@@ -14,13 +14,664 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      argomenti_corso: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      attestati_caricati: {
+        Row: {
+          codice_fiscale: string
+          created_at: string
+          data_corso: string
+          data_scadenza_calcolata: string | null
+          data_validazione: string | null
+          dipendente_id: string
+          id: string
+          note_rifiuto: string | null
+          ore_dichiarate: number | null
+          stato_validazione: string
+          tipo_corso_id: string
+          updated_at: string
+          url_foto_fronte: string | null
+          url_foto_retro: string | null
+        }
+        Insert: {
+          codice_fiscale: string
+          created_at?: string
+          data_corso: string
+          data_scadenza_calcolata?: string | null
+          data_validazione?: string | null
+          dipendente_id: string
+          id?: string
+          note_rifiuto?: string | null
+          ore_dichiarate?: number | null
+          stato_validazione?: string
+          tipo_corso_id: string
+          updated_at?: string
+          url_foto_fronte?: string | null
+          url_foto_retro?: string | null
+        }
+        Update: {
+          codice_fiscale?: string
+          created_at?: string
+          data_corso?: string
+          data_scadenza_calcolata?: string | null
+          data_validazione?: string | null
+          dipendente_id?: string
+          id?: string
+          note_rifiuto?: string | null
+          ore_dichiarate?: number | null
+          stato_validazione?: string
+          tipo_corso_id?: string
+          updated_at?: string
+          url_foto_fronte?: string | null
+          url_foto_retro?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attestati_caricati_codice_fiscale_fkey"
+            columns: ["codice_fiscale"]
+            isOneToOne: false
+            referencedRelation: "dipendenti"
+            referencedColumns: ["codice_fiscale"]
+          },
+          {
+            foreignKeyName: "attestati_caricati_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "dipendenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attestati_caricati_tipo_corso_id_fkey"
+            columns: ["tipo_corso_id"]
+            isOneToOne: false
+            referencedRelation: "tipi_corso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorie_corso: {
+        Row: {
+          macro_categoria: string
+          updated_at: string
+          visibile_lavoratore: boolean
+        }
+        Insert: {
+          macro_categoria: string
+          updated_at?: string
+          visibile_lavoratore?: boolean
+        }
+        Update: {
+          macro_categoria?: string
+          updated_at?: string
+          visibile_lavoratore?: boolean
+        }
+        Relationships: []
+      }
+      classi_concorso: {
+        Row: {
+          attivo: boolean
+          codice: string
+          created_at: string
+          da_lavoratore: boolean
+          denominazione: string | null
+          id: string
+          usi: number
+        }
+        Insert: {
+          attivo?: boolean
+          codice: string
+          created_at?: string
+          da_lavoratore?: boolean
+          denominazione?: string | null
+          id?: string
+          usi?: number
+        }
+        Update: {
+          attivo?: boolean
+          codice?: string
+          created_at?: string
+          da_lavoratore?: boolean
+          denominazione?: string | null
+          id?: string
+          usi?: number
+        }
+        Relationships: []
+      }
+      coda_valutazioni: {
+        Row: {
+          archiviato: boolean
+          argomenti: string[]
+          argomenti_mancanti: string[]
+          codice_ateco: string | null
+          codice_fiscale: string | null
+          cognome: string | null
+          created_at: string
+          data_corso: string | null
+          data_nascita: string | null
+          email: string | null
+          ente: string | null
+          esito: string
+          id: string
+          integrazione: string | null
+          inviato: boolean
+          luogo_nascita: string | null
+          mime_file: string | null
+          nome: string | null
+          nome_file: string | null
+          note: string | null
+          ore: number | null
+          percorso_file: string | null
+          reparto: string | null
+          tipo_corso_id: string | null
+          tipo_corso_nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          archiviato?: boolean
+          argomenti?: string[]
+          argomenti_mancanti?: string[]
+          codice_ateco?: string | null
+          codice_fiscale?: string | null
+          cognome?: string | null
+          created_at?: string
+          data_corso?: string | null
+          data_nascita?: string | null
+          email?: string | null
+          ente?: string | null
+          esito?: string
+          id?: string
+          integrazione?: string | null
+          inviato?: boolean
+          luogo_nascita?: string | null
+          mime_file?: string | null
+          nome?: string | null
+          nome_file?: string | null
+          note?: string | null
+          ore?: number | null
+          percorso_file?: string | null
+          reparto?: string | null
+          tipo_corso_id?: string | null
+          tipo_corso_nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archiviato?: boolean
+          argomenti?: string[]
+          argomenti_mancanti?: string[]
+          codice_ateco?: string | null
+          codice_fiscale?: string | null
+          cognome?: string | null
+          created_at?: string
+          data_corso?: string | null
+          data_nascita?: string | null
+          email?: string | null
+          ente?: string | null
+          esito?: string
+          id?: string
+          integrazione?: string | null
+          inviato?: boolean
+          luogo_nascita?: string | null
+          mime_file?: string | null
+          nome?: string | null
+          nome_file?: string | null
+          note?: string | null
+          ore?: number | null
+          percorso_file?: string | null
+          reparto?: string | null
+          tipo_corso_id?: string | null
+          tipo_corso_nome?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dipendenti: {
+        Row: {
+          classe_concorso: string | null
+          codice_ateco: string | null
+          codice_fiscale: string
+          cognome: string
+          created_at: string
+          data_nascita: string | null
+          email: string | null
+          id: string
+          luogo_nascita: string | null
+          materia: string | null
+          nome: string
+          reparto: string | null
+          sottoreparto: string | null
+          updated_at: string
+        }
+        Insert: {
+          classe_concorso?: string | null
+          codice_ateco?: string | null
+          codice_fiscale: string
+          cognome: string
+          created_at?: string
+          data_nascita?: string | null
+          email?: string | null
+          id?: string
+          luogo_nascita?: string | null
+          materia?: string | null
+          nome: string
+          reparto?: string | null
+          sottoreparto?: string | null
+          updated_at?: string
+        }
+        Update: {
+          classe_concorso?: string | null
+          codice_ateco?: string | null
+          codice_fiscale?: string
+          cognome?: string
+          created_at?: string
+          data_nascita?: string | null
+          email?: string | null
+          id?: string
+          luogo_nascita?: string | null
+          materia?: string | null
+          nome?: string
+          reparto?: string | null
+          sottoreparto?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dipendenti_ruoli: {
+        Row: {
+          created_at: string
+          dipendente_id: string
+          id: string
+          ruolo_id: string
+        }
+        Insert: {
+          created_at?: string
+          dipendente_id: string
+          id?: string
+          ruolo_id: string
+        }
+        Update: {
+          created_at?: string
+          dipendente_id?: string
+          id?: string
+          ruolo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dipendenti_ruoli_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "dipendenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dipendenti_ruoli_ruolo_id_fkey"
+            columns: ["ruolo_id"]
+            isOneToOne: false
+            referencedRelation: "ruoli_sicurezza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documenti_attestati: {
+        Row: {
+          codice_fiscale: string
+          created_at: string
+          data_scadenza: string
+          dipendente_id: string
+          id: string
+          nome_file: string
+          percorso_file: string
+          tipo_attestato: string
+          tipo_personalizzato: string | null
+          updated_at: string
+        }
+        Insert: {
+          codice_fiscale: string
+          created_at?: string
+          data_scadenza: string
+          dipendente_id: string
+          id?: string
+          nome_file: string
+          percorso_file: string
+          tipo_attestato: string
+          tipo_personalizzato?: string | null
+          updated_at?: string
+        }
+        Update: {
+          codice_fiscale?: string
+          created_at?: string
+          data_scadenza?: string
+          dipendente_id?: string
+          id?: string
+          nome_file?: string
+          percorso_file?: string
+          tipo_attestato?: string
+          tipo_personalizzato?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documenti_attestati_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "dipendenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrazioni_dvr: {
+        Row: {
+          argomenti_mancanti: string[]
+          attestato_chiusura_id: string | null
+          attestato_origine_id: string | null
+          created_at: string
+          data_chiusura: string | null
+          data_richiesta: string
+          descrizione: string
+          dipendente_id: string
+          id: string
+          ore: number | null
+          stato: string
+          tipo_corso_nome: string | null
+        }
+        Insert: {
+          argomenti_mancanti?: string[]
+          attestato_chiusura_id?: string | null
+          attestato_origine_id?: string | null
+          created_at?: string
+          data_chiusura?: string | null
+          data_richiesta?: string
+          descrizione: string
+          dipendente_id: string
+          id?: string
+          ore?: number | null
+          stato?: string
+          tipo_corso_nome?: string | null
+        }
+        Update: {
+          argomenti_mancanti?: string[]
+          attestato_chiusura_id?: string | null
+          attestato_origine_id?: string | null
+          created_at?: string
+          data_chiusura?: string | null
+          data_richiesta?: string
+          descrizione?: string
+          dipendente_id?: string
+          id?: string
+          ore?: number | null
+          stato?: string
+          tipo_corso_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrazioni_dvr_attestato_chiusura_id_fkey"
+            columns: ["attestato_chiusura_id"]
+            isOneToOne: false
+            referencedRelation: "attestati_caricati"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrazioni_dvr_attestato_origine_id_fkey"
+            columns: ["attestato_origine_id"]
+            isOneToOne: false
+            referencedRelation: "attestati_caricati"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrazioni_dvr_dipendente_id_fkey"
+            columns: ["dipendente_id"]
+            isOneToOne: false
+            referencedRelation: "dipendenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      materie: {
+        Row: {
+          attivo: boolean
+          classe_concorso: string | null
+          created_at: string
+          da_lavoratore: boolean
+          id: string
+          nome: string
+          usi: number
+        }
+        Insert: {
+          attivo?: boolean
+          classe_concorso?: string | null
+          created_at?: string
+          da_lavoratore?: boolean
+          id?: string
+          nome: string
+          usi?: number
+        }
+        Update: {
+          attivo?: boolean
+          classe_concorso?: string | null
+          created_at?: string
+          da_lavoratore?: boolean
+          id?: string
+          nome?: string
+          usi?: number
+        }
+        Relationships: []
+      }
+      note_valutazione: {
+        Row: {
+          created_at: string
+          id: string
+          testo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          testo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          testo?: string
+        }
+        Relationships: []
+      }
+      opzioni_integrazione: {
+        Row: {
+          created_at: string
+          etichetta: string
+          id: string
+          ore: number | null
+        }
+        Insert: {
+          created_at?: string
+          etichetta: string
+          id?: string
+          ore?: number | null
+        }
+        Update: {
+          created_at?: string
+          etichetta?: string
+          id?: string
+          ore?: number | null
+        }
+        Relationships: []
+      }
+      reparti: {
+        Row: {
+          attivo: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordine: number
+          richiede_classe_concorso: boolean
+        }
+        Insert: {
+          attivo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordine?: number
+          richiede_classe_concorso?: boolean
+        }
+        Update: {
+          attivo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordine?: number
+          richiede_classe_concorso?: boolean
+        }
+        Relationships: []
+      }
+      ruoli_sicurezza: {
+        Row: {
+          attivo: boolean
+          created_at: string
+          descrizione: string | null
+          id: string
+          macro_categoria: string | null
+          nome: string
+          obbligatorio_tutti: boolean
+          ordine: number
+        }
+        Insert: {
+          attivo?: boolean
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          macro_categoria?: string | null
+          nome: string
+          obbligatorio_tutti?: boolean
+          ordine?: number
+        }
+        Update: {
+          attivo?: boolean
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          macro_categoria?: string | null
+          nome?: string
+          obbligatorio_tutti?: boolean
+          ordine?: number
+        }
+        Relationships: []
+      }
+      sottoreparti: {
+        Row: {
+          attivo: boolean
+          codice: string | null
+          created_at: string
+          id: string
+          nome: string
+          ordine: number
+          reparto_id: string
+        }
+        Insert: {
+          attivo?: boolean
+          codice?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          ordine?: number
+          reparto_id: string
+        }
+        Update: {
+          attivo?: boolean
+          codice?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          ordine?: number
+          reparto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sottoreparti_reparto_id_fkey"
+            columns: ["reparto_id"]
+            isOneToOne: false
+            referencedRelation: "reparti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tipi_corso: {
+        Row: {
+          anni_aggiornamento: number | null
+          codice: string | null
+          codice_corso_aggiornamento: string | null
+          created_at: string
+          durata_validita_anni: number | null
+          id: string
+          livello_specifico: string
+          macro_categoria: string
+          nome_corso: string
+          ordine: number | null
+          ore_aggiornamento: number | null
+          ore_minime_legge: number | null
+          updated_at: string
+          visibile_lavoratore: boolean | null
+        }
+        Insert: {
+          anni_aggiornamento?: number | null
+          codice?: string | null
+          codice_corso_aggiornamento?: string | null
+          created_at?: string
+          durata_validita_anni?: number | null
+          id?: string
+          livello_specifico: string
+          macro_categoria: string
+          nome_corso: string
+          ordine?: number | null
+          ore_aggiornamento?: number | null
+          ore_minime_legge?: number | null
+          updated_at?: string
+          visibile_lavoratore?: boolean | null
+        }
+        Update: {
+          anni_aggiornamento?: number | null
+          codice?: string | null
+          codice_corso_aggiornamento?: string | null
+          created_at?: string
+          durata_validita_anni?: number | null
+          id?: string
+          livello_specifico?: string
+          macro_categoria?: string
+          nome_corso?: string
+          ordine?: number | null
+          ore_aggiornamento?: number | null
+          ore_minime_legge?: number | null
+          updated_at?: string
+          visibile_lavoratore?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      registra_classe_concorso: {
+        Args: { p_codice: string; p_denominazione?: string }
+        Returns: undefined
+      }
+      registra_materia: {
+        Args: { p_classe?: string; p_nome: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
