@@ -345,7 +345,7 @@ export function PostazioneOperatore() {
         if (r.percorso_file) {
           percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`)}`;
           const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
-          if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, contentType: r.mime_file ?? undefined });
+          if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
         }
         const { data: att, error } = await db.from("attestati_caricati").insert({
           dipendente_id: dip.id, codice_fiscale: dip.codice_fiscale, tipo_corso_id: r.tipo_corso_id,
