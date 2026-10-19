@@ -56,7 +56,7 @@ import {
 export const Route = createFileRoute("/dipendenti")({
   head: () => ({
     meta: [
-      { title: "Gestione Dipendenti — Archivio Sicurezza" },
+      { title: "Gestione Dipendenti — Archivio Sicurezza · Nichetti Gian Battista" },
       {
         name: "description",
         content:

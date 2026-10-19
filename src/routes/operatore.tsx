@@ -378,7 +378,7 @@ export function PostazioneOperatore() {
     if (!righe.length) return;
     const destinatari = [...new Set(righe.map((r) => r.email).filter(Boolean))];
     const persone = [...new Set(righe.map((r) => `${r.cognome} ${r.nome}`))];
-    const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza (D.Lgs. 81/2008):\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}\n\nCordiali saluti\nUfficio Sicurezza`;
+    const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza (D.Lgs. 81/2008):\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}\n\nCordiali saluti\nUfficio Sicurezza\nNichetti Gian Battista — Soresina (CR)`;
     const oggetto = `Esito verifica attestati — ${persone.join(", ")}`;
     window.location.href = `mailto:${destinatari.join(",")}?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(corpo)}`;
     if (!destinatari.length) toast.info("Nessuna email salvata: aggiungi il destinatario nella posta");

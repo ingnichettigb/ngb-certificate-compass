@@ -34,7 +34,7 @@ import {
 export const Route = createFileRoute("/carica")({
   head: () => ({
     meta: [
-      { title: "Carica il tuo attestato — Archivio Sicurezza" },
+      { title: "Carica il tuo attestato — Archivio Sicurezza · Nichetti Gian Battista" },
       {
         name: "description",
         content:

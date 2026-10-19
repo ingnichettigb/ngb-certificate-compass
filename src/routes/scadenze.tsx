@@ -16,7 +16,7 @@ import { formatData, getAttestati, repartoLeggibile, scaduto } from "@/lib/api";
 export const Route = createFileRoute("/scadenze")({
   head: () => ({
     meta: [
-      { title: "Attestati scaduti e in scadenza — Archivio Sicurezza" },
+      { title: "Attestati scaduti e in scadenza — Archivio Sicurezza · Nichetti Gian Battista" },
       {
         name: "description",
         content:
