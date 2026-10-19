@@ -15,17 +15,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { supabase } from "@/integrations/supabase/client";
+import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Archivio Attestati Sicurezza — D.Lgs. 81/2008" },
+      { title: "Archivio Attestati Sicurezza — Nichetti Gian Battista" },
       {
         name: "description",
         content:
           "Archivio digitale degli attestati di formazione sulla sicurezza: caricamento da cellulare, validazione HR e scadenze calcolate in automatico.",
       },
-      { property: "og:title", content: "Archivio Attestati Sicurezza" },
+      { property: "og:title", content: "Archivio Attestati Sicurezza — Nichetti Gian Battista" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content:
@@ -78,12 +81,10 @@ function Home() {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <ShieldCheck className="size-5" />
-            </span>
+            <img src={logoAsset.url} alt="Nichetti Gian Battista" className="h-12 w-auto rounded-md bg-card" />
             <div>
               <h1 className="text-lg font-semibold">Archivio Attestati Sicurezza</h1>
-              <p className="text-xs text-muted-foreground">D.Lgs. 81/2008</p>
+              <p className="text-xs text-muted-foreground">Nichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008</p>
             </div>
           </div>
           <BackupBar />

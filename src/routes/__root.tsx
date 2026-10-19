@@ -79,21 +79,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Archivio Sicurezza · Nichetti Gian Battista" },
+      { name: "description", content: "Archivio attestati di formazione sicurezza — Nichetti Gian Battista, Soresina (CR)" },
+      { name: "author", content: "Nichetti Gian Battista" },
+      { property: "og:title", content: "Archivio Sicurezza · Nichetti Gian Battista" },
+      { property: "og:description", content: "Archivio attestati di formazione sicurezza — Nichetti Gian Battista, Soresina (CR)" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
