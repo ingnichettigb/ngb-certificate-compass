@@ -10,33 +10,91 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CaricaRouteImport } from './routes/carica'
+import { Route as DipendentiRouteImport } from './routes/dipendenti'
+import { Route as HrRouteImport } from './routes/hr'
+import { Route as OperatoreRouteImport } from './routes/operatore'
+import { Route as ScadenzeRouteImport } from './routes/scadenze'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CaricaRoute = CaricaRouteImport.update({
+  id: '/carica',
+  path: '/carica',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DipendentiRoute = DipendentiRouteImport.update({
+  id: '/dipendenti',
+  path: '/dipendenti',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HrRoute = HrRouteImport.update({
+  id: '/hr',
+  path: '/hr',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatoreRoute = OperatoreRouteImport.update({
+  id: '/operatore',
+  path: '/operatore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScadenzeRoute = ScadenzeRouteImport.update({
+  id: '/scadenze',
+  path: '/scadenze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/carica': typeof CaricaRoute
+  '/dipendenti': typeof DipendentiRoute
+  '/hr': typeof HrRoute
+  '/operatore': typeof OperatoreRoute
+  '/scadenze': typeof ScadenzeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/carica': typeof CaricaRoute
+  '/dipendenti': typeof DipendentiRoute
+  '/hr': typeof HrRoute
+  '/operatore': typeof OperatoreRoute
+  '/scadenze': typeof ScadenzeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/carica': typeof CaricaRoute
+  '/dipendenti': typeof DipendentiRoute
+  '/hr': typeof HrRoute
+  '/operatore': typeof OperatoreRoute
+  '/scadenze': typeof ScadenzeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    '/' | '/carica' | '/dipendenti' | '/hr' | '/operatore' | '/scadenze'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/carica' | '/dipendenti' | '/hr' | '/operatore' | '/scadenze'
+  id:
+    | '__root__'
+    | '/'
+    | '/carica'
+    | '/dipendenti'
+    | '/hr'
+    | '/operatore'
+    | '/scadenze'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CaricaRoute: typeof CaricaRoute
+  DipendentiRoute: typeof DipendentiRoute
+  HrRoute: typeof HrRoute
+  OperatoreRoute: typeof OperatoreRoute
+  ScadenzeRoute: typeof ScadenzeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +106,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/carica': {
+      id: '/carica'
+      path: '/carica'
+      fullPath: '/carica'
+      preLoaderRoute: typeof CaricaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dipendenti': {
+      id: '/dipendenti'
+      path: '/dipendenti'
+      fullPath: '/dipendenti'
+      preLoaderRoute: typeof DipendentiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hr': {
+      id: '/hr'
+      path: '/hr'
+      fullPath: '/hr'
+      preLoaderRoute: typeof HrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operatore': {
+      id: '/operatore'
+      path: '/operatore'
+      fullPath: '/operatore'
+      preLoaderRoute: typeof OperatoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scadenze': {
+      id: '/scadenze'
+      path: '/scadenze'
+      fullPath: '/scadenze'
+      preLoaderRoute: typeof ScadenzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CaricaRoute: CaricaRoute,
+  DipendentiRoute: DipendentiRoute,
+  HrRoute: HrRoute,
+  OperatoreRoute: OperatoreRoute,
+  ScadenzeRoute: ScadenzeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
