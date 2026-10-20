@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 
 const { log, makeClient, toast } = vi.hoisted(() => {
   const log: unknown[][] = [];
@@ -21,6 +22,7 @@ const { log, makeClient, toast } = vi.hoisted(() => {
     { ...base, id: "r1", cognome: "ROSSI", nome: "MARIO", codice_fiscale: "RSSMRA80A01H501U", email: "mario@x.it", reparto: "Docente", tipo_corso_id: "t1", tipo_corso_nome: "Antincendio", data_corso: "2026-03-15", ore: 8, esito: "Valido", note: "ok", archiviato: true, inviato: true, created_at: "2026-10-01" },
     { ...base, id: "r2", cognome: "BIANCHI", nome: "ANNA", codice_fiscale: "BNCNNA85B41F205X", email: "", reparto: "", tipo_corso_id: null, tipo_corso_nome: "", data_corso: "", ore: null, esito: "Non valido", note: "x", archiviato: false, inviato: false, created_at: "2026-10-02" },
     { ...base, id: "r3", cognome: "VERDI", nome: "ELENA", codice_fiscale: "VRDLNE80A41H501X", email: "elena@x.it", reparto: "ATA", tipo_corso_id: "t1", tipo_corso_nome: "Antincendio", data_corso: "2026-05-10", ore: 8, esito: "Valido con integrazione DVR", integrazione: "4 ore di rischio specifico", note: "da integrare", archiviato: false, inviato: false, created_at: "2026-10-03" },
+    { ...base, id: "r4", cognome: "NERI", nome: "LUCA", codice_fiscale: "NRELCU80A01H501U", email: "luca@x.it", reparto: "", tipo_corso_id: "t2", tipo_corso_nome: "Primo Soccorso", data_corso: "2026-06-01", ore: 12, esito: "Valido", note: "ok", percorso_file: "Coda/old-1.pdf", mime_file: "application/pdf", archiviato: false, inviato: false, created_at: "2026-10-04" },
   ];
 
   const ultimo = (path: string[]) => [...path].reverse().find((p) => p !== "()") ?? "";
@@ -106,6 +108,11 @@ beforeEach(() => {
   vi.spyOn(crypto, "randomUUID").mockImplementation(() => `uuid-${++n}` as `${string}-${string}-${string}-${string}-${string}`);
   vi.spyOn(window, "confirm").mockReturnValue(true);
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  URL.createObjectURL = vi.fn(() => "blob:x");
+  URL.revokeObjectURL = vi.fn();
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    log.push(["a.click", this.download]);
+  });
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
 });
@@ -117,7 +124,7 @@ afterEach(() => {
 
 describe("Postazione Operatore: percorso d'uso completo", () => {
   it("registra tutto quello che la pagina fa", async () => {
-    const Pagina = Route.options.component as () => JSX.Element;
+    const Pagina = Route.options.component as () => ReactElement;
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <Pagina />
@@ -163,6 +170,10 @@ describe("Postazione Operatore: percorso d'uso completo", () => {
     // 6) archiviazione: riga con tipo di corso mancante (errore) e riga con integrazione DVR
     await clic(riga("BIANCHI").querySelector('[aria-label="Aggiungi al database"]')!);
     await clic(riga("VERDI").querySelector('[aria-label="Aggiungi al database"]')!);
+
+    // 6b) riga con file allegato: archivia nel DB (copia del file) e salva sul PC
+    await clic(riga("NERI").querySelector('[aria-label="Aggiungi al database"]')!);
+    await clic(riga("NERI").querySelector('[aria-label="Salva sul PC con nome"]')!);
 
     // 7) selezione di più righe e archiviazione dei selezionati
     const caselle = document.querySelectorAll("tbody [role=checkbox]");
