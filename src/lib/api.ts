@@ -19,6 +19,20 @@ import { supabase } from "@/integrations/supabase/client";
  */
 const sb = supabase as unknown as SupabaseClient;
 
+/** Legge tutte le righe a blocchi da 1000, senza tagliare gli elenchi lunghi. */
+async function leggiTutto<T>(
+  crea: () => { range: (da: number, a: number) => PromiseLike<{ data: unknown; error: unknown }> },
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let da = 0; ; da += 1000) {
+    const { data, error } = await crea().range(da, da + 999);
+    if (error) throw error;
+    const righe = (data ?? []) as T[];
+    out.push(...righe);
+    if (righe.length < 1000) return out;
+  }
+}
+
 export type Dipendente = {
   id: string;
   codice_fiscale: string;
@@ -471,21 +485,19 @@ export async function getCategorieNascoste(): Promise<string[]> {
 }
 
 export async function getAttestati(stato?: Stato | "Tutti"): Promise<Attestato[]> {
-  let q = supabase
-    .from("attestati_caricati")
-    .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
-    .order("created_at", { ascending: false })
-    .limit(1000);
-  if (stato && stato !== "Tutti") q = q.eq("stato_validazione", stato);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as unknown as Attestato[];
+  return leggiTutto<Attestato>(() => {
+    let q = sb
+      .from("attestati_caricati")
+      .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
+      .order("created_at", { ascending: false })
+      .order("id");
+    if (stato && stato !== "Tutti") q = q.eq("stato_validazione", stato);
+    return q;
+  });
 }
 
 export async function getDipendenti(): Promise<Dipendente[]> {
-  const { data, error } = await sb.from("dipendenti").select("*").order("cognome").limit(2000);
-  if (error) throw error;
-  return (data ?? []) as Dipendente[];
+  return leggiTutto<Dipendente>(() => sb.from("dipendenti").select("*").order("cognome").order("id"));
 }
 
 export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipendente> {
@@ -605,10 +617,14 @@ export function apriEmailEsito(a: Attestato, esito: Stato): boolean {
 
 /** Esporta l'intero database in un file JSON salvato sul dispositivo. */
 export async function esportaDb() {
-  const [dip, tipi, att, rep, sot, cat, classi, mat] = await Promise.all([
-    supabase.from("dipendenti").select("*").limit(5000),
+  const [dipTutti, attTutti] = await Promise.all([
+    leggiTutto(() => sb.from("dipendenti").select("*").order("id")),
+    leggiTutto(() => sb.from("attestati_caricati").select("*").order("id")),
+  ]);
+  const dip = { data: dipTutti };
+  const att = { data: attTutti };
+  const [tipi, rep, sot, cat, classi, mat] = await Promise.all([
     supabase.from("tipi_corso").select("*"),
-    supabase.from("attestati_caricati").select("*").limit(20000),
     sb.from("reparti").select("*"),
     sb.from("sottoreparti").select("*"),
     sb.from("categorie_corso").select("*"),
