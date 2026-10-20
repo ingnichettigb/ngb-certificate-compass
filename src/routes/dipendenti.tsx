@@ -1,21 +1,31 @@
 /*
  * File:      dipendenti.tsx
  * Percorso:  src/routes/dipendenti.tsx
- * Data:      14/10/2026
- * Modifica:  01
+ * Data:      20/10/2026
  *
- * Modifica 01:
- *  - Scheda lavoratore: se ha integrazioni DVR da completare compare, sotto "Incarichi e formazione",
- *    un riquadro arancione "Integrazione DVR: N ore - Da completare" con gli argomenti da integrare
- *    e il pulsante "Segna completata". Senza integrazioni la scheda resta come prima.
- *  - Tabella "Tutti gli attestati": le integrazioni compaiono come righe con stato
- *    "Da completare" / "Completata".
+ * Funzionalità:
+ *  - Elenco e anagrafica dipendenti con ricerca e filtri (reparto, ruolo, corsi mancanti)
+ *  - Integrazioni DVR e riepilogo ruoli/incarichi
+ *  - Gestione PDF / documenti attestati
+ *  - Tabella "Tutti gli attestati" con:
+ *      * Ordinamento bidirezionale (1° clic crescente, 2° clic decrescente) su Corso, Data, Scadenza, Stato
+ *      * Intestazione fissa (sticky)
+ *      * Barra di scorrimento orizzontale e verticale sempre visibile nel contenitore tabella
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Plus, Search, Users } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
+  Loader2,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,6 +88,9 @@ export const Route = createFileRoute("/dipendenti")({
 const TUTTI = "__tutti__";
 const NESSUNO = "__nessuno__";
 
+type ColonnaSortAttestati = "corso" | "data" | "scadenza" | "stato";
+type DirezioneSort = "asc" | "desc";
+
 const VUOTO: Omit<Dipendente, "id"> = {
   codice_fiscale: "",
   cognome: "",
@@ -99,6 +112,11 @@ function DipendentiPage() {
   const [form, setForm] = useState<Omit<Dipendente, "id"> | null>(null);
   const [saving, setSaving] = useState(false);
   const [filtroReparto, setFiltroReparto] = useState(TUTTI);
+  const [filtroRuolo, setFiltroRuolo] = useState(TUTTI);
+
+  // Stato ordinamento tabella attestati
+  const [attestatiSortCol, setAttestatiSortCol] = useState<ColonnaSortAttestati>("data");
+  const [attestatiSortDir, setAttestatiSortDir] = useState<DirezioneSort>("desc");
 
   const { data: repartiElenco = [] } = useQuery({
     queryKey: ["reparti"],
@@ -123,7 +141,6 @@ function DipendentiPage() {
     queryFn: getAssegnazioniRuoli,
     retry: false,
   });
-  const [filtroRuolo, setFiltroRuolo] = useState(TUTTI);
   const { data: integrazioni = [] } = useQuery({
     queryKey: ["integrazioni-dvr"],
     queryFn: getIntegrazioniDvr,
@@ -180,6 +197,108 @@ function DipendentiPage() {
   const ruoliCorrente = sel ? ruoliDelDipendente(sel, ruoliCatalogo, assegnazioni) : [];
   const categorieRichieste = new Set(ruoliCorrente.map((r) => r.macro_categoria).filter(Boolean));
   const ruoliAttivi = ruoliCatalogo.filter((r) => r.attivo);
+
+  function cambiaOrdinamentoAttestati(colonna: ColonnaSortAttestati) {
+    if (attestatiSortCol === colonna) {
+      setAttestatiSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setAttestatiSortCol(colonna);
+      setAttestatiSortDir("asc");
+    }
+  }
+
+  // Righe unificate (attestati + eventuali integrazioni DVR) con ordinamento dinamico
+  const righeAttestati = useMemo(() => {
+    if (!sel) return [];
+
+    const lista: Array<{
+      id: string;
+      isAttestato: boolean;
+      corso: string;
+      data: string | null;
+      scadenza: string | null;
+      stato: string;
+      attestato?: (typeof attestati)[number];
+      integrazione?: IntegrazioneDvr;
+    }> = [
+      ...suoi.map((a) => ({
+        id: a.id,
+        isAttestato: true,
+        corso: a.tipi_corso?.nome_corso ?? "—",
+        data: a.data_corso,
+        scadenza: a.data_scadenza_calcolata,
+        stato: a.stato_validazione ?? "",
+        attestato: a,
+      })),
+      ...suoiInteg.map((i) => ({
+        id: `integrazione-${i.id}`,
+        isAttestato: false,
+        corso: `Integrazione DVR — ${i.descrizione}`,
+        data: i.data_richiesta,
+        scadenza: null,
+        stato: i.stato,
+        integrazione: i,
+      })),
+    ];
+
+    lista.sort((a, b) => {
+      let valA = "";
+      let valB = "";
+      switch (attestatiSortCol) {
+        case "corso":
+          valA = a.corso;
+          valB = b.corso;
+          break;
+        case "data":
+          valA = a.data ?? "";
+          valB = b.data ?? "";
+          break;
+        case "scadenza":
+          valA = a.scadenza ?? (attestatiSortDir === "asc" ? "9999-99-99" : "0000-00-00");
+          valB = b.scadenza ?? (attestatiSortDir === "asc" ? "9999-99-99" : "0000-00-00");
+          break;
+        case "stato":
+          valA = a.stato;
+          valB = b.stato;
+          break;
+      }
+      const cmp = valA.localeCompare(valB, "it", { numeric: true });
+      return attestatiSortDir === "asc" ? cmp : -cmp;
+    });
+
+    return lista;
+  }, [sel, suoi, suoiInteg, attestatiSortCol, attestatiSortDir]);
+
+  function IntestazioneOrdinabileAttestati({
+    colonna,
+    titolo,
+  }: {
+    colonna: ColonnaSortAttestati;
+    titolo: string;
+  }) {
+    const attiva = attestatiSortCol === colonna;
+    return (
+      <th className="px-3 py-2">
+        <button
+          type="button"
+          onClick={() => cambiaOrdinamentoAttestati(colonna)}
+          className="inline-flex items-center gap-1 font-semibold hover:text-foreground transition-colors cursor-pointer"
+          title={`Ordina per ${titolo}`}
+        >
+          <span>{titolo}</span>
+          {attiva ? (
+            attestatiSortDir === "asc" ? (
+              <ArrowUp className="size-3.5 text-primary" />
+            ) : (
+              <ArrowDown className="size-3.5 text-primary" />
+            )
+          ) : (
+            <ArrowUpDown className="size-3 text-muted-foreground/50 opacity-60 hover:opacity-100" />
+          )}
+        </button>
+      </th>
+    );
+  }
 
   async function spuntaRuolo(ruoloId: string, v: boolean) {
     if (!sel) return;
@@ -602,60 +721,70 @@ function DipendentiPage() {
 
               <h3 className="text-sm font-semibold">Tutti gli attestati</h3>
 
-              <div className="overflow-auto rounded-lg border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+              {/* Contenitore con altezza fissa e scrollbar orizzontale sempre sul fondo dell'area visibile */}
+              <div className="max-h-[380px] overflow-auto rounded-lg border border-border bg-surface">
+                <table className="w-full min-w-[550px] text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
                     <tr>
-                      <th className="px-3 py-2">Corso</th>
-                      <th className="px-3 py-2">Data</th>
-                      <th className="px-3 py-2">Scadenza</th>
-                      <th className="px-3 py-2">Stato</th>
+                      <IntestazioneOrdinabileAttestati colonna="corso" titolo="Corso" />
+                      <IntestazioneOrdinabileAttestati colonna="data" titolo="Data" />
+                      <IntestazioneOrdinabileAttestati colonna="scadenza" titolo="Scadenza" />
+                      <IntestazioneOrdinabileAttestati colonna="stato" titolo="Stato" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {suoi.map((a) => (
-                      <tr key={a.id}>
-                        <td className="px-3 py-2">{a.tipi_corso?.nome_corso ?? "—"}</td>
-                        <td className="px-3 py-2">{formatData(a.data_corso)}</td>
-                        <td
-                          className={`px-3 py-2 ${
-                            scaduto(a.data_scadenza_calcolata) ? "font-medium text-destructive" : ""
-                          }`}
-                        >
-                          {a.data_scadenza_calcolata
-                            ? formatData(a.data_scadenza_calcolata)
-                            : "senza scadenza"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-xs ${statoBadgeClass(
-                              a.stato_validazione,
-                            )}`}
-                          >
-                            {a.stato_validazione}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {suoiInteg.map((i) => (
-                      <tr key={`integrazione-${i.id}`}>
-                        <td className="px-3 py-2">Integrazione DVR — {i.descrizione}</td>
-                        <td className="px-3 py-2">{formatData(i.data_richiesta)}</td>
-                        <td className="px-3 py-2 text-muted-foreground">—</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-xs ${
-                              i.stato === "Completata"
-                                ? "border-success/40 bg-success/12 text-success"
-                                : "border-warning/50 bg-warning/15 text-warning-foreground"
-                            }`}
-                          >
-                            {i.stato}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {!suoi.length && !suoiInteg.length && (
+                    {righeAttestati.map((r) => {
+                      if (r.isAttestato && r.attestato) {
+                        const a = r.attestato;
+                        return (
+                          <tr key={a.id} className="hover:bg-muted/40">
+                            <td className="px-3 py-2 font-medium">{a.tipi_corso?.nome_corso ?? "—"}</td>
+                            <td className="px-3 py-2">{formatData(a.data_corso)}</td>
+                            <td
+                              className={`px-3 py-2 ${
+                                scaduto(a.data_scadenza_calcolata) ? "font-medium text-destructive" : ""
+                              }`}
+                            >
+                              {a.data_scadenza_calcolata
+                                ? formatData(a.data_scadenza_calcolata)
+                                : "senza scadenza"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-xs ${statoBadgeClass(
+                                  a.stato_validazione,
+                                )}`}
+                              >
+                                {a.stato_validazione}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      if (!r.isAttestato && r.integrazione) {
+                        const i = r.integrazione;
+                        return (
+                          <tr key={r.id} className="hover:bg-muted/40">
+                            <td className="px-3 py-2 font-medium">Integrazione DVR — {i.descrizione}</td>
+                            <td className="px-3 py-2">{formatData(i.data_richiesta)}</td>
+                            <td className="px-3 py-2 text-muted-foreground">—</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-xs ${
+                                  i.stato === "Completata"
+                                    ? "border-success/40 bg-success/12 text-success"
+                                    : "border-warning/50 bg-warning/15 text-warning-foreground"
+                                }`}
+                              >
+                                {i.stato}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return null;
+                    })}
+                    {!righeAttestati.length && (
                       <tr>
                         <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
                           Nessun attestato registrato
