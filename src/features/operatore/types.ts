@@ -56,3 +56,12 @@ export const VUOTA: Omit<Riga, "id"> = {
 };
 
 export const NOTA_PREDEFINITA = "Attestato conforme ai requisiti previsti dall'Accordo Stato-Regioni.";
+
+/** Stato della finestra di anteprima/invio email. */
+export interface StatoModaleEmail {
+  aperta: boolean;
+  righe: CodaRiga[];
+  destinatari: string;
+  oggetto: string;
+  testoCorpo: string;
+}

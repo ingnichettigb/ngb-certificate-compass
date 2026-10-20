@@ -4,44 +4,31 @@
  * Postazione Operatore completa: estrazione AI, mirino OCR con pulizia automatica testo,
  * campo email nel modulo, copia anagrafica nella coda e modale di anteprima/modifica email prima dell'invio via Resend.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ArrowLeft, Archive, Copy, Download, Edit3, FileText, Loader2, Mail, Plus,
-  Crosshair, Trash2, X, UserCheck, Send, AlertCircle
-} from "lucide-react";
+
 import { supabase as sb } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { estraiAttestato } from "@/lib/estrazione.functions";
 import { getActiveProvider, useAiConfig } from "@/lib/ai-providers";
-import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
+
 import { contaPagine, estraiPagine, parsePagine, piuSimile, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
-import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, formatData, creaIntegrazioneDvr } from "@/lib/api";
-import { CatturaOcr } from "@/components/CatturaOcr";
+import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, creaIntegrazioneDvr } from "@/lib/api";
+
 import { leggiDatiAzienda } from "@/lib/dati-azienda";
 import { inviaEmailConResend } from "@/lib/email-resend.functions";
 import { ETICHETTE_OCR, dataDaTesto, pulisciTestoOcr } from "@/features/operatore/ocr-testo";
 import { estensioneFile, nomeFileStandard } from "@/features/operatore/nome-file";
 import { costruisciBozzaEmail, riepilogo } from "@/features/operatore/bozza-email";
 import { NOTA_PREDEFINITA, VUOTA } from "@/features/operatore/types";
-import type { CampoOcr, CodaRiga, Riga, TipoCorso } from "@/features/operatore/types";
+import type { CampoOcr, CodaRiga, Riga, StatoModaleEmail, TipoCorso } from "@/features/operatore/types";
+import { IntestazioneOperatore } from "@/features/operatore/components/IntestazioneOperatore";
+import { PannelloDocumento } from "@/features/operatore/components/PannelloDocumento";
+import { ModuloDati } from "@/features/operatore/components/ModuloDati";
+import { CodaLavoro } from "@/features/operatore/components/CodaLavoro";
+import { ModaleEmail } from "@/features/operatore/components/ModaleEmail";
 
 export const Route = createFileRoute("/operatore")({
   head: () => ({
@@ -91,18 +78,11 @@ function PostazioneOperatore() {
   const [pagine, setPagine] = useState("");
   const [, setTestoLetto] = useState("");
   const [, setSuggerito] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const [campoOcr, setCampoOcr] = useState<CampoOcr | null>(null);
 
   // Finestra anteprima / inserimento email prima dell'invio
-  const [modaleEmail, setModaleEmail] = useState<{
-    aperta: boolean;
-    righe: CodaRiga[];
-    destinatari: string;
-    oggetto: string;
-    testoCorpo: string;
-  }>({
+  const [modaleEmail, setModaleEmail] = useState<StatoModaleEmail>({
     aperta: false,
     righe: [],
     destinatari: "",
@@ -131,20 +111,6 @@ function PostazioneOperatore() {
     toast.success(`${ETICHETTE_OCR[c]}: ${testo}`);
     setCampoOcr(null);
   }
-
-  const Mirino = ({ campo }: { campo: CampoOcr }) => (
-    <button
-      type="button"
-      disabled={!anteprima}
-      onClick={() => setCampoOcr(campoOcr === campo ? null : campo)}
-      title={`Cattura ${ETICHETTE_OCR[campo]} dal documento`}
-      className={`ml-1 inline-grid size-6 place-items-center rounded align-middle disabled:opacity-30 ${
-        campoOcr === campo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-      }`}
-    >
-      <Crosshair className="size-3.5" />
-    </button>
-  );
 
   const set = <K extends keyof Riga>(k: K, v: Riga[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -523,450 +489,62 @@ function PostazioneOperatore() {
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
-      {/* Intestazione Superiore */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title="Torna alla home"
-            aria-label="Torna alla home"
-          >
-            <ArrowLeft className="size-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Postazione Operatore</h1>
-            <p className="text-sm text-muted-foreground">Verifica, lettura automatica con AI e archiviazione attestati</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <ImpostaAiButton />
-          <Button onClick={() => inputRef.current?.click()} className="gap-2">
-            <Plus className="size-4" /> Carica documento
-          </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/pdf,image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) scegliFile(f);
-            }}
-          />
-        </div>
-      </div>
+      <IntestazioneOperatore onFile={scegliFile} />
 
       {/* Area di Lavoro Split Screen */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Colonna Sinistra: Visualizzatore Documento con rotazione oraria a 90° e mirino OCR */}
-        <Card className="flex flex-col overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Documento caricato</CardTitle>
-            {anteprima && (
-              <span className="text-xs text-muted-foreground">
-                {file?.name ?? "Attestato caricato"} {totPagine > 0 && `(${totPagine} pag.)`}
-              </span>
-            )}
-          </CardHeader>
-          <CardContent className="p-0 flex-1 min-h-[520px] flex items-center justify-center bg-muted/20 relative">
-            {lettura && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-2">
-                <Loader2 className="size-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">Lettura attestato con {aiAttiva.name}...</p>
-              </div>
-            )}
-            {anteprima && file ? (
-              <CatturaOcr
-                file={file}
-                isPdf={anteprimaMime === "application/pdf"}
-                totPagine={totPagine}
-                etichettaCampo={campoOcr ? ETICHETTE_OCR[campoOcr] : ""}
-                onTesto={incollaOcr}
-              />
-            ) : anteprima ? (
-              anteprimaMime === "application/pdf" ? (
-                <iframe src={anteprima} className="w-full h-full min-h-[500px] border-none" title="Anteprima PDF" />
-              ) : (
-                <img src={anteprima} alt="Anteprima" className="max-h-[550px] object-contain p-2" />
-              )
-            ) : (
-              <div className="text-center p-6 text-muted-foreground">
-                <FileText className="size-12 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Trascina o carica un file PDF o una foto per iniziare</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Colonna Destra: Modulo Dati Riconosciuti */}
-        <Card>
-          <CardHeader className="py-3 px-4 border-b">
-            <CardTitle className="text-sm font-medium">Dati estratti e valutazione</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Clicca il mirino accanto a un campo, poi seleziona l'area sul documento per copiarne il testo pulito.
-            </p>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="cog">Cognome<Mirino campo="cognome" /></Label>
-                <Input id="cog" value={form.cognome} onChange={(e) => set("cognome", e.target.value.toUpperCase())} />
-              </div>
-              <div>
-                <Label htmlFor="nom">Nome<Mirino campo="nome" /></Label>
-                <Input id="nom" value={form.nome} onChange={(e) => set("nome", e.target.value.toUpperCase())} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="cf">Codice Fiscale<Mirino campo="codice_fiscale" /></Label>
-                <Input id="cf" value={form.codice_fiscale} onChange={(e) => set("codice_fiscale", pulisciCF(e.target.value))} />
-              </div>
-              <div>
-                <Label htmlFor="ateco">Codice ATECO<Mirino campo="codice_ateco" /></Label>
-                <Input id="ateco" value={form.codice_ateco} onChange={(e) => set("codice_ateco", e.target.value)} />
-              </div>
-            </div>
-
-            {/* Campo Email lavoratore e Reparto nel modulo */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="email">Email lavoratore<Mirino campo="email" /></Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="es. nome@azienda.it"
-                  value={form.email}
-                  onChange={(e) => set("email", e.target.value.toLowerCase().trim())}
-                />
-              </div>
-              <div>
-                <Label htmlFor="rep">Reparto</Label>
-                <Input
-                  id="rep"
-                  placeholder="es. Produzione, Uffici..."
-                  value={form.reparto}
-                  onChange={(e) => set("reparto", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Corso identificato</Label>
-              <Select
-                value={form.tipo_corso_id ?? ""}
-                onValueChange={(val) => {
-                  const t = tipi.find((x) => x.id === val);
-                  set("tipo_corso_id", val);
-                  if (t) set("tipo_corso_nome", t.nome_corso);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona corso..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {tipi.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nome_corso}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="dt">Data emanazione<Mirino campo="data_corso" /></Label>
-                <Input id="dt" type="date" value={form.data_corso} onChange={(e) => set("data_corso", e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="ore">Ore corso<Mirino campo="ore" /></Label>
-                <Input id="ore" type="number" value={form.ore ?? ""} onChange={(e) => set("ore", Number(e.target.value) || null)} />
-              </div>
-              <div>
-                <Label htmlFor="esito">Esito</Label>
-                <Select value={form.esito} onValueChange={(val: any) => set("esito", val)}>
-                  <SelectTrigger id="esito">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Valido">Valido</SelectItem>
-                    <SelectItem value="Valido con integrazione DVR">Valido con integrazione DVR</SelectItem>
-                    <SelectItem value="Non valido">Non valido</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="note">Note valutazione<Mirino campo="note" /></Label>
-              <Textarea id="note" rows={3} value={form.note} onChange={(e) => set("note", e.target.value)} />
-            </div>
-
-            <div className="rounded-md border p-3 bg-muted/30 text-xs font-mono break-all">
-              <span className="font-semibold text-muted-foreground block mb-1">Nome file archiviazione:</span>
-              {nomeFileStandard(form)}
-            </div>
-
-            {totPagine > 1 && (
-              <div>
-                <Label htmlFor="pag">Pagine da salvare per questo corso (es. 1-2 oppure 3)</Label>
-                <Input id="pag" placeholder={`Tutte (1-${totPagine})`} value={pagine} onChange={(e) => setPagine(e.target.value)} />
-              </div>
-            )}
-
-            <div className="flex flex-wrap justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={nuovo}><X className="size-4" /> Svuota</Button>
-              <Button variant="outline" disabled={salvando || archiviando} onClick={() => salvaInCoda(true)}>
-                <Archive className="size-4" /> Archivia subito nel DB
-              </Button>
-              <Button disabled={salvando || archiviando} onClick={() => salvaInCoda(false)}>
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                {idInModifica ? "Salva modifiche" : "Aggiungi alla coda"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <PannelloDocumento
+          file={file}
+          anteprima={anteprima}
+          anteprimaMime={anteprimaMime}
+          totPagine={totPagine}
+          lettura={lettura}
+          nomeAi={aiAttiva.name}
+          campoOcr={campoOcr}
+          onTesto={incollaOcr}
+        />
+        <ModuloDati
+          form={form}
+          set={set}
+          tipi={tipi}
+          campoOcr={campoOcr}
+          setCampoOcr={setCampoOcr}
+          haAnteprima={!!anteprima}
+          totPagine={totPagine}
+          pagine={pagine}
+          setPagine={setPagine}
+          idInModifica={idInModifica}
+          salvando={salvando}
+          archiviando={archiviando}
+          onSvuota={nuovo}
+          onSalva={salvaInCoda}
+        />
       </div>
 
-      {/* Coda di lavoro */}
-      <Card>
-        <CardHeader className="py-3 px-4 border-b flex flex-row flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium">Coda di lavoro ({righeCoda.length})</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!selezione.length || archiviando || daArchiviare.length === 0}
-              onClick={() => archivia(selezione)}
-            >
-              {archiviando ? <Loader2 className="size-4 animate-spin" /> : <Archive className="size-4" />}
-              Aggiungi selezionati al DB{daArchiviare.length > 0 ? ` (${daArchiviare.length})` : ""}
-            </Button>
-            <Button
-              size="sm"
-              disabled={!selezione.length || inviandoEmail}
-              onClick={() => preparaInvioEmail(selezione)}
-            >
-              {inviandoEmail ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-              Unica email ({selezione.length})
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="p-2">
-                  <Checkbox
-                    checked={righeCoda.length > 0 && selezione.length === righeCoda.length}
-                    onCheckedChange={(v) => setSelezionati(v ? new Set(righeCoda.map((r) => r.id)) : new Set())}
-                  />
-                </th>
-                <th className="p-2">Lavoratore</th>
-                <th className="p-2">Corso</th>
-                <th className="p-2">Data</th>
-                <th className="p-2">Esito</th>
-                <th className="p-2">Stato</th>
-                <th className="p-2 text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {righeCoda.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                    Nessuna valutazione in coda
-                  </td>
-                </tr>
-              )}
-              {righeCoda.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-2">
-                    <Checkbox checked={selezionati.has(r.id)} onCheckedChange={() => toggleSel(r.id)} />
-                  </td>
-                  <td className="p-2">
-                    <div className="font-medium">{r.cognome} {r.nome}</div>
-                    <div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div>
-                    {r.email && <div className="text-[11px] text-muted-foreground">{r.email}</div>}
-                  </td>
-                  <td className="p-2">
-                    {r.tipo_corso_nome || <span className="text-destructive">da scegliere</span>}
-                    <div className="text-xs text-muted-foreground">{r.ore ?? "?"} ore</div>
-                  </td>
-                  <td className="p-2">{formatData(r.data_corso)}</td>
-                  <td className="p-2">
-                    <Badge variant={r.esito === "Non valido" ? "destructive" : r.esito === "Valido" ? "default" : "secondary"}>
-                      {r.esito}
-                    </Badge>
-                  </td>
-                  <td className="p-2 text-xs">
-                    {r.archiviato ? <span className="text-primary font-medium">Archiviato nel DB ✓</span> : "Bozza"}
-                    {r.inviato && <div className="text-muted-foreground">Email inviata ✓</div>}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex justify-end gap-1">
-                      <Icona
-                        t="Copia dati anagrafici nel modulo per nuovo documento"
-                        onClick={() => copiaSoloAnagrafica(r)}
-                      >
-                        <UserCheck />
-                      </Icona>
-                      <Icona t="Modifica" onClick={() => modifica(r)}>
-                        <Edit3 />
-                      </Icona>
-                      <Icona
-                        t={r.archiviato ? "Già archiviato nel database" : "Aggiungi al database"}
-                        disabled={r.archiviato || archiviando}
-                        onClick={() => archivia([r])}
-                      >
-                        <Archive />
-                      </Icona>
-                      <Icona t="Duplica (altro corso nello stesso file)" onClick={() => duplica(r)}>
-                        <Copy />
-                      </Icona>
-                      <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}>
-                        <Download />
-                      </Icona>
-                      <Icona
-                        t="Invia email con Resend (apre anteprima)"
-                        disabled={inviandoEmail}
-                        onClick={() => preparaInvioEmail([r])}
-                      >
-                        <Mail />
-                      </Icona>
-                      <Icona t="Elimina dalla coda" danger onClick={() => cancella(r)}>
-                        <Trash2 />
-                      </Icona>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <CodaLavoro
+        righeCoda={righeCoda}
+        selezionati={selezionati}
+        selezione={selezione}
+        daArchiviare={daArchiviare}
+        archiviando={archiviando}
+        inviandoEmail={inviandoEmail}
+        onSelezionaTutti={(v) => setSelezionati(v ? new Set(righeCoda.map((r) => r.id)) : new Set())}
+        onToggle={toggleSel}
+        onArchivia={archivia}
+        onEmail={preparaInvioEmail}
+        onCopiaAnagrafica={copiaSoloAnagrafica}
+        onModifica={modifica}
+        onDuplica={duplica}
+        onSalvaLocale={salvaLocale}
+        onCancella={cancella}
+      />
 
-      {/* Finestra Modale di Anteprima e Modifica Email prima dell'invio */}
-      <Dialog
-        open={modaleEmail.aperta}
-        onOpenChange={(open) => !inviandoEmail && setModaleEmail((m) => ({ ...m, aperta: open }))}
-      >
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="size-5 text-primary" />
-              Verifica e invia email esito attestati
-            </DialogTitle>
-            <DialogDescription>
-              Controlla o inserisci l'indirizzo email del destinatario e il testo del messaggio prima di procedere.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {!modaleEmail.destinatari.trim() && (
-              <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                <span>
-                  <b>Email mancante:</b> inserisci qui sotto l'indirizzo email a cui inviare l'esito. Verrà salvato automaticamente per questo lavoratore.
-                </span>
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="destinatariEmail" className="font-semibold">
-                Destinatari (separati da virgola se più di uno) *
-              </Label>
-              <Input
-                id="destinatariEmail"
-                placeholder="es. domenico.perziano@email.it, hr@azienda.com"
-                value={modaleEmail.destinatari}
-                onChange={(e) => setModaleEmail((m) => ({ ...m, destinatari: e.target.value }))}
-                className="mt-1"
-                autoFocus={!modaleEmail.destinatari.trim()}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="oggettoEmail" className="font-semibold">
-                Oggetto email
-              </Label>
-              <Input
-                id="oggettoEmail"
-                value={modaleEmail.oggetto}
-                onChange={(e) => setModaleEmail((m) => ({ ...m, oggetto: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="corpoEmail" className="font-semibold">
-                Testo del messaggio
-              </Label>
-              <Textarea
-                id="corpoEmail"
-                rows={7}
-                value={modaleEmail.testoCorpo}
-                onChange={(e) => setModaleEmail((m) => ({ ...m, testoCorpo: e.target.value }))}
-                className="mt-1 font-sans text-xs leading-relaxed"
-              />
-            </div>
-
-            <div className="rounded-md border p-2.5 bg-muted/30 text-[11px] text-muted-foreground">
-              <b>Mittente / Firma:</b> Inviato tramite Resend con i dati configurati in <i>Dati ditta / studio</i>.
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={inviandoEmail}
-              onClick={() => setModaleEmail((m) => ({ ...m, aperta: false }))}
-            >
-              Annulla
-            </Button>
-            <Button
-              type="button"
-              disabled={inviandoEmail || !modaleEmail.destinatari.trim()}
-              onClick={confermaEInviaEmail}
-              className="gap-2"
-            >
-              {inviandoEmail ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              Invia adesso con Resend
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ModaleEmail
+        stato={modaleEmail}
+        setStato={setModaleEmail}
+        inviando={inviandoEmail}
+        onConferma={confermaEInviaEmail}
+      />
     </div>
-  );
-}
-
-function Icona({
-  t,
-  onClick,
-  children,
-  danger,
-  disabled,
-}: {
-  t: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <Button
-      size="icon"
-      variant="ghost"
-      title={t}
-      aria-label={t}
-      disabled={disabled}
-      onClick={onClick}
-      className={`h-8 w-8 [&_svg]:h-4 [&_svg]:w-4 ${danger ? "text-destructive" : ""}`}
-    >
-      {children}
-    </Button>
   );
 }
