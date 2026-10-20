@@ -1175,9 +1175,9 @@ export async function eliminaRuolo(id: string) {
 }
 
 export async function getAssegnazioniRuoli(): Promise<AssegnazioneRuolo[]> {
-  const { data, error } = await sb.from("dipendenti_ruoli").select("id, dipendente_id, ruolo_id").limit(10000);
-  if (error) throw error;
-  return (data ?? []) as AssegnazioneRuolo[];
+  return leggiTutto<AssegnazioneRuolo>(() =>
+    sb.from("dipendenti_ruoli").select("id, dipendente_id, ruolo_id").order("id"),
+  );
 }
 
 /** Assegna (true) o toglie (false) un ruolo a un dipendente. */
