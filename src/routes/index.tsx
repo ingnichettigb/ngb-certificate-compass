@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import {
   ArrowRight,
   Bot,
+  CalendarClock,
   Check,
   Clock,
   Copy,
@@ -59,7 +60,12 @@ function Home() {
   const { data: stats } = useQuery({
     queryKey: ["stats"],
     queryFn: async () => {
-      const [dip, attesa, scaduti, tot] = await Promise.all([
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const in6m = new Date();
+      in6m.setMonth(in6m.getMonth() + 6);
+      const in6mStr = in6m.toISOString().slice(0, 10);
+
+      const [dip, attesa, scaduti, inScadenza6m, tot] = await Promise.all([
         supabase.from("dipendenti").select("id", { count: "exact", head: true }),
         supabase
           .from("attestati_caricati")
@@ -68,7 +74,12 @@ function Home() {
         supabase
           .from("attestati_caricati")
           .select("id", { count: "exact", head: true })
-          .lt("data_scadenza_calcolata", new Date().toISOString().slice(0, 10)),
+          .lt("data_scadenza_calcolata", todayStr),
+        supabase
+          .from("attestati_caricati")
+          .select("id", { count: "exact", head: true })
+          .gte("data_scadenza_calcolata", todayStr)
+          .lte("data_scadenza_calcolata", in6mStr),
         supabase
           .from("attestati_caricati")
           .select("id", { count: "exact", head: true }),
@@ -78,6 +89,7 @@ function Home() {
         dipendenti: dip.count ?? 0,
         attesa: attesa.count ?? 0,
         scaduti: scaduti.count ?? 0,
+        inScadenza6m: inScadenza6m.count ?? 0,
         attestati: tot.count ?? 0,
       };
     },
@@ -131,7 +143,7 @@ function Home() {
       </header>
 
       <section className="mx-auto max-w-6xl px-5 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             label="Dipendenti"
             value={stats?.dipendenti}
@@ -150,6 +162,13 @@ function Home() {
             icon={Clock}
             tone="warning"
             to="/hr"
+          />
+          <StatCard
+            label="In scadenza (6 mesi)"
+            value={stats?.inScadenza6m}
+            icon={CalendarClock}
+            tone="warning"
+            to="/scadenze"
           />
           <StatCard
             label="Scaduti"
@@ -219,50 +238,59 @@ function Home() {
             <h2 className="mt-4 text-xl font-semibold">Dashboard HR</h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Gestisci attestati, dipendenti, verifiche e scadenze dalla postazione
-              amministrativa.
+              Elenco degli attestati caricati: visualizza l&apos;immagine,
+              correggi i dati letti dal documento e valida o respingi l&apos;attestato.
             </p>
 
-            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-              <li>• Verifica, approva o respingi gli attestati</li>
-              <li>• Modifica dati, corsi e ore dichiarate</li>
-              <li>• Consulta lo storico dei dipendenti</li>
-              <li>• Controlla attestati scaduti e in scadenza</li>
-            </ul>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button asChild>
+                <Link to="/hr">
+                  Apri dashboard
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
 
-            <Button asChild className="mt-6">
-              <Link to="/hr">
-                Apri la dashboard
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+              <Button asChild variant="outline">
+                <Link to="/dipendenti">Elenco dipendenti</Link>
+              </Button>
+
+              <Button asChild variant="outline">
+                <Link to="/scadenze">Scaduti</Link>
+              </Button>
+            </div>
           </article>
 
           <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
             <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
-              <Sparkles className="size-5" />
+              <Bot className="size-5" />
             </span>
 
             <h2 className="mt-4 text-xl font-semibold">Postazione operatore</h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Carica i documenti, usa la lettura automatica AI, verifica i dati e
-              archivia gli attestati nell&apos;archivio aziendale.
+              Carica foto e PDF da cartella o scanner, esegui la lettura automatica
+              con intelligenza artificiale, archivia i documenti e compila i registri.
             </p>
 
-            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-              <li>• Caricamento di PDF e immagini degli attestati</li>
-              <li>• Lettura automatica e compilazione guidata</li>
-              <li>• Correzione manuale e cattura OCR dei campi</li>
-              <li>• Coda di lavoro, archiviazione ed email di esito</li>
-            </ul>
+            <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <Sparkles className="size-3.5 text-primary" />
+                Lettura automatica con AI
+              </div>
+              <p className="mt-1">
+                Estrae nominativo, codice fiscale, data del corso ed ente
+                formatore direttamente dal file.
+              </p>
+            </div>
 
-            <Button asChild className="mt-6">
-              <Link to="/operatore">
-                Apri la postazione
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button asChild>
+                <Link to="/operatore">
+                  Apri postazione
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
           </article>
         </div>
       </section>
@@ -274,26 +302,26 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  tone,
+  tone = "default",
   to,
 }: {
   label: string;
   value?: number;
-  icon: typeof ShieldCheck;
-  tone?: "warning" | "destructive";
-  to: "/dipendenti" | "/scadenze" | "/hr";
+  icon: React.ComponentType<{ className?: string }>;
+  tone?: "default" | "warning" | "destructive";
+  to: string;
 }) {
   const toneClass =
-    tone === "warning"
-      ? "text-warning-foreground"
-      : tone === "destructive"
-        ? "text-destructive"
+    tone === "destructive"
+      ? "text-destructive"
+      : tone === "warning"
+        ? "text-warning"
         : "text-primary";
 
   return (
     <Link
       to={to}
-      className="block rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-card)] transition-colors hover:border-primary/40 hover:bg-muted/40"
+      className="rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-card)] transition-colors hover:border-primary/50"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
