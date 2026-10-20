@@ -1,8 +1,14 @@
+/*
+ * File:      BackupBar.tsx
+ * Percorso:  src/components/BackupBar.tsx
+ * Barra superiore con backup DB e configurazione dati ditta.
+ */
 import { useRef, useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { esportaDb, importaDb } from "@/lib/api";
+import { DatiAziendaDialog } from "@/components/DatiAziendaDialog";
 
 export function BackupBar({ onImported }: { onImported?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +47,8 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <DatiAziendaDialog />
+
       <Button variant="outline" size="sm" onClick={handleExport} disabled={!!busy}>
         {busy === "export" ? (
           <Loader2 className="size-4 animate-spin" />
@@ -49,6 +57,7 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
         )}
         Salva DB su cartella
       </Button>
+
       <Button
         variant="outline"
         size="sm"
@@ -62,6 +71,7 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
         )}
         Carica DB da file
       </Button>
+
       <input
         ref={inputRef}
         type="file"
