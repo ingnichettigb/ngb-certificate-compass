@@ -1,7 +1,7 @@
 /*
  * File:      operatore.tsx
  * Percorso:  src/routes/operatore.tsx
- * Postazione Operatore completa con estrazione AI, split-screen e coda bozze.
+ * Postazione Operatore completa con estrazione AI, split-screen, coda bozze e invio email rapido via Resend.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -26,6 +26,8 @@ import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
 import { contaPagine, estraiPagine, parsePagine, piuSimile, somiglianza, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
 import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, formatData, creaIntegrazioneDvr } from "@/lib/api";
 import { CatturaOcr } from "@/components/CatturaOcr";
+import { leggiDatiAzienda } from "@/lib/dati-azienda";
+import { inviaEmailConResend } from "@/lib/email-resend.functions";
 
 type CodaRiga = Omit<Riga, "esito"> & {
   esito: string; percorso_file: string | null; mime_file: string | null; nome_file: string | null;
@@ -255,6 +257,7 @@ function PostazioneOperatore() {
   const db = sb as any;
   const [salvando, setSalvando] = useState(false);
   const [archiviando, setArchiviando] = useState(false);
+  const [inviandoEmail, setInviandoEmail] = useState(false);
   const righeCoda = coda as CodaRiga[];
   const ricarica = () => qc.invalidateQueries({ queryKey: ["coda"] });
   const selezione = useMemo(() => righeCoda.filter((r) => selezionati.has(r.id)), [righeCoda, selezionati]);
@@ -405,14 +408,43 @@ function PostazioneOperatore() {
 
   async function inviaEmail(righe: CodaRiga[]) {
     if (!righe.length) return;
-    const destinatari = [...new Set(righe.map((r) => r.email).filter(Boolean))];
+    const destinatari = [...new Set(righe.map((r) => r.email?.trim()).filter(Boolean) as string[])];
+    if (!destinatari.length) {
+      return void toast.error("Nessun indirizzo email salvato per i lavoratori selezionati");
+    }
+
     const persone = [...new Set(righe.map((r) => `${r.cognome} ${r.nome}`))];
-    const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza (D.Lgs. 81/2008):\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}\n\nCordiali saluti\nUfficio Sicurezza\nNichetti Gian Battista — Soresina (CR)`;
-    const oggetto = `Esito verifica attestati — ${persone.join(", ")}`;
-    window.location.href = `mailto:${destinatari.join(",")}?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(corpo)}`;
-    if (!destinatari.length) toast.info("Nessuna email salvata: aggiungi il destinatario nella posta");
-    await db.from("coda_valutazioni").update({ inviato: true }).in("id", righe.map((r) => r.id));
-    ricarica();
+    const oggetto = `Esito verifica attestati D.Lgs. 81/2008 — ${persone.join(", ")}`;
+    const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza:\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}`;
+
+    const datiAzienda = leggiDatiAzienda();
+
+    setInviandoEmail(true);
+    const toastId = toast.loading(`Invio email a ${destinatari.join(", ")}...`);
+
+    try {
+      const res = await inviaEmailConResend({
+        data: {
+          destinatari,
+          oggetto,
+          testoCorpo: corpo,
+          datiAzienda,
+        },
+      });
+
+      if (!res.ok) {
+        toast.error(res.messaggio || "Errore durante l'invio dell'email", { id: toastId });
+        return;
+      }
+
+      toast.success("Email inviata con successo tramite Resend!", { id: toastId });
+      await db.from("coda_valutazioni").update({ inviato: true }).in("id", righe.map((r) => r.id));
+      ricarica();
+    } catch (e) {
+      toast.error(`Errore: ${(e as Error).message}`, { id: toastId });
+    } finally {
+      setInviandoEmail(false);
+    }
   }
 
   async function salvaLocale(r: CodaRiga) {
@@ -634,7 +666,14 @@ function PostazioneOperatore() {
               {archiviando ? <Loader2 className="size-4 animate-spin" /> : <Archive className="size-4" />}
               Aggiungi selezionati al DB{daArchiviare.length > 0 ? ` (${daArchiviare.length})` : ""}
             </Button>
-            <Button size="sm" disabled={!selezione.length} onClick={() => inviaEmail(selezione)}><Mail className="size-4" /> Unica email ({selezione.length})</Button>
+            <Button
+              size="sm"
+              disabled={!selezione.length || inviandoEmail}
+              onClick={() => inviaEmail(selezione)}
+            >
+              {inviandoEmail ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+              Unica email ({selezione.length})
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -654,14 +693,14 @@ function PostazioneOperatore() {
                   <td className="p-2">{r.tipo_corso_nome || <span className="text-destructive">da scegliere</span>}<div className="text-xs text-muted-foreground">{r.ore ?? "?"} ore</div></td>
                   <td className="p-2">{formatData(r.data_corso)}</td>
                   <td className="p-2"><Badge variant={r.esito === "Non valido" ? "destructive" : r.esito === "Valido" ? "default" : "secondary"}>{r.esito}</Badge></td>
-                  <td className="p-2 text-xs">{r.archiviato ? <span className="text-primary">Archiviato nel DB ✓</span> : "Bozza"}{r.inviato && <div className="text-muted-foreground">Email preparata</div>}</td>
+                  <td className="p-2 text-xs">{r.archiviato ? <span className="text-primary">Archiviato nel DB ✓</span> : "Bozza"}{r.inviato && <div className="text-muted-foreground">Email inviata ✓</div>}</td>
                   <td className="p-2">
                     <div className="flex justify-end gap-1">
                       <Icona t="Modifica" onClick={() => modifica(r)}><Edit3 /></Icona>
                       <Icona t={r.archiviato ? "Già archiviato nel database" : "Aggiungi al database"} disabled={r.archiviato || archiviando} onClick={() => archivia([r])}><Archive /></Icona>
                       <Icona t="Duplica (altro corso nello stesso file)" onClick={() => duplica(r)}><Copy /></Icona>
                       <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}><Download /></Icona>
-                      <Icona t="Invia email" onClick={() => inviaEmail([r])}><Mail /></Icona>
+                      <Icona t="Invia email con Resend" disabled={inviandoEmail} onClick={() => inviaEmail([r])}><Mail /></Icona>
                       <Icona t="Elimina dalla coda" danger onClick={() => cancella(r)}><Trash2 /></Icona>
                     </div>
                   </td>
