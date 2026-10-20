@@ -37,65 +37,11 @@ import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, for
 import { CatturaOcr } from "@/components/CatturaOcr";
 import { leggiDatiAzienda } from "@/lib/dati-azienda";
 import { inviaEmailConResend } from "@/lib/email-resend.functions";
-
-type CodaRiga = Omit<Riga, "esito"> & {
-  esito: string;
-  percorso_file: string | null;
-  mime_file: string | null;
-  nome_file: string | null;
-  archiviato: boolean;
-  inviato: boolean;
-  argomenti_mancanti: string[];
-};
-
-type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "email" | "codice_ateco" | "data_corso" | "ore" | "note";
-
-const ETICHETTE_OCR: Record<CampoOcr, string> = {
-  cognome: "Cognome",
-  nome: "Nome",
-  codice_fiscale: "Codice Fiscale",
-  email: "Email lavoratore",
-  codice_ateco: "Codice ATECO",
-  data_corso: "Data emanazione",
-  ore: "Ore corso",
-  note: "Note",
-};
-
-/**
- * Funzione di "Maquillage" e pulizia dell'OCR:
- * Toglie spazi e caratteri spuri ai bordi (es. barre |, tilde, apici, trattini).
- */
-function pulisciTestoOcr(testoGrezzo: string, campo?: CampoOcr): string {
-  if (!testoGrezzo) return "";
-  let pulito = testoGrezzo.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
-  // Rimuove caratteri di bordo tipici dei margini tabella o scansioni
-  pulito = pulito.replace(/^[|_\-~*`'"°:;.\/\\—]+/g, "").replace(/[|_\-~*`'"°:;.\/\\—]+$/g, "").trim();
-
-  if (campo === "codice_fiscale") {
-    return pulito.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  }
-  if (campo === "cognome" || campo === "nome") {
-    return pulito.toUpperCase().replace(/[^A-ZÀ-ÿ\s']/g, "").replace(/\s+/g, " ").trim();
-  }
-  if (campo === "email") {
-    return pulito.toLowerCase().replace(/\s+/g, "");
-  }
-  if (campo === "ore") {
-    return pulito.replace(/[^0-9.,]/g, "");
-  }
-  if (campo === "data_corso") {
-    return pulito.replace(/[^0-9/.\-]/g, "");
-  }
-  return pulito;
-}
-
-function dataDaTesto(t: string): string {
-  const m = t.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
-  if (!m) return "";
-  let y = m[3]!;
-  if (y.length === 2) y = "20" + y;
-  return `${y}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
-}
+import { ETICHETTE_OCR, dataDaTesto, pulisciTestoOcr } from "@/features/operatore/ocr-testo";
+import { estensioneFile, nomeFileStandard } from "@/features/operatore/nome-file";
+import { costruisciBozzaEmail, riepilogo } from "@/features/operatore/bozza-email";
+import { NOTA_PREDEFINITA, VUOTA } from "@/features/operatore/types";
+import type { CampoOcr, CodaRiga, Riga, TipoCorso } from "@/features/operatore/types";
 
 export const Route = createFileRoute("/operatore")({
   head: () => ({
@@ -110,47 +56,6 @@ export const Route = createFileRoute("/operatore")({
   }),
   component: PostazioneOperatore,
 });
-
-interface TipoCorso {
-  id: string;
-  nome_corso: string;
-  macro_categoria: string;
-  livello_specifico: string;
-  ore_minime_legge: number;
-  durata_validita_anni: number | null;
-}
-
-interface Riga {
-  id: string;
-  cognome: string;
-  nome: string;
-  codice_fiscale: string;
-  data_nascita: string;
-  luogo_nascita: string;
-  codice_ateco: string;
-  email: string;
-  reparto: string;
-  tipo_corso_id: string | null;
-  tipo_corso_nome: string;
-  data_corso: string;
-  ore: number | null;
-  ente: string;
-  argomenti: string[];
-  esito: "Valido" | "Valido con integrazione DVR" | "Non valido";
-  note: string;
-  integrazione: string;
-  pagine_salvate?: string;
-  file_blob?: Blob;
-  nome_file_originale?: string;
-}
-
-const VUOTA: Omit<Riga, "id"> = {
-  cognome: "", nome: "", codice_fiscale: "", data_nascita: "", luogo_nascita: "", codice_ateco: "",
-  email: "", reparto: "", tipo_corso_id: null, tipo_corso_nome: "", data_corso: "", ore: null,
-  ente: "", argomenti: [], esito: "Valido", note: "", integrazione: "",
-};
-
-const NOTA_PREDEFINITA = "Attestato conforme ai requisiti previsti dall'Accordo Stato-Regioni.";
 
 function PostazioneOperatore() {
   const qc = useQueryClient();
@@ -348,9 +253,6 @@ function PostazioneOperatore() {
       else n.add(id);
       return n;
     });
-  const est = (mime: string | null | undefined) =>
-    mime === "application/pdf" ? "pdf" : mime?.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
-
   function nuovo() {
     setForm(VUOTA);
     setFile(null);
@@ -401,7 +303,7 @@ function PostazioneOperatore() {
           const idx = parsePagine(pagine, totPagine).map((n) => n - 1);
           if (idx.length) blob = await estraiPagine(file, idx);
         }
-        percorso = `Coda/${crypto.randomUUID()}.${est(mime)}`;
+        percorso = `Coda/${crypto.randomUUID()}.${estensioneFile(mime)}`;
         const { error } = await sb.storage.from("attestati").upload(percorso, blob, { contentType: mime });
         if (error) throw error;
       }
@@ -412,7 +314,7 @@ function PostazioneOperatore() {
         data_corso: dati.data_corso || null,
         percorso_file: percorso,
         mime_file: mime,
-        nome_file: nomeFileStandard(form).replace(/\.pdf$/, `.${est(mime)}`),
+        nome_file: nomeFileStandard(form).replace(/\.pdf$/, `.${estensioneFile(mime)}`),
       };
       const res = idInModifica
         ? await db.from("coda_valutazioni").update(payload).eq("id", idInModifica).select().single()
@@ -458,13 +360,6 @@ function PostazioneOperatore() {
     ricarica();
   }
 
-  function riepilogo(r: CodaRiga) {
-    let s = `${r.cognome} ${r.nome} (${r.codice_fiscale})\nCorso: ${r.tipo_corso_nome} — ${formatData(r.data_corso)} — ${r.ore ?? "?"} ore\nEsito: ${r.esito}`;
-    if (r.esito === "Valido con integrazione DVR" && r.integrazione) s += `\nIntegrazione richiesta: ${r.integrazione}`;
-    if (r.note) s += `\nNote: ${r.note}`;
-    return s;
-  }
-
   async function archivia(righe: CodaRiga[]) {
     if (!righe.length) return;
     const daSalvare = righe.filter((r) => !r.archiviato);
@@ -495,7 +390,7 @@ function PostazioneOperatore() {
           });
           let percorsoFinale = r.percorso_file;
           if (r.percorso_file) {
-            percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`)}`;
+            percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${estensioneFile(r.mime_file)}`)}`;
             const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
             if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
             else percorsoFinale = r.percorso_file;
@@ -544,18 +439,8 @@ function PostazioneOperatore() {
   // Apre la finestra di anteprima e compilazione email prima dell'invio effettivo
   function preparaInvioEmail(righe: CodaRiga[]) {
     if (!righe.length) return;
-    const destinatariTrovati = [...new Set(righe.map((r) => r.email?.trim()).filter(Boolean) as string[])].join(", ");
-    const persone = [...new Set(righe.map((r) => `${r.cognome} ${r.nome}`))];
-    const oggetto = `Esito verifica attestati D.Lgs. 81/2008 — ${persone.join(", ")}`;
-    const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza:\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}`;
-
-    setModaleEmail({
-      aperta: true,
-      righe,
-      destinatari: destinatariTrovati,
-      oggetto,
-      testoCorpo: corpo,
-    });
+    const { destinatari, oggetto, testoCorpo } = costruisciBozzaEmail(righe);
+    setModaleEmail({ aperta: true, righe, destinatari, oggetto, testoCorpo });
   }
 
   // Invio effettivo tramite Resend dalla finestra di anteprima
@@ -615,7 +500,7 @@ function PostazioneOperatore() {
     if (!r.percorso_file) return void toast.error("Nessun file allegato");
     const { data: blob, error } = await sb.storage.from("attestati").download(r.percorso_file);
     if (error || !blob) return void toast.error("Download non riuscito");
-    const nome = nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`);
+    const nome = nomeFileStandard(r).replace(/\.pdf$/, `.${estensioneFile(r.mime_file)}`);
     const w = window as any;
     try {
       if (w.showSaveFilePicker) {
@@ -634,13 +519,6 @@ function PostazioneOperatore() {
     } catch (e) {
       if ((e as Error).name !== "AbortError") toast.error((e as Error).message);
     }
-  }
-
-  function nomeFileStandard(r: Pick<Riga, "data_corso" | "cognome" | "nome" | "codice_fiscale" | "tipo_corso_nome">) {
-    const dataPrefix = r.data_corso ? r.data_corso.slice(0, 7) : "ANNO-MANCANTE";
-    const cf = r.codice_fiscale || "SENZACF";
-    const corso = (r.tipo_corso_nome || "CORSO").replace(/[^a-zA-Z0-9]/g, "_");
-    return `${dataPrefix}_${r.cognome || "COGNOME"}_${r.nome || "NOME"}_${cf}_${corso}.pdf`;
   }
 
   return (
