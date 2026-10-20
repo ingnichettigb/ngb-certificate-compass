@@ -2,13 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import {
+  ArrowRight,
+  Bot,
+  Check,
+  Clock,
+  Copy,
+  FileCheck2,
+  Monitor,
   ShieldCheck,
   Smartphone,
-  Monitor,
-  Copy,
-  Check,
-  FileCheck2,
-  Clock,
+  Sparkles,
   AlertTriangle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,14 +29,17 @@ export const Route = createFileRoute("/")({
         content:
           "Archivio digitale degli attestati di formazione sulla sicurezza: caricamento da cellulare, validazione HR e scadenze calcolate in automatico.",
       },
-      { property: "og:title", content: "Archivio Attestati Sicurezza — Nichetti Gian Battista" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      {
+        property: "og:title",
+        content: "Archivio Attestati Sicurezza — Nichetti Gian Battista",
+      },
       {
         property: "og:description",
         content:
           "Carica gli attestati dal telefono, valida dalla dashboard HR e tieni sotto controllo tutte le scadenze.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Home,
@@ -67,6 +73,7 @@ function Home() {
           .from("attestati_caricati")
           .select("id", { count: "exact", head: true }),
       ]);
+
       return {
         dipendenti: dip.count ?? 0,
         attesa: attesa.count ?? 0,
@@ -79,15 +86,47 @@ function Home() {
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5">
-          <div className="flex items-center gap-3">
-            <img src={logoAsset.url} alt="Nichetti Gian Battista" className="h-12 w-auto rounded-md bg-card" />
-            <div>
-              <h1 className="text-lg font-semibold">Archivio Attestati Sicurezza</h1>
-              <p className="text-xs text-muted-foreground">Nichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008</p>
+        <div className="mx-auto max-w-6xl px-5 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={logoAsset.url}
+                alt="Nichetti Gian Battista"
+                className="h-12 w-auto rounded-md bg-card"
+              />
+              <div>
+                <h1 className="text-lg font-semibold">Archivio Attestati Sicurezza</h1>
+                <p className="text-xs text-muted-foreground">
+                  Nichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008
+                </p>
+              </div>
             </div>
+
+            <BackupBar />
           </div>
-          <BackupBar />
+
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+            <Button asChild variant="outline">
+              <Link to="/hr">
+                <Monitor className="size-4" />
+                Dashboard HR
+              </Link>
+            </Button>
+
+            <Button asChild variant="outline">
+              <Link to="/carica">
+                <Smartphone className="size-4" />
+                Modulo lavoratore
+              </Link>
+            </Button>
+
+            <Button asChild>
+              <Link to="/operatore">
+                <Bot className="size-4" />
+                Postazione operatore
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -121,48 +160,41 @@ function Home() {
           />
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to="/dipendenti">Gestione dipendenti</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/scadenze">Attestati scaduti</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/hr">Dashboard HR</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/operatore">Postazione Operatore (lettura automatica)</Link>
-          </Button>
-        </div>
-
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
+        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
             <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
               <Smartphone className="size-5" />
             </span>
+
             <h2 className="mt-4 text-xl font-semibold">Modulo lavoratore</h2>
+
             <p className="mt-2 text-sm text-muted-foreground">
-              Il lavoratore compila cognome, nome, codice fiscale, data e luogo di
-              nascita, sceglie il corso e allega la foto dell'attestato dal telefono.
+              Il lavoratore compila i propri dati, sceglie il corso e allega la
+              foto dell&apos;attestato direttamente dal telefono.
             </p>
-            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+
+            <div className="mt-5 flex flex-col gap-4">
               {qr && (
                 <img
                   src={qr}
                   alt="QR code per il modulo lavoratore"
-                  className="size-32 rounded-lg border border-border bg-white p-1"
+                  className="size-32 rounded-lg border border-border bg-card p-1"
                 />
               )}
-              <div className="flex-1 space-y-3">
+
+              <div className="space-y-3">
                 <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs break-all text-muted-foreground">
                   {link}
                 </div>
+
                 <div className="flex flex-wrap gap-2">
                   <Button asChild>
-                    <Link to="/carica">Apri il modulo</Link>
+                    <Link to="/carica">
+                      Apri il modulo
+                      <ArrowRight className="size-4" />
+                    </Link>
                   </Button>
+
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -177,27 +209,61 @@ function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </article>
 
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
+          <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
             <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
               <Monitor className="size-5" />
             </span>
+
             <h2 className="mt-4 text-xl font-semibold">Dashboard HR</h2>
+
             <p className="mt-2 text-sm text-muted-foreground">
-              Elenco filtrabile per stato, vista affiancata con dati modificabili e
-              visualizzatore immagini con zoom. Approvazione o respingimento con note
-              obbligatorie e notifica email simulata.
+              Gestisci attestati, dipendenti, verifiche e scadenze dalla postazione
+              amministrativa.
             </p>
+
             <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-              <li>• Modifica tipo corso, data e ore dichiarate</li>
-              <li>• Scadenza ricalcolata automaticamente</li>
-              <li>• Storico completo per dipendente</li>
+              <li>• Verifica, approva o respingi gli attestati</li>
+              <li>• Modifica dati, corsi e ore dichiarate</li>
+              <li>• Consulta lo storico dei dipendenti</li>
+              <li>• Controlla attestati scaduti e in scadenza</li>
             </ul>
+
             <Button asChild className="mt-6">
-              <Link to="/hr">Apri la dashboard</Link>
+              <Link to="/hr">
+                Apri la dashboard
+                <ArrowRight className="size-4" />
+              </Link>
             </Button>
-          </div>
+          </article>
+
+          <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
+            <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
+              <Sparkles className="size-5" />
+            </span>
+
+            <h2 className="mt-4 text-xl font-semibold">Postazione operatore</h2>
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              Carica i documenti, usa la lettura automatica AI, verifica i dati e
+              archivia gli attestati nell&apos;archivio aziendale.
+            </p>
+
+            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+              <li>• Caricamento di PDF e immagini degli attestati</li>
+              <li>• Lettura automatica e compilazione guidata</li>
+              <li>• Correzione manuale e cattura OCR dei campi</li>
+              <li>• Coda di lavoro, archiviazione ed email di esito</li>
+            </ul>
+
+            <Button asChild className="mt-6">
+              <Link to="/operatore">
+                Apri la postazione
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </article>
         </div>
       </section>
     </main>
@@ -212,7 +278,7 @@ function StatCard({
   to,
 }: {
   label: string;
-  value?: number | undefined;
+  value?: number;
   icon: typeof ShieldCheck;
   tone?: "warning" | "destructive";
   to: "/dipendenti" | "/scadenze" | "/hr";
@@ -223,6 +289,7 @@ function StatCard({
       : tone === "destructive"
         ? "text-destructive"
         : "text-primary";
+
   return (
     <Link
       to={to}
@@ -232,6 +299,7 @@ function StatCard({
         <span className="text-sm text-muted-foreground">{label}</span>
         <Icon className={`size-4 ${toneClass}`} />
       </div>
+
       <p className="mt-3 font-display text-3xl font-semibold tabular-nums">
         {value ?? "—"}
       </p>
