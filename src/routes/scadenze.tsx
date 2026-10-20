@@ -22,6 +22,8 @@ export const Route = createFileRoute("/scadenze")({
         content:
           "Elenco dei certificati di formazione scaduti e in scadenza nei prossimi mesi, con nome del dipendente, corso e data di scadenza.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Attestati scaduti e in scadenza" },
       {
         property: "og:description",

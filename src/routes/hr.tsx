@@ -39,6 +39,8 @@ export const Route = createFileRoute("/hr")({
         content:
           "Dashboard desktop per l'ufficio personale: filtra gli attestati per stato, verifica le immagini, correggi i dati e approva o respingi.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Dashboard HR attestati" },
       {
         property: "og:description",
