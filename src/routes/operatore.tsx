@@ -25,12 +25,12 @@ import { getActiveProvider, useAiConfig } from "@/lib/ai-providers";
 import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
 import { contaPagine, estraiPagine, parsePagine, piuSimile, somiglianza, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
 import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, formatData, creaIntegrazioneDvr } from "@/lib/api";
+import { CatturaOcr } from "@/components/CatturaOcr";
 
 type CodaRiga = Omit<Riga, "esito"> & {
   esito: string; percorso_file: string | null; mime_file: string | null; nome_file: string | null;
   archiviato: boolean; inviato: boolean; argomenti_mancanti: string[];
 };
-import { CatturaOcr } from "@/components/CatturaOcr";
 
 type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "codice_ateco" | "data_corso" | "ore" | "note";
 const ETICHETTE_OCR: Record<CampoOcr, string> = { cognome: "Cognome", nome: "Nome", codice_fiscale: "Codice Fiscale", codice_ateco: "Codice ATECO", data_corso: "Data emanazione", ore: "Ore corso", note: "Note" };
@@ -254,9 +254,11 @@ function PostazioneOperatore() {
   // ================= Salvataggio, coda di lavoro, archiviazione =================
   const db = sb as any;
   const [salvando, setSalvando] = useState(false);
+  const [archiviando, setArchiviando] = useState(false);
   const righeCoda = coda as CodaRiga[];
   const ricarica = () => qc.invalidateQueries({ queryKey: ["coda"] });
   const selezione = useMemo(() => righeCoda.filter((r) => selezionati.has(r.id)), [righeCoda, selezionati]);
+  const daArchiviare = useMemo(() => selezione.filter((r) => !r.archiviato), [selezione]);
   const toggleSel = (id: string) => setSelezionati((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const est = (mime: string | null | undefined) => (mime === "application/pdf" ? "pdf" : mime?.split("/")[1]?.replace("jpeg", "jpg") || "jpg");
 
@@ -339,55 +341,66 @@ function PostazioneOperatore() {
   }
 
   async function archivia(righe: CodaRiga[]) {
-    let ok = 0;
-    for (const r of righe) {
-      if (r.archiviato) continue;
-      try {
-        if (!r.tipo_corso_id) throw new Error(`${r.cognome}: scegli il tipo di corso`);
-        if (!r.data_corso) throw new Error(`${r.cognome}: manca la data del corso`);
-        const dip = await upsertDipendente({
-          codice_fiscale: pulisciCF(r.codice_fiscale), cognome: r.cognome, nome: r.nome, email: r.email || null,
-          reparto: r.reparto || null, sottoreparto: null, classe_concorso: null, materia: null,
-          luogo_nascita: r.luogo_nascita || null, data_nascita: r.data_nascita || null,
-          ...(r.codice_ateco ? { codice_ateco: r.codice_ateco } : {}),
-        });
-        let percorsoFinale = r.percorso_file;
-        if (r.percorso_file) {
-          percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`)}`;
-          const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
-          if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
-          else percorsoFinale = r.percorso_file;
-        }
-        const { data: att, error } = await db.from("attestati_caricati").insert({
-          dipendente_id: dip.id, codice_fiscale: dip.codice_fiscale, tipo_corso_id: r.tipo_corso_id,
-          data_corso: r.data_corso, ore_dichiarate: r.ore, url_foto_fronte: percorsoFinale, url_foto_retro: null,
-          stato_validazione: r.esito === "Non valido" ? "Respinto" : "Approvato",
-          note_rifiuto: r.esito === "Valido" ? (r.note || null) : riepilogo(r),
-          data_validazione: new Date().toISOString(),
-        }).select("id").single();
-        if (error) throw error;
-        if (r.esito === "Valido con integrazione DVR") {
-          await creaIntegrazioneDvr({
-            dipendente_id: dip.id, attestato_origine_id: att?.id ?? null, tipo_corso_nome: r.tipo_corso_nome || null,
-            descrizione: r.integrazione || r.note || "Integrazione DVR richiesta",
-            ore: Number(r.integrazione?.match(/(\d+)\s*or/)?.[1]) || null,
-            argomenti_mancanti: r.argomenti_mancanti ?? [],
-          }).catch((e) => toast.error(`Integrazione DVR non registrata: ${(e as Error).message}`));
-        }
-        await db.from("coda_valutazioni").update({ archiviato: true, ...(percorsoFinale !== r.percorso_file ? { percorso_file: percorsoFinale } : {}) }).eq("id", r.id);
-        // Rimuove la copia temporanea in Coda/ se nessun'altra riga la usa ancora.
-        if (r.percorso_file && percorsoFinale !== r.percorso_file && r.percorso_file.startsWith("Coda/")) {
-          const { count } = await db.from("coda_valutazioni").select("id", { count: "exact", head: true }).eq("percorso_file", r.percorso_file);
-          if (!count) await sb.storage.from("attestati").remove([r.percorso_file]);
-        }
-        ok++;
-      } catch (e) {
-        toast.error((e as Error).message);
-      }
+    if (!righe.length) return;
+    const daSalvare = righe.filter((r) => !r.archiviato);
+    if (daSalvare.length === 0) {
+      toast.info("Tutti gli attestati selezionati risultano già archiviati nel database");
+      return;
     }
-    if (ok) toast.success(`${ok} attestat${ok === 1 ? "o archiviato" : "i archiviati"} nel database`);
-    ricarica();
-    qc.invalidateQueries();
+
+    setArchiviando(true);
+    let ok = 0;
+    try {
+      for (const r of daSalvare) {
+        try {
+          if (!r.tipo_corso_id) throw new Error(`${r.cognome}: scegli il tipo di corso`);
+          if (!r.data_corso) throw new Error(`${r.cognome}: manca la data del corso`);
+          const dip = await upsertDipendente({
+            codice_fiscale: pulisciCF(r.codice_fiscale), cognome: r.cognome, nome: r.nome, email: r.email || null,
+            reparto: r.reparto || null, sottoreparto: null, classe_concorso: null, materia: null,
+            luogo_nascita: r.luogo_nascita || null, data_nascita: r.data_nascita || null,
+            ...(r.codice_ateco ? { codice_ateco: r.codice_ateco } : {}),
+          });
+          let percorsoFinale = r.percorso_file;
+          if (r.percorso_file) {
+            percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`)}`;
+            const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
+            if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
+            else percorsoFinale = r.percorso_file;
+          }
+          const { data: att, error } = await db.from("attestati_caricati").insert({
+            dipendente_id: dip.id, codice_fiscale: dip.codice_fiscale, tipo_corso_id: r.tipo_corso_id,
+            data_corso: r.data_corso, ore_dichiarate: r.ore, url_foto_fronte: percorsoFinale, url_foto_retro: null,
+            stato_validazione: r.esito === "Non valido" ? "Respinto" : "Approvato",
+            note_rifiuto: r.esito === "Valido" ? (r.note || null) : riepilogo(r),
+            data_validazione: new Date().toISOString(),
+          }).select("id").single();
+          if (error) throw error;
+          if (r.esito === "Valido con integrazione DVR") {
+            await creaIntegrazioneDvr({
+              dipendente_id: dip.id, attestato_origine_id: att?.id ?? null, tipo_corso_nome: r.tipo_corso_nome || null,
+              descrizione: r.integrazione || r.note || "Integrazione DVR richiesta",
+              ore: Number(r.integrazione?.match(/(\d+)\s*or/)?.[1]) || null,
+              argomenti_mancanti: r.argomenti_mancanti ?? [],
+            }).catch((e) => toast.error(`Integrazione DVR non registrata: ${(e as Error).message}`));
+          }
+          await db.from("coda_valutazioni").update({ archiviato: true, ...(percorsoFinale !== r.percorso_file ? { percorso_file: percorsoFinale } : {}) }).eq("id", r.id);
+          // Rimuove la copia temporanea in Coda/ se nessun'altra riga la usa ancora.
+          if (r.percorso_file && percorsoFinale !== r.percorso_file && r.percorso_file.startsWith("Coda/")) {
+            const { count } = await db.from("coda_valutazioni").select("id", { count: "exact", head: true }).eq("percorso_file", r.percorso_file);
+            if (!count) await sb.storage.from("attestati").remove([r.percorso_file]);
+          }
+          ok++;
+        } catch (e) {
+          toast.error((e as Error).message);
+        }
+      }
+      if (ok) toast.success(`${ok} attestat${ok === 1 ? "o archiviato" : "i archiviati"} nel database`);
+      ricarica();
+      qc.invalidateQueries();
+    } finally {
+      setArchiviando(false);
+    }
   }
 
   async function inviaEmail(righe: CodaRiga[]) {
@@ -433,7 +446,7 @@ function PostazioneOperatore() {
     <div className="flex flex-col gap-4 p-4 lg:p-6">
       {/* Intestazione Superiore */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-               <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <Link
             to="/"
             className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -597,8 +610,8 @@ function PostazioneOperatore() {
 
             <div className="flex flex-wrap justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={nuovo}><X className="size-4" /> Svuota</Button>
-              <Button variant="outline" disabled={salvando} onClick={() => salvaInCoda(true)}><Archive className="size-4" /> Archivia subito nel DB</Button>
-              <Button disabled={salvando} onClick={() => salvaInCoda(false)}>
+              <Button variant="outline" disabled={salvando || archiviando} onClick={() => salvaInCoda(true)}><Archive className="size-4" /> Archivia subito nel DB</Button>
+              <Button disabled={salvando || archiviando} onClick={() => salvaInCoda(false)}>
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
                 {idInModifica ? "Salva modifiche" : "Aggiungi alla coda"}
               </Button>
@@ -612,7 +625,15 @@ function PostazioneOperatore() {
         <CardHeader className="py-3 px-4 border-b flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium">Coda di lavoro ({righeCoda.length})</CardTitle>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={!selezione.length} onClick={() => archivia(selezione)}><Archive className="size-4" /> Aggiungi selezionati al DB</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!selezione.length || archiviando || daArchiviare.length === 0}
+              onClick={() => archivia(selezione)}
+            >
+              {archiviando ? <Loader2 className="size-4 animate-spin" /> : <Archive className="size-4" />}
+              Aggiungi selezionati al DB{daArchiviare.length > 0 ? ` (${daArchiviare.length})` : ""}
+            </Button>
             <Button size="sm" disabled={!selezione.length} onClick={() => inviaEmail(selezione)}><Mail className="size-4" /> Unica email ({selezione.length})</Button>
           </div>
         </CardHeader>
@@ -637,7 +658,7 @@ function PostazioneOperatore() {
                   <td className="p-2">
                     <div className="flex justify-end gap-1">
                       <Icona t="Modifica" onClick={() => modifica(r)}><Edit3 /></Icona>
-                      <Icona t="Aggiungi al database" disabled={r.archiviato} onClick={() => archivia([r])}><Archive /></Icona>
+                      <Icona t={r.archiviato ? "Già archiviato nel database" : "Aggiungi al database"} disabled={r.archiviato || archiviando} onClick={() => archivia([r])}><Archive /></Icona>
                       <Icona t="Duplica (altro corso nello stesso file)" onClick={() => duplica(r)}><Copy /></Icona>
                       <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}><Download /></Icona>
                       <Icona t="Invia email" onClick={() => inviaEmail([r])}><Mail /></Icona>
