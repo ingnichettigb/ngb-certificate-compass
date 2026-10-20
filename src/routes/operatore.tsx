@@ -43,6 +43,16 @@ function dataDaTesto(t: string): string {
 }
 
 export const Route = createFileRoute("/operatore")({
+  head: () => ({
+    meta: [
+      { title: "Postazione Operatore — Archivio Sicurezza · Nichetti Gian Battista" },
+      { name: "description", content: "Lettura automatica con AI degli attestati di sicurezza, verifica dei dati e archiviazione." },
+      { property: "og:title", content: "Postazione Operatore" },
+      { property: "og:description", content: "Carica un attestato, verifica i dati letti dall'AI e archivialo nel database." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PostazioneOperatore,
 });
 
@@ -87,7 +97,7 @@ const VUOTA: Omit<Riga, "id"> = {
 
 const NOTA_PREDEFINITA = "Attestato conforme ai requisiti previsti dall'Accordo Stato-Regioni.";
 
-export function PostazioneOperatore() {
+function PostazioneOperatore() {
   const qc = useQueryClient();
   const [aiConfig] = useAiConfig();
   const aiAttiva = getActiveProvider(aiConfig);
@@ -346,6 +356,7 @@ export function PostazioneOperatore() {
           percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${est(r.mime_file)}`)}`;
           const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
           if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
+          else percorsoFinale = r.percorso_file;
         }
         const { data: att, error } = await db.from("attestati_caricati").insert({
           dipendente_id: dip.id, codice_fiscale: dip.codice_fiscale, tipo_corso_id: r.tipo_corso_id,
@@ -363,7 +374,12 @@ export function PostazioneOperatore() {
             argomenti_mancanti: r.argomenti_mancanti ?? [],
           }).catch((e) => toast.error(`Integrazione DVR non registrata: ${(e as Error).message}`));
         }
-        await db.from("coda_valutazioni").update({ archiviato: true }).eq("id", r.id);
+        await db.from("coda_valutazioni").update({ archiviato: true, ...(percorsoFinale !== r.percorso_file ? { percorso_file: percorsoFinale } : {}) }).eq("id", r.id);
+        // Rimuove la copia temporanea in Coda/ se nessun'altra riga la usa ancora.
+        if (r.percorso_file && percorsoFinale !== r.percorso_file && r.percorso_file.startsWith("Coda/")) {
+          const { count } = await db.from("coda_valutazioni").select("id", { count: "exact", head: true }).eq("percorso_file", r.percorso_file);
+          if (!count) await sb.storage.from("attestati").remove([r.percorso_file]);
+        }
         ok++;
       } catch (e) {
         toast.error((e as Error).message);

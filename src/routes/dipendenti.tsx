@@ -62,6 +62,8 @@ export const Route = createFileRoute("/dipendenti")({
         content:
           "Elenco completo dei dipendenti, anagrafiche e storico degli attestati di formazione sulla sicurezza.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Gestione Dipendenti" },
       {
         property: "og:description",

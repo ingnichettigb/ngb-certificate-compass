@@ -40,6 +40,8 @@ export const Route = createFileRoute("/carica")({
         content:
           "Modulo mobile per i lavoratori: inserisci i tuoi dati, scegli il corso e allega la foto dell'attestato di formazione sulla sicurezza.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Carica il tuo attestato" },
       {
         property: "og:description",
