@@ -1,15 +1,16 @@
 /*
  * File:      operatore.tsx
  * Percorso:  src/routes/operatore.tsx
- * Postazione Operatore completa con estrazione AI, split-screen, coda bozze e invio email rapido via Resend.
+ * Postazione Operatore completa con estrazione AI, split-screen con pan/zoom/rotazione,
+ * pulsante copia anagrafica nella coda e invio email rapido via Resend.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Archive, Check, Copy, Download, Edit3, Eye, FileText, Loader2, Mail, Plus,
-  RotateCw, Sparkles, Crosshair, Trash2, X, ZoomIn, ZoomOut, RotateCcw
+  ArrowLeft, Archive, Copy, Download, Edit3, FileText, Loader2, Mail, Plus,
+  Crosshair, Trash2, X, UserCheck
 } from "lucide-react";
 import { supabase as sb } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { estraiAttestato } from "@/lib/estrazione.functions";
 import { getActiveProvider, useAiConfig } from "@/lib/ai-providers";
 import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
-import { contaPagine, estraiPagine, parsePagine, piuSimile, somiglianza, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
+import { contaPagine, estraiPagine, parsePagine, piuSimile, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
 import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, formatData, creaIntegrazioneDvr } from "@/lib/api";
 import { CatturaOcr } from "@/components/CatturaOcr";
 import { leggiDatiAzienda } from "@/lib/dati-azienda";
@@ -35,12 +36,21 @@ type CodaRiga = Omit<Riga, "esito"> & {
 };
 
 type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "codice_ateco" | "data_corso" | "ore" | "note";
-const ETICHETTE_OCR: Record<CampoOcr, string> = { cognome: "Cognome", nome: "Nome", codice_fiscale: "Codice Fiscale", codice_ateco: "Codice ATECO", data_corso: "Data emanazione", ore: "Ore corso", note: "Note" };
+const ETICHETTE_OCR: Record<CampoOcr, string> = {
+  cognome: "Cognome",
+  nome: "Nome",
+  codice_fiscale: "Codice Fiscale",
+  codice_ateco: "Codice ATECO",
+  data_corso: "Data emanazione",
+  ore: "Ore corso",
+  note: "Note",
+};
 
 function dataDaTesto(t: string): string {
   const m = t.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
   if (!m) return "";
-  let y = m[3]!; if (y.length === 2) y = "20" + y;
+  let y = m[3]!;
+  if (y.length === 2) y = "20" + y;
   return `${y}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
 }
 
@@ -131,11 +141,9 @@ function PostazioneOperatore() {
   const [selezionati, setSelezionati] = useState<Set<string>>(new Set());
   const [totPagine, setTotPagine] = useState(0);
   const [pagine, setPagine] = useState("");
-  const [testoLetto, setTestoLetto] = useState("");
-  const [suggerito, setSuggerito] = useState<string | null>(null);
+  const [, setTestoLetto] = useState("");
+  const [, setSuggerito] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [rotazione, setRotazione] = useState(0);
-  const sorgenteRef = useRef<Blob | null>(null);
 
   const [campoOcr, setCampoOcr] = useState<CampoOcr | null>(null);
 
@@ -145,34 +153,45 @@ function PostazioneOperatore() {
     const c = campoOcr;
     if (c === "codice_fiscale") set("codice_fiscale", pulisciCF(testo));
     else if (c === "cognome" || c === "nome") set(c, testo.toUpperCase());
-    else if (c === "data_corso") { const d = dataDaTesto(testo); if (!d) return void toast.error(`Data non riconosciuta in: "${testo}"`); set("data_corso", d); }
-    else if (c === "ore") { const n = Number((testo.match(/\d+([.,]\d+)?/)?.[0] ?? "").replace(",", ".")); if (!n) return void toast.error("Numero non trovato"); set("ore", n); }
-    else if (c === "note") set("note", form.note ? form.note + " " + testo : testo);
+    else if (c === "data_corso") {
+      const d = dataDaTesto(testo);
+      if (!d) return void toast.error(`Data non riconosciuta in: "${testo}"`);
+      set("data_corso", d);
+    } else if (c === "ore") {
+      const n = Number((testo.match(/\d+([.,]\d+)?/)?.[0] ?? "").replace(",", "."));
+      if (!n) return void toast.error("Numero non trovato");
+      set("ore", n);
+    } else if (c === "note") set("note", form.note ? form.note + " " + testo : testo);
     else set(c, testo);
     toast.success(`${ETICHETTE_OCR[c]}: ${testo}`);
     setCampoOcr(null);
   }
 
   const Mirino = ({ campo }: { campo: CampoOcr }) => (
-    <button type="button" disabled={!file}
+    <button
+      type="button"
+      disabled={!anteprima}
       onClick={() => setCampoOcr(campoOcr === campo ? null : campo)}
       title={`Cattura ${ETICHETTE_OCR[campo]} dal documento`}
-      className={`ml-1 inline-grid size-6 place-items-center rounded align-middle disabled:opacity-30 ${campoOcr === campo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+      className={`ml-1 inline-grid size-6 place-items-center rounded align-middle disabled:opacity-30 ${
+        campoOcr === campo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+      }`}
+    >
       <Crosshair className="size-3.5" />
     </button>
   );
 
   const set = <K extends keyof Riga>(k: K, v: Riga[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  useEffect(() => () => { if (anteprima?.startsWith("blob:")) URL.revokeObjectURL(anteprima); }, [anteprima]);
+  useEffect(() => () => {
+    if (anteprima?.startsWith("blob:")) URL.revokeObjectURL(anteprima);
+  }, [anteprima]);
 
   async function scegliFile(f: File) {
     if (!(f.type === "application/pdf" || f.type.startsWith("image/"))) return void toast.error("Carica un PDF o una foto");
     setFile(f);
     setAnteprima(URL.createObjectURL(f));
     setAnteprimaMime(f.type);
-    sorgenteRef.current = f;
-    setRotazione(0);
     setIdInModifica(null);
     setForm(VUOTA);
     setPagine("");
@@ -262,12 +281,51 @@ function PostazioneOperatore() {
   const ricarica = () => qc.invalidateQueries({ queryKey: ["coda"] });
   const selezione = useMemo(() => righeCoda.filter((r) => selezionati.has(r.id)), [righeCoda, selezionati]);
   const daArchiviare = useMemo(() => selezione.filter((r) => !r.archiviato), [selezione]);
-  const toggleSel = (id: string) => setSelezionati((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const est = (mime: string | null | undefined) => (mime === "application/pdf" ? "pdf" : mime?.split("/")[1]?.replace("jpeg", "jpg") || "jpg");
+  const toggleSel = (id: string) =>
+    setSelezionati((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const est = (mime: string | null | undefined) =>
+    mime === "application/pdf" ? "pdf" : mime?.split("/")[1]?.replace("jpeg", "jpg") || "jpg";
 
   function nuovo() {
-    setForm(VUOTA); setFile(null); setAnteprima(null); setAnteprimaMime(null); setIdInModifica(null);
-    setPagine(""); setTotPagine(0); sorgenteRef.current = null; setCampoOcr(null);
+    setForm(VUOTA);
+    setFile(null);
+    setAnteprima(null);
+    setAnteprimaMime(null);
+    setIdInModifica(null);
+    setPagine("");
+    setTotPagine(0);
+    setCampoOcr(null);
+  }
+
+  // Copia solo i dati anagrafici dal lavoratore in coda al modulo per un nuovo attestato
+  function copiaSoloAnagrafica(r: CodaRiga) {
+    setForm((f) => ({
+      ...f,
+      cognome: (r.cognome || "").toUpperCase(),
+      nome: (r.nome || "").toUpperCase(),
+      codice_fiscale: r.codice_fiscale || "",
+      data_nascita: r.data_nascita || "",
+      luogo_nascita: r.luogo_nascita || "",
+      codice_ateco: r.codice_ateco || "",
+      email: r.email || "",
+      reparto: r.reparto || "",
+      tipo_corso_id: null,
+      tipo_corso_nome: "",
+      data_corso: "",
+      ore: null,
+      ente: "",
+      argomenti: [],
+      esito: "Valido",
+      note: NOTA_PREDEFINITA,
+      integrazione: "",
+    }));
+    setIdInModifica(null);
+    toast.success(`Anagrafica di ${r.cognome} ${r.nome} copiata nel modulo`);
   }
 
   async function salvaInCoda(archiviaSubito: boolean) {
@@ -275,8 +333,8 @@ function PostazioneOperatore() {
     if (form.esito === "Non valido" && !form.note.trim()) return void toast.error("Indica il motivo del rifiuto nelle note");
     setSalvando(true);
     try {
-      let percorso: string | null = idInModifica ? (righeCoda.find((r) => r.id === idInModifica)?.percorso_file ?? null) : null;
-      let mime: string | null = idInModifica ? (righeCoda.find((r) => r.id === idInModifica)?.mime_file ?? null) : null;
+      let percorso: string | null = idInModifica ? righeCoda.find((r) => r.id === idInModifica)?.percorso_file ?? null : null;
+      let mime: string | null = idInModifica ? righeCoda.find((r) => r.id === idInModifica)?.mime_file ?? null : null;
       if (file) {
         let blob: Blob = file;
         mime = file.type;
@@ -293,7 +351,9 @@ function PostazioneOperatore() {
         ...dati,
         data_nascita: dati.data_nascita || null,
         data_corso: dati.data_corso || null,
-        percorso_file: percorso, mime_file: mime, nome_file: nomeFileStandard(form).replace(/\.pdf$/, `.${est(mime)}`),
+        percorso_file: percorso,
+        mime_file: mime,
+        nome_file: nomeFileStandard(form).replace(/\.pdf$/, `.${est(mime)}`),
       };
       const res = idInModifica
         ? await db.from("coda_valutazioni").update(payload).eq("id", idInModifica).select().single()
@@ -314,9 +374,12 @@ function PostazioneOperatore() {
     const base = { ...VUOTA } as Record<string, unknown>;
     for (const k of Object.keys(VUOTA)) base[k] = (r as any)[k] ?? (VUOTA as any)[k];
     setForm(base as Omit<Riga, "id">);
-    setIdInModifica(r.id); setFile(null); setPagine(""); setTotPagine(0);
+    setIdInModifica(r.id);
+    setFile(null);
+    setPagine("");
+    setTotPagine(0);
     setAnteprimaMime(r.mime_file);
-    setAnteprima(r.percorso_file ? ((await sb.storage.from("attestati").createSignedUrl(r.percorso_file, 3600)).data?.signedUrl ?? null) : null);
+    setAnteprima(r.percorso_file ? (await sb.storage.from("attestati").createSignedUrl(r.percorso_file, 3600)).data?.signedUrl ?? null : null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -359,9 +422,16 @@ function PostazioneOperatore() {
           if (!r.tipo_corso_id) throw new Error(`${r.cognome}: scegli il tipo di corso`);
           if (!r.data_corso) throw new Error(`${r.cognome}: manca la data del corso`);
           const dip = await upsertDipendente({
-            codice_fiscale: pulisciCF(r.codice_fiscale), cognome: r.cognome, nome: r.nome, email: r.email || null,
-            reparto: r.reparto || null, sottoreparto: null, classe_concorso: null, materia: null,
-            luogo_nascita: r.luogo_nascita || null, data_nascita: r.data_nascita || null,
+            codice_fiscale: pulisciCF(r.codice_fiscale),
+            cognome: r.cognome,
+            nome: r.nome,
+            email: r.email || null,
+            reparto: r.reparto || null,
+            sottoreparto: null,
+            classe_concorso: null,
+            materia: null,
+            luogo_nascita: r.luogo_nascita || null,
+            data_nascita: r.data_nascita || null,
             ...(r.codice_ateco ? { codice_ateco: r.codice_ateco } : {}),
           });
           let percorsoFinale = r.percorso_file;
@@ -372,23 +442,29 @@ function PostazioneOperatore() {
             else percorsoFinale = r.percorso_file;
           }
           const { data: att, error } = await db.from("attestati_caricati").insert({
-            dipendente_id: dip.id, codice_fiscale: dip.codice_fiscale, tipo_corso_id: r.tipo_corso_id,
-            data_corso: r.data_corso, ore_dichiarate: r.ore, url_foto_fronte: percorsoFinale, url_foto_retro: null,
+            dipendente_id: dip.id,
+            codice_fiscale: dip.codice_fiscale,
+            tipo_corso_id: r.tipo_corso_id,
+            data_corso: r.data_corso,
+            ore_dichiarate: r.ore,
+            url_foto_fronte: percorsoFinale,
+            url_foto_retro: null,
             stato_validazione: r.esito === "Non valido" ? "Respinto" : "Approvato",
-            note_rifiuto: r.esito === "Valido" ? (r.note || null) : riepilogo(r),
+            note_rifiuto: r.esito === "Valido" ? r.note || null : riepilogo(r),
             data_validazione: new Date().toISOString(),
           }).select("id").single();
           if (error) throw error;
           if (r.esito === "Valido con integrazione DVR") {
             await creaIntegrazioneDvr({
-              dipendente_id: dip.id, attestato_origine_id: att?.id ?? null, tipo_corso_nome: r.tipo_corso_nome || null,
+              dipendente_id: dip.id,
+              attestato_origine_id: att?.id ?? null,
+              tipo_corso_nome: r.tipo_corso_nome || null,
               descrizione: r.integrazione || r.note || "Integrazione DVR richiesta",
               ore: Number(r.integrazione?.match(/(\d+)\s*or/)?.[1]) || null,
               argomenti_mancanti: r.argomenti_mancanti ?? [],
             }).catch((e) => toast.error(`Integrazione DVR non registrata: ${(e as Error).message}`));
           }
           await db.from("coda_valutazioni").update({ archiviato: true, ...(percorsoFinale !== r.percorso_file ? { percorso_file: percorsoFinale } : {}) }).eq("id", r.id);
-          // Rimuove la copia temporanea in Coda/ se nessun'altra riga la usa ancora.
           if (r.percorso_file && percorsoFinale !== r.percorso_file && r.percorso_file.startsWith("Coda/")) {
             const { count } = await db.from("coda_valutazioni").select("id", { count: "exact", head: true }).eq("percorso_file", r.percorso_file);
             if (!count) await sb.storage.from("attestati").remove([r.percorso_file]);
@@ -456,9 +532,14 @@ function PostazioneOperatore() {
     try {
       if (w.showSaveFilePicker) {
         const h = await w.showSaveFilePicker({ suggestedName: nome });
-        const wr = await h.createWritable(); await wr.write(blob); await wr.close();
+        const wr = await h.createWritable();
+        await wr.write(blob);
+        await wr.close();
       } else {
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = nome;
+        a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
       }
       toast.success(`Salvato: ${nome}`);
@@ -512,32 +593,33 @@ function PostazioneOperatore() {
 
       {/* Area di Lavoro Split Screen */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Colonna Sinistra: Visualizzatore Documento */}
+        {/* Colonna Sinistra: Visualizzatore Documento con Pan, Zoom e Rotazione */}
         <Card className="flex flex-col overflow-hidden">
           <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">Documento caricato</CardTitle>
             {anteprima && (
               <span className="text-xs text-muted-foreground">
-                {file?.name} {totPagine > 0 && `(${totPagine} pag.)`}
+                {file?.name ?? "Attestato caricato"} {totPagine > 0 && `(${totPagine} pag.)`}
               </span>
             )}
           </CardHeader>
-          <CardContent className="p-0 flex-1 min-h-[500px] flex items-center justify-center bg-muted/20 relative">
+          <CardContent className="p-0 flex-1 min-h-[520px] flex items-center justify-center bg-muted/20 relative">
             {lettura && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-2">
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="size-8 animate-spin text-primary" />
                 <p className="text-sm font-medium">Lettura attestato con {aiAttiva.name}...</p>
               </div>
             )}
-            {anteprima && file && campoOcr ? (
-              <CatturaOcr file={file} isPdf={anteprimaMime === "application/pdf"} totPagine={totPagine}
-                etichettaCampo={ETICHETTE_OCR[campoOcr]} onTesto={incollaOcr} />
-            ) : anteprima ? (
-              anteprimaMime === "application/pdf" ? (
-                <iframe src={anteprima} className="w-full h-full min-h-[500px] border-none" title="Anteprima PDF" />
-              ) : (
-                <img src={anteprima} alt="Anteprima" className="max-h-[550px] object-contain p-2" />
-              )
+            {anteprima ? (
+              <CatturaOcr
+                file={file}
+                url={anteprima}
+                isPdf={anteprimaMime === "application/pdf"}
+                totPagine={totPagine}
+                etichettaCampo={campoOcr ? ETICHETTE_OCR[campoOcr] : null}
+                onTesto={incollaOcr}
+                onChiudiOcr={() => setCampoOcr(null)}
+              />
             ) : (
               <div className="text-center p-6 text-muted-foreground">
                 <FileText className="size-12 mx-auto mb-2 opacity-40" />
@@ -551,7 +633,9 @@ function PostazioneOperatore() {
         <Card>
           <CardHeader className="py-3 px-4 border-b">
             <CardTitle className="text-sm font-medium">Dati estratti e valutazione</CardTitle>
-            <p className="text-xs text-muted-foreground">Clicca il mirino accanto a un campo, poi disegna un rettangolo sul documento per copiarne il testo.</p>
+            <p className="text-xs text-muted-foreground">
+              Clicca il mirino accanto a un campo, poi seleziona l'area sul documento per copiarne il testo.
+            </p>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -642,7 +726,9 @@ function PostazioneOperatore() {
 
             <div className="flex flex-wrap justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={nuovo}><X className="size-4" /> Svuota</Button>
-              <Button variant="outline" disabled={salvando || archiviando} onClick={() => salvaInCoda(true)}><Archive className="size-4" /> Archivia subito nel DB</Button>
+              <Button variant="outline" disabled={salvando || archiviando} onClick={() => salvaInCoda(true)}>
+                <Archive className="size-4" /> Archivia subito nel DB
+              </Button>
               <Button disabled={salvando || archiviando} onClick={() => salvaInCoda(false)}>
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
                 {idInModifica ? "Salva modifiche" : "Aggiungi alla coda"}
@@ -680,28 +766,82 @@ function PostazioneOperatore() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="p-2"><Checkbox checked={righeCoda.length > 0 && selezione.length === righeCoda.length} onCheckedChange={(v) => setSelezionati(v ? new Set(righeCoda.map((r) => r.id)) : new Set())} /></th>
-                <th className="p-2">Lavoratore</th><th className="p-2">Corso</th><th className="p-2">Data</th><th className="p-2">Esito</th><th className="p-2">Stato</th><th className="p-2 text-right">Azioni</th>
+                <th className="p-2">
+                  <Checkbox
+                    checked={righeCoda.length > 0 && selezione.length === righeCoda.length}
+                    onCheckedChange={(v) => setSelezionati(v ? new Set(righeCoda.map((r) => r.id)) : new Set())}
+                  />
+                </th>
+                <th className="p-2">Lavoratore</th>
+                <th className="p-2">Corso</th>
+                <th className="p-2">Data</th>
+                <th className="p-2">Esito</th>
+                <th className="p-2">Stato</th>
+                <th className="p-2 text-right">Azioni</th>
               </tr>
             </thead>
             <tbody>
-              {righeCoda.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nessuna valutazione in coda</td></tr>}
+              {righeCoda.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    Nessuna valutazione in coda
+                  </td>
+                </tr>
+              )}
               {righeCoda.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="p-2"><Checkbox checked={selezionati.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></td>
-                  <td className="p-2"><div className="font-medium">{r.cognome} {r.nome}</div><div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div></td>
-                  <td className="p-2">{r.tipo_corso_nome || <span className="text-destructive">da scegliere</span>}<div className="text-xs text-muted-foreground">{r.ore ?? "?"} ore</div></td>
+                  <td className="p-2">
+                    <Checkbox checked={selezionati.has(r.id)} onCheckedChange={() => toggleSel(r.id)} />
+                  </td>
+                  <td className="p-2">
+                    <div className="font-medium">{r.cognome} {r.nome}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div>
+                  </td>
+                  <td className="p-2">
+                    {r.tipo_corso_nome || <span className="text-destructive">da scegliere</span>}
+                    <div className="text-xs text-muted-foreground">{r.ore ?? "?"} ore</div>
+                  </td>
                   <td className="p-2">{formatData(r.data_corso)}</td>
-                  <td className="p-2"><Badge variant={r.esito === "Non valido" ? "destructive" : r.esito === "Valido" ? "default" : "secondary"}>{r.esito}</Badge></td>
-                  <td className="p-2 text-xs">{r.archiviato ? <span className="text-primary">Archiviato nel DB ✓</span> : "Bozza"}{r.inviato && <div className="text-muted-foreground">Email inviata ✓</div>}</td>
+                  <td className="p-2">
+                    <Badge variant={r.esito === "Non valido" ? "destructive" : r.esito === "Valido" ? "default" : "secondary"}>
+                      {r.esito}
+                    </Badge>
+                  </td>
+                  <td className="p-2 text-xs">
+                    {r.archiviato ? <span className="text-primary font-medium">Archiviato nel DB ✓</span> : "Bozza"}
+                    {r.inviato && <div className="text-muted-foreground">Email inviata ✓</div>}
+                  </td>
                   <td className="p-2">
                     <div className="flex justify-end gap-1">
-                      <Icona t="Modifica" onClick={() => modifica(r)}><Edit3 /></Icona>
-                      <Icona t={r.archiviato ? "Già archiviato nel database" : "Aggiungi al database"} disabled={r.archiviato || archiviando} onClick={() => archivia([r])}><Archive /></Icona>
-                      <Icona t="Duplica (altro corso nello stesso file)" onClick={() => duplica(r)}><Copy /></Icona>
-                      <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}><Download /></Icona>
-                      <Icona t="Invia email con Resend" disabled={inviandoEmail} onClick={() => inviaEmail([r])}><Mail /></Icona>
-                      <Icona t="Elimina dalla coda" danger onClick={() => cancella(r)}><Trash2 /></Icona>
+                      {/* Copia anagrafica nel modulo per nuovo documento */}
+                      <Icona
+                        t="Copia dati anagrafici nel modulo per nuovo documento"
+                        onClick={() => copiaSoloAnagrafica(r)}
+                      >
+                        <UserCheck />
+                      </Icona>
+                      <Icona t="Modifica" onClick={() => modifica(r)}>
+                        <Edit3 />
+                      </Icona>
+                      <Icona
+                        t={r.archiviato ? "Già archiviato nel database" : "Aggiungi al database"}
+                        disabled={r.archiviato || archiviando}
+                        onClick={() => archivia([r])}
+                      >
+                        <Archive />
+                      </Icona>
+                      <Icona t="Duplica (altro corso nello stesso file)" onClick={() => duplica(r)}>
+                        <Copy />
+                      </Icona>
+                      <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}>
+                        <Download />
+                      </Icona>
+                      <Icona t="Invia email con Resend" disabled={inviandoEmail} onClick={() => inviaEmail([r])}>
+                        <Mail />
+                      </Icona>
+                      <Icona t="Elimina dalla coda" danger onClick={() => cancella(r)}>
+                        <Trash2 />
+                      </Icona>
                     </div>
                   </td>
                 </tr>
@@ -714,9 +854,30 @@ function PostazioneOperatore() {
   );
 }
 
-function Icona({ t, onClick, children, danger, disabled }: { t: string; onClick: () => void; children: React.ReactNode; danger?: boolean; disabled?: boolean }) {
+function Icona({
+  t,
+  onClick,
+  children,
+  danger,
+  disabled,
+}: {
+  t: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  danger?: boolean;
+  disabled?: boolean;
+}) {
   return (
-    <Button size="icon" variant="ghost" title={t} aria-label={t} disabled={disabled} onClick={onClick}
-      className={`h-8 w-8 [&_svg]:h-4 [&_svg]:w-4 ${danger ? "text-destructive" : ""}`}>{children}</Button>
+    <Button
+      size="icon"
+      variant="ghost"
+      title={t}
+      aria-label={t}
+      disabled={disabled}
+      onClick={onClick}
+      className={`h-8 w-8 [&_svg]:h-4 [&_svg]:w-4 ${danger ? "text-destructive" : ""}`}
+    >
+      {children}
+    </Button>
   );
 }
