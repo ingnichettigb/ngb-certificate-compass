@@ -1,8 +1,8 @@
 /*
  * File:      operatore.tsx
  * Percorso:  src/routes/operatore.tsx
- * Postazione Operatore completa con estrazione AI, split-screen con pan/zoom/rotazione,
- * pulsante copia anagrafica nella coda e invio email rapido via Resend.
+ * Postazione Operatore completa: estrazione AI, mirino OCR con pulizia automatica testo,
+ * campo email nel modulo, copia anagrafica nella coda e modale di anteprima/modifica email prima dell'invio via Resend.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft, Archive, Copy, Download, Edit3, FileText, Loader2, Mail, Plus,
-  Crosshair, Trash2, X, UserCheck
+  Crosshair, Trash2, X, UserCheck, Send, AlertCircle
 } from "lucide-react";
 import { supabase as sb } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { estraiAttestato } from "@/lib/estrazione.functions";
 import { getActiveProvider, useAiConfig } from "@/lib/ai-providers";
 import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
@@ -31,20 +39,55 @@ import { leggiDatiAzienda } from "@/lib/dati-azienda";
 import { inviaEmailConResend } from "@/lib/email-resend.functions";
 
 type CodaRiga = Omit<Riga, "esito"> & {
-  esito: string; percorso_file: string | null; mime_file: string | null; nome_file: string | null;
-  archiviato: boolean; inviato: boolean; argomenti_mancanti: string[];
+  esito: string;
+  percorso_file: string | null;
+  mime_file: string | null;
+  nome_file: string | null;
+  archiviato: boolean;
+  inviato: boolean;
+  argomenti_mancanti: string[];
 };
 
-type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "codice_ateco" | "data_corso" | "ore" | "note";
+type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "email" | "codice_ateco" | "data_corso" | "ore" | "note";
+
 const ETICHETTE_OCR: Record<CampoOcr, string> = {
   cognome: "Cognome",
   nome: "Nome",
   codice_fiscale: "Codice Fiscale",
+  email: "Email lavoratore",
   codice_ateco: "Codice ATECO",
   data_corso: "Data emanazione",
   ore: "Ore corso",
   note: "Note",
 };
+
+/**
+ * Funzione di "Maquillage" e pulizia dell'OCR:
+ * Toglie spazi e caratteri spuri ai bordi (es. barre |, tilde, apici, trattini).
+ */
+function pulisciTestoOcr(testoGrezzo: string, campo?: CampoOcr): string {
+  if (!testoGrezzo) return "";
+  let pulito = testoGrezzo.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+  // Rimuove caratteri di bordo tipici dei margini tabella o scansioni
+  pulito = pulito.replace(/^[|_\-~*`'"°:;.\/\\—]+/g, "").replace(/[|_\-~*`'"°:;.\/\\—]+$/g, "").trim();
+
+  if (campo === "codice_fiscale") {
+    return pulito.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
+  if (campo === "cognome" || campo === "nome") {
+    return pulito.toUpperCase().replace(/[^A-ZÀ-ÿ\s']/g, "").replace(/\s+/g, " ").trim();
+  }
+  if (campo === "email") {
+    return pulito.toLowerCase().replace(/\s+/g, "");
+  }
+  if (campo === "ore") {
+    return pulito.replace(/[^0-9.,]/g, "");
+  }
+  if (campo === "data_corso") {
+    return pulito.replace(/[^0-9/.\-]/g, "");
+  }
+  return pulito;
+}
 
 function dataDaTesto(t: string): string {
   const m = t.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
@@ -147,19 +190,36 @@ function PostazioneOperatore() {
 
   const [campoOcr, setCampoOcr] = useState<CampoOcr | null>(null);
 
-  function incollaOcr(testo: string) {
+  // Finestra anteprima / inserimento email prima dell'invio
+  const [modaleEmail, setModaleEmail] = useState<{
+    aperta: boolean;
+    righe: CodaRiga[];
+    destinatari: string;
+    oggetto: string;
+    testoCorpo: string;
+  }>({
+    aperta: false,
+    righe: [],
+    destinatari: "",
+    oggetto: "",
+    testoCorpo: "",
+  });
+
+  function incollaOcr(testoGrezzo: string) {
     if (!campoOcr) return;
-    if (!testo) return void toast.error("Nessun testo riconosciuto: riprova con un rettangolo più preciso");
+    const testo = pulisciTestoOcr(testoGrezzo, campoOcr);
+    if (!testo) return void toast.error("Nessun testo valido riconosciuto: riprova con un rettangolo più mirato");
     const c = campoOcr;
     if (c === "codice_fiscale") set("codice_fiscale", pulisciCF(testo));
-    else if (c === "cognome" || c === "nome") set(c, testo.toUpperCase());
+    else if (c === "cognome" || c === "nome") set(c, testo);
+    else if (c === "email") set("email", testo);
     else if (c === "data_corso") {
       const d = dataDaTesto(testo);
       if (!d) return void toast.error(`Data non riconosciuta in: "${testo}"`);
       set("data_corso", d);
     } else if (c === "ore") {
       const n = Number((testo.match(/\d+([.,]\d+)?/)?.[0] ?? "").replace(",", "."));
-      if (!n) return void toast.error("Numero non trovato");
+      if (!n) return void toast.error("Numero ore non trovato");
       set("ore", n);
     } else if (c === "note") set("note", form.note ? form.note + " " + testo : testo);
     else set(c, testo);
@@ -246,11 +306,11 @@ function PostazioneOperatore() {
 
       setForm({
         ...VUOTA,
-        cognome: d.cognome.toUpperCase(),
-        nome: d.nome.toUpperCase(),
+        cognome: (d.cognome || "").toUpperCase(),
+        nome: (d.nome || "").toUpperCase(),
         codice_fiscale: cf,
-        data_nascita: d.data_nascita,
-        luogo_nascita: d.luogo_nascita,
+        data_nascita: d.data_nascita || "",
+        luogo_nascita: d.luogo_nascita || "",
         codice_ateco: d.codice_ateco || esistente?.codice_ateco || "",
         email: esistente?.email ?? "",
         reparto: esistente?.reparto ?? "",
@@ -302,7 +362,6 @@ function PostazioneOperatore() {
     setCampoOcr(null);
   }
 
-  // Copia solo i dati anagrafici dal lavoratore in coda al modulo per un nuovo attestato
   function copiaSoloAnagrafica(r: CodaRiga) {
     setForm((f) => ({
       ...f,
@@ -482,28 +541,44 @@ function PostazioneOperatore() {
     }
   }
 
-  async function inviaEmail(righe: CodaRiga[]) {
+  // Apre la finestra di anteprima e compilazione email prima dell'invio effettivo
+  function preparaInvioEmail(righe: CodaRiga[]) {
     if (!righe.length) return;
-    const destinatari = [...new Set(righe.map((r) => r.email?.trim()).filter(Boolean) as string[])];
-    if (!destinatari.length) {
-      return void toast.error("Nessun indirizzo email salvato per i lavoratori selezionati");
-    }
-
+    const destinatariTrovati = [...new Set(righe.map((r) => r.email?.trim()).filter(Boolean) as string[])].join(", ");
     const persone = [...new Set(righe.map((r) => `${r.cognome} ${r.nome}`))];
     const oggetto = `Esito verifica attestati D.Lgs. 81/2008 — ${persone.join(", ")}`;
     const corpo = `Gentile ${persone.length === 1 ? persone[0] : "collega"},\n\ndi seguito l'esito della verifica degli attestati di formazione sicurezza:\n\n${righe.map((r, i) => `${i + 1}) ${riepilogo(r)}`).join("\n\n")}`;
 
-    const datiAzienda = leggiDatiAzienda();
+    setModaleEmail({
+      aperta: true,
+      righe,
+      destinatari: destinatariTrovati,
+      oggetto,
+      testoCorpo: corpo,
+    });
+  }
 
+  // Invio effettivo tramite Resend dalla finestra di anteprima
+  async function confermaEInviaEmail() {
+    const destinatariList = modaleEmail.destinatari
+      .split(/[,;\s]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.includes("@"));
+
+    if (!destinatariList.length) {
+      return void toast.error("Inserisci almeno un indirizzo email valido nel campo Destinatari");
+    }
+
+    const datiAzienda = leggiDatiAzienda();
     setInviandoEmail(true);
-    const toastId = toast.loading(`Invio email a ${destinatari.join(", ")}...`);
+    const toastId = toast.loading(`Invio email a ${destinatariList.join(", ")}...`);
 
     try {
       const res = await inviaEmailConResend({
         data: {
-          destinatari,
-          oggetto,
-          testoCorpo: corpo,
+          destinatari: destinatariList,
+          oggetto: modaleEmail.oggetto,
+          testoCorpo: modaleEmail.testoCorpo,
           datiAzienda,
         },
       });
@@ -514,7 +589,20 @@ function PostazioneOperatore() {
       }
 
       toast.success("Email inviata con successo tramite Resend!", { id: toastId });
-      await db.from("coda_valutazioni").update({ inviato: true }).in("id", righe.map((r) => r.id));
+
+      // Salva l'email inserita nei record di coda (se prima era vuota) per ricordarla
+      const primoIndirizzo = destinatariList[0];
+      for (const r of modaleEmail.righe) {
+        await db
+          .from("coda_valutazioni")
+          .update({
+            inviato: true,
+            ...(!r.email ? { email: primoIndirizzo } : {}),
+          })
+          .eq("id", r.id);
+      }
+
+      setModaleEmail((m) => ({ ...m, aperta: false }));
       ricarica();
     } catch (e) {
       toast.error(`Errore: ${(e as Error).message}`, { id: toastId });
@@ -593,7 +681,7 @@ function PostazioneOperatore() {
 
       {/* Area di Lavoro Split Screen */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Colonna Sinistra: Visualizzatore Documento con Pan, Zoom e Rotazione */}
+        {/* Colonna Sinistra: Visualizzatore Documento con rotazione oraria a 90° e mirino OCR */}
         <Card className="flex flex-col overflow-hidden">
           <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">Documento caricato</CardTitle>
@@ -610,16 +698,20 @@ function PostazioneOperatore() {
                 <p className="text-sm font-medium">Lettura attestato con {aiAttiva.name}...</p>
               </div>
             )}
-            {anteprima ? (
+            {anteprima && file ? (
               <CatturaOcr
                 file={file}
-                url={anteprima}
                 isPdf={anteprimaMime === "application/pdf"}
                 totPagine={totPagine}
-                etichettaCampo={campoOcr ? ETICHETTE_OCR[campoOcr] : null}
+                etichettaCampo={campoOcr ? ETICHETTE_OCR[campoOcr] : ""}
                 onTesto={incollaOcr}
-                onChiudiOcr={() => setCampoOcr(null)}
               />
+            ) : anteprima ? (
+              anteprimaMime === "application/pdf" ? (
+                <iframe src={anteprima} className="w-full h-full min-h-[500px] border-none" title="Anteprima PDF" />
+              ) : (
+                <img src={anteprima} alt="Anteprima" className="max-h-[550px] object-contain p-2" />
+              )
             ) : (
               <div className="text-center p-6 text-muted-foreground">
                 <FileText className="size-12 mx-auto mb-2 opacity-40" />
@@ -634,7 +726,7 @@ function PostazioneOperatore() {
           <CardHeader className="py-3 px-4 border-b">
             <CardTitle className="text-sm font-medium">Dati estratti e valutazione</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Clicca il mirino accanto a un campo, poi seleziona l'area sul documento per copiarne il testo.
+              Clicca il mirino accanto a un campo, poi seleziona l'area sul documento per copiarne il testo pulito.
             </p>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
@@ -657,6 +749,29 @@ function PostazioneOperatore() {
               <div>
                 <Label htmlFor="ateco">Codice ATECO<Mirino campo="codice_ateco" /></Label>
                 <Input id="ateco" value={form.codice_ateco} onChange={(e) => set("codice_ateco", e.target.value)} />
+              </div>
+            </div>
+
+            {/* Campo Email lavoratore e Reparto nel modulo */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="email">Email lavoratore<Mirino campo="email" /></Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="es. nome@azienda.it"
+                  value={form.email}
+                  onChange={(e) => set("email", e.target.value.toLowerCase().trim())}
+                />
+              </div>
+              <div>
+                <Label htmlFor="rep">Reparto</Label>
+                <Input
+                  id="rep"
+                  placeholder="es. Produzione, Uffici..."
+                  value={form.reparto}
+                  onChange={(e) => set("reparto", e.target.value)}
+                />
               </div>
             </div>
 
@@ -755,7 +870,7 @@ function PostazioneOperatore() {
             <Button
               size="sm"
               disabled={!selezione.length || inviandoEmail}
-              onClick={() => inviaEmail(selezione)}
+              onClick={() => preparaInvioEmail(selezione)}
             >
               {inviandoEmail ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
               Unica email ({selezione.length})
@@ -796,6 +911,7 @@ function PostazioneOperatore() {
                   <td className="p-2">
                     <div className="font-medium">{r.cognome} {r.nome}</div>
                     <div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div>
+                    {r.email && <div className="text-[11px] text-muted-foreground">{r.email}</div>}
                   </td>
                   <td className="p-2">
                     {r.tipo_corso_nome || <span className="text-destructive">da scegliere</span>}
@@ -813,7 +929,6 @@ function PostazioneOperatore() {
                   </td>
                   <td className="p-2">
                     <div className="flex justify-end gap-1">
-                      {/* Copia anagrafica nel modulo per nuovo documento */}
                       <Icona
                         t="Copia dati anagrafici nel modulo per nuovo documento"
                         onClick={() => copiaSoloAnagrafica(r)}
@@ -836,7 +951,11 @@ function PostazioneOperatore() {
                       <Icona t="Salva sul PC con nome" onClick={() => salvaLocale(r)}>
                         <Download />
                       </Icona>
-                      <Icona t="Invia email con Resend" disabled={inviandoEmail} onClick={() => inviaEmail([r])}>
+                      <Icona
+                        t="Invia email con Resend (apre anteprima)"
+                        disabled={inviandoEmail}
+                        onClick={() => preparaInvioEmail([r])}
+                      >
                         <Mail />
                       </Icona>
                       <Icona t="Elimina dalla coda" danger onClick={() => cancella(r)}>
@@ -850,6 +969,98 @@ function PostazioneOperatore() {
           </table>
         </CardContent>
       </Card>
+
+      {/* Finestra Modale di Anteprima e Modifica Email prima dell'invio */}
+      <Dialog
+        open={modaleEmail.aperta}
+        onOpenChange={(open) => !inviandoEmail && setModaleEmail((m) => ({ ...m, aperta: open }))}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="size-5 text-primary" />
+              Verifica e invia email esito attestati
+            </DialogTitle>
+            <DialogDescription>
+              Controlla o inserisci l'indirizzo email del destinatario e il testo del messaggio prima di procedere.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {!modaleEmail.destinatari.trim() && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <span>
+                  <b>Email mancante:</b> inserisci qui sotto l'indirizzo email a cui inviare l'esito. Verrà salvato automaticamente per questo lavoratore.
+                </span>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="destinatariEmail" className="font-semibold">
+                Destinatari (separati da virgola se più di uno) *
+              </Label>
+              <Input
+                id="destinatariEmail"
+                placeholder="es. domenico.perziano@email.it, hr@azienda.com"
+                value={modaleEmail.destinatari}
+                onChange={(e) => setModaleEmail((m) => ({ ...m, destinatari: e.target.value }))}
+                className="mt-1"
+                autoFocus={!modaleEmail.destinatari.trim()}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="oggettoEmail" className="font-semibold">
+                Oggetto email
+              </Label>
+              <Input
+                id="oggettoEmail"
+                value={modaleEmail.oggetto}
+                onChange={(e) => setModaleEmail((m) => ({ ...m, oggetto: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="corpoEmail" className="font-semibold">
+                Testo del messaggio
+              </Label>
+              <Textarea
+                id="corpoEmail"
+                rows={7}
+                value={modaleEmail.testoCorpo}
+                onChange={(e) => setModaleEmail((m) => ({ ...m, testoCorpo: e.target.value }))}
+                className="mt-1 font-sans text-xs leading-relaxed"
+              />
+            </div>
+
+            <div className="rounded-md border p-2.5 bg-muted/30 text-[11px] text-muted-foreground">
+              <b>Mittente / Firma:</b> Inviato tramite Resend con i dati configurati in <i>Dati ditta / studio</i>.
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={inviandoEmail}
+              onClick={() => setModaleEmail((m) => ({ ...m, aperta: false }))}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              disabled={inviandoEmail || !modaleEmail.destinatari.trim()}
+              onClick={confermaEInviaEmail}
+              className="gap-2"
+            >
+              {inviandoEmail ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              Invia adesso con Resend
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
