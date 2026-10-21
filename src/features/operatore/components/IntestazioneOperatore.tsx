@@ -5,7 +5,7 @@
  */
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
+import { ImpostaAiButton } from "@/features/ai/ImpostaAiButton";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

@@ -23,7 +23,7 @@ vi.mock("@/lib/ai-test.functions", async () => {
 });
 
 import { registro } from "@/test/registratore-supabase";
-import { ImpostaAiButton } from "@/components/ImpostaAiDialog";
+import { ImpostaAiButton } from "@/features/ai/ImpostaAiButton";
 
 const CHIAVE = "archivio_attestati_ai_config_v1";
 const attendi = () => act(async () => { await new Promise((r) => setTimeout(r, 30)); });
