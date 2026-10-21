@@ -1,0 +1,319 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Imposta AI: percorso d'uso completo > registra tutto quello che il componente fa 1`] = `
+[
+  [
+    "stato",
+    "iniziale",
+    "null",
+    [],
+    [],
+  ],
+  [
+    "stato",
+    "elenco aperto",
+    "null",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)In usoPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave mancanteConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "stato",
+    "chiave rapida aperta",
+    "null",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)In usoPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave mancanteConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      "Chiave di accessoGoogle AI Studio – Gemini 2.0 Flash (gratis)1. Apri il sito e accedi · 2. Crea la chiave · 3. Copiala e incollala qui sotto.Crea la chiave ChiaveAnnullaSalva e attivaClose",
+    ],
+    [
+      "chiave-rapida=password:",
+    ],
+  ],
+  [
+    "stato",
+    "chiave rapida visibile",
+    "null",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)In usoPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave mancanteConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      "Chiave di accessoGoogle AI Studio – Gemini 2.0 Flash (gratis)1. Apri il sito e accedi · 2. Crea la chiave · 3. Copiala e incollala qui sotto.Crea la chiave ChiaveAnnullaSalva e attivaClose",
+    ],
+    [
+      "chiave-rapida=text:AIzaFAKE-20",
+    ],
+  ],
+  [
+    "toast.success",
+    "Chiave salvata e AI attivata",
+    "",
+  ],
+  [
+    "stato",
+    "dopo salva chiave 2.0",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"AIzaFAKE-20","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.0-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)In uso Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.success",
+    "Chiave rimossa",
+    "",
+  ],
+  [
+    "stato",
+    "dopo rimozione chiave 2.0",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.0-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)In uso Chiave mancanteConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.success",
+    "Chiave salvata e AI attivata",
+    "",
+  ],
+  [
+    "toast.success",
+    "Chiave salvata e AI attivata",
+    "",
+  ],
+  [
+    "stato",
+    "2.0 con chiave KO attiva",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.0-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)In uso Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.success",
+    "AI attiva: Google AI Studio – Gemini 2.5 Flash",
+    "",
+  ],
+  [
+    "stato",
+    "dopo usa questa",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "stato",
+    "modifica aperta",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      " Modifica dati AIAggiorna il nome, l'indirizzo API o il nome del modello di OpenAI – GPT-4o-mini (chiave personale).Nome visualizzatoBase URL APINome Modello esattoSe il fornitore ha cambiato o dismesso il modello, puoi inserire qui la versione aggiornata.Chiave APIOttieni chiave AnnullaSalva modificheClose",
+    ],
+    [
+      "mod-nome=text:OpenAI – GPT-4o-mini (chiave personale)",
+      "mod-url=text:https://api.openai.com/v1",
+      "mod-modello=text:gpt-4o-mini",
+      "mod-chiave=password:",
+    ],
+  ],
+  [
+    "toast.error",
+    "Il nome non può essere vuoto",
+    "",
+  ],
+  [
+    "toast.error",
+    "L'URL Base non può essere vuoto",
+    "",
+  ],
+  [
+    "toast.error",
+    "Il nome del modello non può essere vuoto",
+    "",
+  ],
+  [
+    "stato",
+    "modifica compilata",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      " Modifica dati AIAggiorna il nome, l'indirizzo API o il nome del modello di OpenAI – GPT-4o-mini (chiave personale).Nome visualizzatoBase URL APINome Modello esattoSe il fornitore ha cambiato o dismesso il modello, puoi inserire qui la versione aggiornata.Chiave APIOttieni chiave AnnullaSalva modificheClose",
+    ],
+    [
+      "mod-nome=text:GPT personale",
+      "mod-url=text:https://api.openai.com/v1///",
+      "mod-modello=text:gpt-4o",
+      "mod-chiave=text:sk-FAKE",
+    ],
+  ],
+  [
+    "toast.success",
+    "Dati di "GPT personale" aggiornati con successo",
+    "",
+  ],
+  [
+    "stato",
+    "dopo modifica",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.success",
+    "L'AI integrata è sempre configurata.",
+    "",
+  ],
+  [
+    "testaFornitoreAi",
+    "{"baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO"}",
+  ],
+  [
+    "toast.error",
+    "Chiave non valida",
+    "",
+  ],
+  [
+    "testaFornitoreAi",
+    "{"baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25"}",
+  ],
+  [
+    "toast.success",
+    "Chiave valida e pronta!",
+    "",
+  ],
+  [
+    "testaFornitoreAi",
+    "{"baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":""}",
+  ],
+  [
+    "toast.error",
+    "Inserisci prima la chiave.",
+    "",
+  ],
+  [
+    "toast.info",
+    "Precompilati dati per ✨ Google Gemini 2.0 Flash (Gratis)",
+    "",
+  ],
+  [
+    "stato",
+    "nuova AI aperta",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      " Aggiungi nuova AIScegli una precompilazione rapida o inserisci manualmente i dati.Precompila in 1 clic:✨ Google Gemini 2.0 Flash (Gratis)🌪️ Mistral Pixtral (Visione)🌐 OpenRouter Free Vision💡 Importante: il modello scelto deve avere il supporto Vision per leggere testo e date dagli attestati.Nome visualizzato *Base URL API *L'indirizzo compatibile OpenAI (termina tipicamente con /v1 o /openai)Nome Modello esatto *Il codice del modello con visione (es. gemini-2.0-flash, pixtral-12b-2409)Chiave API (opzionale subito)Crea chiave gratis AnnullaSalva AIClose",
+    ],
+    [
+      "nuovo-nome=text:Google AI Studio – Gemini 2.0 Flash",
+      "nuova-url=text:https://generativelanguage.googleapis.com/v1beta/openai",
+      "nuovo-modello=text:gemini-2.0-flash",
+      "nuova-chiave=password:",
+    ],
+  ],
+  [
+    "toast.info",
+    "Precompilati dati per 🌪️ Mistral Pixtral (Visione)",
+    "",
+  ],
+  [
+    "stato",
+    "template Mistral",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}],"activeId":"google-gemini-2.5-flash"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashIn uso Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+      " Aggiungi nuova AIScegli una precompilazione rapida o inserisci manualmente i dati.Precompila in 1 clic:✨ Google Gemini 2.0 Flash (Gratis)🌪️ Mistral Pixtral (Visione)🌐 OpenRouter Free Vision💡 Importante: il modello scelto deve avere il supporto Vision per leggere testo e date dagli attestati.Nome visualizzato *Base URL API *L'indirizzo compatibile OpenAI (termina tipicamente con /v1 o /openai)Nome Modello esatto *Il codice del modello con visione (es. gemini-2.0-flash, pixtral-12b-2409)Chiave API (opzionale subito)Crea chiave gratis AnnullaSalva AIClose",
+    ],
+    [
+      "nuovo-nome=text:Mistral – Pixtral 12B",
+      "nuova-url=text:https://api.mistral.ai/v1",
+      "nuovo-modello=text:pixtral-12b-2409",
+      "nuova-chiave=password:",
+    ],
+  ],
+  [
+    "toast.error",
+    "Inserisci un nome per l'AI",
+    "",
+  ],
+  [
+    "toast.error",
+    "Inserisci l'indirizzo Base URL",
+    "",
+  ],
+  [
+    "toast.error",
+    "Inserisci il nome del modello",
+    "",
+  ],
+  [
+    "toast.success",
+    "AI "Mia AI" aggiunta con successo",
+    "",
+  ],
+  [
+    "stato",
+    "dopo nuova AI",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true},{"id":"custom-1792497600000","name":"Mia AI","kind":"openai","baseUrl":"https://api.mistral.ai/v1","model":"pixtral-12b-2409","apiKey":"FAKE-NUOVA","note":"Fornitore personalizzato salvato in questo browser.","supportaVisione":true,"isCustom":true,"keyUrl":"https://console.mistral.ai/api-keys/"}],"activeId":"custom-1792497600000"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaMia AIPersonalizzataIn uso Chiave inseritaFornitore personalizzato salvato in questo browser.Modello: pixtral-12b-2409ModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.info",
+    "Precompilati dati per ✨ Google Gemini 2.0 Flash (Gratis)",
+    "",
+  ],
+  [
+    "toast.success",
+    "AI "Senza chiave" aggiunta con successo",
+    "",
+  ],
+  [
+    "stato",
+    "seconda AI senza chiave",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true},{"id":"custom-1792497600000","name":"Mia AI","kind":"openai","baseUrl":"https://api.mistral.ai/v1","model":"pixtral-12b-2409","apiKey":"FAKE-NUOVA","note":"Fornitore personalizzato salvato in questo browser.","supportaVisione":true,"isCustom":true,"keyUrl":"https://console.mistral.ai/api-keys/"},{"id":"custom-1792497605000","name":"Senza chiave","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"","note":"Fornitore personalizzato salvato in questo browser.","supportaVisione":true,"isCustom":true,"keyUrl":"https://aistudio.google.com/app/apikey"}],"activeId":"custom-1792497600000"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)Usa questaPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaMia AIPersonalizzataIn uso Chiave inseritaFornitore personalizzato salvato in questo browser.Modello: pixtral-12b-2409ModificaTestaSenza chiavePersonalizzataUsa questa Chiave mancanteFornitore personalizzato salvato in questo browser.Modello: gemini-2.0-flashModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.info",
+    "AI "Mia AI" eliminata",
+    "",
+  ],
+  [
+    "stato",
+    "dopo elimina",
+    "{"providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"KO","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"AIzaFAKE-25","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"GPT personale","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o","apiKey":"sk-FAKE","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true},{"id":"custom-1792497605000","name":"Senza chiave","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"","note":"Fornitore personalizzato salvato in questo browser.","supportaVisione":true,"isCustom":true,"keyUrl":"https://aistudio.google.com/app/apikey"}],"activeId":"lovable-default"}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)In usoPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave inseritaConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave inseritaDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaGPT personaleUsa questa Chiave inseritaRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4oModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaSenza chiavePersonalizzataUsa questa Chiave mancanteFornitore personalizzato salvato in questo browser.Modello: gemini-2.0-flashModificaTestaClose",
+    ],
+    [],
+  ],
+  [
+    "toast.info",
+    "AI "Senza chiave" eliminata",
+    "",
+  ],
+  [
+    "toast.info",
+    "Elenco ripristinato",
+    "",
+  ],
+  [
+    "stato",
+    "dopo ripristino",
+    "{"activeId":"lovable-default","providers":[{"id":"lovable-default","name":"AI integrata (crediti Lovable)","kind":"default","baseUrl":"","model":"integrato","apiKey":"","note":"Predefinita. Usa i crediti AI mensili dello spazio di lavoro.","supportaVisione":true},{"id":"google-gemini-2.0-flash","name":"Google AI Studio – Gemini 2.0 Flash (gratis)","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.0-flash","apiKey":"","note":"Consigliato: veloce, gratuito e legge PDF e foto.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"google-gemini-2.5-flash","name":"Google AI Studio – Gemini 2.5 Flash","kind":"openai","baseUrl":"https://generativelanguage.googleapis.com/v1beta/openai","model":"gemini-2.5-flash","apiKey":"","note":"Disponibile solo per account abilitati su Google AI Studio.","keyUrl":"https://aistudio.google.com/app/apikey","supportaVisione":true},{"id":"openai-gpt4o-mini","name":"OpenAI – GPT-4o-mini (chiave personale)","kind":"openai","baseUrl":"https://api.openai.com/v1","model":"gpt-4o-mini","apiKey":"","note":"Richiede una chiave OpenAI con credito proprio. Legge le foto.","keyUrl":"https://platform.openai.com/api-keys","supportaVisione":true},{"id":"openrouter-free","name":"OpenRouter (modelli gratuiti)","kind":"openai","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemini-2.0-flash-exp:free","apiKey":"","note":"Aggregatore con modelli gratuiti che leggono le immagini.","keyUrl":"https://openrouter.ai/keys","supportaVisione":true}]}",
+    [
+      " Imposta AIScegli chi legge gli attestati o modifica modello, indirizzo e chiave. Le modifiche restano in questo browser. Aggiungi nuova AI Elenco inizialeAI integrata (crediti Lovable)In usoPredefinita. Usa i crediti AI mensili dello spazio di lavoro.Modello: integratoTestaGoogle AI Studio – Gemini 2.0 Flash (gratis)Usa questa Chiave mancanteConsigliato: veloce, gratuito e legge PDF e foto.Modello: gemini-2.0-flashModificaTestaGoogle AI Studio – Gemini 2.5 FlashUsa questa Chiave mancanteDisponibile solo per account abilitati su Google AI Studio.Modello: gemini-2.5-flashModificaTestaOpenAI – GPT-4o-mini (chiave personale)Usa questa Chiave mancanteRichiede una chiave OpenAI con credito proprio. Legge le foto.Modello: gpt-4o-miniModificaTestaOpenRouter (modelli gratuiti)Usa questa Chiave mancanteAggregatore con modelli gratuiti che leggono le immagini.Modello: google/gemini-2.0-flash-exp:freeModificaTestaClose",
+    ],
+    [],
+  ],
+]
+`;
