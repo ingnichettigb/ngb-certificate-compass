@@ -1,0 +1,204 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Attestati (PDF): percorso d'uso completo > registra tutto quello che il componente fa 1`] = `
+[
+  [
+    "sb",
+    "from",
+    "documenti_attestati",
+    "["documenti_attestati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "documenti_attestati",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "documenti_attestati",
+    "["dipendente_id","d1"]",
+  ],
+  [
+    "sb",
+    "from.select.eq.order",
+    "documenti_attestati",
+    "["created_at",{"ascending":false}]",
+  ],
+  [
+    "lista",
+    "Attestati (PDF) Aggiungi attestato2025-01_ROSSI_MARIO_RSSMRA80A01H501U_ANTINCENDIO.pdfAntincendio10/01/20302021-01_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdfLavori in quota01/01/2026",
+  ],
+  [
+    "sb",
+    "storage.from",
+    "",
+    "["attestati"]",
+  ],
+  [
+    "sb",
+    "storage.from.createSignedUrl",
+    "",
+    "["Archivio Attestati Sicurezza/ROSSI_MARIO_RSSMRA80A01H501U/2025-01_ROSSI_MARIO_RSSMRA80A01H501U_ANTINCENDIO.pdf",3600]",
+  ],
+  [
+    "window.open",
+    "https://firmato/x",
+    "_blank",
+  ],
+  [
+    "sb",
+    "storage.from",
+    "",
+    "["attestati"]",
+  ],
+  [
+    "sb",
+    "storage.from.remove",
+    "",
+    "[["Archivio Attestati Sicurezza/ROSSI_MARIO_RSSMRA80A01H501U/2021-01_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdf"]]",
+  ],
+  [
+    "sb",
+    "from",
+    "documenti_attestati",
+    "["documenti_attestati"]",
+  ],
+  [
+    "sb",
+    "from.delete",
+    "documenti_attestati",
+    "[]",
+  ],
+  [
+    "sb",
+    "from.delete.eq",
+    "documenti_attestati",
+    "["id","doc2"]",
+  ],
+  [
+    "toast.success",
+    "Attestato eliminato",
+    "",
+  ],
+  [
+    "sb",
+    "from",
+    "documenti_attestati",
+    "["documenti_attestati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "documenti_attestati",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "documenti_attestati",
+    "["dipendente_id","d1"]",
+  ],
+  [
+    "sb",
+    "from.select.eq.order",
+    "documenti_attestati",
+    "["created_at",{"ascending":false}]",
+  ],
+  [
+    "pagina",
+    "dialog iniziale",
+    "Aggiungi attestato PDFRossi Mario · rssmra80a01h501uTipo di attestatoSeleziona…Data rilascio / emanazioneAnno/mese usati per il nome del fileData di scadenzaPer il calcolo dei rinnoviTrascina qui il PDF oppure clicca per sceglierloSalva anche in locale (cartella "Archivio Attestati Sicurezza", solo Chrome/Edge da computer)Annulla Conferma e caricaClose",
+  ],
+  [
+    "toast.error",
+    "Sono ammessi solo file PDF",
+    "",
+  ],
+  [
+    "pagina",
+    "dialog compilato",
+    "Aggiungi attestato PDFRossi Mario · rssmra80a01h501uTipo di attestatoAltroData rilascio / emanazioneAnno/mese usati per il nome del fileData di scadenzaPer il calcolo dei rinnoviSpecifica il tiposcan.pdfIl file verrà salvato come 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdfAnteprima non disponibile in questo browser.Salva anche in locale (cartella "Archivio Attestati Sicurezza", solo Chrome/Edge da computer)Annulla Conferma e caricaClose",
+  ],
+  [
+    "sb",
+    "storage.from",
+    "",
+    "["attestati"]",
+  ],
+  [
+    "sb",
+    "storage.from.upload",
+    "",
+    "["Archivio Attestati Sicurezza/ROSSI_MARIO_RSSMRA80A01H501U/2026-03_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdf",{},{"upsert":true,"contentType":"application/pdf"}]",
+  ],
+  [
+    "sb",
+    "from",
+    "documenti_attestati",
+    "["documenti_attestati"]",
+  ],
+  [
+    "sb",
+    "from.insert",
+    "documenti_attestati",
+    "[{"dipendente_id":"d1","codice_fiscale":"rssmra80a01h501u","tipo_attestato":"Altro","tipo_personalizzato":"Lavori in quota","data_scadenza":"2031-03-15","nome_file":"2026-03_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdf","percorso_file":"Archivio Attestati Sicurezza/ROSSI_MARIO_RSSMRA80A01H501U/2026-03_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdf"}]",
+  ],
+  [
+    "sb",
+    "from.insert.select",
+    "documenti_attestati",
+    "[]",
+  ],
+  [
+    "sb",
+    "from.insert.select.single",
+    "documenti_attestati",
+    "[]",
+  ],
+  [
+    "toast.info",
+    "Salvataggio locale non supportato",
+    "{"description":"La copia in cartella locale funziona solo su Chrome o Edge da computer. Il file è stato salvato online."}",
+  ],
+  [
+    "toast.success",
+    "Attestato caricato",
+    "{"description":"2026-03_ROSSI_MARIO_RSSMRA80A01H501U_LAVORI_IN_QUOTA.pdf"}",
+  ],
+  [
+    "sb",
+    "from",
+    "documenti_attestati",
+    "["documenti_attestati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "documenti_attestati",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "documenti_attestati",
+    "["dipendente_id","d1"]",
+  ],
+  [
+    "sb",
+    "from.select.eq.order",
+    "documenti_attestati",
+    "["created_at",{"ascending":false}]",
+  ],
+  [
+    "dialog chiuso",
+    true,
+  ],
+  [
+    "pagina",
+    "dialog riaperto (campi azzerati)",
+    "Aggiungi attestato PDFRossi Mario · rssmra80a01h501uTipo di attestatoSeleziona…Data rilascio / emanazioneAnno/mese usati per il nome del fileData di scadenzaPer il calcolo dei rinnoviTrascina qui il PDF oppure clicca per sceglierloSalva anche in locale (cartella "Archivio Attestati Sicurezza", solo Chrome/Edge da computer)Annulla Conferma e caricaClose",
+  ],
+]
+`;
