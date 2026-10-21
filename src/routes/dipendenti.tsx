@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { BackupBar } from "@/components/BackupBar";
 import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
-import { DocumentiAttestati } from "@/components/DocumentiAttestati";
+import { DocumentiAttestati } from "@/features/documenti/DocumentiAttestati";
 import {
   aggiornaRepartoDipendente,
   chiudiIntegrazioneDvr,

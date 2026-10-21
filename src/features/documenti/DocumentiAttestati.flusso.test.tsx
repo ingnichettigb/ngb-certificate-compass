@@ -28,7 +28,7 @@ vi.mock("sonner", async () => {
 });
 
 import { registro } from "@/test/registratore-supabase";
-import { DocumentiAttestati } from "@/components/DocumentiAttestati";
+import { DocumentiAttestati } from "@/features/documenti/DocumentiAttestati";
 
 const dipendente = {
   id: "d1", cognome: "Rossi", nome: "Mario", codice_fiscale: "rssmra80a01h501u", email: null, reparto: null,
