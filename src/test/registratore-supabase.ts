@@ -14,11 +14,13 @@ export type DatiFinti = {
   tabelle?: Record<string, unknown[]>;
   /** Riga restituita da single()/maybeSingle() per tabella. */
   singoli?: Record<string, unknown>;
+  /** Tabelle la cui lettura fallisce, con il messaggio d'errore (si può modificare durante il test). */
+  errori?: Record<string, string>;
 };
 
 const ultimo = (path: string[]) => [...path].reverse().find((p) => p !== "()") ?? "";
 
-export function creaClientFinto({ tabelle = {}, singoli = {} }: DatiFinti = {}) {
+export function creaClientFinto({ tabelle = {}, singoli = {}, errori = {} }: DatiFinti = {}) {
   const risposta = (path: string[], tabella: string) => {
     const op = ultimo(path);
     if (path.includes("storage")) {
@@ -27,6 +29,7 @@ export function creaClientFinto({ tabelle = {}, singoli = {} }: DatiFinti = {}) 
       return { data: null, error: null };
     }
     const scrive = path.some((p) => ["insert", "update", "upsert", "delete"].includes(p));
+    if (!scrive && errori[tabella]) return { data: null, error: { message: errori[tabella] } };
     if (op === "single" || op === "maybeSingle") return { data: singoli[tabella] ?? { id: "nuovo-1" }, error: null };
     if (!scrive && tabella in tabelle) return { data: tabelle[tabella], error: null, count: tabelle[tabella]!.length };
     return { data: scrive ? null : [], error: null, count: 1 };
