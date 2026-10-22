@@ -58,10 +58,11 @@ export function TabellaTipiCorso() {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-auto rounded-lg border border-border">
+    <div className="min-w-0 space-y-3">
+      <div className="max-h-[60vh] min-w-0 overflow-auto rounded-lg border border-border">
         <Table className="min-w-[900px]">
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background">
+
             <TableRow>
               <TableHead className="w-8" />
               <TableHead className="w-28 min-w-[104px]">Codice</TableHead>
