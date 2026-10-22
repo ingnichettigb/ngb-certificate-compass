@@ -306,7 +306,7 @@ function StatCard({
   to,
 }: {
   label: string;
-  value?: number;
+  value?: number | undefined;
   icon: React.ComponentType<{ className?: string }>;
   tone?: "default" | "warning" | "destructive";
   to: string;
