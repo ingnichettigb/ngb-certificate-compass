@@ -1,0 +1,363 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto quello che la pagina fa 1`] = `
+[
+  [
+    "sb",
+    "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "tipi_corso",
+    "["ordine"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "tipi_corso",
+    "["nome_corso"]",
+  ],
+  [
+    "sb",
+    "from",
+    "reparti",
+    "["reparti"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "reparti",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "reparti",
+    "["ordine"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "reparti",
+    "["nome"]",
+  ],
+  [
+    "sb",
+    "from",
+    "sottoreparti",
+    "["sottoreparti"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "sottoreparti",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "sottoreparti",
+    "["ordine"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "sottoreparti",
+    "["nome"]",
+  ],
+  [
+    "sb",
+    "from",
+    "classi_concorso",
+    "["classi_concorso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "classi_concorso",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "classi_concorso",
+    "["codice"]",
+  ],
+  [
+    "sb",
+    "from",
+    "materie",
+    "["materie"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "materie",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "materie",
+    "["usi",{"ascending":false}]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "materie",
+    "["nome"]",
+  ],
+  [
+    "sb",
+    "from",
+    "categorie_corso",
+    "["categorie_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "categorie_corso",
+    "["macro_categoria"]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "categorie_corso",
+    "["visibile_lavoratore",false]",
+  ],
+  [
+    "pagina",
+    "iniziale",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *Scegli il repartoDocenteATALuogo di nascitaData di nascita2. Il corsoCategoria del corso *Scegli la categoriaAntincendioPrepostoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "opzioni reparto",
+    [
+      "Docente",
+      "ATA",
+    ],
+  ],
+  [
+    "opzioni categoria",
+    [
+      "Antincendio",
+      "Preposto",
+    ],
+  ],
+  [
+    "toast.error",
+    "Codice fiscale non valido",
+    "{"description":"Deve contenere 16 caratteri."}",
+  ],
+  [
+    "toast.error",
+    "Codice fiscale non valido",
+    "{"description":"Deve contenere 16 caratteri."}",
+  ],
+  [
+    "toast.error",
+    "Scegli il tuo reparto",
+    "",
+  ],
+  [
+    "pagina",
+    "reparto ATA",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *ATADocenteATAProfilo / sottoreparto *Scegli il profiloAA — Assistente amministrativoCS — Collaboratore scolasticoLuogo di nascitaData di nascita2. Il corsoCategoria del corso *Scegli la categoriaAntincendioPrepostoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "opzioni profilo",
+    [
+      "AA — Assistente amministrativo",
+      "CS — Collaboratore scolastico",
+    ],
+  ],
+  [
+    "toast.error",
+    "Scegli il tuo profilo dentro il reparto",
+    "",
+  ],
+  [
+    "pagina",
+    "reparto Docente",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *Luogo di nascitaData di nascita2. Il corsoCategoria del corso *Scegli la categoriaAntincendioPrepostoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "toast.error",
+    "Indica la classe di concorso",
+    "",
+  ],
+  [
+    "valori",
+    "classe digitata",
+    "["RSSMRA80A01H501U","Rossi","Mario","mario@x.it","A-26","","","","",""]",
+  ],
+  [
+    "toast.error",
+    "Indica la materia insegnata",
+    "",
+  ],
+  [
+    "toast.error",
+    "Completa corso e data del corso",
+    "",
+  ],
+  [
+    "valori",
+    "dopo cambio reparto (campi azzerati)",
+    "["RSSMRA80A01H501U","Rossi","Mario","mario@x.it","","","",""]",
+  ],
+  [
+    "pagina",
+    "categoria Antincendio",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "pagina",
+    "livello Aggiornamento",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio aggiornamento2 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "pagina",
+    "livello Base",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "valori",
+    "corso scelto (ore precompilate)",
+    "["RSSMRA80A01H501U","Rossi","Mario","mario@x.it","A-26","Matematica","Soresina","1980-01-01","Base","Aggiornamento","t1","t2","","8"]",
+  ],
+  [
+    "pagina",
+    "scadenza calcolata",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "pagina",
+    "cambio categoria (corso azzerato)",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *PrepostoAntincendioPrepostoLivello *SpecificoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "toast.error",
+    "Allega almeno la foto del fronte dell'attestato",
+    "",
+  ],
+  [
+    "pagina",
+    "foto allegate",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteRetroInvia attestato",
+  ],
+  [
+    "pagina",
+    "rimossa una foto",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroInvia attestato",
+  ],
+  [
+    "sb",
+    "from",
+    "dipendenti",
+    "["dipendenti"]",
+  ],
+  [
+    "sb",
+    "from.upsert",
+    "dipendenti",
+    "[{"codice_fiscale":"RSSMRA80A01H501U","cognome":"Rossi","nome":"Mario","email":"mario@x.it","reparto":"Docente","sottoreparto":null,"classe_concorso":"A-26","materia":"Matematica","luogo_nascita":"Soresina","data_nascita":"1980-01-01"},{"onConflict":"codice_fiscale"}]",
+  ],
+  [
+    "sb",
+    "from.upsert.select",
+    "dipendenti",
+    "[]",
+  ],
+  [
+    "sb",
+    "from.upsert.select.single",
+    "dipendenti",
+    "[]",
+  ],
+  [
+    "sb",
+    "rpc",
+    "",
+    "["registra_classe_concorso",{"p_codice":"A-26","p_denominazione":null}]",
+  ],
+  [
+    "sb",
+    "rpc",
+    "",
+    "["registra_materia",{"p_nome":"Matematica","p_classe":"A-26"}]",
+  ],
+  [
+    "sb",
+    "storage.from",
+    "",
+    "["attestati"]",
+  ],
+  [
+    "sb",
+    "storage.from.upload",
+    "",
+    "["RSSMRA80A01H501U/1792000000000-fronte.jpg",{}]",
+  ],
+  [
+    "sb",
+    "storage.from",
+    "",
+    "["attestati"]",
+  ],
+  [
+    "sb",
+    "storage.from.upload",
+    "",
+    "["RSSMRA80A01H501U/1792000000000-retro.jpg",{}]",
+  ],
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.insert",
+    "attestati_caricati",
+    "[{"dipendente_id":"dip-1","codice_fiscale":"RSSMRA80A01H501U","tipo_corso_id":"t1","data_corso":"2026-03-15","ore_dichiarate":4,"url_foto_fronte":"RSSMRA80A01H501U/1792000000000-fronte.jpg","url_foto_retro":"RSSMRA80A01H501U/1792000000000-retro.jpg","stato_validazione":"In attesa"}]",
+  ],
+  [
+    "sb",
+    "from.insert.select",
+    "attestati_caricati",
+    "[]",
+  ],
+  [
+    "sb",
+    "from.insert.select.single",
+    "attestati_caricati",
+    "[]",
+  ],
+  [
+    "pagina",
+    "dopo invio",
+    "Attestato inviatoIl tuo attestato è in attesa di validazione da parte dell'ufficio personale. Riceverai l'esito via email.Carica un altro attestato",
+  ],
+  [
+    "pagina",
+    "secondo attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+  ],
+  [
+    "valori",
+    "secondo attestato",
+    "["RSSMRA80A01H501U","Rossi","Mario","mario@x.it","A-26","Matematica","Soresina","1980-01-01","Base","Aggiornamento","t1","t2","",""]",
+  ],
+]
+`;
