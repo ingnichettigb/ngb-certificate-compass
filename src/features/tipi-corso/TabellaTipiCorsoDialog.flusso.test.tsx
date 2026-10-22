@@ -37,7 +37,7 @@ vi.mock("sonner", async () => {
 });
 
 import { registro } from "@/test/registratore-supabase";
-import { TabellaTipiCorsoDialog } from "@/components/TabellaTipiCorsoDialog";
+import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
 
 const attendi = () => act(async () => { await new Promise((r) => setTimeout(r, 40)); });
 const clic = async (el: Element) => { fireEvent.click(el); await attendi(); };
@@ -139,7 +139,7 @@ describe("Tabella tipi di corso: percorso d'uso completo", () => {
   });
 
   it("mostra l'errore se la tabella non è leggibile", async () => {
-    dati.errori.tipi_corso = "relation \"tipi_corso\" does not exist";
+    dati.errori["tipi_corso"] = "relation \"tipi_corso\" does not exist";
     render(<QueryClientProvider client={nuovoClient()}><TabellaTipiCorsoDialog /></QueryClientProvider>);
     await clic(screen.getByText("Tabella corsi"));
     await attendi();
