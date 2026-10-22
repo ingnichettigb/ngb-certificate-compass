@@ -95,7 +95,8 @@ export function RigaTipoCorso({
           disabled={occupata}
           onBlur={(e) => onSalvaCampo("codice", e.target.value.trim() || null)}
           title={c.codice ?? "Codice del corso"}
-          className="h-9 min-w-[96px] font-mono text-xs"
+          className="h-9 min-w-[110px] font-mono text-xs"
+
         />
       </TableCell>
 

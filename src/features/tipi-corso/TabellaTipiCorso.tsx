@@ -66,13 +66,13 @@ export function TabellaTipiCorso() {
 
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead className="w-28 min-w-[104px]">Codice</TableHead>
+              <TableHead className="w-32 min-w-[118px]">Codice</TableHead>
               <TableHead className="min-w-[220px]">Corso</TableHead>
               <TableHead className="w-24 min-w-[72px]">Ore corso</TableHead>
               <TableHead className="w-28 min-w-[86px]">Validità (anni)</TableHead>
               <TableHead className="w-28 min-w-[86px]">Aggiorn. (anni)</TableHead>
               <TableHead className="w-24 min-w-[76px]">Aggiorn. (ore)</TableHead>
-              <TableHead className="w-32 min-w-[104px]">Codice aggiorn.</TableHead>
+              <TableHead className="w-32 min-w-[118px]">Codice aggiorn.</TableHead>
               <TableHead className="w-24 min-w-[84px] text-center">Al lavoratore</TableHead>
               <TableHead className="w-10" />
 
