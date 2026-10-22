@@ -59,9 +59,10 @@ export function TabellaTipiCorso() {
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="max-h-[60vh] min-w-0 overflow-auto rounded-lg border border-border">
+      <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
         <Table className="min-w-[900px]">
           <TableHeader className="sticky top-0 z-10 bg-background">
+
 
             <TableRow>
               <TableHead className="w-8" />
