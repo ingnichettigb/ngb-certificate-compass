@@ -74,7 +74,7 @@ function costruisciHtml(corpo: string, d: DatiAzienda): string {
 export const inviaEmailConResend = createServerFn({ method: "POST" })
   .inputValidator((d: InvioEmailInput) => d)
   .handler(async ({ data }): Promise<InvioEmailRisultato> => {
-    const apiKey = process.env.RESEND_API_KEY;
+    const apiKey = process.env["RESEND_API_KEY"];
     if (!apiKey) {
       return { ok: false, messaggio: "Chiave RESEND_API_KEY non configurata sul server." };
     }
