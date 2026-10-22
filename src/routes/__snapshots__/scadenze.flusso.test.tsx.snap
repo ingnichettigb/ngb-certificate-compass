@@ -1,0 +1,365 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Scadenze: percorso d'uso completo > registra tutto quello che la pagina mostra 1`] = `
+[
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "attestati_caricati",
+    "["*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "attestati_caricati",
+    "["created_at",{"ascending":false}]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "attestati_caricati",
+    "["id"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order.range",
+    "attestati_caricati",
+    "[0,999]",
+  ],
+  [
+    "caricamento",
+    "Scadenze attestati0 risultati · ScadutiScadutiTutti i corsiTutti i reparti Caricamento…",
+  ],
+  [
+    "vista iniziale (Scaduti, per scadenza crescente)",
+    "Scadenze attestati2 risultati · Scaduti",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+    ],
+  ],
+  [
+    "opzioni periodo",
+    [
+      "Scaduti",
+      "In scadenza (90 gg)",
+      "In scadenza (6 mesi)",
+      "In scadenza (1 anno)",
+      "Tutti con scadenza",
+    ],
+  ],
+  [
+    "opzioni corso",
+    [
+      "Tutti i corsi",
+      "Antincendio rischio basso",
+      "Preposto",
+      "Primo soccorso",
+    ],
+  ],
+  [
+    "opzioni reparto",
+    [
+      "Tutti i reparti",
+      "ATA",
+      "Docente",
+      "Studente",
+    ],
+  ],
+  [
+    "periodo In scadenza (90 gg)",
+    "Scadenze attestati3 risultati · In scadenza (90 gg)",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+    ],
+  ],
+  [
+    "periodo In scadenza (6 mesi)",
+    "Scadenze attestati4 risultati · In scadenza (6 mesi)",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+    ],
+  ],
+  [
+    "periodo In scadenza (1 anno)",
+    "Scadenze attestati5 risultati · In scadenza (1 anno)",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+    ],
+  ],
+  [
+    "periodo Tutti con scadenza",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "periodo Scaduti",
+    "Scadenze attestati2 risultati · Scaduti",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+    ],
+  ],
+  [
+    "corso Primo soccorso (indipendente da maiuscole)",
+    "Scadenze attestati3 risultati · Tutti con scadenza",
+    [
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+    ],
+  ],
+  [
+    "corso Primo soccorso + reparto Docente",
+    "Scadenze attestati1 risultati · Tutti con scadenza",
+    [
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+    ],
+  ],
+  [
+    "solo reparto Docente (indipendente da maiuscole)",
+    "Scadenze attestati3 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+    ],
+  ],
+  [
+    "ricerca «ross»",
+    "Scadenze attestati1 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+    ],
+  ],
+  [
+    "ricerca «  VRDLNE »",
+    "Scadenze attestati1 risultati · Tutti con scadenza",
+    [
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+    ],
+  ],
+  [
+    "ricerca «antincendio»",
+    "Scadenze attestati3 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "ricerca «preposto»",
+    "Scadenze attestati1 risultati · Tutti con scadenza",
+    [
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+    ],
+  ],
+  [
+    "ricerca «zzz»",
+    "Scadenze attestati0 risultati · Tutti con scadenza",
+    [
+      "Nessun attestato in questa vista",
+    ],
+  ],
+  [
+    "ricerca «mario rossi»",
+    "Scadenze attestati0 risultati · Tutti con scadenza",
+    [
+      "Nessun attestato in questa vista",
+    ],
+  ],
+  [
+    "ricerca «»",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "ordinato per Dipendente",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "ordinato per Dipendente",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+    ],
+  ],
+  [
+    "ordinato per Codice fiscale",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+    ],
+  ],
+  [
+    "ordinato per Reparto",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+    ],
+  ],
+  [
+    "ordinato per Reparto",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+    ],
+  ],
+  [
+    "ordinato per Corso",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+    ],
+  ],
+  [
+    "ordinato per Data corso",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "ordinato per Data corso",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+    ],
+  ],
+  [
+    "ordinato per Scadenza",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+    ],
+  ],
+  [
+    "ordinato per Scadenza",
+    "Scadenze attestati8 risultati · Tutti con scadenza",
+    [
+      "VIOLA TINAVLITNA80A41H501X45123Antincendio rischio basso05/05/202501/01/2030",
+      "BRUNI SARABRNSRA80A41H501XStudenteprimo SOCCORSO01/09/202201/09/2027",
+      "GIALLI PAOLOGLLPLA80A01H501UdocentePrimo soccorso01/03/202401/03/2027",
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+      "VERDI ELENAVRDLNE80A41H501XDocenteAntincendio rischio basso20/11/202115/11/2026",
+      "ARANCI UGORNCGUO80A01H501U———20/10/2026",
+      "BIANCHI ANNABNCNNA85B41F205XATAPrimo soccorso01/10/202319/10/2026",
+      "ROSSI MARIORSSMRA80A01H501UDocenteAntincendio rischio basso10/01/202110/01/2026",
+    ],
+  ],
+  [
+    "combinazione 1 anno + Preposto",
+    "Scadenze attestati1 risultati · In scadenza (1 anno)",
+    [
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+    ],
+  ],
+  [
+    "combinazione 1 anno + Preposto + ATA",
+    "Scadenze attestati1 risultati · In scadenza (1 anno)",
+    [
+      "NERI LUCANRELCU80A01H501UATAPreposto18/01/202218/01/2027",
+    ],
+  ],
+]
+`;
