@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { TabellaTipiCorsoDialog } from "@/components/TabellaTipiCorsoDialog";
+import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
 import { Switch } from "@/components/ui/switch";
 import { getCategorieCorso, impostaCategoriaVisibile } from "@/lib/api";
 import { ErroreTabelle } from "./ErroreTabelle";
