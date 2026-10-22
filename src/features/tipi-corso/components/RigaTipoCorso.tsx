@@ -94,9 +94,11 @@ export function RigaTipoCorso({
           defaultValue={c.codice ?? ""}
           disabled={occupata}
           onBlur={(e) => onSalvaCampo("codice", e.target.value.trim() || null)}
-          className="h-9 font-mono text-xs"
+          title={c.codice ?? "Codice del corso"}
+          className="h-9 min-w-[96px] font-mono text-xs"
         />
       </TableCell>
+
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.nome_corso}
@@ -120,9 +122,10 @@ export function RigaTipoCorso({
           onBlur={(e) =>
             onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)
           }
-          className="h-9 font-mono text-xs"
+          className="h-9 min-w-[96px] font-mono text-xs"
         />
       </TableCell>
+
       <TableCell className="p-1.5 text-center">
         <Switch
           checked={c.visibile_lavoratore}

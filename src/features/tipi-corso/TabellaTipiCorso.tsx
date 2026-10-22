@@ -60,19 +60,20 @@ export function TabellaTipiCorso() {
   return (
     <div className="space-y-3">
       <div className="overflow-auto rounded-lg border border-border">
-        <Table>
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead className="w-24">Codice</TableHead>
+              <TableHead className="w-28 min-w-[104px]">Codice</TableHead>
               <TableHead className="min-w-[220px]">Corso</TableHead>
-              <TableHead className="w-24">Ore corso</TableHead>
-              <TableHead className="w-28">Validità (anni)</TableHead>
-              <TableHead className="w-28">Aggiorn. (anni)</TableHead>
-              <TableHead className="w-24">Aggiorn. (ore)</TableHead>
-              <TableHead className="w-32">Codice aggiorn.</TableHead>
-              <TableHead className="w-24 text-center">Al lavoratore</TableHead>
+              <TableHead className="w-24 min-w-[72px]">Ore corso</TableHead>
+              <TableHead className="w-28 min-w-[86px]">Validità (anni)</TableHead>
+              <TableHead className="w-28 min-w-[86px]">Aggiorn. (anni)</TableHead>
+              <TableHead className="w-24 min-w-[76px]">Aggiorn. (ore)</TableHead>
+              <TableHead className="w-32 min-w-[104px]">Codice aggiorn.</TableHead>
+              <TableHead className="w-24 min-w-[84px] text-center">Al lavoratore</TableHead>
               <TableHead className="w-10" />
+
             </TableRow>
           </TableHeader>
           <TableBody>
