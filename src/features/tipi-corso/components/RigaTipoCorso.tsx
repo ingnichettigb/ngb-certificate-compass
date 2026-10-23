@@ -112,7 +112,7 @@ export function RigaTipoCorso({
         </span>
       </TableCell>
       <CellaNumerica valore={c.ore_minime_legge} disabled={occupata} onSalva={(v) => onSalvaCampo("ore_minime_legge", v)} />
-      <CellaNumerica valore={c.durata_validita_anni} placeholder="non scade" disabled={occupata} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
+      <CellaNumerica valore={c.durata_validita_anni} placeholder="N/A" zeroComeVuoto title="Lascia vuoto, scrivi 0 o N/A se il corso non scade" disabled={occupata} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
       <CellaNumerica valore={c.anni_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
       <CellaNumerica valore={c.ore_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
       <TableCell className="p-1.5">
