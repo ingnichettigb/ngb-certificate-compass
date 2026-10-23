@@ -24,7 +24,7 @@ export function CardDashboardHr() {
       <div className="mt-6 flex flex-wrap gap-2">
         <Button asChild>
           <Link to="/hr">
-            Apri dashboard
+            Apri cruscotto
             <ArrowRight className="size-4" />
           </Link>
         </Button>
