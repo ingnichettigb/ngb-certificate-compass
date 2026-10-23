@@ -3,7 +3,8 @@
  * Percorso:  src/features/tipi-corso/TabellaTipiCorso.tsx
  * Tabella completa dei tipi di corso: intestazioni, righe, aggiunta e note.
  */
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,11 +13,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { TipoCorso } from "@/lib/api";
 import { RigaTipoCorso } from "./components/RigaTipoCorso";
 import { FormNuovoCorso } from "./components/FormNuovoCorso";
 import { useTabellaTipiCorso } from "./hooks/useTabellaTipiCorso";
 
+type Chiave =
+  | "codice"
+  | "nome_corso"
+  | "ore_minime_legge"
+  | "durata_validita_anni"
+  | "anni_aggiornamento"
+  | "ore_aggiornamento"
+  | "codice_corso_aggiornamento"
+  | "visibile_lavoratore";
+type Ord = { chiave: Chiave; dir: "asc" | "desc" };
+
+/** Ordina i corsi per la colonna scelta; i valori vuoti vanno sempre in fondo. */
+export function ordina(corsi: TipoCorso[], ord: Ord): TipoCorso[] {
+  const f = ord.dir === "asc" ? 1 : -1;
+  return [...corsi].sort((a, b) => {
+    const va = a[ord.chiave];
+    const vb = b[ord.chiave];
+    const vuotoA = va === null || va === undefined || va === "";
+    const vuotoB = vb === null || vb === undefined || vb === "";
+    if (vuotoA || vuotoB) return vuotoA === vuotoB ? 0 : vuotoA ? 1 : -1;
+    if (typeof va === "string" && typeof vb === "string")
+      return f * va.localeCompare(vb, "it", { numeric: true, sensitivity: "base" });
+    return f * (Number(va) - Number(vb));
+  });
+}
+
 export function TabellaTipiCorso() {
+  const [ord, setOrd] = useState<Ord>({ chiave: "codice", dir: "asc" });
   const {
     corsi,
     isLoading,
@@ -57,29 +86,48 @@ export function TabellaTipiCorso() {
     );
   }
 
+  const righe = ordina(corsi, ord);
+  const intest = (chiave: Chiave, testo: string, cls: string) => (
+    <TableHead className={cls}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+        onClick={() =>
+          setOrd((o) => ({ chiave, dir: o.chiave === chiave && o.dir === "asc" ? "desc" : "asc" }))
+        }
+      >
+        {testo}
+        {ord.chiave === chiave ? (
+          ord.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+        ) : (
+          <ArrowUpDown className="size-3 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+
   return (
     <div className="min-w-0 space-y-3">
       <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
         <Table className="min-w-[900px]">
           <TableHeader className="sticky top-0 z-10 bg-background">
-
-
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead className="w-32 min-w-[118px]">Codice</TableHead>
-              <TableHead className="min-w-[220px]">Corso</TableHead>
-              <TableHead className="w-24 min-w-[72px]">Ore corso</TableHead>
-              <TableHead className="w-28 min-w-[86px]">Validità (anni)</TableHead>
-              <TableHead className="w-28 min-w-[86px]">Aggiorn. (anni)</TableHead>
-              <TableHead className="w-24 min-w-[76px]">Aggiorn. (ore)</TableHead>
-              <TableHead className="w-32 min-w-[118px]">Codice aggiorn.</TableHead>
-              <TableHead className="w-24 min-w-[84px] text-center">Al lavoratore</TableHead>
+              {intest("codice", "Codice", "w-32 min-w-[118px]")}
+              {intest("nome_corso", "Corso", "min-w-[220px]")}
+              {intest("ore_minime_legge", "Ore corso", "w-24 min-w-[72px]")}
+              {intest("durata_validita_anni", "Validità (anni)", "w-28 min-w-[86px]")}
+              {intest("anni_aggiornamento", "Aggiorn. (anni)", "w-28 min-w-[86px]")}
+              {intest("ore_aggiornamento", "Aggiorn. (ore)", "w-24 min-w-[76px]")}
+              {intest("codice_corso_aggiornamento", "Codice aggiorn.", "w-32 min-w-[118px]")}
+              {intest("visibile_lavoratore", "Al lavoratore", "w-24 min-w-[84px] text-center")}
               <TableHead className="w-10" />
-
             </TableRow>
           </TableHeader>
           <TableBody>
-            {corsi.map((c, i) => (
+            {righe.map((c) => {
+              const i = corsi.findIndex((x) => x.id === c.id);
+              return (
               <RigaTipoCorso
                 key={c.id}
                 c={c}
@@ -96,7 +144,8 @@ export function TabellaTipiCorso() {
                 onLasciaRiga={() => lasciaRiga(c.id)}
                 onRilascia={() => rilasciaSu(c.id)}
               />
-            ))}
+              );
+            })}
             {!corsi.length && (
               <TableRow>
                 <TableCell colSpan={10} className="py-6 text-center text-sm text-muted-foreground">
