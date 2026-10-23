@@ -10,9 +10,17 @@ import { Button } from "@/components/ui/button";
 export function CardPostazioneOperatore() {
   return (
     <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
-      <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
-        <Bot className="size-5" />
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground">
+          <Bot className="size-5" />
+        </span>
+        <Button asChild>
+          <Link to="/operatore">
+            Apri postazione
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+      </div>
 
       <h2 className="mt-4 text-xl font-semibold">Postazione operatore</h2>
 
@@ -31,14 +39,6 @@ export function CardPostazioneOperatore() {
         </p>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild>
-          <Link to="/operatore">
-            Apri postazione
-            <ArrowRight className="size-4" />
-          </Link>
-        </Button>
-      </div>
     </article>
   );
 }
