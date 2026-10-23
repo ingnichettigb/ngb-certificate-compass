@@ -27,7 +27,7 @@ export interface Riga {
   tipo_corso_id: string | null;
   tipo_corso_nome: string;
   /** Solo nel modulo: non è una colonna della coda (ricavato da tipo_corso_id). */
-  tipo_corso_codice?: string | null;
+  tipo_corso_codice?: string | null | undefined;
   data_corso: string;
   ore: number | null;
   ente: string;

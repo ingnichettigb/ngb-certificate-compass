@@ -11,7 +11,7 @@ export const estensioneFile = (mime: string | null | undefined) =>
 
 export function nomeFileStandard(
   r: Pick<Riga, "data_corso" | "cognome" | "nome" | "codice_fiscale" | "tipo_corso_nome"> & {
-    tipo_corso_codice?: string | null;
+    tipo_corso_codice?: string | null | undefined;
   },
 ) {
   const codice = (r.tipo_corso_codice || "").trim() || "CORSO";
