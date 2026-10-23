@@ -1,3 +1,8 @@
+/*
+ * File:      ImpostazioniDialog.tsx
+ * Percorso:  src/components/ImpostazioniDialog.tsx
+ * Finestra impostazioni modulo lavoratore e archivio locale.
+ */
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +18,9 @@ import { RepartiTab } from "@/features/impostazioni/RepartiTab";
 import { InsegnamentoTab } from "@/features/impostazioni/InsegnamentoTab";
 import { CategorieTab } from "@/features/impostazioni/CategorieTab";
 import { RuoliTab } from "@/features/impostazioni/RuoliTab";
+import { ArchivioTab } from "@/features/impostazioni/ArchivioTab";
 
-/** Bottone "Impostazioni" + finestra per gestire reparti, sottoreparti e categorie. */
+/** Bottone "Impostazioni" + finestra per gestire reparti, sottoreparti, categorie e archivio locale. */
 export function ImpostazioniDialog() {
   const [open, setOpen] = useState(false);
   return (
@@ -23,21 +29,21 @@ export function ImpostazioniDialog() {
         <Settings className="size-4" /> Impostazioni
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Impostazioni modulo lavoratore</DialogTitle>
+            <DialogTitle>Impostazioni generali del programma</DialogTitle>
             <DialogDescription>
-              Scegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso
-              modo.
+              Configura i reparti, le materie, le categorie dei corsi e la cartella locale per l'archiviazione e la ricerca degli attestati.
             </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="reparti">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="reparti">Reparti</TabsTrigger>
               <TabsTrigger value="insegnamento">Classi e materie</TabsTrigger>
               <TabsTrigger value="categorie">Categorie corsi</TabsTrigger>
               <TabsTrigger value="ruoli">Ruoli</TabsTrigger>
+              <TabsTrigger value="archivio">Archivio locale</TabsTrigger>
             </TabsList>
             <TabsContent value="reparti" className="mt-4">
               <RepartiTab />
@@ -50,6 +56,9 @@ export function ImpostazioniDialog() {
             </TabsContent>
             <TabsContent value="ruoli" className="mt-4">
               <RuoliTab />
+            </TabsContent>
+            <TabsContent value="archivio" className="mt-4">
+              <ArchivioTab />
             </TabsContent>
           </Tabs>
         </DialogContent>
