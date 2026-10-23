@@ -112,6 +112,7 @@ export function ModuloDati({
                   const t = tipi.find((x) => x.id === val);
                   set("tipo_corso_id", val);
                   if (t) set("tipo_corso_nome", t.nome_corso);
+                  set("tipo_corso_codice", t?.codice ?? null);
                 }}
               >
                 <SelectTrigger>
@@ -164,7 +165,10 @@ export function ModuloDati({
 
             <div className="rounded-md border p-3 bg-muted/30 text-xs font-mono break-all">
               <span className="font-semibold text-muted-foreground block mb-1">Nome file archiviazione:</span>
-              {nomeFileStandard(form)}
+              {nomeFileStandard({
+                ...form,
+                tipo_corso_codice: form.tipo_corso_codice ?? tipi.find((t) => t.id === form.tipo_corso_id)?.codice ?? null,
+              })}
             </div>
 
             {totPagine > 1 && (

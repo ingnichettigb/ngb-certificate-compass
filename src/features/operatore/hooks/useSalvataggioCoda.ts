@@ -51,7 +51,7 @@ export function useSalvataggioCoda({
         const { error } = await sb.storage.from("attestati").upload(percorso, blob, { contentType: mime });
         if (error) throw error;
       }
-      const { file_blob: _b, nome_file_originale: _n, pagine_salvate: _p, ...dati } = form as Riga;
+      const { file_blob: _b, nome_file_originale: _n, pagine_salvate: _p, tipo_corso_codice: _c, ...dati } = form as Riga;
       const payload = {
         ...dati,
         data_nascita: dati.data_nascita || null,
