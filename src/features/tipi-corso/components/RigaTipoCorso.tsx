@@ -94,9 +94,12 @@ export function RigaTipoCorso({
           defaultValue={c.codice ?? ""}
           disabled={occupata}
           onBlur={(e) => onSalvaCampo("codice", e.target.value.trim() || null)}
-          className="h-9 font-mono text-xs"
+          title={c.codice ?? "Codice del corso"}
+          className="h-9 min-w-[110px] font-mono text-xs"
+
         />
       </TableCell>
+
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.nome_corso}
@@ -109,7 +112,7 @@ export function RigaTipoCorso({
         </span>
       </TableCell>
       <CellaNumerica valore={c.ore_minime_legge} disabled={occupata} onSalva={(v) => onSalvaCampo("ore_minime_legge", v)} />
-      <CellaNumerica valore={c.durata_validita_anni} placeholder="non scade" disabled={occupata} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
+      <CellaNumerica valore={c.durata_validita_anni} placeholder="N/A" zeroComeVuoto title="Lascia vuoto, scrivi 0 o N/A se il corso non scade" disabled={occupata} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
       <CellaNumerica valore={c.anni_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
       <CellaNumerica valore={c.ore_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
       <TableCell className="p-1.5">
@@ -120,9 +123,10 @@ export function RigaTipoCorso({
           onBlur={(e) =>
             onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)
           }
-          className="h-9 font-mono text-xs"
+          className="h-9 min-w-[96px] font-mono text-xs"
         />
       </TableCell>
+
       <TableCell className="p-1.5 text-center">
         <Switch
           checked={c.visibile_lavoratore}

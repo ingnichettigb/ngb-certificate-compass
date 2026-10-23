@@ -4,7 +4,9 @@
  * Bottone «Tabella corsi» e finestra che contiene la tabella.
  */
 import { useState } from "react";
-import { ListChecks } from "lucide-react";
+import { FileSpreadsheet, ListChecks } from "lucide-react";
+import { toast } from "sonner";
+import { esportaTipiCorsoExcel } from "./esporta-excel";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +34,16 @@ export function TabellaTipiCorsoDialog() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Tabella tipi di corso</DialogTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
+              <DialogTitle>Tabella tipi di corso</DialogTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => esportaTipiCorsoExcel().catch(() => toast.error("Esportazione non riuscita"))}
+              >
+                <FileSpreadsheet className="size-4" /> Esporta in Excel
+              </Button>
+            </div>
             <DialogDescription>
               Codici ufficiali Stato-Regioni: ore, validità e corso di aggiornamento collegato.
               Trascina una riga dal simbolo a sinistra per cambiarne l'ordine, modifica una cella
