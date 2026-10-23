@@ -43,6 +43,8 @@ Altre funzioni usate da più pagine: `ai` (provider di intelligenza artificiale)
 - `CatturaOcr.tsx` — visualizzatore documenti con mirino OCR. Le parti sono in `cattura-ocr/`
   (caricamento e rotazione, pan e zoom, selezione OCR, barra strumenti, banner, area di visualizzazione).
 - `IntestazioneOrdinabile.tsx` — intestazione di colonna ordinabile, usata da Dipendenti e Scadenze.
+- `TabellaRepartiDialog.tsx` — finestra con la tabella reparti in modifica diretta. Le parti sono in `tabella-reparti/`
+  (dati e azioni, tabella, riga modificabile, riga di inserimento).
 - `BackupBar`, `ImageViewer`, `UploadPreview`, `CampoSuggerito`, `DatiAziendaDialog`, `ImpostazioniDialog`, `TabellaRepartiDialog`.
 
 ## Test
@@ -55,4 +57,6 @@ Altre funzioni usate da più pagine: `ai` (provider di intelligenza artificiale)
 - HR: `hr.tsx` diviso in lista, filtri, dettaglio, validazione, email e hook.
 - Home: `routes/index.tsx` (336 righe) diviso in `features/home/`.
 - OCR: `CatturaOcr.tsx` (452 righe) diviso in `components/cattura-ocr/`.
+- Impostazioni: `RepartiTab` in `impostazioni/reparti/`, `InsegnamentoTab` in `impostazioni/insegnamento/`,
+  `TabellaRepartiDialog` in `components/tabella-reparti/`. Con test sulle regole pure (reparti da importare, ricerca classi).
 - Pulizia: due copie di `IntestazioneOrdinabile` unite; eliminati `lib/ruota-documento.ts` e `lib/email-eml.ts` (non usati).
