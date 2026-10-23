@@ -9,7 +9,8 @@ export interface TipoCorso {
   nome_corso: string;
   macro_categoria: string;
   livello_specifico: string;
-  ore_minime_legge: number;
+  ore_minime_legge: number | null;
+  codice?: string | null;
   durata_validita_anni: number | null;
 }
 

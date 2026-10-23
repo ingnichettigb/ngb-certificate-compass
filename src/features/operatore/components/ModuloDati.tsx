@@ -118,11 +118,17 @@ export function ModuloDati({
                   <SelectValue placeholder="Seleziona corso..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {tipi.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nome_corso}
-                    </SelectItem>
-                  ))}
+                  {[...tipi]
+                    .sort((a, b) => (a.codice ?? "~").localeCompare(b.codice ?? "~"))
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="font-mono text-xs text-primary mr-2">{t.codice ?? "—"}</span>
+                        {t.nome_corso}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({t.ore_minime_legge ?? "?"} ore)
+                        </span>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
