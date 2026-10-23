@@ -61,6 +61,7 @@ export function OperatorePage() {
           nomeAi={aiAttiva.name}
           campoOcr={campoOcr}
           onTesto={incollaOcr}
+          onFile={scegliFile}
         />
         <ModuloDati
           form={form}
