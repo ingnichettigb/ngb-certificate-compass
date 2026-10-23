@@ -82,7 +82,7 @@ describe("dataDaTesto", () => {
 });
 
 describe("nome file", () => {
-  it("nomeFileStandard: anno-mese, cognome, nome, CF, corso", () => {
+  it("nomeFileStandard: codice davanti, poi anno-mese, cognome, nome, CF, corso", () => {
     expect(
       nomeFileStandard({
         data_corso: "2026-03-15",
@@ -90,8 +90,9 @@ describe("nome file", () => {
         nome: "MARIO",
         codice_fiscale: "RSSMRA80A01H501U",
         tipo_corso_nome: "Antincendio - Rischio basso",
+        tipo_corso_codice: "SIC-GEN-04",
       }),
-    ).toBe("2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio___Rischio_basso.pdf");
+    ).toBe("SIC-GEN-04 - 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio___Rischio_basso.pdf");
   });
   it("nomeFileStandard: valori di ripiego se mancano i dati", () => {
     expect(
@@ -102,7 +103,7 @@ describe("nome file", () => {
         codice_fiscale: "",
         tipo_corso_nome: "",
       }),
-    ).toBe("ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf");
+    ).toBe("CORSO - ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf");
   });
   it("estensioneFile", () => {
     expect(estensioneFile("application/pdf")).toBe("pdf");

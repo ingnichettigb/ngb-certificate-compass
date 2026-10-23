@@ -28,6 +28,8 @@ export function useArchiviazione(ricarica: () => unknown) {
     setArchiviando(true);
     let ok = 0;
     try {
+      const { data: listaCorsi } = await sb.from("tipi_corso").select("id, codice");
+      const codici = new Map<string, string | null>((listaCorsi ?? []).map((c: any) => [c.id, c.codice ?? null]));
       for (const r of daSalvare) {
         try {
           if (!r.tipo_corso_id) throw new Error(`${r.cognome}: scegli il tipo di corso`);
@@ -47,7 +49,8 @@ export function useArchiviazione(ricarica: () => unknown) {
           });
           let percorsoFinale = r.percorso_file;
           if (r.percorso_file) {
-            percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeFileStandard(r).replace(/\.pdf$/, `.${estensioneFile(r.mime_file)}`)}`;
+            const nomeDoc = nomeFileStandard({ ...r, tipo_corso_codice: r.tipo_corso_codice || codici.get(r.tipo_corso_id) || null });
+            percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeDoc.replace(/\.pdf$/, `.${estensioneFile(r.mime_file)}`)}`;
             const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
             if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
             else percorsoFinale = r.percorso_file;
