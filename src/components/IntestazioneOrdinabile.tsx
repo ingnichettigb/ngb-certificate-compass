@@ -1,23 +1,25 @@
 /*
  * File:      IntestazioneOrdinabile.tsx
- * Percorso:  src/features/scadenze/components/IntestazioneOrdinabile.tsx
- * Intestazione di colonna cliccabile per ordinare la tabella.
+ * Percorso:  src/components/IntestazioneOrdinabile.tsx
+ * Intestazione di colonna cliccabile per ordinare una tabella. Condivisa da Dipendenti e Scadenze:
+ * il tipo della colonna è generico, così ogni tabella usa le proprie colonne.
  */
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { type ColonnaSort, type DirezioneSort } from "../types";
 
-export function IntestazioneOrdinabile({
+export type DirezioneSort = "asc" | "desc";
+
+export function IntestazioneOrdinabile<C extends string>({
   colonna,
   titolo,
   colonnaAttiva,
   direzione,
   onOrdina,
 }: {
-  colonna: ColonnaSort;
+  colonna: C;
   titolo: string;
-  colonnaAttiva: ColonnaSort;
+  colonnaAttiva: C;
   direzione: DirezioneSort;
-  onOrdina: (colonna: ColonnaSort) => void;
+  onOrdina: (colonna: C) => void;
 }) {
   const attiva = colonnaAttiva === colonna;
   return (
@@ -25,7 +27,7 @@ export function IntestazioneOrdinabile({
       <button
         type="button"
         onClick={() => onOrdina(colonna)}
-        className="inline-flex items-center gap-1 font-semibold hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1 font-semibold hover:text-foreground transition-colors cursor-pointer"
         title={`Ordina per ${titolo}`}
       >
         <span>{titolo}</span>

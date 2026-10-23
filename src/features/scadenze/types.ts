@@ -19,6 +19,6 @@ export type ColonnaSort =
   | "data_corso"
   | "scadenza";
 
-export type DirezioneSort = "asc" | "desc";
+export type { DirezioneSort } from "@/components/IntestazioneOrdinabile";
 
 export const TUTTI = "__tutti__";

@@ -9,7 +9,7 @@ export const TUTTI = "__tutti__";
 export const NESSUNO = "__nessuno__";
 
 export type ColonnaSortAttestati = "corso" | "data" | "scadenza" | "stato";
-export type DirezioneSort = "asc" | "desc";
+export type { DirezioneSort } from "@/components/IntestazioneOrdinabile";
 
 export const VUOTO: Omit<Dipendente, "id"> = {
   codice_fiscale: "",

@@ -5,7 +5,7 @@
  */
 import { formatData, scaduto, statoBadgeClass } from "@/lib/api";
 import { type ColonnaSortAttestati, type DirezioneSort, type RigaAttestato } from "../types";
-import { IntestazioneOrdinabile } from "./IntestazioneOrdinabile";
+import { IntestazioneOrdinabile } from "@/components/IntestazioneOrdinabile";
 
 export function TabellaAttestati({
   righe,

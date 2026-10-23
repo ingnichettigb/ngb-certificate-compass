@@ -5,7 +5,7 @@
  */
 import { type ColonnaSort, type DirezioneSort } from "../types";
 import { RigaScadenza } from "./RigaScadenza";
-import { IntestazioneOrdinabile } from "./IntestazioneOrdinabile";
+import { IntestazioneOrdinabile } from "@/components/IntestazioneOrdinabile";
 import { type Attestato } from "@/lib/api";
 
 export function TabellaScadenze({
