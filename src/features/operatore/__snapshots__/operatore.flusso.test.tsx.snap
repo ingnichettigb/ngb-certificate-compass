@@ -41,7 +41,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "iniziale",
-    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "toast.error",
@@ -51,7 +51,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "compilato",
-    "{"cognome":"NERI","nome":"LUCA","cf":"NRELCU80A01H501U","email":"luca@x.it","reparto":"","data":"2026-09-01","ore":"6","file":"Nome file archiviazione:2026-09_NERI_LUCA_NRELCU80A01H501U_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"NERI","nome":"LUCA","cf":"NRELCU80A01H501U","email":"luca@x.it","reparto":"","data":"2026-09-01","ore":"6","file":"Nome file archiviazione:CORSO - 2026-09_NERI_LUCA_NRELCU80A01H501U_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "sb",
@@ -63,7 +63,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "from.insert",
     "coda_valutazioni",
-    "[{"cognome":"NERI","nome":"LUCA","codice_fiscale":"NRELCU80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"luca@x.it","reparto":"","tipo_corso_id":null,"tipo_corso_nome":"","data_corso":"2026-09-01","ore":6,"ente":"","argomenti":[],"esito":"Valido","note":"","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"2026-09_NERI_LUCA_NRELCU80A01H501U_CORSO.jpg"}]",
+    "[{"cognome":"NERI","nome":"LUCA","codice_fiscale":"NRELCU80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"luca@x.it","reparto":"","tipo_corso_id":null,"tipo_corso_nome":"","data_corso":"2026-09-01","ore":6,"ente":"","argomenti":[],"esito":"Valido","note":"","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"CORSO - 2026-09_NERI_LUCA_NRELCU80A01H501U_CORSO.jpg"}]",
   ],
   [
     "sb",
@@ -103,7 +103,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "dopo salvataggio",
-    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "sb",
@@ -115,7 +115,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "from.insert",
     "coda_valutazioni",
-    "[{"cognome":"GIALLI","nome":"","codice_fiscale":"GLLLCA80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"","reparto":"","tipo_corso_id":null,"tipo_corso_nome":"","data_corso":null,"ore":null,"ente":"","argomenti":[],"esito":"Valido","note":"","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"ANNO-MANCANTE_GIALLI_NOME_GLLLCA80A01H501U_CORSO.jpg"}]",
+    "[{"cognome":"GIALLI","nome":"","codice_fiscale":"GLLLCA80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"","reparto":"","tipo_corso_id":null,"tipo_corso_nome":"","data_corso":null,"ore":null,"ente":"","argomenti":[],"esito":"Valido","note":"","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"CORSO - ANNO-MANCANTE_GIALLI_NOME_GLLLCA80A01H501U_CORSO.jpg"}]",
   ],
   [
     "sb",
@@ -128,6 +128,18 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "from.insert.select.single",
     "coda_valutazioni",
     "[]",
+  ],
+  [
+    "sb",
+    "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["id, codice"]",
   ],
   [
     "toast.error",
@@ -214,12 +226,12 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "anagrafica copiata",
-    "{"cognome":"VERDI","nome":"ELENA","cf":"VRDLNE80A41H501X","email":"elena@x.it","reparto":"ATA","data":"","ore":"","file":"Nome file archiviazione:ANNO-MANCANTE_VERDI_ELENA_VRDLNE80A41H501X_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"VERDI","nome":"ELENA","cf":"VRDLNE80A41H501X","email":"elena@x.it","reparto":"ATA","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_VERDI_ELENA_VRDLNE80A41H501X_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "stato",
     "in modifica",
-    "{"cognome":"ROSSI","nome":"MARIO","cf":"RSSMRA80A01H501U","email":"mario@x.it","reparto":"Docente","data":"2026-03-15","ore":"8","file":"Nome file archiviazione:2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.pdf","righe":4,"pulsanteSalva":["Salva modifiche"]}",
+    "{"cognome":"ROSSI","nome":"MARIO","cf":"RSSMRA80A01H501U","email":"mario@x.it","reparto":"Docente","data":"2026-03-15","ore":"8","file":"Nome file archiviazione:CORSO - 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.pdf","righe":4,"pulsanteSalva":["Salva modifiche"]}",
   ],
   [
     "sb",
@@ -231,7 +243,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "from.update",
     "coda_valutazioni",
-    "[{"cognome":"ROSSI","nome":"MARIO","codice_fiscale":"RSSMRA80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"mario@x.it","reparto":"Docente","tipo_corso_id":"t1","tipo_corso_nome":"Antincendio","data_corso":"2026-03-15","ore":8,"ente":"","argomenti":[],"esito":"Valido","note":"ok","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.jpg"}]",
+    "[{"cognome":"ROSSI","nome":"MARIO","codice_fiscale":"RSSMRA80A01H501U","data_nascita":null,"luogo_nascita":"","codice_ateco":"","email":"mario@x.it","reparto":"Docente","tipo_corso_id":"t1","tipo_corso_nome":"Antincendio","data_corso":"2026-03-15","ore":8,"ente":"","argomenti":[],"esito":"Valido","note":"ok","integrazione":"","percorso_file":null,"mime_file":null,"nome_file":"CORSO - 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.jpg"}]",
   ],
   [
     "sb",
@@ -277,12 +289,12 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "modifica salvata",
-    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "stato",
     "svuotato",
-    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"","nome":"","cf":"","email":"","reparto":"","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_COGNOME_NOME_SENZACF_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "sb",
@@ -356,6 +368,18 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "["created_at",{"ascending":false}]",
   ],
   [
+    "sb",
+    "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["id, codice"]",
+  ],
+  [
     "toast.error",
     "BIANCHI: scegli il tipo di corso",
     "",
@@ -413,6 +437,18 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "from.select.order",
     "coda_valutazioni",
     "["created_at",{"ascending":false}]",
+  ],
+  [
+    "sb",
+    "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["id, codice"]",
   ],
   [
     "sb",
@@ -566,6 +602,18 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "sb",
     "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["id, codice"]",
+  ],
+  [
+    "sb",
+    "from",
     "dipendenti",
     "["dipendenti"]",
   ],
@@ -609,7 +657,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "storage.from.upload",
     "dipendenti",
-    "["Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",{},{"upsert":true,"contentType":"application/pdf"}]",
+    "["Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/CORSO - 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",{},{"upsert":true,"contentType":"application/pdf"}]",
   ],
   [
     "sb",
@@ -621,7 +669,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "from.insert",
     "attestati_caricati",
-    "[{"dipendente_id":"dip-1","codice_fiscale":"VRDLNE80A41H501X","tipo_corso_id":"t2","data_corso":"2026-06-01","ore_dichiarate":12,"url_foto_fronte":"Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf","url_foto_retro":null,"stato_validazione":"Approvato","note_rifiuto":"ok","data_validazione":"2026-10-20T12:00:00.000Z"}]",
+    "[{"dipendente_id":"dip-1","codice_fiscale":"VRDLNE80A41H501X","tipo_corso_id":"t2","data_corso":"2026-06-01","ore_dichiarate":12,"url_foto_fronte":"Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/CORSO - 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf","url_foto_retro":null,"stato_validazione":"Approvato","note_rifiuto":"ok","data_validazione":"2026-10-20T12:00:00.000Z"}]",
   ],
   [
     "sb",
@@ -645,7 +693,7 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "sb",
     "from.update",
     "coda_valutazioni",
-    "[{"archiviato":true,"percorso_file":"Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf"}]",
+    "[{"archiviato":true,"percorso_file":"Archivio Attestati Sicurezza/VERDI_ELENA_VRDLNE80A41H501X/CORSO - 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf"}]",
   ],
   [
     "sb",
@@ -744,12 +792,24 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   ],
   [
     "a.click",
-    "2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",
+    "CORSO - 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",
   ],
   [
     "toast.success",
-    "Salvato: 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",
+    "Salvato: CORSO - 2026-06_NERI_LUCA_NRELCU80A01H501U_Primo_Soccorso.pdf",
     "",
+  ],
+  [
+    "sb",
+    "from",
+    "tipi_corso",
+    "["tipi_corso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "tipi_corso",
+    "["id, codice"]",
   ],
   [
     "sb",
