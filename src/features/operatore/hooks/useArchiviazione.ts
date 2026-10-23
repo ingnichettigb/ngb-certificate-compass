@@ -49,7 +49,7 @@ export function useArchiviazione(ricarica: () => unknown) {
           });
           let percorsoFinale = r.percorso_file;
           if (r.percorso_file) {
-            const nomeDoc = nomeFileStandard({ ...r, tipo_corso_codice: r.tipo_corso_codice || codici.get(r.tipo_corso_id) });
+            const nomeDoc = nomeFileStandard({ ...r, tipo_corso_codice: r.tipo_corso_codice || codici.get(r.tipo_corso_id) || null });
             percorsoFinale = `${CARTELLA_ARCHIVIO}/${cartellaDipendente(dip)}/${nomeDoc.replace(/\.pdf$/, `.${estensioneFile(r.mime_file)}`)}`;
             const { data: blob } = await sb.storage.from("attestati").download(r.percorso_file);
             if (blob) await sb.storage.from("attestati").upload(percorsoFinale, blob, { upsert: true, ...(r.mime_file ? { contentType: r.mime_file } : {}) });
