@@ -20,7 +20,7 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
             <ShieldCheck className="size-5" />
           </span>
           <div>
-            <h1 className="font-display text-base font-semibold">Dashboard HR</h1>
+            <h1 className="font-display text-base font-semibold">Cruscotto risorse umane</h1>
             <p className="text-xs text-muted-foreground">Validazione attestati di formazione</p>
           </div>
         </div>

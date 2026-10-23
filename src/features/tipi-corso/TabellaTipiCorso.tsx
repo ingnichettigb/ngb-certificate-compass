@@ -161,7 +161,7 @@ export function TabellaTipiCorso() {
 
       <p className="text-xs text-muted-foreground">
         "Al lavoratore" mostra o nasconde questo corso specifico nel modulo di invio: utile se un
-        reparto può inviare solo certi tipi di attestato. Resta comunque visibile in dashboard HR e
+        reparto può inviare solo certi tipi di attestato. Resta comunque visibile in cruscotto risorse umane e
         nella scheda dei dipendenti. Il cestino non funziona se il corso è già usato in qualche
         attestato caricato: in quel caso nascondilo con l'interruttore invece di eliminarlo.
       </p>

@@ -35,7 +35,7 @@ export function IntestazioneHome() {
           <Button asChild variant="outline">
             <Link to="/hr">
               <Monitor className="size-4" />
-              Dashboard HR
+              Cruscotto risorse umane
             </Link>
           </Button>
 

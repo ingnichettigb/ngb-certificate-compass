@@ -1,5 +1,5 @@
 /*
- * Test di flusso della Dashboard HR (validazione attestati).
+ * Test di flusso della Cruscotto risorse umane (validazione attestati).
  * Registra chiamate al database, notifiche, email preparate e contenuto della pagina durante un
  * percorso d'uso (filtri per stato, scelta di un attestato, correzione dati, approva/respingi, email)
  * e le confronta con lo snapshot.
@@ -98,7 +98,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
-describe("Dashboard HR: percorso d'uso completo", () => {
+describe("Cruscotto risorse umane: percorso d'uso completo", () => {
   it("registra tutto quello che la pagina fa", async () => {
     const Pagina = Route.options.component as () => ReactElement;
     render(
@@ -106,7 +106,7 @@ describe("Dashboard HR: percorso d'uso completo", () => {
         <Pagina />
       </QueryClientProvider>,
     );
-    await screen.findByText("Dashboard HR");
+    await screen.findByText("Cruscotto risorse umane");
     await attendi();
     foto("iniziale (In attesa, nessun dettaglio)");
 
