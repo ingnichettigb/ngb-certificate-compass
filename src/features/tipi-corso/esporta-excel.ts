@@ -17,7 +17,7 @@ export function csvTipiCorso(corsi: TipoCorso[]): string {
   ];
   const righe = corsi.map((c) => [
     c.codice, c.nome_corso, c.macro_categoria, c.livello_specifico, c.ore_minime_legge,
-    c.durata_validita_anni, c.anni_aggiornamento, c.ore_aggiornamento,
+    c.durata_validita_anni ? c.durata_validita_anni : "N/A", c.anni_aggiornamento, c.ore_aggiornamento,
     c.codice_corso_aggiornamento, c.visibile_lavoratore ? "Sì" : "No",
   ]);
   return "\uFEFF" + [intest, ...righe].map((r) => r.map(cella).join(";")).join("\r\n");
