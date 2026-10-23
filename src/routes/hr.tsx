@@ -13,7 +13,7 @@ export const Route = createFileRoute("/hr")({
       {
         name: "description",
         content:
-          "Dashboard desktop per l'ufficio personale: filtra gli attestati per stato, verifica le immagini, correggi i dati e approva o respingi.",
+          "Cruscotto risorse umane per l'ufficio personale: filtra gli attestati per stato, verifica le immagini, correggi i dati e approva o respingi.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
