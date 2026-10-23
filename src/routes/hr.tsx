@@ -9,7 +9,7 @@ import { HrPage } from "@/features/hr/HrPage";
 export const Route = createFileRoute("/hr")({
   head: () => ({
     meta: [
-      { title: "Dashboard HR — Validazione attestati sicurezza" },
+      { title: "Cruscotto risorse umane — Validazione attestati sicurezza" },
       {
         name: "description",
         content:
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/hr")({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { property: "og:title", content: "Dashboard HR attestati" },
+      { property: "og:title", content: "Cruscotto risorse umane" },
       {
         property: "og:description",
         content:

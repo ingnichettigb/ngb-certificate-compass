@@ -48,7 +48,7 @@ export function CategorieTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex-1 text-sm text-muted-foreground">
           Elenco di tutte le categorie di corso, uguale per tutti. Attiva quelle che il lavoratore
-          può scegliere nel modulo: le altre restano comunque visibili in dashboard HR e nelle
+          può scegliere nel modulo: le altre restano comunque visibili in cruscotto risorse umane e nelle
           schede dei dipendenti.
         </p>
         <TabellaTipiCorsoDialog />

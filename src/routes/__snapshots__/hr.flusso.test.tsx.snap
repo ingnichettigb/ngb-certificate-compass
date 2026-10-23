@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Dashboard HR: percorso d'uso completo > registra tutto quello che la pagina fa 1`] = `
+exports[`Cruscotto risorse umane: percorso d'uso completo > registra tutto quello che la pagina fa 1`] = `
 [
   [
     "sb",

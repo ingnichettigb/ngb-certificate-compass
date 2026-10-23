@@ -14,7 +14,7 @@ export function CardDashboardHr() {
         <Monitor className="size-5" />
       </span>
 
-      <h2 className="mt-4 text-xl font-semibold">Dashboard HR</h2>
+      <h2 className="mt-4 text-xl font-semibold">Cruscotto risorse umane</h2>
 
       <p className="mt-2 text-sm text-muted-foreground">
         Elenco degli attestati caricati: visualizza l&apos;immagine, correggi i dati letti dal
