@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-25 09:07): Implementazione gestione handle IndexedDB e scansione ricorsiva.
  *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
+ *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
  */
 
 const DB_NOME = "app_archivio_locale";
