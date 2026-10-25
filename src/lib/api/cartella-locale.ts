@@ -1,10 +1,10 @@
 /*
- * File:      cartella-locale.ts
- * Percorso:  src/lib/api/cartella-locale.ts
- * Gestione cartella locale/rete tramite File System Access API:
- * - Salvataggio persistente del handle in IndexedDB
- * - Scansione ricorsiva delle sottocartelle
- * - Lettura, anteprima e scrittura file
+ * File:          cartella-locale.ts
+ * Percorso:      src/lib/api/cartella-locale.ts
+ * Data creazione: 2026-10-25
+ * Revisioni:
+ *   - Rev 1 (2026-10-25 09:07): Implementazione gestione handle IndexedDB e scansione ricorsiva.
+ *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
  */
 
 const DB_NOME = "app_archivio_locale";
@@ -27,7 +27,7 @@ export function supportaCartellaLocale(): boolean {
   return typeof window !== "undefined" && "showDirectoryPicker" in window;
 }
 
-// Helper interno per IndexedDB nativo senza dipendenze
+// Helper interno per IndexedDB nativo senza dipendenze esterne
 function apriDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NOME, DB_VERSIONE);
@@ -140,15 +140,21 @@ export async function dimenticaCartellaLocale(): Promise<void> {
 
 /**
  * Scansione ricorsiva di tutte le sottocartelle a partire dalla cartella radice.
- * Cerca i file corrispondenti alla chiave inserita (senza distinzione tra maiuscole e minuscole).
+ * Tollerante ad accenti, trattini, maiuscole/minuscole e separatori.
  */
 export async function cercaFileRicorsivo(
   root: FileSystemDirectoryHandle,
   chiaveRicerca: string,
 ): Promise<FileTrovato[]> {
-  const termini = chiaveRicerca
+  const normalizza = (str: string) =>
+    str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Rimuove accenti
+      .replace(/[._\-/\\]+/g, " ");   // Trattini e underscore trasformati in spazi
+
+  const termini = normalizza(chiaveRicerca)
     .trim()
-    .toLowerCase()
     .split(/\s+/)
     .filter(Boolean);
 
@@ -158,7 +164,6 @@ export async function cercaFileRicorsivo(
     for await (const entry of dir.values()) {
       if (entry.kind === "file") {
         const nomeLower = entry.name.toLowerCase();
-        // Cerca file con estensione documento/immagine
         const isDoc =
           nomeLower.endsWith(".pdf") ||
           nomeLower.endsWith(".jpg") ||
@@ -167,10 +172,13 @@ export async function cercaFileRicorsivo(
 
         if (!isDoc) continue;
 
-        // Se tutti i termini inseriti sono contenuti nel nome del file o nel percorso
+        const stringaConfronto = normalizza(
+          percorsoAttuale ? `${percorsoAttuale} ${entry.name}` : entry.name,
+        );
+
+        // Corrisponde se tutti i termini cercati compaiono nel nome del file o nella sottocartella
         const corrisponde =
-          termini.length === 0 ||
-          termini.every((t) => nomeLower.includes(t) || percorsoAttuale.toLowerCase().includes(t));
+          termini.length === 0 || termini.every((t) => stringaConfronto.includes(t));
 
         if (corrisponde) {
           try {
@@ -184,7 +192,7 @@ export async function cercaFileRicorsivo(
               dataModifica: new Date(fileData.lastModified),
             });
           } catch {
-            // Continua se un singolo file non è leggibile
+            // Continua con i file successivi se un file ha restrizioni del sistema operativo
           }
         }
       } else if (entry.kind === "directory") {
@@ -200,7 +208,7 @@ export async function cercaFileRicorsivo(
   return risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
 }
 
-/** Apre un file handle o percorso in una nuova scheda del browser. */
+/** Apre un file locale in una nuova scheda per consultarlo o leggerlo. */
 export async function apriFileLocale(fileHandle: FileSystemFileHandle): Promise<void> {
   const file = await fileHandle.getFile();
   const url = URL.createObjectURL(file);
@@ -208,7 +216,7 @@ export async function apriFileLocale(fileHandle: FileSystemFileHandle): Promise<
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-/** Cerca un file a partire dal suo percorso relativo salvato e lo apre. */
+/** Cerca un file a partire dal suo percorso relativo memorizzato e lo apre. */
 export async function apriDaPercorsoRelativo(
   root: FileSystemDirectoryHandle,
   percorsoRelativo: string,
@@ -219,42 +227,12 @@ export async function apriDaPercorsoRelativo(
     for (let i = 0; i < parti.length - 1; i++) {
       dir = await dir.getDirectoryHandle(parti[i]!);
     }
-    const fileHandle = await dir.getFileHandle(parti[parti.length - 1]!);
+    const nomeFile = parti[parti.length - 1];
+    if (!nomeFile) return false;
+    const fileHandle = await dir.getFileHandle(nomeFile);
     await apriFileLocale(fileHandle);
     return true;
   } catch {
     return false;
   }
-}
-
-/** Scrive un file nella cartella locale (compatibilità con il salvataggio esistente). */
-export async function salvaInLocale(file: File, nomeFile: string, sottocartella = ""): Promise<boolean> {
-  const root = await getCartellaArchivio(true);
-  if (!root) throw new Error("Cartella archivio non impostata");
-
-  let targetDir = root;
-  if (sottocartella) {
-    const parti = sottocartella.split("/").filter(Boolean);
-    for (const p of parti) {
-      targetDir = await targetDir.getDirectoryHandle(p, { create: true });
-    }
-  }
-
-  let esiste = false;
-  try {
-    await targetDir.getFileHandle(nomeFile);
-    esiste = true;
-  } catch {
-    esiste = false;
-  }
-
-  if (esiste && !window.confirm(`"${nomeFile}" esiste già nella cartella locale. Sovrascrivere?`)) {
-    return false;
-  }
-
-  const handle = await targetDir.getFileHandle(nomeFile, { create: true });
-  const w = await handle.createWritable();
-  await w.write(file);
-  await w.close();
-  return true;
 }
