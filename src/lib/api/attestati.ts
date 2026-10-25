@@ -1,7 +1,10 @@
 /*
- * File:      attestati.ts
- * Percorso:  src/lib/api/attestati.ts
- * Attestati caricati: lettura, creazione, aggiornamento, foto.
+ * File:          attestati.ts
+ * Percorso:      src/lib/api/attestati.ts
+ * Data creazione: 2026-10-22
+ * Revisioni:
+ *   - Rev 1 (2026-10-22 10:00): Funzioni base get, upload, crea e aggiorna attestati.
+ *   - Rev 2 (2026-10-25 20:30): Aggiunte funzioni eliminaAttestato e scollegaDocumentoAttestato.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
@@ -83,4 +86,17 @@ export async function aggiornaAttestato(id: string, patch: AttestatoPatch) {
     .single();
   if (error) throw error;
   return data as unknown as Attestato;
+}
+
+export async function eliminaAttestato(id: string): Promise<void> {
+  const { error } = await supabase.from("attestati_caricati").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function scollegaDocumentoAttestato(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("attestati_caricati")
+    .update({ url_foto_fronte: null, url_foto_retro: null })
+    .eq("id", id);
+  if (error) throw error;
 }
