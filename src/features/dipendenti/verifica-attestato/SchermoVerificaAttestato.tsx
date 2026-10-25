@@ -4,6 +4,7 @@
  * Data creazione: 2026-10-25
  * Revisioni:
  *   - Rev 1 (2026-10-25 21:35): Schermata a tutto schermo per verifica documento e aggancio nel database.
+ *   - Rev 2 (2026-10-25 21:45): Vista intera (100vw x 100vh) con suddivisione a 2 colonne reali (PDF 70% e dati 30%).
  */
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -39,7 +40,7 @@ export function SchermoVerificaAttestato({
 
   async function conferma() {
     if (!dati.dataCorso) {
-      toast.error("Inserisci la data di svolgimento del corso");
+      toast.error("Inserisci la data di svolgimento del corso prima di confermare");
       return;
     }
     try {
@@ -54,7 +55,7 @@ export function SchermoVerificaAttestato({
         })
         .eq("id", attestato.id);
       if (error) throw error;
-      toast.success(`Attestato collegato: ${fileTrovato.nome}`);
+      toast.success(`Attestato collegato correttamente: ${fileTrovato.nome}`);
       onConfermato(fileTrovato.percorsoRelativo);
     } catch (e) {
       toast.error("Errore durante il salvataggio", { description: (e as Error).message });
@@ -64,34 +65,51 @@ export function SchermoVerificaAttestato({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col bg-background">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3">
+    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col bg-background">
+      {/* Intestazione fissa in alto */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" size="sm" onClick={onChiudi} disabled={salvataggio} className="gap-1.5">
-            <ArrowLeft className="size-4" /> Torna alla selezione
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onChiudi}
+            disabled={salvataggio}
+            className="gap-1.5"
+          >
+            <ArrowLeft className="size-4" /> Torna all'elenco file
           </Button>
           <div>
-            <h2 className="text-sm font-bold">Verifica e collegamento attestato</h2>
+            <h1 className="text-sm font-bold text-foreground">Verifica documento e aggancio all'archivio</h1>
             <p className="text-xs text-muted-foreground">
               {dipendente.cognome} {dipendente.nome} • {attestato.tipi_corso?.nome_corso ?? "Corso"}
             </p>
           </div>
         </div>
-        <Button type="button" onClick={conferma} disabled={salvataggio} className="gap-2 bg-success px-5 font-semibold text-success-foreground hover:bg-success/90">
+        <Button
+          type="button"
+          onClick={conferma}
+          disabled={salvataggio}
+          className="gap-2 bg-success px-6 py-2.5 font-bold text-success-foreground hover:bg-success/90 shadow ring-2 ring-success/30"
+        >
           {salvataggio ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-          Conferma e aggancia
+          Conferma e aggancia al database
         </Button>
       </header>
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 lg:grid-cols-12">
-        <div className="min-h-0 lg:col-span-8">
+      {/* Corpo a tutto schermo diviso orizzontalmente */}
+      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 md:flex-row">
+        {/* Documento PDF: occupa la maggior parte dello schermo (70-75%) */}
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden md:w-3/4">
           <VisualizzatorePdfVerifica
             fileHandle={fileTrovato.handle}
             nomeFile={fileTrovato.nome}
             onApriEsterno={() => apriFileLocale(fileTrovato.handle)}
           />
-        </div>
-        <div className="min-h-0 overflow-y-auto lg:col-span-4">
+        </section>
+
+        {/* Pannello dati: occupa la colonna destra (25-30%) */}
+        <section className="min-h-0 overflow-y-auto md:w-1/4">
           <PannelloDatiVerifica
             attestato={attestato}
             dipendente={dipendente}
@@ -100,7 +118,7 @@ export function SchermoVerificaAttestato({
             dati={dati}
             onCambia={setDati}
           />
-        </div>
+        </section>
       </main>
     </div>,
     document.body,
