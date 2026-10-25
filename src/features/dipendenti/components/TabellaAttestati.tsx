@@ -6,13 +6,33 @@
  *   - Rev 1 (2026-10-24 16:30): Intestazioni ordinabili e scrollbar orizzontale sticky.
  *   - Rev 2 (2026-10-25 08:52): Colonna Documento con apertura e aggancio da cartella locale.
  *   - Rev 3 (2026-10-25 11:00): Integrazione con ricerca flessibile per cognome e refresh automatico.
+ *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
  */
 import { useState } from "react";
-import { FileText, Search, ExternalLink } from "lucide-react";
-import { formatData, scaduto, statoBadgeClass, type Dipendente, type Attestato } from "@/lib/api";
+import { FileText, Search, ExternalLink, RefreshCw, Unlink, Pencil, Trash2 } from "lucide-react";
+import {
+  formatData,
+  scaduto,
+  statoBadgeClass,
+  eliminaAttestato,
+  scollegaDocumentoAttestato,
+  type Dipendente,
+  type Attestato,
+} from "@/lib/api";
 import { type ColonnaSortAttestati, type DirezioneSort, type RigaAttestato } from "../types";
 import { IntestazioneOrdinabile } from "@/components/IntestazioneOrdinabile";
 import { DialogCercaAgganciaAttestato } from "./DialogCercaAgganciaAttestato";
+import { DialogModificaAttestato } from "./DialogModificaAttestato";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getCartellaArchivio, apriDaPercorsoRelativo } from "@/lib/api/cartella-locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,10 +53,12 @@ export function TabellaAttestati({
   onAttestatoAggiornato?: () => void;
 }) {
   const [attestatoDaAgganciare, setAttestatoDaAgganciare] = useState<Attestato | null>(null);
+  const [attestatoDaModificare, setAttestatoDaModificare] = useState<Attestato | null>(null);
+  const [attestatoDaEliminare, setAttestatoDaEliminare] = useState<Attestato | null>(null);
+  const [eliminazioneInCorso, setEliminazioneInCorso] = useState(false);
 
   async function apriDocumento(percorso: string) {
     try {
-      // 1. Se è un file salvato in storage cloud
       if (percorso.startsWith("Archivio Attestati") || percorso.startsWith("Coda/")) {
         const { data } = await supabase.storage.from("attestati").createSignedUrl(percorso, 3600);
         if (data?.signedUrl) {
@@ -45,7 +67,6 @@ export function TabellaAttestati({
         }
       }
 
-      // 2. Prova apertura da cartella locale configurata
       const root = await getCartellaArchivio(true);
       if (root) {
         const aperto = await apriDaPercorsoRelativo(root, percorso);
@@ -53,10 +74,38 @@ export function TabellaAttestati({
       }
 
       toast.info("File locale non trovato nel percorso memorizzato", {
-        description: "Puoi cercarlo di nuovo cliccando sull'icona di ricerca.",
+        description: "Puoi cercarlo o sostituirlo cliccando sull'icona di sostituzione.",
       });
     } catch (e) {
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
+    }
+  }
+
+  async function handleScollegaDocumento(a: Attestato) {
+    if (!confirm("Vuoi scollegare il file PDF da questo attestato? Il record del corso rimarrà registrato.")) {
+      return;
+    }
+    try {
+      await scollegaDocumentoAttestato(a.id);
+      toast.success("Documento PDF scollegato con successo");
+      if (onAttestatoAggiornato) onAttestatoAggiornato();
+    } catch (err) {
+      toast.error("Errore durante lo scollegamento del file", { description: (err as Error).message });
+    }
+  }
+
+  async function handleConfermaElimina() {
+    if (!attestatoDaEliminare) return;
+    try {
+      setEliminazioneInCorso(true);
+      await eliminaAttestato(attestatoDaEliminare.id);
+      toast.success("Attestato eliminato definitivamente");
+      setAttestatoDaEliminare(null);
+      if (onAttestatoAggiornato) onAttestatoAggiornato();
+    } catch (err) {
+      toast.error("Errore durante l'eliminazione dell'attestato", { description: (err as Error).message });
+    } finally {
+      setEliminazioneInCorso(false);
     }
   }
 
@@ -64,16 +113,15 @@ export function TabellaAttestati({
     <>
       <h3 className="text-sm font-semibold">Tutti gli attestati</h3>
 
-      {/* Contenitore con altezza fissa e scrollbar orizzontale sempre visibile */}
       <div className="max-h-[380px] overflow-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[620px] text-sm">
+        <table className="w-full min-w-[660px] text-sm">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
             <tr>
               <IntestazioneOrdinabile colonna="corso" titolo="Corso" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="data" titolo="Data" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="scadenza" titolo="Scadenza" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="stato" titolo="Stato" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
-              <th className="px-3 py-2 text-right">Documento</th>
+              <th className="px-3 py-2 text-right">Documento e Azioni</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -112,40 +160,77 @@ export function TabellaAttestati({
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {haFile ? (
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => apriDocumento(a.url_foto_fronte!)}
-                            className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1 text-xs font-medium text-success hover:bg-success/20 transition-colors"
-                            title="Apri file collegato"
-                          >
-                            <FileText className="size-3.5" /> PDF
-                            <ExternalLink className="size-3" />
-                          </button>
-                          {dipendente && (
+                      <div className="inline-flex items-center gap-1.5">
+                        {/* Sezione Documento */}
+                        {haFile ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => apriDocumento(a.url_foto_fronte!)}
+                              className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1 text-xs font-medium text-success hover:bg-success/20 transition-colors"
+                              title="Apri file collegato"
+                            >
+                              <FileText className="size-3.5" /> PDF
+                              <ExternalLink className="size-3" />
+                            </button>
+                            {dipendente && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setAttestatoDaAgganciare(a)}
+                                  className="inline-flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  title="Sostituisci certificato con un altro file"
+                                >
+                                  <RefreshCw className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleScollegaDocumento(a)}
+                                  className="inline-flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-warning"
+                                  title="Scollega file PDF (mantiene l'attestato)"
+                                >
+                                  <Unlink className="size-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          dipendente && (
                             <button
                               type="button"
                               onClick={() => setAttestatoDaAgganciare(a)}
-                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                              title="Riaggancia o cambia file"
+                              className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                              title="Cerca e collega il file da archivio"
                             >
-                              <Search className="size-3.5" />
+                              <Search className="size-3.5" /> Aggancia
                             </button>
-                          )}
-                        </div>
-                      ) : (
-                        dipendente && (
+                          )
+                        )}
+
+                        {/* Modifica dati attestato */}
+                        {dipendente && (
                           <button
                             type="button"
-                            onClick={() => setAttestatoDaAgganciare(a)}
-                            className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-                            title="Cerca e collega il file da archivio"
+                            onClick={() => setAttestatoDaModificare(a)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            title="Modifica e imposta corso, date e ore"
                           >
-                            <Search className="size-3.5" /> Aggancia
+                            <Pencil className="size-3.5" />
                           </button>
-                        )
-                      )}
+                        )}
+
+                        {/* Cancella intero attestato */}
+                        {dipendente && (
+                          <button
+                            type="button"
+                            onClick={() => setAttestatoDaEliminare(a)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+                            title="Elimina definitivamente questo attestato"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -185,6 +270,7 @@ export function TabellaAttestati({
         </table>
       </div>
 
+      {/* Finestra per cercare, agganciare o sostituire file PDF */}
       {dipendente && (
         <DialogCercaAgganciaAttestato
           open={Boolean(attestatoDaAgganciare)}
@@ -196,6 +282,48 @@ export function TabellaAttestati({
           }}
         />
       )}
+
+      {/* Finestra per modificare e settare i dati dell'attestato */}
+      {dipendente && (
+        <DialogModificaAttestato
+          open={Boolean(attestatoDaModificare)}
+          onOpenChange={(v) => !v && setAttestatoDaModificare(null)}
+          attestato={attestatoDaModificare}
+          onSalvato={() => {
+            if (onAttestatoAggiornato) onAttestatoAggiornato();
+          }}
+        />
+      )}
+
+      {/* Conferma eliminazione definitiva attestato */}
+      <AlertDialog
+        open={Boolean(attestatoDaEliminare)}
+        onOpenChange={(v) => !v && setAttestatoDaEliminare(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare questo attestato?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stai per cancellare definitivamente l'attestato{" "}
+              <strong>{attestatoDaEliminare?.tipi_corso?.nome_corso ?? ""}</strong> registrato in data{" "}
+              {attestatoDaEliminare ? formatData(attestatoDaEliminare.data_corso) : ""}. Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={eliminazioneInCorso}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfermaElimina();
+              }}
+              disabled={eliminazioneInCorso}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {eliminazioneInCorso ? "Eliminazione..." : "Elimina attestato"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
