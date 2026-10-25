@@ -155,7 +155,6 @@ export async function cercaFileRicorsivo(
   const risultati: FileTrovato[] = [];
 
   async function navigaCartella(dir: FileSystemDirectoryHandle, percorsoAttuale: string) {
-    // @ts-expect-error values() è supportato da FileSystemDirectoryHandle
     for await (const entry of dir.values()) {
       if (entry.kind === "file") {
         const nomeLower = entry.name.toLowerCase();
@@ -218,9 +217,9 @@ export async function apriDaPercorsoRelativo(
     const parti = percorsoRelativo.split("/").filter(Boolean);
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parti[i]);
+      dir = await dir.getDirectoryHandle(parti[i]!);
     }
-    const fileHandle = await dir.getFileHandle(parti[parti.length - 1]);
+    const fileHandle = await dir.getFileHandle(parti[parti.length - 1]!);
     await apriFileLocale(fileHandle);
     return true;
   } catch {

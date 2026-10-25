@@ -49,7 +49,7 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <DatiAziendaDialog />
+      <ImpostazioniDialog />
 
       <Button variant="outline" size="sm" onClick={handleExport} disabled={!!busy}>
         {busy === "export" ? (

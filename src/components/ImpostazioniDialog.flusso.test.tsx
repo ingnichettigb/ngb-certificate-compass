@@ -64,7 +64,7 @@ describe("Impostazioni: percorso d'uso completo", () => {
         <ImpostazioniDialog />
       </QueryClientProvider>,
     );
-    await clic(screen.getByText("Impostazioni"));
+    await clic(screen.getByText("Impostazioni generali"));
     await screen.findByText("Docente");
     testo("reparti: iniziale");
 
