@@ -88,7 +88,7 @@ describe("Impostazioni: percorso d'uso completo", () => {
     testo("reparti: dopo le azioni");
 
     // Classi di concorso e materie
-    await scheda("Classi e materie");
+    await scheda("Materie");
     testo("insegnamento: iniziale");
     fireEvent.change(screen.getByPlaceholderText("Cerca…"), { target: { value: "b01" } });
     testo("insegnamento: filtro");
@@ -102,7 +102,7 @@ describe("Impostazioni: percorso d'uso completo", () => {
     testo("insegnamento: dopo le azioni");
 
     // Categorie dei corsi
-    await scheda("Categorie corsi");
+    await scheda("Categorie");
     testo("categorie: iniziale");
     await clic(interruttori()[0]!);
     await clic(interruttori()[1]!);
