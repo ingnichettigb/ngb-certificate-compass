@@ -65,6 +65,7 @@ describe("Impostazioni: percorso d'uso completo", () => {
       </QueryClientProvider>,
     );
     await clic(screen.getByText("Impostazioni generali"));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Reparti" }), { button: 0 }); await attendi();
     await screen.findByText("Docente");
     testo("reparti: iniziale");
 
