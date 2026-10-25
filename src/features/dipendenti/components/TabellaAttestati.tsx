@@ -7,6 +7,7 @@
  *   - Rev 2 (2026-10-25 08:52): Colonna Documento con apertura e aggancio da cartella locale.
  *   - Rev 3 (2026-10-25 11:00): Integrazione con ricerca flessibile per cognome e refresh automatico.
  *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
+ *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic dell'attestato agganciato.
  */
 import { useState } from "react";
 import { FileText, Search, ExternalLink, RefreshCw, Unlink, Pencil, Trash2 } from "lucide-react";
@@ -74,7 +75,7 @@ export function TabellaAttestati({
       }
 
       toast.info("File locale non trovato nel percorso memorizzato", {
-        description: "Puoi cercarlo o sostituirlo cliccando sull'icona di sostituzione.",
+        description: "Puoi cercarlo o riagganciarlo cliccando sull'icona di sostituzione.",
       });
     } catch (e) {
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
@@ -168,7 +169,7 @@ export function TabellaAttestati({
                               type="button"
                               onClick={() => apriDocumento(a.url_foto_fronte!)}
                               className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1 text-xs font-medium text-success hover:bg-success/20 transition-colors"
-                              title="Apri file collegato"
+                              title={`Apri documento collegato: ${a.url_foto_fronte}`}
                             >
                               <FileText className="size-3.5" /> PDF
                               <ExternalLink className="size-3" />
@@ -270,7 +271,7 @@ export function TabellaAttestati({
         </table>
       </div>
 
-      {/* Finestra per cercare, agganciare o sostituire file PDF */}
+      {/* Finestra per cercare, selezionare, verificare e agganciare il file PDF */}
       {dipendente && (
         <DialogCercaAgganciaAttestato
           open={Boolean(attestatoDaAgganciare)}
@@ -283,7 +284,7 @@ export function TabellaAttestati({
         />
       )}
 
-      {/* Finestra per modificare e settare i dati dell'attestato */}
+      {/* Finestra per modificare e impostare i dati dell'attestato */}
       {dipendente && (
         <DialogModificaAttestato
           open={Boolean(attestatoDaModificare)}
