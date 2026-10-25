@@ -6,7 +6,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Users } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
-import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 
 export function IntestazioneDipendenti({ totale }: { totale: number }) {
   return (
@@ -27,7 +26,6 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ImpostazioniDialog />
           <BackupBar />
         </div>
       </div>
