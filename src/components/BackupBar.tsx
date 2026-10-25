@@ -1,14 +1,16 @@
 /*
  * File:      BackupBar.tsx
  * Percorso:  src/components/BackupBar.tsx
- * Barra superiore con backup DB e configurazione dati ditta.
+ * Barra superiore con Impostazioni generali e backup DB.
+ * Revisioni:
+ *   rev 2 — 25/10/2026 10:15 — Dati ditta spostati dentro "Impostazioni generali".
  */
 import { useRef, useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { esportaDb, importaDb } from "@/lib/api";
-import { DatiAziendaDialog } from "@/components/DatiAziendaDialog";
+import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 
 export function BackupBar({ onImported }: { onImported?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
