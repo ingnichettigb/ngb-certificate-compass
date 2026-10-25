@@ -74,7 +74,7 @@ export function DialogModificaAttestato({
     const d = new Date(dataRif);
     if (!isNaN(d.getTime())) {
       d.setFullYear(d.getFullYear() + corso.durata_validita_anni);
-      setDataScadenza(d.toISOString().split("T")[0]);
+      setDataScadenza(d.toISOString().slice(0, 10));
       setSenzaScadenza(false);
     }
   }
