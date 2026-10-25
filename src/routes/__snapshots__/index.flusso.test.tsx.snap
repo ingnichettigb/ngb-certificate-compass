@@ -1,0 +1,145 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Home: contatori, schede e link > registra tutto quello che la pagina mostra e fa 1`] = `
+[
+  [
+    "sb",
+    "from",
+    "dipendenti",
+    "["dipendenti"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "dipendenti",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "attestati_caricati",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "attestati_caricati",
+    "["stato_validazione","In attesa"]",
+  ],
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "attestati_caricati",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "sb",
+    "from.select.lt",
+    "attestati_caricati",
+    "["data_scadenza_calcolata","2026-10-20"]",
+  ],
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "attestati_caricati",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "sb",
+    "from.select.gte",
+    "attestati_caricati",
+    "["data_scadenza_calcolata","2026-10-20"]",
+  ],
+  [
+    "sb",
+    "from.select.gte.lte",
+    "attestati_caricati",
+    "["data_scadenza_calcolata","2027-04-20"]",
+  ],
+  [
+    "sb",
+    "from",
+    "attestati_caricati",
+    "["attestati_caricati"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "attestati_caricati",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "subito dopo il rendering",
+    [
+      "Dipendenti—",
+      "Attestati—",
+      "In attesa di validazione—",
+      "In scadenza (6 mesi)—",
+      "Scaduti—",
+    ],
+    [
+      "Nichetti Gian Battista → /logo-test.jpg",
+    ],
+  ],
+  [
+    "dopo il caricamento",
+    [
+      "Dipendenti4",
+      "Attestati9",
+      "In attesa di validazione3",
+      "In scadenza (6 mesi)5",
+      "Scaduti2",
+    ],
+    [
+      "Nichetti Gian Battista → /logo-test.jpg",
+      "QR code per il modulo lavoratore → data:image/png;base64,QR[http://localhost:3000/carica]",
+    ],
+    [
+      "/hr «Dashboard HR»",
+      "/carica «Modulo lavoratore»",
+      "/operatore «Postazione operatore»",
+      "/dipendenti «Dipendenti4»",
+      "/hr «Attestati9»",
+      "/hr «In attesa di validazione3»",
+      "/scadenze «In scadenza (6 mesi)5»",
+      "/scadenze «Scaduti2»",
+      "/carica «Apri il modulo»",
+      "/hr «Apri dashboard»",
+      "/dipendenti «Elenco dipendenti»",
+      "/scadenze «Scaduti»",
+      "/operatore «Apri postazione»",
+    ],
+    "Archivio Attestati SicurezzaNichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008Dati ditta o studioSalva DB su cartellaCarica DB da fileDashboard HRModulo lavoratorePostazione operatoreDipendenti4Attestati9In attesa di validazione3In scadenza (6 mesi)5Scaduti2Modulo lavoratoreIl lavoratore compila i propri dati, sceglie il corso e allega la foto dell'attestato direttamente dal telefono.http://localhost:3000/caricaApri il moduloCopia linkDashboard HRElenco degli attestati caricati: visualizza l'immagine, correggi i dati letti dal documento e valida o respingi l'attestato.Apri dashboardElenco dipendentiScadutiPostazione operatoreCarica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza artificiale, archivia i documenti e compila i registri.Lettura automatica con AIEstrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.Apri postazione",
+  ],
+  [
+    "clipboard.writeText",
+    "http://localhost:3000/carica",
+  ],
+  [
+    "dopo «Copia link»",
+    "Copiato",
+  ],
+  [
+    "dopo 1,9 secondi",
+    "Copia link",
+  ],
+]
+`;
