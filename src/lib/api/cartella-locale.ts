@@ -218,9 +218,9 @@ export async function apriDaPercorsoRelativo(
     const parti = percorsoRelativo.split("/").filter(Boolean);
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parti[i]);
+      dir = await dir.getDirectoryHandle(parti[i] as string);
     }
-    const fileHandle = await dir.getFileHandle(parti[parti.length - 1]);
+    const fileHandle = await dir.getFileHandle(parti[parti.length - 1] as string);
     await apriFileLocale(fileHandle);
     return true;
   } catch {
