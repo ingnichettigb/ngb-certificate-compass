@@ -1,11 +1,15 @@
 /*
- * File:      TabellaAttestati.tsx
- * Percorso:  src/features/dipendenti/components/TabellaAttestati.tsx
- * Tabella «Tutti gli attestati» con colonna Documento (apertura diretta o ricerca/aggancio).
+ * File:          TabellaAttestati.tsx
+ * Percorso:      src/features/dipendenti/components/TabellaAttestati.tsx
+ * Data creazione: 2026-10-24
+ * Revisioni:
+ *   - Rev 1 (2026-10-24 16:30): Intestazioni ordinabili e scrollbar orizzontale sticky.
+ *   - Rev 2 (2026-10-25 08:52): Colonna Documento con apertura e aggancio da cartella locale.
+ *   - Rev 3 (2026-10-25 11:00): Integrazione con ricerca flessibile per cognome e refresh automatico.
  */
 import { useState } from "react";
 import { FileText, Search, ExternalLink } from "lucide-react";
-import { formatData, scaduto, statoBadgeClass, type Dipendente } from "@/lib/api";
+import { formatData, scaduto, statoBadgeClass, type Dipendente, type Attestato } from "@/lib/api";
 import { type ColonnaSortAttestati, type DirezioneSort, type RigaAttestato } from "../types";
 import { IntestazioneOrdinabile } from "@/components/IntestazioneOrdinabile";
 import { DialogCercaAgganciaAttestato } from "./DialogCercaAgganciaAttestato";
@@ -28,7 +32,7 @@ export function TabellaAttestati({
   onOrdina: (colonna: ColonnaSortAttestati) => void;
   onAttestatoAggiornato?: () => void;
 }) {
-  const [attestatoDaAgganciare, setAttestatoDaAgganciare] = useState<any | null>(null);
+  const [attestatoDaAgganciare, setAttestatoDaAgganciare] = useState<Attestato | null>(null);
 
   async function apriDocumento(percorso: string) {
     try {
@@ -49,7 +53,7 @@ export function TabellaAttestati({
       }
 
       toast.info("File locale non trovato nel percorso memorizzato", {
-        description: "Puoi cercarlo di nuovo cliccando su 'Aggancia'.",
+        description: "Puoi cercarlo di nuovo cliccando sull'icona di ricerca.",
       });
     } catch (e) {
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
