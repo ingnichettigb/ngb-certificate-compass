@@ -4,8 +4,9 @@
  * Data creazione: 2026-10-25
  * Revisioni:
  *   - Rev 1 (2026-10-25 08:52): Prima stesura dialog ricerca e aggancio attestati.
- *   - Rev 2 (2026-10-25 11:00): Proposta iniziale su solo cognome, avvio ricerca immediato, anteprima rapida e pulsante esplicito di chiusura senza allegato.
- *   - Rev 3 (2026-10-25 21:05): Casella di spunta a sinistra per selezione file, vista di verifica/confronto dati memorizzati vs file e conferma salvataggio link nel database.
+ *   - Rev 2 (2026-10-25 11:00): Proposta iniziale su solo cognome, avvio ricerca immediato.
+ *   - Rev 3 (2026-10-25 21:05): Casella di spunta a sinistra e confronto memorizzati vs file.
+ *   - Rev 4 (2026-10-25 21:20): Selezione singola esclusiva, pulsante verifica reattivo verde, anteprima PDF ruotabile a 90° e rettifica dati contestuale prima dell'aggancio finale.
  */
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -19,11 +20,8 @@ import {
   XCircle,
   ArrowRight,
   ArrowLeft,
-  CheckCircle2,
-  Calendar,
-  Clock,
-  User,
-  BookOpen,
+  RotateCw,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +41,7 @@ import {
   apriFileLocale,
   type FileTrovato,
 } from "@/lib/api/cartella-locale";
-import { formatData, type Attestato, type Dipendente } from "@/lib/api";
+import { type Attestato, type Dipendente } from "@/lib/api";
 
 export function DialogCercaAgganciaAttestato({
   open,
@@ -65,6 +63,16 @@ export function DialogCercaAgganciaAttestato({
   const [fileSelezionato, setFileSelezionato] = useState<FileTrovato | null>(null);
   const [faseVerifica, setFaseVerifica] = useState(false);
   const [salvataggioInCorso, setSalvataggioInCorso] = useState(false);
+
+  // Campi modificabili durante la verifica
+  const [dataCorso, setDataCorso] = useState("");
+  const [dataScadenza, setDataScadenza] = useState("");
+  const [senzaScadenza, setSenzaScadenza] = useState(false);
+  const [oreDichiarate, setOreDichiarate] = useState<number | "">("");
+
+  // Visualizzatore PDF e rotazione
+  const [anteprimaUrl, setAnteprimaUrl] = useState<string | null>(null);
+  const [rotazione, setRotazione] = useState(0);
 
   const eseguiRicercaConTesto = useCallback(async (testoRicerca: string) => {
     if (!testoRicerca.trim()) {
@@ -99,7 +107,7 @@ export function DialogCercaAgganciaAttestato({
     }
   }, []);
 
-  // Proposta iniziale: solo il cognome per massimizzare i riscontri
+  // Inizializzazione dialog
   useEffect(() => {
     if (open && attestato) {
       const soloCognome = (dipendente.cognome || "").trim();
@@ -107,6 +115,12 @@ export function DialogCercaAgganciaAttestato({
       setRisultati(null);
       setFileSelezionato(null);
       setFaseVerifica(false);
+      setRotazione(0);
+
+      setDataCorso(attestato.data_corso || "");
+      setDataScadenza(attestato.data_scadenza_calcolata || "");
+      setSenzaScadenza(!attestato.data_scadenza_calcolata);
+      setOreDichiarate(attestato.ore_dichiarate ?? "");
 
       getCartellaArchivio(false).then((h) => {
         setHaCartella(Boolean(h));
@@ -117,32 +131,56 @@ export function DialogCercaAgganciaAttestato({
     }
   }, [open, attestato, dipendente, eseguiRicercaConTesto]);
 
-  async function handleConfermaAggancio() {
+  // Caricamento oggetto URL per l'anteprima PDF / Immagine
+  useEffect(() => {
+    let active = true;
+    let urlCreato = "";
+    if (fileSelezionato && faseVerifica) {
+      fileSelezionato.handle.getFile().then((file) => {
+        if (!active) return;
+        urlCreato = URL.createObjectURL(file);
+        setAnteprimaUrl(urlCreato);
+      });
+    } else {
+      setAnteprimaUrl(null);
+    }
+    return () => {
+      active = false;
+      if (urlCreato) URL.revokeObjectURL(urlCreato);
+    };
+  }, [fileSelezionato, faseVerifica]);
+
+  // Gestione selezione rigorosamente singola
+  function toggleSelezioneFile(f: FileTrovato) {
+    setFileSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo ? null : f));
+  }
+
+  async function handleConfermaEAggiungi() {
     if (!attestato || !fileSelezionato) return;
     try {
       setSalvataggioInCorso(true);
       const { error } = await supabase
         .from("attestati_caricati")
-        .update({ url_foto_fronte: fileSelezionato.percorsoRelativo })
+        .update({
+          url_foto_fronte: fileSelezionato.percorsoRelativo,
+          data_corso: dataCorso || null,
+          data_scadenza_calcolata: senzaScadenza ? null : dataScadenza || null,
+          ore_dichiarate: oreDichiarate === "" ? null : Number(oreDichiarate),
+        })
         .eq("id", attestato.id);
 
       if (error) throw error;
 
-      toast.success(`Attestato collegato al database: ${fileSelezionato.nome}`);
+      toast.success(`Attestato collegato e salvato: ${fileSelezionato.nome}`);
       onAgganciato(fileSelezionato.percorsoRelativo);
       onOpenChange(false);
     } catch (e) {
-      toast.error("Errore durante il salvataggio del collegamento", {
+      toast.error("Errore durante il salvataggio", {
         description: (e as Error).message,
       });
     } finally {
       setSalvataggioInCorso(false);
     }
-  }
-
-  function aggiungiFrammento(testo: string) {
-    if (!testo) return;
-    setChiave((prev) => (prev ? `${prev} ${testo}` : testo));
   }
 
   if (!attestato) return null;
@@ -152,23 +190,22 @@ export function DialogCercaAgganciaAttestato({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="size-5 text-primary" />
-            {faseVerifica ? "Verifica e conferma attestato" : "Cerca e seleziona attestato"}
+            {faseVerifica ? "Verifica documento e dati prima di aggiungere" : "Cerca e seleziona attestato"}
           </DialogTitle>
           <DialogDescription>
             {faseVerifica
-              ? "Controlla la corrispondenza tra i dati salvati a sistema e il documento selezionato prima di agganciarlo."
-              : "Spunta la casella a sinistra del file corrispondente e procedi alla verifica."}
+              ? "Visiona il documento, ruotalo se necessario e rettifica i dati prima del collegamento definitivo."
+              : "Spunta il file corrispondente (selezione singola) per abilitare il pulsante verde di verifica."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* FASE 1: RICERCA E SELEZIONE FILE CON CASELLA DI SPUNTA */}
+        {/* FASE 1: RICERCA E SELEZIONE FILE */}
         {!faseVerifica && (
           <div className="space-y-4 pt-1">
-            {/* Informazioni corso di riferimento */}
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
               <div className="font-medium text-foreground">
                 {corsoNome}{" "}
@@ -182,7 +219,6 @@ export function DialogCercaAgganciaAttestato({
               </div>
             </div>
 
-            {/* Avviso cartella locale non impostata */}
             {haCartella === false && (
               <div className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
                 <span className="flex items-center gap-1.5">
@@ -203,19 +239,18 @@ export function DialogCercaAgganciaAttestato({
               </div>
             )}
 
-            {/* Campo Chiave di ricerca */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Termini di ricerca (proposto: solo cognome)
                 </label>
-                <span className="text-[11px] text-muted-foreground">Cerca in tutte le sottocartelle</span>
+                <span className="text-[11px] text-muted-foreground">Ricerca ricorsiva</span>
               </div>
               <div className="flex gap-2">
                 <Input
                   value={chiave}
                   onChange={(e) => setChiave(e.target.value)}
-                  placeholder="Inserisci cognome o parole del file..."
+                  placeholder="Inserisci cognome del lavoratore..."
                   onKeyDown={(e) => e.key === "Enter" && eseguiRicercaConTesto(chiave)}
                   className="font-medium"
                 />
@@ -228,59 +263,24 @@ export function DialogCercaAgganciaAttestato({
                   Cerca
                 </Button>
               </div>
-
-              {/* Tag rapidi per affinare */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                <span>Aggiungi:</span>
-                <button
-                  type="button"
-                  onClick={() => aggiungiFrammento(dipendente.nome)}
-                  className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground"
-                >
-                  +{dipendente.nome}
-                </button>
-                {codiceCorso && (
-                  <button
-                    type="button"
-                    onClick={() => aggiungiFrammento(codiceCorso)}
-                    className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground font-mono"
-                  >
-                    +{codiceCorso}
-                  </button>
-                )}
-                {dipendente.codice_fiscale && (
-                  <button
-                    type="button"
-                    onClick={() => aggiungiFrammento(dipendente.codice_fiscale)}
-                    className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground font-mono"
-                  >
-                    +CF
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setChiave("")}
-                  className="ml-auto text-xs text-destructive hover:underline"
-                >
-                  Svuota campo
-                </button>
-              </div>
             </div>
 
-            {/* Elenco dei file trovati con casella di spunta a sinistra */}
+            {/* Risultati */}
             {risultati !== null && (
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
                   <span>File trovati ({risultati.length})</span>
                   {fileSelezionato && (
-                    <span className="text-primary font-medium">1 file selezionato pronto per verifica</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✓ 1 file selezionato pronto per verifica
+                    </span>
                   )}
                 </div>
 
                 {risultati.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground space-y-2">
-                    <p>Nessun file trovato per <strong>"{chiave}"</strong> nelle cartelle.</p>
-                    <p className="text-xs">Se l'attestato non è presente, puoi chiudere senza allegare nulla.</p>
+                  <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground space-y-1">
+                    <p>Nessun file trovato per <strong>"{chiave}"</strong>.</p>
+                    <p className="text-xs">Puoi modificare il termine di ricerca o chiudere senza allegare.</p>
                   </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto divide-y divide-border rounded-lg border border-border bg-surface">
@@ -289,29 +289,21 @@ export function DialogCercaAgganciaAttestato({
                       return (
                         <div
                           key={i}
-                          onClick={() => setFileSelezionato(f)}
+                          onClick={() => toggleSelezioneFile(f)}
                           className={`flex items-center gap-3 p-3 text-sm cursor-pointer transition-colors ${
-                            isChecked ? "bg-primary/10 border-l-4 border-primary" : "hover:bg-muted/40"
+                            isChecked ? "bg-emerald-500/10 border-l-4 border-emerald-600" : "hover:bg-muted/40"
                           }`}
                         >
-                          {/* Casella di spunta a sinistra */}
-                          <div className="flex items-center justify-center shrink-0">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setFileSelezionato(isChecked ? null : f);
-                              }}
-                              className="size-4.5 rounded border-input text-primary focus:ring-primary cursor-pointer"
-                            />
-                          </div>
-
-                          {/* Dati del file */}
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelezioneFile(f)}
+                            className="size-4.5 rounded border-input text-emerald-600 focus:ring-emerald-600 cursor-pointer"
+                          />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <FileText className="size-4 shrink-0 text-primary" />
-                              <span className={`truncate font-medium ${isChecked ? "text-primary" : ""}`}>
+                              <span className={`truncate font-medium ${isChecked ? "text-emerald-700 dark:text-emerald-300" : ""}`}>
                                 {f.nome}
                               </span>
                             </div>
@@ -320,23 +312,18 @@ export function DialogCercaAgganciaAttestato({
                               {f.dataModifica.toLocaleDateString("it-IT")}
                             </p>
                           </div>
-
-                          {/* Pulsante Guarda rapido */}
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                apriFileLocale(f.handle);
-                              }}
-                              title="Visualizza il documento per controllarlo"
-                              className="gap-1 text-xs"
-                            >
-                              <Eye className="size-3.5" /> Guarda
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              apriFileLocale(f.handle);
+                            }}
+                            className="gap-1 text-xs shrink-0"
+                          >
+                            <Eye className="size-3.5" /> Guarda
+                          </Button>
                         </div>
                       );
                     })}
@@ -345,7 +332,7 @@ export function DialogCercaAgganciaAttestato({
               </div>
             )}
 
-            {/* Barra inferiore */}
+            {/* Barra inferiore con pulsante verde condizionale */}
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <Button
                 type="button"
@@ -359,8 +346,15 @@ export function DialogCercaAgganciaAttestato({
               <Button
                 type="button"
                 disabled={!fileSelezionato}
-                onClick={() => setFaseVerifica(true)}
-                className="gap-2 text-xs"
+                onClick={() => {
+                  setRotazione(0);
+                  setFaseVerifica(true);
+                }}
+                className={`gap-2 text-xs transition-colors ${
+                  fileSelezionato
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                }`}
               >
                 Procedi alla verifica <ArrowRight className="size-3.5" />
               </Button>
@@ -368,117 +362,140 @@ export function DialogCercaAgganciaAttestato({
           </div>
         )}
 
-        {/* FASE 2: VERIFICA E CONFRONTO TRA DATI A SISTEMA E ATTESTATO SELEZIONATO */}
+        {/* FASE 2: VERIFICA COMBINATA (PDF RUOTABILE + DATI MODIFICABILI) */}
         {faseVerifica && fileSelezionato && (
           <div className="space-y-4 pt-1">
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3.5 flex items-start gap-3">
-              <CheckCircle2 className="size-5 text-primary shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <p className="font-semibold text-foreground text-sm">
-                  Verifica corrispondenza prima del salvataggio
-                </p>
-                <p className="text-muted-foreground">
-                  Verifica che i dati riportati nel documento PDF corrispondano a quelli registrati
-                  nella scheda del dipendente prima di agganciare definitivamente il link.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Colonna 1: Dati memorizzati a sistema */}
-              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">
-                  <User className="size-3.5" /> Dati registrati a database
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Riquadro 1: Visualizzatore documento con rotazione */}
+              <div className="flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2 text-xs">
+                  <span className="font-medium truncate max-w-[220px]" title={fileSelezionato.nome}>
+                    {fileSelezionato.nome}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setRotazione((r) => (r + 90) % 360)}
+                      className="h-7 text-xs gap-1"
+                      title="Ruota il foglio di 90 gradi a destra"
+                    >
+                      <RotateCw className="size-3.5" /> Ruota 90°
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => apriFileLocale(fileSelezionato.handle)}
+                      className="h-7 text-xs gap-1"
+                      title="Apri a schermo intero"
+                    >
+                      <ExternalLink className="size-3.5" /> Schermo intero
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Dipendente:</span>{" "}
-                    <strong className="text-foreground">
+
+                <div className="flex-1 flex items-center justify-center min-h-[380px] p-2 bg-black/5 overflow-hidden">
+                  {anteprimaUrl ? (
+                    <div
+                      className="w-full h-[380px] flex items-center justify-center transition-transform duration-200"
+                      style={{ transform: `rotate(${rotazione}deg)` }}
+                    >
+                      <iframe
+                        src={`${anteprimaUrl}#toolbar=0`}
+                        title="Anteprima PDF"
+                        className="w-full h-full rounded border border-border bg-white"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" /> Caricamento documento...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Riquadro 2: Dati registrati e rettificabili */}
+              <div className="flex flex-col justify-between rounded-lg border border-border bg-surface p-4 space-y-4 text-xs">
+                <div className="space-y-3">
+                  <div className="border-b border-border pb-2">
+                    <span className="text-muted-foreground">Lavoratore:</span>{" "}
+                    <strong className="text-foreground text-sm">
                       {dipendente.cognome} {dipendente.nome}
-                    </strong>
+                    </strong>{" "}
+                    <span className="font-mono text-muted-foreground">({dipendente.codice_fiscale})</span>
                   </div>
+
                   <div>
-                    <span className="text-muted-foreground">Codice Fiscale:</span>{" "}
-                    <span className="font-mono text-foreground">{dipendente.codice_fiscale}</span>
-                  </div>
-                  <div className="pt-1 border-t border-border/40">
-                    <span className="text-muted-foreground">Corso:</span>{" "}
+                    <span className="text-muted-foreground">Corso associato:</span>{" "}
                     <strong className="text-foreground">{corsoNome}</strong>{" "}
-                    {codiceCorso && (
-                      <span className="font-mono text-muted-foreground">[{codiceCorso}]</span>
-                    )}
+                    {codiceCorso && <span className="font-mono text-muted-foreground">[{codiceCorso}]</span>}
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Data svolgimento:</span>{" "}
-                    <strong className="text-foreground">{formatData(attestato.data_corso)}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Data scadenza:</span>{" "}
-                    <span className="text-foreground">
-                      {attestato.data_scadenza_calcolata
-                        ? formatData(attestato.data_scadenza_calcolata)
-                        : "senza scadenza"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ore registrate:</span>{" "}
-                    <span className="text-foreground">
-                      {attestato.ore_dichiarate != null ? `${attestato.ore_dichiarate} ore` : "—"}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Colonna 2: Dati del file selezionato */}
-              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">
-                  <BookOpen className="size-3.5" /> File attestato da agganciare
-                </div>
-                <div className="space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Nome file:</span>
-                    <div className="font-mono font-medium text-primary break-all mt-0.5">
-                      {fileSelezionato.nome}
-                    </div>
+                  <div className="space-y-1.5 pt-2">
+                    <label className="font-medium text-foreground">Data svolgimento corso</label>
+                    <Input
+                      type="date"
+                      value={dataCorso}
+                      onChange={(e) => setDataCorso(e.target.value)}
+                    />
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Percorso:</span>
-                    <div className="text-muted-foreground font-mono text-[11px] break-all mt-0.5">
-                      {fileSelezionato.percorsoRelativo}
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-medium text-foreground">Data scadenza calcolata</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={senzaScadenza}
+                          onChange={(e) => {
+                            setSenzaScadenza(e.target.checked);
+                            if (e.target.checked) setDataScadenza("");
+                          }}
+                          className="rounded text-primary"
+                        />
+                        <span>Senza scadenza</span>
+                      </label>
                     </div>
+                    <Input
+                      type="date"
+                      value={dataScadenza}
+                      disabled={senzaScadenza}
+                      onChange={(e) => setDataScadenza(e.target.value)}
+                    />
                   </div>
-                  <div className="flex items-center gap-4 pt-1 border-t border-border/40">
-                    <div>
-                      <span className="text-muted-foreground">Dimensione:</span>{" "}
-                      <span className="text-foreground">
-                        {(fileSelezionato.dimensione / 1024 / 1024).toFixed(2)} MB
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Data file:</span>{" "}
-                      <span className="text-foreground">
-                        {fileSelezionato.dataModifica.toLocaleDateString("it-IT")}
-                      </span>
-                    </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-foreground">Ore di formazione</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={oreDichiarate}
+                      placeholder="Ore dichiarate..."
+                      onChange={(e) =>
+                        setOreDichiarate(e.target.value === "" ? "" : Number(e.target.value))
+                      }
+                    />
+                  </div>
+
+                  <div className="rounded border border-border/80 bg-muted/30 p-2 text-[11px] text-muted-foreground break-all">
+                    <span>Percorso file selezionato: </span>
+                    <strong className="text-foreground font-mono">{fileSelezionato.percorsoRelativo}</strong>
                   </div>
                 </div>
 
-                {/* Pulsante per visionare il PDF a schermo intero */}
                 <div className="pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => apriFileLocale(fileSelezionato.handle)}
-                    className="w-full gap-2 text-xs"
-                  >
-                    <Eye className="size-3.5 text-primary" /> Apri e visiona il documento PDF
-                  </Button>
+                  <p className="text-muted-foreground text-[11px]">
+                    Cliccando sul tasto verde sottostante, i dati rettificati e il collegamento al file
+                    verranno registrati immediatamente nella scheda del lavoratore.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Pulsanti di azione finali */}
+            {/* Barra azioni finale */}
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <Button
                 type="button"
@@ -492,16 +509,16 @@ export function DialogCercaAgganciaAttestato({
 
               <Button
                 type="button"
-                onClick={handleConfermaAggancio}
+                onClick={handleConfermaEAggiungi}
                 disabled={salvataggioInCorso}
-                className="gap-2 text-xs bg-success text-success-foreground hover:bg-success/90"
+                className="gap-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               >
                 {salvataggioInCorso ? (
                   <Loader2 className="size-3.5 animate-spin" />
                 ) : (
                   <Check className="size-3.5" />
                 )}
-                Conferma e Collega al Database
+                Aggiungi e collega al database
               </Button>
             </div>
           </div>
