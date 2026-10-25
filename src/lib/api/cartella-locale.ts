@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-25 09:07): Implementazione gestione handle IndexedDB e scansione ricorsiva.
  *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
+ *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
  */
 
 const DB_NOME = "app_archivio_locale";
@@ -235,4 +236,48 @@ export async function apriDaPercorsoRelativo(
   } catch {
     return false;
   }
+}
+
+/**
+ * Salva una copia del file nella cartella archivio configurata, creando le
+ * sottocartelle necessarie. Se esiste già un file con lo stesso nome ne crea
+ * uno con suffisso progressivo, così nessuna copia va sovrascritta.
+ * Restituisce false se la cartella non è configurata o i permessi sono negati.
+ */
+export async function salvaInLocale(
+  file: File,
+  nomeFile: string,
+  sottocartella?: string,
+): Promise<boolean> {
+  const root = await getCartellaArchivio(true);
+  if (!root) return false;
+
+  let dir = root;
+  for (const parte of (sottocartella || "").split("/").filter(Boolean)) {
+    dir = await dir.getDirectoryHandle(parte, { create: true });
+  }
+
+  const handle = await nuovoHandleFile(dir, nomeFile);
+  const scrittura = await handle.createWritable();
+  await scrittura.write(file);
+  await scrittura.close();
+  return true;
+}
+
+/** Handle di un file libero: se il nome è già occupato aggiunge " (2)", " (3)"... */
+async function nuovoHandleFile(
+  dir: FileSystemDirectoryHandle,
+  nomeFile: string,
+): Promise<FileSystemFileHandle> {
+  const base = nomeFile.replace(/\.[^.]+$/, "");
+  const estensione = nomeFile.slice(base.length);
+  for (let n = 1; n <= 50; n++) {
+    const candidato = n === 1 ? nomeFile : `${base} (${n})${estensione}`;
+    try {
+      await dir.getFileHandle(candidato);
+    } catch {
+      return dir.getFileHandle(candidato, { create: true });
+    }
+  }
+  throw new Error("Impossibile salvare il file: nome già occupato troppe volte");
 }
