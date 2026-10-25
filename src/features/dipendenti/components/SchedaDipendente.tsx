@@ -2,8 +2,11 @@
  * File:      SchedaDipendente.tsx
  * Percorso:  src/features/dipendenti/components/SchedaDipendente.tsx
  * Scheda del dipendente selezionato: anagrafica, reparto, ruoli, incarichi, PDF e tabella attestati.
+ * Revisioni:
+ *   rev 2 — 25/10/2026 11:26 — Passato il dipendente alla tabella: attivi "Aggancia" e ricerca in cartella.
  */
 import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ruoliDelDipendente,
   type Dipendente,
@@ -46,6 +49,7 @@ export function SchedaDipendente({
   onSpuntaRuolo: (ruoloId: string, v: boolean) => void;
   onSegnaCompletata: (i: IntegrazioneDvr) => void;
 }) {
+  const qc = useQueryClient();
   const { attestatiSortCol, attestatiSortDir, cambiaOrdinamentoAttestati } = ordinamento;
   const suoi = attestati.filter((a) => a.dipendente_id === corrente.id);
   const suoiInteg = integrazioni.filter((i) => i.dipendente_id === corrente.id);
@@ -83,9 +87,11 @@ export function SchedaDipendente({
 
       <TabellaAttestati
         righe={righeAttestati}
+        dipendente={corrente}
         colonna={attestatiSortCol}
         direzione={attestatiSortDir}
         onOrdina={cambiaOrdinamentoAttestati}
+        onAttestatoAggiornato={() => qc.invalidateQueries({ queryKey: ["attestati"] })}
       />
     </div>
   );
