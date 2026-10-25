@@ -1,10 +1,13 @@
 /*
- * File:      DialogCercaAgganciaAttestato.tsx
- * Percorso:  src/features/dipendenti/components/DialogCercaAgganciaAttestato.tsx
- * Dialog di ricerca ricorsiva nelle cartelle locali con chiave modificabile, anteprima e aggancio.
+ * File:          DialogCercaAgganciaAttestato.tsx
+ * Percorso:      src/features/dipendenti/components/DialogCercaAgganciaAttestato.tsx
+ * Data creazione: 2026-10-25
+ * Revisioni:
+ *   - Rev 1 (2026-10-25 08:52): Prima stesura dialog ricerca e aggancio attestati.
+ *   - Rev 2 (2026-10-25 11:00): Proposta iniziale su solo cognome, avvio ricerca immediato, anteprima rapida e pulsante esplicito di chiusura senza allegato.
  */
-import { useEffect, useState } from "react";
-import { Search, FileText, Eye, Check, Loader2, FolderOpen, AlertCircle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Search, FileText, Eye, Check, Loader2, FolderOpen, AlertCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,22 +47,8 @@ export function DialogCercaAgganciaAttestato({
   const [haCartella, setHaCartella] = useState<boolean | null>(null);
   const [agganciando, setAgganciando] = useState<string | null>(null);
 
-  // Prepara la chiave di ricerca suggerita iniziale
-  useEffect(() => {
-    if (open && attestato) {
-      const codiceCorso = attestato.tipi_corso?.codice || "";
-      const cognome = dipendente.cognome || "";
-      // Pre-compila ad es. "SIC-GEN-04 ROSSI"
-      const iniziale = `${codiceCorso} ${cognome}`.trim();
-      setChiave(iniziale);
-      setRisultati(null);
-
-      getCartellaArchivio(false).then((h) => setHaCartella(Boolean(h)));
-    }
-  }, [open, attestato, dipendente]);
-
-  async function eseguiRicerca() {
-    if (!chiave.trim()) {
+  const eseguiRicercaConTesto = useCallback(async (testoRicerca: string) => {
+    if (!testoRicerca.trim()) {
       toast.error("Inserisci almeno un termine per la ricerca");
       return;
     }
@@ -75,11 +64,11 @@ export function DialogCercaAgganciaAttestato({
         }
         setHaCartella(true);
       }
-      const files = await cercaFileRicorsivo(root, chiave);
+      const files = await cercaFileRicorsivo(root, testoRicerca);
       setRisultati(files);
       if (files.length === 0) {
-        toast.info("Nessun file trovato con i termini inseriti", {
-          description: "Prova ad accorciare la chiave di ricerca (es. solo il cognome).",
+        toast.info("Nessun file trovato nelle cartelle", {
+          description: "Prova ad accorciare la ricerca o inserisci solo parte del cognome.",
         });
       }
     } catch (e) {
@@ -87,7 +76,23 @@ export function DialogCercaAgganciaAttestato({
     } finally {
       setInRicerca(false);
     }
-  }
+  }, []);
+
+  // Proposta iniziale: SOLO IL COGNOME per la massima tolleranza
+  useEffect(() => {
+    if (open && attestato) {
+      const soloCognome = (dipendente.cognome || "").trim();
+      setChiave(soloCognome);
+      setRisultati(null);
+
+      getCartellaArchivio(false).then((h) => {
+        setHaCartella(Boolean(h));
+        if (h && soloCognome) {
+          eseguiRicercaConTesto(soloCognome);
+        }
+      });
+    }
+  }, [open, attestato, dipendente, eseguiRicercaConTesto]);
 
   async function handleAggancia(file: FileTrovato) {
     if (!attestato) return;
@@ -100,7 +105,7 @@ export function DialogCercaAgganciaAttestato({
 
       if (error) throw error;
 
-      toast.success(`Attestato agganciato con successo: ${file.nome}`);
+      toast.success(`Attestato collegato: ${file.nome}`);
       onAgganciato(file.percorsoRelativo);
       onOpenChange(false);
     } catch (e) {
@@ -128,7 +133,7 @@ export function DialogCercaAgganciaAttestato({
             <Search className="size-5 text-primary" /> Cerca e aggancia attestato
           </DialogTitle>
           <DialogDescription>
-            Cerca il documento PDF corrispondente tra tutte le sottocartelle del tuo archivio locale.
+            Cerca nelle cartelle e sottocartelle del tuo archivio locale. Ti proponiamo il cognome, che puoi modificare liberamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,36 +152,53 @@ export function DialogCercaAgganciaAttestato({
           {haCartella === false && (
             <div className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
               <span className="flex items-center gap-1.5">
-                <AlertCircle className="size-4" /> Cartella locale non ancora selezionata.
+                <AlertCircle className="size-4" /> Cartella archivio non ancora selezionata.
               </span>
-              <Button size="sm" variant="outline" onClick={() => scegliCartellaLocale().then((h) => setHaCartella(Boolean(h)))}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => scegliCartellaLocale().then((h) => {
+                  setHaCartella(Boolean(h));
+                  if (h && chiave) eseguiRicercaConTesto(chiave);
+                })}
+              >
                 <FolderOpen className="size-3.5" /> Scegli cartella
               </Button>
             </div>
           )}
 
-          {/* Campo Chiave di ricerca perfezionabile */}
+          {/* Campo Chiave di ricerca: di default solo il cognome, modificabile */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Chiave di ricerca (modificabile prima di cercare)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Termini di ricerca (proposto: solo cognome)
+              </label>
+              <span className="text-[11px] text-muted-foreground">Cerca in tutte le sottocartelle</span>
+            </div>
             <div className="flex gap-2">
               <Input
                 value={chiave}
                 onChange={(e) => setChiave(e.target.value)}
-                placeholder="es. SIC-GEN-04 ROSSI..."
-                onKeyDown={(e) => e.key === "Enter" && eseguiRicerca()}
+                placeholder="Inserisci cognome o parole del file..."
+                onKeyDown={(e) => e.key === "Enter" && eseguiRicercaConTesto(chiave)}
                 className="font-medium"
               />
-              <Button onClick={eseguiRicerca} disabled={inRicerca} className="gap-2 shrink-0">
+              <Button onClick={() => eseguiRicercaConTesto(chiave)} disabled={inRicerca} className="gap-2 shrink-0">
                 {inRicerca ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
                 Cerca
               </Button>
             </div>
 
-            {/* Frammenti rapidi per costruire la chiave */}
+            {/* Frammenti rapidi per aggiungere altri dettagli alla ricerca */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-muted-foreground">
               <span>Aggiungi rapido:</span>
+              <button
+                type="button"
+                onClick={() => aggiungiFrammento(dipendente.nome)}
+                className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground"
+              >
+                +{dipendente.nome}
+              </button>
               {codiceCorso && (
                 <button
                   type="button"
@@ -186,20 +208,6 @@ export function DialogCercaAgganciaAttestato({
                   +{codiceCorso}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => aggiungiFrammento(dipendente.cognome)}
-                className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground"
-              >
-                +{dipendente.cognome}
-              </button>
-              <button
-                type="button"
-                onClick={() => aggiungiFrammento(dipendente.nome)}
-                className="rounded bg-muted px-2 py-0.5 hover:bg-muted/80 text-foreground"
-              >
-                +{dipendente.nome}
-              </button>
               {dipendente.codice_fiscale && (
                 <button
                   type="button"
@@ -214,23 +222,23 @@ export function DialogCercaAgganciaAttestato({
                 onClick={() => setChiave("")}
                 className="ml-auto text-xs text-destructive hover:underline"
               >
-                Pulisci
+                Svuota campo
               </button>
             </div>
           </div>
 
-          {/* Elenco dei risultati trovati */}
+          {/* Elenco dei risultati con opzione di visione e aggancio */}
           {risultati !== null && (
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>File trovati nelle cartelle ({risultati.length})</span>
-                {risultati.length > 0 && <span>Ricerca ricorsiva completata</span>}
+                <span>File trovati ({risultati.length})</span>
+                {risultati.length > 0 && <span className="text-success">Seleziona o visualizza un file</span>}
               </div>
 
               {risultati.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Nessun file PDF trovato corrispondente a <strong>"{chiave}"</strong>.
-                  <p className="mt-1 text-xs">Prova a usare una parola più breve (ad es. solo le prime lettere del cognome).</p>
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground space-y-2">
+                  <p>Nessun file trovato per <strong>"{chiave}"</strong> nelle sottocartelle.</p>
+                  <p className="text-xs">Se l'attestato non è presente, puoi chiudere senza allegare nulla.</p>
                 </div>
               ) : (
                 <div className="max-h-60 overflow-auto divide-y divide-border rounded-lg border border-border bg-surface">
@@ -248,27 +256,29 @@ export function DialogCercaAgganciaAttestato({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
+                        {/* Visione preventiva del file prima di decidere */}
                         <Button
                           size="sm"
-                          variant="ghost"
+                          variant="outline"
                           onClick={() => apriFileLocale(f.handle)}
-                          title="Apri anteprima del file"
+                          title="Guarda il file prima di allegarlo"
+                          className="gap-1 text-xs"
                         >
-                          <Eye className="size-4" /> Anteprima
+                          <Eye className="size-3.5" /> Guarda
                         </Button>
                         <Button
                           size="sm"
                           variant="default"
                           disabled={agganciando === f.percorsoRelativo}
                           onClick={() => handleAggancia(f)}
-                          className="gap-1.5"
+                          className="gap-1.5 text-xs"
                         >
                           {agganciando === f.percorsoRelativo ? (
                             <Loader2 className="size-3.5 animate-spin" />
                           ) : (
                             <Check className="size-3.5" />
                           )}
-                          Aggancia
+                          Collega
                         </Button>
                       </div>
                     </div>
@@ -277,6 +287,21 @@ export function DialogCercaAgganciaAttestato({
               )}
             </div>
           )}
+
+          {/* Barra inferiore: comando esplicito di chiusura senza collegare */}
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {risultati ? `${risultati.length} file corrispondenti` : "In attesa di ricerca"}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onOpenChange(false)}
+              className="gap-1.5 text-xs"
+            >
+              <XCircle className="size-3.5" /> Nessun file da allegare (Chiudi)
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
