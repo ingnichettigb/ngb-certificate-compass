@@ -7,10 +7,11 @@
  *   - Rev 2 (2026-10-25 08:52): Colonna Documento con apertura e aggancio da cartella locale.
  *   - Rev 3 (2026-10-25 11:00): Integrazione con ricerca flessibile per cognome e refresh automatico.
  *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
- *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic dell'attestato agganciato.
+ *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic.
+ *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
  */
 import { useState } from "react";
-import { FileText, Search, ExternalLink, RefreshCw, Unlink, Pencil, Trash2 } from "lucide-react";
+import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
 import {
   formatData,
   scaduto,
@@ -162,17 +163,17 @@ export function TabellaAttestati({
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="inline-flex items-center gap-1.5">
-                        {/* Sezione Documento */}
+                        {/* Sezione Documento: Occhio per visualizzare se presente, o Aggancia se mancante */}
                         {haFile ? (
                           <>
                             <button
                               type="button"
                               onClick={() => apriDocumento(a.url_foto_fronte!)}
-                              className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1 text-xs font-medium text-success hover:bg-success/20 transition-colors"
-                              title={`Apri documento collegato: ${a.url_foto_fronte}`}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-600/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              title={`Visualizza documento allegato: ${a.url_foto_fronte}`}
                             >
-                              <FileText className="size-3.5" /> PDF
-                              <ExternalLink className="size-3" />
+                              <Eye className="size-3.5" />
+                              <span>Vedi</span>
                             </button>
                             {dipendente && (
                               <>
@@ -208,7 +209,7 @@ export function TabellaAttestati({
                           )
                         )}
 
-                        {/* Modifica dati attestato */}
+                        {/* Modifica dati attestato (matita) */}
                         {dipendente && (
                           <button
                             type="button"
@@ -220,7 +221,7 @@ export function TabellaAttestati({
                           </button>
                         )}
 
-                        {/* Cancella intero attestato */}
+                        {/* Cancella intero attestato (cestino) */}
                         {dipendente && (
                           <button
                             type="button"
@@ -254,73 +255,65 @@ export function TabellaAttestati({
                         {i.stato}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right text-muted-foreground text-xs">—</td>
+                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">—</td>
                   </tr>
                 );
               }
               return null;
             })}
-            {!righe.length && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
-                  Nessun attestato registrato
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
 
-      {/* Finestra per cercare, selezionare, verificare e agganciare il file PDF */}
-      {dipendente && (
+      {attestatoDaAgganciare && dipendente && (
         <DialogCercaAgganciaAttestato
           open={Boolean(attestatoDaAgganciare)}
-          onOpenChange={(v) => !v && setAttestatoDaAgganciare(null)}
+          onOpenChange={(open) => !open && setAttestatoDaAgganciare(null)}
           attestato={attestatoDaAgganciare}
           dipendente={dipendente}
           onAgganciato={() => {
+            setAttestatoDaAgganciare(null);
             if (onAttestatoAggiornato) onAttestatoAggiornato();
           }}
         />
       )}
 
-      {/* Finestra per modificare e impostare i dati dell'attestato */}
-      {dipendente && (
+      {attestatoDaModificare && dipendente && (
         <DialogModificaAttestato
           open={Boolean(attestatoDaModificare)}
-          onOpenChange={(v) => !v && setAttestatoDaModificare(null)}
+          onOpenChange={(open) => !open && setAttestatoDaModificare(null)}
           attestato={attestatoDaModificare}
+          dipendente={dipendente}
           onSalvato={() => {
+            setAttestatoDaModificare(null);
             if (onAttestatoAggiornato) onAttestatoAggiornato();
           }}
         />
       )}
 
-      {/* Conferma eliminazione definitiva attestato */}
       <AlertDialog
         open={Boolean(attestatoDaEliminare)}
-        onOpenChange={(v) => !v && setAttestatoDaEliminare(null)}
+        onOpenChange={(open) => !open && setAttestatoDaEliminare(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminare questo attestato?</AlertDialogTitle>
+            <AlertDialogTitle>Sei sicuro di voler eliminare questo attestato?</AlertDialogTitle>
             <AlertDialogDescription>
-              Stai per cancellare definitivamente l'attestato{" "}
-              <strong>{attestatoDaEliminare?.tipi_corso?.nome_corso ?? ""}</strong> registrato in data{" "}
-              {attestatoDaEliminare ? formatData(attestatoDaEliminare.data_corso) : ""}. Questa azione non può essere annullata.
+              Stai per cancellare la registrazione del corso{" "}
+              <strong>
+                {attestatoDaEliminare?.tipi_corso?.nome_corso ?? "selezionato"}
+              </strong>
+              . L'operazione non può essere annullata.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={eliminazioneInCorso}>Annulla</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleConfermaElimina();
-              }}
+              onClick={handleConfermaElimina}
               disabled={eliminazioneInCorso}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {eliminazioneInCorso ? "Eliminazione..." : "Elimina attestato"}
+              {eliminazioneInCorso ? "Eliminazione..." : "Elimina definitivamente"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
