@@ -83,12 +83,12 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "reparti: iniziale",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
   ],
   [
     "pagina",
     "reparti: ATA aperto",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoChiedi classe di concorso e materiaDa attivare per i docenti: i valori inseriti alimentano l'elenco dei suggerimenti.SottorepartiAAAssistente amministrativoNel moduloAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoChiedi classe di concorso e materiaDa attivare per i docenti: i valori inseriti alimentano l'elenco dei suggerimenti.SottorepartiAAAssistente amministrativoNel moduloAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
   ],
   [
     "sb",
@@ -669,7 +669,7 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "reparti: dopo le azioni",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoChiedi classe di concorso e materiaDa attivare per i docenti: i valori inseriti alimentano l'elenco dei suggerimenti.SottorepartiAAAssistente amministrativoNel moduloAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioIl lavoratore sceglie il proprio reparto da questo elenco. Apri un reparto per gestire i sottoreparti (es. ATA → AA, AT, CS, DSGA) e per decidere se chiedere classe di concorso e materia. Tabella repartiDocentenessun sottoreparto · classe di concorso richiestaNel moduloATA1 sottorepartoNascostoChiedi classe di concorso e materiaDa attivare per i docenti: i valori inseriti alimentano l'elenco dei suggerimenti.SottorepartiAAAssistente amministrativoNel moduloAggiungiGià presenti nei dipendenti ma non nell'elenco. Tocca per aggiungerli:+ StudenteClose",
   ],
   [
     "sb",
@@ -716,12 +716,12 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "insegnamento: iniziale",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)A022Italianousata 3 volteB012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)A022Italianousata 3 volteB012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
   ],
   [
     "pagina",
     "insegnamento: filtro",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)B012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)B012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
   ],
   [
     "sb",
@@ -960,7 +960,7 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "insegnamento: dopo le azioni",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)A022Italianousata 3 volteB012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioElenco proposto ai docenti nel modulo. Ogni valore nuovo scritto da un lavoratore viene aggiunto qui in automatico, così col tempo l'elenco si completa da solo.Classi di concorso (2)A022Italianousata 3 volteB012—AggiungiMaterie raccolte (1)ItalianoA022 · indicata 2 volteClose",
   ],
   [
     "sb",
@@ -989,7 +989,7 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "categorie: iniziale",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliElenco di tutte le categorie di corso, uguale per tutti. Attiva quelle che il lavoratore può scegliere nel modulo: le altre restano comunque visibili in cruscotto risorse umane e nelle schede dei dipendenti. Tabella corsiAntincendio2 corsiNel moduloPrimo Soccorso1 corsoNascostaClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioElenco di tutte le categorie di corso, uguale per tutti. Attiva quelle che il lavoratore può scegliere nel modulo: le altre restano comunque visibili in cruscotto risorse umane e nelle schede dei dipendenti. Tabella corsiAntincendio2 corsiNel moduloPrimo Soccorso1 corsoNascostaClose",
   ],
   [
     "sb",
@@ -1066,7 +1066,7 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "categorie: dopo le azioni",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliElenco di tutte le categorie di corso, uguale per tutti. Attiva quelle che il lavoratore può scegliere nel modulo: le altre restano comunque visibili in cruscotto risorse umane e nelle schede dei dipendenti. Tabella corsiAntincendio2 corsiNel moduloPrimo Soccorso1 corsoNascostaClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioElenco di tutte le categorie di corso, uguale per tutti. Attiva quelle che il lavoratore può scegliere nel modulo: le altre restano comunque visibili in cruscotto risorse umane e nelle schede dei dipendenti. Tabella corsiAntincendio2 corsiNel moduloPrimo Soccorso1 corsoNascostaClose",
   ],
   [
     "sb",
@@ -1119,7 +1119,7 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "pagina",
     "ruoli: iniziale",
-    "Impostazioni modulo lavoratoreScegli cosa vede il lavoratore quando compila il modulo. Valgono per tutti allo stesso modo.RepartiClassi e materieCategorie corsiRuoliRuoli e incarichi di sicurezza da spuntare nella scheda di ogni dipendente. Collega il ruolo a una categoria di corsi per vedere subito se la formazione è fatta o mancante. AggiungiPrepostoPer tuttiAttivoClose",
+    "Impostazioni generali del programmaDati ditta, corsi, reparti, materie, categorie, ruoli e cartella locale degli attestati.DittaCorsiRepartiMaterieCategorieRuoliArchivioRuoli e incarichi di sicurezza da spuntare nella scheda di ogni dipendente. Collega il ruolo a una categoria di corsi per vedere subito se la formazione è fatta o mancante. AggiungiPrepostoPer tuttiAttivoClose",
   ],
 ]
 `;

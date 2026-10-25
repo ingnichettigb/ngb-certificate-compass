@@ -2,6 +2,8 @@
  * File:      ModuloDati.tsx
  * Percorso:  src/features/operatore/components/ModuloDati.tsx
  * Modulo dei dati estratti dall'attestato (con mirino OCR) e pulsanti di salvataggio.
+ * Revisioni:
+ *   rev 2 — 25/10/2026 10:15 — Reparto scelto da menu (SelezioneRepartoModulo).
  */
 import { Archive, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { pulisciCF } from "@/lib/api";
 import { nomeFileStandard } from "../nome-file";
 import type { CampoOcr, Riga, TipoCorso } from "../types";
 import { MirinoOcr } from "./MirinoOcr";
+import { SelezioneRepartoModulo } from "./SelezioneRepartoModulo";
 
 export function ModuloDati({
   form,
@@ -95,12 +98,7 @@ export function ModuloDati({
               </div>
               <div>
                 <Label htmlFor="rep">Reparto</Label>
-                <Input
-                  id="rep"
-                  placeholder="es. Produzione, Uffici..."
-                  value={form.reparto}
-                  onChange={(e) => set("reparto", e.target.value)}
-                />
+                <SelezioneRepartoModulo value={form.reparto} onChange={(v) => set("reparto", v)} />
               </div>
             </div>
 

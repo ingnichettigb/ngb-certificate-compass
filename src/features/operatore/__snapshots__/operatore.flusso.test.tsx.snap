@@ -5,6 +5,30 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "sb",
     "from",
+    "reparti",
+    "["reparti"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "reparti",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "reparti",
+    "["ordine"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "reparti",
+    "["nome"]",
+  ],
+  [
+    "sb",
+    "from",
     "tipi_corso",
     "["tipi_corso"]",
   ],
@@ -226,12 +250,12 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
   [
     "stato",
     "anagrafica copiata",
-    "{"cognome":"VERDI","nome":"ELENA","cf":"VRDLNE80A41H501X","email":"elena@x.it","reparto":"ATA","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_VERDI_ELENA_VRDLNE80A41H501X_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
+    "{"cognome":"VERDI","nome":"ELENA","cf":"VRDLNE80A41H501X","email":"elena@x.it","reparto":"","data":"","ore":"","file":"Nome file archiviazione:CORSO - ANNO-MANCANTE_VERDI_ELENA_VRDLNE80A41H501X_CORSO.pdf","righe":4,"pulsanteSalva":["Aggiungi alla coda"]}",
   ],
   [
     "stato",
     "in modifica",
-    "{"cognome":"ROSSI","nome":"MARIO","cf":"RSSMRA80A01H501U","email":"mario@x.it","reparto":"Docente","data":"2026-03-15","ore":"8","file":"Nome file archiviazione:CORSO - 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.pdf","righe":4,"pulsanteSalva":["Salva modifiche"]}",
+    "{"cognome":"ROSSI","nome":"MARIO","cf":"RSSMRA80A01H501U","email":"mario@x.it","reparto":"","data":"2026-03-15","ore":"8","file":"Nome file archiviazione:CORSO - 2026-03_ROSSI_MARIO_RSSMRA80A01H501U_Antincendio.pdf","righe":4,"pulsanteSalva":["Salva modifiche"]}",
   ],
   [
     "sb",

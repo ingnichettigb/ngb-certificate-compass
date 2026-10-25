@@ -155,7 +155,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "iniziale",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiSeleziona un dipendente per vedere i suoi attestati, oppure aggiungine uno nuovo.",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiSeleziona un dipendente per vedere i suoi attestati, oppure aggiungine uno nuovo.",
   ],
   [
     "lista: ricerca ros",
@@ -257,14 +257,14 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "scheda ROSSI",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiROSSI MARIORSSMRA80A01H501U · DocenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoDocenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoDa svolgere: corso Preposto per il ruolo PrepostoIncarichi e formazioneIntegrazione DVR: 4 oreDa completareDal corso: Antincendio rischio basso · richiesta il 01/09/2026Argomenti da integrare: Rischio elettrico, MovimentazioneSegna completataSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoDa svolgereSpecificoassenteAggiornamentoassentePrimo SoccorsoValidoBase20/01/2026senza scadenzaAggiornamentoassenteAntincendioValidoBase18/05/2024scade 18/05/2029AggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoIntegrazione DVR — Integrazione 4 ore01/09/2026—Da completarePrimo Soccorso gruppo B20/01/2026senza scadenzaIn attesaIntegrazione DVR — Integrazione 2 ore01/02/2025—CompletataAntincendio rischio basso18/05/202418/05/2029ApprovatoPrimo Soccorso gruppo B10/03/202110/03/2024Approvato",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiROSSI MARIORSSMRA80A01H501U · DocenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoDocenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoDa svolgere: corso Preposto per il ruolo PrepostoIncarichi e formazioneIntegrazione DVR: 4 oreDa completareDal corso: Antincendio rischio basso · richiesta il 01/09/2026Argomenti da integrare: Rischio elettrico, MovimentazioneSegna completataSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoDa svolgereSpecificoassenteAggiornamentoassentePrimo SoccorsoValidoBase20/01/2026senza scadenzaAggiornamentoassenteAntincendioValidoBase18/05/2024scade 18/05/2029AggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoDocumentoIntegrazione DVR — Integrazione 4 ore01/09/2026—Da completare—Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesaIntegrazione DVR — Integrazione 2 ore01/02/2025—Completata—Antincendio rischio basso18/05/202418/05/2029ApprovatoPrimo Soccorso gruppo B10/03/202110/03/2024Approvato",
   ],
   [
     "tabella iniziale",
     [
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
     ],
@@ -273,8 +273,8 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     "tabella ordinata per Corso",
     [
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
     ],
@@ -284,8 +284,8 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     [
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
     ],
   ],
@@ -294,17 +294,17 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     [
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
     ],
   ],
   [
     "tabella ordinata per Data",
     [
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
     ],
@@ -315,8 +315,8 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
     ],
   ],
   [
@@ -325,8 +325,8 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
     ],
   ],
   [
@@ -334,8 +334,8 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     [
       "Antincendio rischio basso18/05/202418/05/2029Approvato",
       "Primo Soccorso gruppo B10/03/202110/03/2024Approvato",
-      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata",
-      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare",
+      "Integrazione DVR — Integrazione 2 ore01/02/2025—Completata—",
+      "Integrazione DVR — Integrazione 4 ore01/09/2026—Da completare—",
       "Primo Soccorso gruppo B20/01/2026senza scadenzaIn attesa",
     ],
   ],
@@ -669,7 +669,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "scheda BIANCHI",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiBIANCHI ANNABNCNNA85B41F205X · ATANato/a a Cremona il 01/01/1980 · email non presenteRepartoATARuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioValidoBase12/09/2025scade 12/09/2030AggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoAntincendio rischio basso12/09/202512/09/2030Approvato",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiBIANCHI ANNABNCNNA85B41F205X · ATANato/a a Cremona il 01/01/1980 · email non presenteRepartoATARuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioValidoBase12/09/2025scade 12/09/2030AggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoDocumentoAntincendio rischio basso12/09/202512/09/2030Approvato",
   ],
   [
     "sb",
@@ -698,12 +698,12 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "scheda NERI",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoNessun attestato registrato",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoDocumentoNessun attestato registrato",
   ],
   [
     "pagina",
     "form nuovo",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNuovo dipendenteCognomeNomeCodice fiscaleEmailRepartoScegli il repartoCodice ATECOLuogo di nascitaData di nascita SalvaAnnulla",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNuovo dipendenteCognomeNomeCodice fiscaleEmailRepartoScegli il repartoCodice ATECOLuogo di nascitaData di nascita SalvaAnnulla",
   ],
   [
     "toast.error",
@@ -713,7 +713,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "form compilato",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNuovo dipendenteCognomeNomeCodice fiscaleEmailRepartoDocenteCodice ATECOLuogo di nascitaData di nascita SalvaAnnulla",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNuovo dipendenteCognomeNomeCodice fiscaleEmailRepartoDocenteCodice ATECOLuogo di nascitaData di nascita SalvaAnnulla",
   ],
   [
     "sb",
@@ -801,7 +801,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "dopo salvataggio",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoNessun attestato registrato",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoDocumentoNessun attestato registrato",
   ],
   [
     "sb",
@@ -830,7 +830,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
   [
     "pagina",
     "dopo annulla",
-    "Dipendenti4 nominativi in archivio ImpostazioniDati ditta o studioSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoNessun attestato registrato",
+    "Dipendenti4 nominativi in archivio Impostazioni generaliSalva DB su cartellaCarica DB da fileTutti i repartiTutti i ruoli NuovoROSSI MARIORSSMRA80A01H501U · DocentePrimo SoccorsoAntincendio3 attestatiBIANCHI ANNABNCNNA85B41F205X · ATAAntincendio1 attestatiVERDI ELENAVRDLNE80A41H501X0 attestatiNERI LUCANRELCU80A01H501U · Studente0 attestatiNERI LUCANRELCU80A01H501U · StudenteNato/a a Cremona il 01/01/1980 · email non presenteRepartoStudenteRuoli e incarichi assegnatiAddetto antincendioLavoratore(per tutti)PrepostoIncarichi e formazioneSicurezza LavoratoriNon incaricatoBaseassenteSpecificoassenteAggiornamentoassentePrepostoNon incaricatoSpecificoassenteAggiornamentoassentePrimo SoccorsoNon incaricatoBaseassenteAggiornamentoassenteAntincendioNon incaricatoBaseassenteAggiornamentoassenteDefibrillatore (BLSD)Non incaricatoBaseassenteAggiornamentoassenteAttestati (PDF) Aggiungi attestatoNessun PDF caricato per questo dipendenteTutti gli attestatiCorsoDataScadenzaStatoDocumentoNessun attestato registrato",
   ],
 ]
 `;

@@ -6,7 +6,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
-import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 
 export function IntestazioneHr({ onImported }: { onImported: () => void }) {
   return (
@@ -25,7 +24,6 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ImpostazioniDialog />
           <BackupBar onImported={onImported} />
         </div>
       </div>
