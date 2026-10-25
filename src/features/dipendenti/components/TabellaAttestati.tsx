@@ -283,7 +283,6 @@ export function TabellaAttestati({
           open={Boolean(attestatoDaModificare)}
           onOpenChange={(open) => !open && setAttestatoDaModificare(null)}
           attestato={attestatoDaModificare}
-          dipendente={dipendente}
           onSalvato={() => {
             setAttestatoDaModificare(null);
             if (onAttestatoAggiornato) onAttestatoAggiornato();
