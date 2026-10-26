@@ -114,6 +114,14 @@ export function TabellaTipiCorso() {
 
   return (
     <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="font-medium text-muted-foreground">Argomenti:</span>
+        {GRUPPI_ARGOMENTO.map((g) => (
+          <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
+            {g.ordine}. {g.titolo}
+          </span>
+        ))}
+      </div>
       <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
         <Table className="min-w-[900px]">
           <TableHeader className="sticky top-0 z-10 bg-background">
