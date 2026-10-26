@@ -2,12 +2,15 @@
  * File:      DocumentiAttestati.tsx
  * Percorso:  src/features/documenti/DocumentiAttestati.tsx
  * Elenco degli attestati PDF di un dipendente, con apertura, eliminazione e caricamento.
+ * Revisioni:
+ *   rev 2 — 26/10/2026 20:10 — Bottoni nello stile verde standard; i comandi «Aggancia» e
+ *            «Aggiungi» sono eseguibili anche dalla barra fissa del Cruscotto HR
+ *            (con bottoniInBarra i due bottoni locali restano nascosti).
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Paperclip } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Paperclip, Plus } from "lucide-react";
 import {
   eliminaDocumento,
   getDocumenti,
@@ -18,8 +21,19 @@ import {
 import { RigaDocumento } from "./RigaDocumento";
 import { DialogCaricamento } from "./DialogCaricamento";
 import { SchermoAgganciaAllegato } from "@/features/dipendenti/aggancia-allegato/SchermoAgganciaAllegato";
+import { pubblicaDipendente, registraComando } from "./barra-azioni";
 
-export function DocumentiAttestati({ dipendente }: { dipendente: Dipendente }) {
+// Stile standard: verde tenue a riposo, verde scuro al passaggio, bordo verde scuro.
+const BOTTONI =
+  "inline-flex items-center gap-1.5 rounded-lg border-2 border-primary bg-primary/15 px-3 py-1.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground";
+
+export function DocumentiAttestati({
+  dipendente,
+  bottoniInBarra = false,
+}: {
+  dipendente: Dipendente;
+  bottoniInBarra?: boolean;
+}) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [aggancia, setAggancia] = useState(false);
@@ -28,6 +42,15 @@ export function DocumentiAttestati({ dipendente }: { dipendente: Dipendente }) {
     queryKey: ["documenti", dipendente.id],
     queryFn: () => getDocumenti(dipendente.id),
   });
+
+  // La barra fissa del Cruscotto HR comanda da qui: pubblica il dipendente aperto
+  // e registra le azioni dei due bottoni.
+  useEffect(() => {
+    pubblicaDipendente(dipendente);
+  }, [dipendente]);
+  useEffect(() => () => pubblicaDipendente(null), []);
+  useEffect(() => registraComando("caricamento", () => setOpen(true)), []);
+  useEffect(() => registraComando("aggancio", () => setAggancia(true)), []);
 
   async function apri(doc: DocumentoAttestato) {
     try {
@@ -53,14 +76,16 @@ export function DocumentiAttestati({ dipendente }: { dipendente: Dipendente }) {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold">Attestati (PDF)</h3>
-        <div className="flex flex-col items-end gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => setAggancia(true)}>
-            <Paperclip className="size-4" /> Aggancia attestato come allegato
-          </Button>
-          <Button size="sm" onClick={() => setOpen(true)}>
-            <Plus className="size-4" /> Aggiungi attestato
-          </Button>
-        </div>
+        {!bottoniInBarra ? (
+          <div className="flex flex-col items-end gap-1.5">
+            <button type="button" className={BOTTONI} onClick={() => setAggancia(true)}>
+              <Paperclip className="size-4" /> Aggancia attestato come allegato
+            </button>
+            <button type="button" className={BOTTONI} onClick={() => setOpen(true)}>
+              <Plus className="size-4" /> Aggiungi attestato
+            </button>
+          </div>
+        ) : null}
       </div>
       <SchermoAgganciaAllegato
         open={aggancia}

@@ -2,7 +2,9 @@
  * File:      HrPage.tsx
  * Percorso:  src/features/hr/HrPage.tsx
  * Revisioni:
- *   rev 2 — 26/10/2026 15:10 — aggiunte sezioni «ricevuti» e «archiviati».
+ *   rev 2 — 26/10/2026 15:10 — Aggiunte sezioni «ricevuti» e «archiviati».
+ *   rev 3 — 26/10/2026 20:10 — Blocco in alto fisso durante lo scorrimento; bottoni
+ *            «Aggancia/Aggiungi attestato» inclusi nella barra fissa.
  * Dashboard HR: compone lista, filtri e dettaglio con la logica degli hook.
  */
 import { useState } from "react";
@@ -11,6 +13,7 @@ import { FiltriStatoHr } from "./components/FiltriStatoHr";
 import { ListaAttestatiHr } from "./components/ListaAttestatiHr";
 import { DettaglioAttestato } from "./components/DettaglioAttestato";
 import { SelettoreSezioniHr, type SezioneHr } from "./components/SelettoreSezioniHr";
+import { AzioniAttestatiBarra } from "./components/AzioniAttestatiBarra";
 import { useDatiHr } from "./hooks/useDatiHr";
 import { DipendentiPage } from "@/features/dipendenti/DipendentiPage";
 
@@ -20,11 +23,15 @@ export function HrPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <IntestazioneHr onImported={refresh} />
-      <SelettoreSezioniHr sezione={sezione} onCambia={setSezione} />
+      {/* Blocco in alto sempre visibile durante lo scorrimento */}
+      <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        <IntestazioneHr onImported={refresh} />
+        <SelettoreSezioniHr sezione={sezione} onCambia={setSezione} />
+        {sezione === "archiviati" ? <AzioniAttestatiBarra /> : null}
+      </div>
 
       {sezione === "archiviati" ? (
-        <DipendentiPage senzaIntestazione />
+        <DipendentiPage senzaIntestazione bottoniInBarra />
       ) : (
         <div className="mx-auto grid max-w-[1600px] gap-5 px-5 py-6 lg:grid-cols-[380px_1fr]">
           <aside className="space-y-3">

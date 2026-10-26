@@ -4,6 +4,8 @@
  * Scheda del dipendente selezionato: anagrafica, reparto, ruoli, incarichi, PDF e tabella attestati.
  * Revisioni:
  *   rev 2 — 25/10/2026 11:26 — Passato il dipendente alla tabella: attivi "Aggancia" e ricerca in cartella.
+ *   rev 3 — 26/10/2026 20:10 — Prop bottoniInBarra: nel Cruscotto HR i bottoni Aggancia/Aggiungi
+ *            stanno nella barra fissa in alto, non nella sezione PDF.
  */
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,6 +35,7 @@ export function SchedaDipendente({
   ruoliAttivi,
   repartiAttivi,
   ordinamento,
+  bottoniInBarra = false,
   onCambiaReparto,
   onSpuntaRuolo,
   onSegnaCompletata,
@@ -45,6 +48,7 @@ export function SchedaDipendente({
   ruoliAttivi: RuoloSicurezza[];
   repartiAttivi: string[];
   ordinamento: ReturnType<typeof useOrdinamentoAttestati>;
+  bottoniInBarra?: boolean;
   onCambiaReparto: (valore: string) => void;
   onSpuntaRuolo: (ruoloId: string, v: boolean) => void;
   onSegnaCompletata: (i: IntegrazioneDvr) => void;
@@ -83,7 +87,7 @@ export function SchedaDipendente({
       />
 
       {/* Riquadro Gestione PDF Attestati */}
-      <DocumentiAttestati dipendente={corrente} />
+      <DocumentiAttestati dipendente={corrente} bottoniInBarra={bottoniInBarra} />
 
       <TabellaAttestati
         righe={righeAttestati}
