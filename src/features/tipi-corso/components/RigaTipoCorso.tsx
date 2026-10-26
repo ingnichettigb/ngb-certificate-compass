@@ -2,14 +2,17 @@
  * File:      RigaTipoCorso.tsx
  * Percorso:  src/features/tipi-corso/components/RigaTipoCorso.tsx
  * Una riga della tabella corsi: maniglia e frecce, celle modificabili, interruttore, cestino.
+ * Revisioni:
+ * - Rev 3: 2026-10-26 17:15 - Sfondo per argomento e blocco dei corsi standard del programma.
  */
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { type TipoCorso } from "@/lib/api";
 import { CellaNumerica } from "./CellaNumerica";
+import { assegnaGruppoArgomento, isCorsoProtetto } from "../tipi-raggruppamento";
 
 export function RigaTipoCorso({
   c,
@@ -40,19 +43,23 @@ export function RigaTipoCorso({
   onLasciaRiga: () => void;
   onRilascia: () => void;
 }) {
+  const gruppo = assegnaGruppoArgomento(c);
+  const protetto = isCorsoProtetto(c);
+  const blocca = occupata || protetto;
+  const bloccoCls = protetto ? "cursor-not-allowed bg-background/40" : "";
+
   return (
     <TableRow
-     
-      className={`${occupata ? "opacity-60" : ""} ${inTrascinamento ? "bg-accent/40" : ""}`}
+      className={`${gruppo.coloreSfondo} ${occupata ? "opacity-60" : ""} ${inTrascinamento ? "bg-accent/40" : ""}`}
       onDragOver={(e) => {
-  e.preventDefault();
-  onTrascinaSopra();
-}}
+        e.preventDefault();
+        onTrascinaSopra();
+      }}
       onDragLeave={onLasciaRiga}
       onDrop={(e) => {
-  e.preventDefault();
-  onRilascia();
-}}
+        e.preventDefault();
+        onRilascia();
+      }}
     >
       <TableCell className="p-1.5">
         <div className="flex items-center gap-0.5">
@@ -68,65 +75,49 @@ export function RigaTipoCorso({
             <GripVertical className="size-4" />
           </button>
           <div className="flex flex-col">
-            <button
-              type="button"
-              disabled={indice === 0 || occupata}
-              onClick={() => onSposta(-1)}
-              className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-              aria-label={`Sposta su ${c.nome_corso}`}
-            >
-              ▲
-            </button>
-            <button
-              type="button"
-              disabled={indice === totale - 1 || occupata}
-              onClick={() => onSposta(1)}
-              className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-              aria-label={`Sposta giù ${c.nome_corso}`}
-            >
-              ▼
-            </button>
+            <button type="button" disabled={indice === 0 || occupata} onClick={() => onSposta(-1)} className="text-muted-foreground hover:text-foreground disabled:opacity-20" aria-label={`Sposta su ${c.nome_corso}`}>▲</button>
+            <button type="button" disabled={indice === totale - 1 || occupata} onClick={() => onSposta(1)} className="text-muted-foreground hover:text-foreground disabled:opacity-20" aria-label={`Sposta giù ${c.nome_corso}`}>▼</button>
           </div>
         </div>
       </TableCell>
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.codice ?? ""}
-          disabled={occupata}
+          disabled={blocca}
           onBlur={(e) => onSalvaCampo("codice", e.target.value.trim() || null)}
-          title={c.codice ?? "Codice del corso"}
-          className="h-9 min-w-[110px] font-mono text-xs"
-
+          title={protetto ? "Corso standard del programma: non modificabile" : (c.codice ?? "Codice del corso")}
+          className={`h-9 min-w-[110px] font-mono text-xs ${bloccoCls}`}
         />
       </TableCell>
-
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.nome_corso}
-          disabled={occupata}
+          disabled={blocca}
           onBlur={(e) => onSalvaCampo("nome_corso", e.target.value.trim())}
-          className="h-9"
+          className={`h-9 ${bloccoCls}`}
         />
-        <span className="pl-1 text-xs text-muted-foreground">
-          {c.macro_categoria} · {c.livello_specifico}
+        <span className="flex items-center gap-1 pl-1 text-xs text-muted-foreground">
+          <span className={`font-medium ${gruppo.coloreTesto}`}>{gruppo.titolo}</span> · {c.livello_specifico}
+          {protetto && (
+            <span className="inline-flex items-center gap-0.5 text-[10px]">
+              <Lock className="size-2.5" /> standard
+            </span>
+          )}
         </span>
       </TableCell>
-      <CellaNumerica valore={c.ore_minime_legge} disabled={occupata} onSalva={(v) => onSalvaCampo("ore_minime_legge", v)} />
-      <CellaNumerica valore={c.durata_validita_anni} placeholder="N/A" zeroComeVuoto title="Lascia vuoto, scrivi 0 o N/A se il corso non scade" disabled={occupata} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
-      <CellaNumerica valore={c.anni_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
-      <CellaNumerica valore={c.ore_aggiornamento} placeholder="—" disabled={occupata} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
+      <CellaNumerica valore={c.ore_minime_legge} disabled={blocca} onSalva={(v) => onSalvaCampo("ore_minime_legge", v)} />
+      <CellaNumerica valore={c.durata_validita_anni} placeholder="N/A" zeroComeVuoto title="Lascia vuoto, scrivi 0 o N/A se il corso non scade" disabled={blocca} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
+      <CellaNumerica valore={c.anni_aggiornamento} placeholder="—" disabled={blocca} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
+      <CellaNumerica valore={c.ore_aggiornamento} placeholder="—" disabled={blocca} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.codice_corso_aggiornamento ?? ""}
           placeholder="—"
-          disabled={occupata}
-          onBlur={(e) =>
-            onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)
-          }
-          className="h-9 min-w-[96px] font-mono text-xs"
+          disabled={blocca}
+          onBlur={(e) => onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)}
+          className={`h-9 min-w-[96px] font-mono text-xs ${bloccoCls}`}
         />
       </TableCell>
-
       <TableCell className="p-1.5 text-center">
         <Switch
           checked={c.visibile_lavoratore}
@@ -136,15 +127,15 @@ export function RigaTipoCorso({
         />
       </TableCell>
       <TableCell className="p-1.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={occupata}
-          onClick={() => onRimuovi()}
-          aria-label={`Elimina ${c.nome_corso}`}
-        >
-          <Trash2 className="size-4 text-destructive" />
-        </Button>
+        {protetto ? (
+          <Button variant="ghost" size="icon" disabled title="Corso standard: non eliminabile" aria-label={`${c.nome_corso} protetto`}>
+            <Lock className="size-4 opacity-40" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" disabled={occupata} onClick={() => onRimuovi()} aria-label={`Elimina ${c.nome_corso}`}>
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );

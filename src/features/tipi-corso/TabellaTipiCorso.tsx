@@ -2,6 +2,8 @@
  * File:      TabellaTipiCorso.tsx
  * Percorso:  src/features/tipi-corso/TabellaTipiCorso.tsx
  * Tabella completa dei tipi di corso: intestazioni, righe, aggiunta e note.
+ * Revisioni:
+ * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
@@ -17,6 +19,7 @@ import type { TipoCorso } from "@/lib/api";
 import { RigaTipoCorso } from "./components/RigaTipoCorso";
 import { FormNuovoCorso } from "./components/FormNuovoCorso";
 import { useTabellaTipiCorso } from "./hooks/useTabellaTipiCorso";
+import { GRUPPI_ARGOMENTO, assegnaGruppoArgomento } from "./tipi-raggruppamento";
 
 type Chiave =
   | "codice"
@@ -29,10 +32,13 @@ type Chiave =
   | "visibile_lavoratore";
 type Ord = { chiave: Chiave; dir: "asc" | "desc" };
 
-/** Ordina i corsi per la colonna scelta; i valori vuoti vanno sempre in fondo. */
+/** Ordina i corsi per argomento (ordine fisso), poi per la colonna scelta; vuoti in fondo. */
 export function ordina(corsi: TipoCorso[], ord: Ord): TipoCorso[] {
   const f = ord.dir === "asc" ? 1 : -1;
   return [...corsi].sort((a, b) => {
+    const ga = assegnaGruppoArgomento(a).ordine;
+    const gb = assegnaGruppoArgomento(b).ordine;
+    if (ga !== gb) return ga - gb;
     const va = a[ord.chiave];
     const vb = b[ord.chiave];
     const vuotoA = va === null || va === undefined || va === "";
@@ -108,6 +114,14 @@ export function TabellaTipiCorso() {
 
   return (
     <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="font-medium text-muted-foreground">Argomenti:</span>
+        {GRUPPI_ARGOMENTO.map((g) => (
+          <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
+            {g.ordine}. {g.titolo}
+          </span>
+        ))}
+      </div>
       <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
         <Table className="min-w-[900px]">
           <TableHeader className="sticky top-0 z-10 bg-background">
