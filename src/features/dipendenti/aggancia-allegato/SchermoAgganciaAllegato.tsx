@@ -4,6 +4,7 @@
  * Data creazione: 2026-10-26
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Schermata a tutto schermo "Aggancia attestato come allegato".
+ *   - Rev 2 (2026-10-26 16:45): z-index corretto a z-40 per apertura visibile dei menu a tendina.
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -73,7 +74,7 @@ export function SchermoAgganciaAllegato({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col bg-background">
+    <div className="fixed inset-0 z-40 flex h-screen w-screen flex-col bg-background">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={onChiudi} disabled={busy}>
