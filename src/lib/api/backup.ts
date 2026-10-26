@@ -1,10 +1,27 @@
 /*
  * File:      backup.ts
  * Percorso:  src/lib/api/backup.ts
- * Esportazione e importazione del database.
+ * Data creaz: 20/10/2026
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Esportazione e importazione database JSON.
+ *   rev 2 — 26/10/2026 17:25 — Nome file 030ArchAttestati_AAMMGGhhmm_archivio-attestati.json e filtro bloccante su import.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
+
+/** Prefisso obbligatorio per tutti i file di backup validi */
+export const PREFISSO_BACKUP = "030ArchAttestati_";
+
+/** Genera il nome file nel formato: 030ArchAttestati_AAMMGGhhmm_archivio-attestati.json */
+export function generaNomeFileBackup(data: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const aa = String(data.getFullYear()).slice(-2);
+  const mm = pad(data.getMonth() + 1);
+  const gg = pad(data.getDate());
+  const hh = pad(data.getHours());
+  const min = pad(data.getMinutes());
+  return `${PREFISSO_BACKUP}${aa}${mm}${gg}${hh}${min}_archivio-attestati.json`;
+}
 
 /** Esporta l'intero database in un file JSON salvato sul dispositivo. */
 export async function esportaDb() {
@@ -37,7 +54,7 @@ export async function esportaDb() {
   const blob = new Blob([JSON.stringify(dump, null, 2)], {
     type: "application/json",
   });
-  const nome = `archivio-attestati-${new Date().toISOString().slice(0, 10)}.json`;
+  const nome = generaNomeFileBackup();
 
   const w = window as unknown as {
     showSaveFilePicker?: (o: unknown) => Promise<{
@@ -51,7 +68,7 @@ export async function esportaDb() {
     try {
       const handle = await w.showSaveFilePicker({
         suggestedName: nome,
-        types: [{ description: "Backup JSON", accept: { "application/json": [".json"] } }],
+        types: [{ description: "Backup JSON Archivio Attestati", accept: { "application/json": [".json"] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);
@@ -72,6 +89,12 @@ export async function esportaDb() {
 
 /** Ripristina un backup JSON nel database (unisce, non cancella). */
 export async function importaDb(file: File) {
+  if (!file.name.startsWith(PREFISSO_BACKUP)) {
+    throw new Error(
+      `File non valido: il file di backup deve iniziare con '${PREFISSO_BACKUP}'. File selezionato: '${file.name}'`
+    );
+  }
+
   const dump = JSON.parse(await file.text());
   let dipCount = 0;
   let attCount = 0;
@@ -89,7 +112,6 @@ export async function importaDb(file: File) {
       dipCount += chunk.length;
     }
   }
-  // Reparti e categorie (ignorati se le tabelle non esistono ancora)
   if (Array.isArray(dump.reparti) && dump.reparti.length) {
     await sb.from("reparti").upsert(dump.reparti, { onConflict: "nome" });
   }
