@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   eliminaDocumento,
@@ -17,10 +17,12 @@ import {
 } from "@/lib/api";
 import { RigaDocumento } from "./RigaDocumento";
 import { DialogCaricamento } from "./DialogCaricamento";
+import { SchermoAgganciaAllegato } from "@/features/dipendenti/aggancia-allegato/SchermoAgganciaAllegato";
 
 export function DocumentiAttestati({ dipendente }: { dipendente: Dipendente }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [aggancia, setAggancia] = useState(false);
 
   const { data: documenti = [], isLoading } = useQuery({
     queryKey: ["documenti", dipendente.id],
@@ -49,12 +51,23 @@ export function DocumentiAttestati({ dipendente }: { dipendente: Dipendente }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold">Attestati (PDF)</h3>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="size-4" /> Aggiungi attestato
-        </Button>
+        <div className="flex flex-col items-end gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => setAggancia(true)}>
+            <Paperclip className="size-4" /> Aggancia attestato come allegato
+          </Button>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus className="size-4" /> Aggiungi attestato
+          </Button>
+        </div>
       </div>
+      <SchermoAgganciaAllegato
+        open={aggancia}
+        onChiudi={() => setAggancia(false)}
+        dipendente={dipendente}
+        onAgganciato={() => qc.invalidateQueries({ queryKey: ["documenti", dipendente.id] })}
+      />
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
