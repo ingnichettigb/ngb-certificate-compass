@@ -1,20 +1,21 @@
 /*
  * File:      SelettoreSezioniHr.tsx
  * Percorso:  src/features/hr/components/SelettoreSezioniHr.tsx
- * Creato:    26/10/2026
+ * Data creaz: 26/10/2026
  * Revisioni:
- *   rev 1 — 26/10/2026 15:10 — creazione: due pulsanti per scegliere la sezione del cruscotto.
- * Selettore tra attestati ricevuti dal Modulo lavoratore e attestati archiviati.
+ *   rev 1 — 26/10/2026 15:10 — Creazione: selettore attestati ricevuti vs archiviati.
+ *   rev 2 — 26/10/2026 17:45 — Uniformazione stile: verde tenue a riposo e verde scuro attivo con bordo verde scuro.
  */
 import { Archive, Inbox } from "lucide-react";
 
 export type SezioneHr = "ricevuti" | "archiviati";
 
 const BASE =
-  "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all";
-const RIPOSO = "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20";
+  "inline-flex items-center gap-2 rounded-lg border-2 border-primary px-4 py-2 text-sm font-semibold transition-all";
+const RIPOSO =
+  "bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground";
 const ATTIVO =
-  "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30 bg-gradient-to-b from-primary/80 to-primary";
+  "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/40";
 
 export function SelettoreSezioniHr({
   sezione,
