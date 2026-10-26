@@ -16,7 +16,7 @@ import { useDatiDipendenti } from "./hooks/useDatiDipendenti";
 import { useOrdinamentoAttestati } from "./hooks/useOrdinamentoAttestati";
 import { useAzioniDipendente } from "./hooks/useAzioniDipendente";
 
-export function DipendentiPage() {
+export function DipendentiPage({ senzaIntestazione = false }: { senzaIntestazione?: boolean } = {}) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Dipendente, "id"> | null>(null);
@@ -47,7 +47,7 @@ export function DipendentiPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <IntestazioneDipendenti totale={dipendenti.length} />
+      {!senzaIntestazione && <IntestazioneDipendenti totale={dipendenti.length} />}
 
       <section className="mx-auto grid max-w-[1400px] gap-6 px-5 py-6 lg:grid-cols-[1fr_1.2fr]">
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
