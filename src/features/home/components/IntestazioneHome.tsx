@@ -5,7 +5,6 @@
  */
 import { Link } from "@tanstack/react-router";
 import { Bot, Monitor, Smartphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
 
