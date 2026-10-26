@@ -1,15 +1,17 @@
 /*
  * File:      BackupBar.tsx
  * Percorso:  src/components/BackupBar.tsx
- * Barra superiore con Impostazioni generali e backup DB.
+ * Data creaz: 20/10/2026
  * Revisioni:
+ *   rev 1 — 20/10/2026 14:30 — Barra superiore con Impostazioni generali e backup DB.
  *   rev 2 — 25/10/2026 10:15 — Dati ditta spostati dentro "Impostazioni generali".
+ *   rev 3 — 26/10/2026 17:25 — Filtro e blocco file se non inizia con 030ArchAttestati_.
  */
 import { useRef, useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { esportaDb, importaDb } from "@/lib/api";
+import { esportaDb, importaDb, PREFISSO_BACKUP } from "@/lib/api";
 import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 
 export function BackupBar({ onImported }: { onImported?: () => void }) {
@@ -20,10 +22,11 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
     setBusy("export");
     try {
       const dump = await esportaDb();
-      if (dump)
+      if (dump) {
         toast.success("Backup salvato", {
           description: `${dump.dipendenti.length} dipendenti e ${dump.attestati_caricati.length} attestati esportati.`,
         });
+      }
     } catch (e) {
       toast.error("Esportazione non riuscita", { description: String(e) });
     } finally {
@@ -32,6 +35,14 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
   }
 
   async function handleImport(file: File) {
+    if (!file.name.startsWith(PREFISSO_BACKUP)) {
+      toast.error("File non valido", {
+        description: `Il file deve iniziare con '${PREFISSO_BACKUP}'. File scelto: '${file.name}'`,
+      });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
     setBusy("import");
     try {
       const res = await importaDb(file);
