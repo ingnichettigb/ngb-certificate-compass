@@ -1,7 +1,10 @@
 /*
  * File:      IntestazioneHome.tsx
  * Percorso:  src/features/home/components/IntestazioneHome.tsx
- * Testata della home: logo, titolo, barra di backup e pulsanti di accesso rapido.
+ * Data creaz: 20/10/2026
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Testata home: logo, titolo, backup e accessi rapidi.
+ *   rev 2 — 26/10/2026 17:45 — Bottoni verde tenue a riposo, verde pieno attivo con bordo verde scuro elettrico.
  */
 import { Link } from "@tanstack/react-router";
 import { Bot, Monitor, Smartphone } from "lucide-react";
@@ -39,10 +42,10 @@ export function IntestazioneHome() {
             <Link
               key={to}
               to={to}
-              className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-primary bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md"
               activeProps={{
                 className:
-                  "!bg-primary !text-primary-foreground bg-gradient-to-b from-primary/80 to-primary shadow-md ring-2 ring-primary/30",
+                  "!bg-primary !text-primary-foreground shadow-md ring-2 ring-primary/40",
               }}
             >
               <Icona className="size-4" />
