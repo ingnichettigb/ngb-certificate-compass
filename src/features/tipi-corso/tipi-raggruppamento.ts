@@ -43,13 +43,13 @@ export function assegnaGruppoArgomento(c: {
   const cat = (c.macro_categoria ?? "").toLowerCase();
   const cod = (c.codice ?? "").toUpperCase();
   const nome = (c.nome_corso ?? "").toLowerCase();
-  if (cat.includes("sicurezza") || cod.startsWith("SIC-")) return GRUPPI_ARGOMENTO[0];
-  if (cat.includes("preposto") || cod.startsWith("PRP-") || nome.includes("preposto")) return GRUPPI_ARGOMENTO[1];
-  if (cat.includes("evacuaz") || cat.includes("emergenz") || cod.startsWith("EME-") || nome.includes("evacuazione")) return GRUPPI_ARGOMENTO[2];
-  if (cat.includes("antincendio") || cod.startsWith("ANT-") || cod.startsWith("VFF-") || nome.includes("vvff") || nome.includes("antincendio")) return GRUPPI_ARGOMENTO[3];
-  if (cat.includes("primo soccorso") || cod.startsWith("PSO-") || nome.includes("primo soccorso")) return GRUPPI_ARGOMENTO[4];
-  if (cat.includes("defibrillatore") || cod.startsWith("BLS-") || nome.includes("dae") || nome.includes("blsd")) return GRUPPI_ARGOMENTO[5];
-  return GRUPPI_ARGOMENTO[6];
+  if (cat.includes("sicurezza") || cod.startsWith("SIC-")) return GRUPPI_ARGOMENTO[0]!;
+  if (cat.includes("preposto") || cod.startsWith("PRP-") || nome.includes("preposto")) return GRUPPI_ARGOMENTO[1]!;
+  if (cat.includes("evacuaz") || cat.includes("emergenz") || cod.startsWith("EME-") || nome.includes("evacuazione")) return GRUPPI_ARGOMENTO[2]!;
+  if (cat.includes("antincendio") || cod.startsWith("ANT-") || cod.startsWith("VFF-") || nome.includes("vvff") || nome.includes("antincendio")) return GRUPPI_ARGOMENTO[3]!;
+  if (cat.includes("primo soccorso") || cod.startsWith("PSO-") || nome.includes("primo soccorso")) return GRUPPI_ARGOMENTO[4]!;
+  if (cat.includes("defibrillatore") || cod.startsWith("BLS-") || nome.includes("dae") || nome.includes("blsd")) return GRUPPI_ARGOMENTO[5]!;
+  return GRUPPI_ARGOMENTO[6]!;
 }
 
 export function isCorsoProtetto(c: { codice?: string | null }): boolean {
