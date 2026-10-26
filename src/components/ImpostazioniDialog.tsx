@@ -5,7 +5,8 @@
  * Revisioni:
  *   rev 1 — 20/10/2026 14:00 — Creazione iniziale modale impostazioni.
  *   rev 2 — 25/10/2026 10:15 — Aggiunte schede Ditta e Corsi.
- *   rev 3 — 26/10/2026 17:50 — Risolto layout: vera pagina a schermo intero con createPortal e tasto Torna.
+ *   rev 3 — 26/10/2026 17:50 — Layout a schermo intero con createPortal e tasto Torna.
+ *   rev 4 — 26/10/2026 17:58 — Chiusura Esc condizionata per non chiudere le impostazioni se è aperto un popup interno.
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -23,11 +24,15 @@ import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDi
 export function ImpostazioniDialog() {
   const [open, setOpen] = useState(false);
 
-  // Chiusura con tasto Esc
+  // Chiusura con tasto Esc: solo se non ci sono popup interni aperti sopra
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // Se c'è un dialog Radix aperto sopra, lasciamo gestire la chiusura a lui
+      const popupAperto = document.querySelector("[data-radix-portal] [role='dialog'], [role='alertdialog']");
+      if (popupAperto) return;
+      setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
