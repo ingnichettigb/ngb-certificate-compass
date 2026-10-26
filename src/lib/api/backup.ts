@@ -34,7 +34,7 @@ export function generaNomeFileBackup(data: Date = new Date()): string {
 export function estraiDataDaNomeBackup(nomeFile: string): { data: string; dateObj: Date } {
   const match = nomeFile.match(/^030ArchAttestati_(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
   if (match) {
-    const [, aa, mm, gg, hh, min] = match;
+    const [, aa = "", mm = "", gg = "", hh = "", min = ""] = match;
     const anno = 2000 + parseInt(aa, 10);
     const dateObj = new Date(anno, parseInt(mm, 10) - 1, parseInt(gg, 10), parseInt(hh, 10), parseInt(min, 10));
     return {

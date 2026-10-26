@@ -2,6 +2,9 @@
  * File:      DipendentiPage.tsx
  * Percorso:  src/features/dipendenti/DipendentiPage.tsx
  * Pagina Dipendenti: compone elenco, filtri, scheda e modulo con la logica degli hook.
+ * Revisioni:
+ *   rev 2 — 26/10/2026 20:10 — Prop bottoniInBarra: nel Cruscotto HR i bottoni Aggancia/Aggiungi
+ *            stanno nella barra fissa in alto, non nella scheda.
  */
 import { useMemo, useState } from "react";
 import { type Dipendente } from "@/lib/api";
@@ -16,7 +19,10 @@ import { useDatiDipendenti } from "./hooks/useDatiDipendenti";
 import { useOrdinamentoAttestati } from "./hooks/useOrdinamentoAttestati";
 import { useAzioniDipendente } from "./hooks/useAzioniDipendente";
 
-export function DipendentiPage({ senzaIntestazione = false }: { senzaIntestazione?: boolean } = {}) {
+export function DipendentiPage({
+  senzaIntestazione = false,
+  bottoniInBarra = false,
+}: { senzaIntestazione?: boolean; bottoniInBarra?: boolean } = {}) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Dipendente, "id"> | null>(null);
@@ -85,6 +91,7 @@ export function DipendentiPage({ senzaIntestazione = false }: { senzaIntestazion
               ruoliAttivi={ruoliAttivi}
               repartiAttivi={repartiAttivi}
               ordinamento={ordinamento}
+              bottoniInBarra={bottoniInBarra}
               onCambiaReparto={(v) => cambiaReparto(corrente.id, v)}
               onSpuntaRuolo={spuntaRuolo}
               onSegnaCompletata={segnaCompletata}

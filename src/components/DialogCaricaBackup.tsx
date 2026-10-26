@@ -28,7 +28,7 @@ import {
 interface Props {
   aperto: boolean;
   onOpenChange: (open: boolean) => void;
-  onImported?: () => void;
+  onImported?: (() => void) | undefined;
 }
 
 export function DialogCaricaBackup({ aperto, onOpenChange, onImported }: Props) {
