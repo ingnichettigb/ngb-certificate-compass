@@ -3,9 +3,10 @@
  * Percorso:  src/components/BackupBar.tsx
  * Data creaz: 20/10/2026
  * Revisioni:
- *   rev 1 — 20/10/2026 14:30 — Barra superiore con Impostazioni generali e backup DB.
- *   rev 2 — 25/10/2026 10:15 — Dati ditta spostati dentro "Impostazioni generali".
- *   rev 3 — 26/10/2026 17:30 — Integrazione DialogCaricaBackup con filtro esclusivo 030ArchAttestati_.
+ *   rev 1 — 20/10/2026 14:30 — Barra superiore backup e impostazioni.
+ *   rev 2 — 25/10/2026 10:15 — Dati ditta spostati dentro Impostazioni generali.
+ *   rev 3 — 26/10/2026 17:30 — DialogCaricaBackup selettivo 030ArchAttestati_.
+ *   rev 4 — 26/10/2026 17:45 — Uniformazione stile bottoni verde tenue e bordo verde scuro elettrico.
  */
 import { useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
@@ -14,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { esportaDb } from "@/lib/api";
 import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 import { DialogCaricaBackup } from "@/components/DialogCaricaBackup";
+
+const STILE_BOTTONE =
+  "border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-medium";
 
 export function BackupBar({ onImported }: { onImported?: () => void }) {
   const [busyExport, setBusyExport] = useState(false);
@@ -39,11 +43,17 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
     <div className="flex flex-wrap items-center gap-2">
       <ImpostazioniDialog />
 
-      <Button variant="outline" size="sm" onClick={handleExport} disabled={busyExport}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleExport}
+        disabled={busyExport}
+        className={STILE_BOTTONE}
+      >
         {busyExport ? (
-          <Loader2 className="size-4 animate-spin" />
+          <Loader2 className="size-4 animate-spin mr-1.5" />
         ) : (
-          <Download className="size-4" />
+          <Download className="size-4 mr-1.5" />
         )}
         Salva DB su cartella
       </Button>
@@ -52,8 +62,9 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
         variant="outline"
         size="sm"
         onClick={() => setDialogImportAperto(true)}
+        className={STILE_BOTTONE}
       >
-        <Upload className="size-4" />
+        <Upload className="size-4 mr-1.5" />
         Carica DB da file
       </Button>
 
