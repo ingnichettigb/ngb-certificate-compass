@@ -35,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getCartellaArchivio, apriDaPercorsoRelativo } from "@/lib/api/cartella-locale";
+import { apriDaPercorsoInTutte } from "@/lib/api/cartelle-multiple";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,11 +69,7 @@ export function TabellaAttestati({
         }
       }
 
-      const root = await getCartellaArchivio(true);
-      if (root) {
-        const aperto = await apriDaPercorsoRelativo(root, percorso);
-        if (aperto) return;
-      }
+      if (await apriDaPercorsoInTutte(percorso)) return;
 
       toast.info("File locale non trovato nel percorso memorizzato", {
         description: "Puoi cercarlo o riagganciarlo cliccando sull'icona di sostituzione.",

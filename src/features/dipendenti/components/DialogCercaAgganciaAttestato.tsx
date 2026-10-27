@@ -10,6 +10,7 @@
  *   - Rev 5 (2026-10-25 21:45): Finestra a sé stante a tutto schermo (100vw x 100vh) senza vincoli modali stretti.
  *   - Rev 6 (2026-10-27 10:38): Aggiunto attributo title su nome file e percorso per visualizzazione per esteso al passaggio del mouse.
  */
+import { cercaInTutteLeCartelle } from "@/lib/api/cartelle-multiple";
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Search, FileText, Eye, Loader2, FolderOpen, AlertCircle, ArrowRight, X } from "lucide-react";
@@ -19,7 +20,6 @@ import { toast } from "sonner";
 import {
   getCartellaArchivio,
   scegliCartellaLocale,
-  cercaFileRicorsivo,
   apriFileLocale,
   type FileTrovato,
 } from "@/lib/api/cartella-locale";
@@ -63,7 +63,7 @@ export function DialogCercaAgganciaAttestato({
         }
         setHaCartella(true);
       }
-      const files = await cercaFileRicorsivo(root, testo);
+      const files = await cercaInTutteLeCartelle(testo);
       setRisultati(files);
       if (files.length === 0) toast.info("Nessun file trovato nelle cartelle");
     } catch (e) {
@@ -88,7 +88,7 @@ export function DialogCercaAgganciaAttestato({
   }, [open, attestato, dipendente, cerca]);
 
   function scegli(f: FileTrovato) {
-    setSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo ? null : f));
+    setSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo && prev?.cartella === f.cartella ? null : f));
   }
 
   if (!open || !attestato) return null;
@@ -221,7 +221,7 @@ export function DialogCercaAgganciaAttestato({
                   const on = selezionato?.percorsoRelativo === f.percorsoRelativo;
                   return (
                     <div
-                      key={f.percorsoRelativo}
+                      key={`${f.cartella}/${f.percorsoRelativo}`}
                       onClick={() => scegli(f)}
                       className={`flex cursor-pointer items-center gap-4 p-4 transition-colors ${
                         on ? "border-l-4 border-success bg-success/10" : "hover:bg-muted/40"
@@ -248,7 +248,7 @@ export function DialogCercaAgganciaAttestato({
                           className="mt-1 truncate text-xs text-muted-foreground"
                           title={`Posizione: ${f.percorsoRelativo}`}
                         >
-                          Posizione: <span className="font-mono">{f.percorsoRelativo}</span> • Dimensione: {(f.dimensione / 1024 / 1024).toFixed(2)} MB • Data: {f.dataModifica.toLocaleDateString("it-IT")}
+                          Posizione: <span className="font-mono">{f.cartella ? `[${f.cartella}] ` : ""}{f.percorsoRelativo}</span> • Dimensione: {(f.dimensione / 1024 / 1024).toFixed(2)} MB • Data: {f.dataModifica.toLocaleDateString("it-IT")}
                         </p>
                       </div>
                       <Button

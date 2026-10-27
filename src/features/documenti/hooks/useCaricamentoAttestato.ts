@@ -3,13 +3,13 @@
  * Percorso:  src/features/documenti/hooks/useCaricamentoAttestato.ts
  * Stato e logica del caricamento di un attestato PDF (campi, file, anteprima, salvataggio).
  */
+import { salvaInCartellaScelta, getUltimaCartella } from "@/lib/api/cartelle-multiple";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   caricaDocumento,
   cartellaDipendente,
   nomeFilePdf,
-  salvaInLocale,
   supportaCartellaLocale,
   type Dipendente,
 } from "@/lib/api";
@@ -34,6 +34,7 @@ export function useCaricamentoAttestato({
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const [anchLocale, setAnchLocale] = useState(false);
+  const [cartellaDest, setCartellaDest] = useState<string | null>(() => getUltimaCartella());
 
   useEffect(() => {
     if (!file) {
@@ -92,12 +93,13 @@ export function useCaricamentoAttestato({
           });
         } else {
           try {
-            const scritto = await salvaInLocale(
+            const scritto = await salvaInCartellaScelta(
+              cartellaDest,
               file,
               nomeFinale,
               cartellaDipendente(dipendente),
             );
-            if (scritto) toast.success("Copia salvata anche nella cartella locale");
+            if (scritto) toast.success(`Copia salvata nella cartella "${scritto}"`);
           } catch (e) {
             if ((e as DOMException)?.name !== "AbortError")
               toast.error("Copia locale non riuscita", {
@@ -126,6 +128,7 @@ export function useCaricamentoAttestato({
     drag, setDrag,
     busy,
     anchLocale, setAnchLocale,
+    cartellaDest, setCartellaDest,
     nomeFinale,
     accetta,
     conferma,

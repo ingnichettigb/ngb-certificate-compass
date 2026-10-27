@@ -1,11 +1,13 @@
 /*
  * File:      ArchivioTab.tsx
  * Percorso:  src/features/impostazioni/ArchivioTab.tsx
+ * Rev (2026-10-27 21:05): aggiunta sezione cartelle aggiuntive.
  * Scheda Impostazioni per la configurazione della cartella locale/rete di destinazione attestati.
  */
 import { useEffect, useState } from "react";
 import { FolderCheck, FolderSync, FolderX, FolderOpen, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CartelleAggiuntive } from "./CartelleAggiuntive";
 import { toast } from "sonner";
 import {
   getCartellaArchivio,
@@ -165,6 +167,7 @@ export function ArchivioTab() {
           </div>
         )}
       </div>
+      {nomeCartella && <CartelleAggiuntive />}
     </div>
   );
 }
