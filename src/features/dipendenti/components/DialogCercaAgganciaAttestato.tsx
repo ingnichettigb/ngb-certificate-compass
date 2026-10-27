@@ -8,6 +8,7 @@
  *   - Rev 3 (2026-10-25 21:05): Casella di spunta e confronto dati.
  *   - Rev 4 (2026-10-25 21:35): Selezione singola, pulsante verifica in alto.
  *   - Rev 5 (2026-10-25 21:45): Finestra a sé stante a tutto schermo (100vw x 100vh) senza vincoli modali stretti.
+ *   - Rev 6 (2026-10-27 10:38): Aggiunto attributo title su nome file e percorso per visualizzazione per esteso al passaggio del mouse.
  */
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -236,9 +237,17 @@ export function DialogCercaAgganciaAttestato({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <FileText className="size-5 shrink-0 text-primary" />
-                          <span className="truncate text-base font-semibold text-foreground">{f.nome}</span>
+                          <span
+                            className="truncate text-base font-semibold text-foreground"
+                            title={f.nome}
+                          >
+                            {f.nome}
+                          </span>
                         </div>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                        <p
+                          className="mt-1 truncate text-xs text-muted-foreground"
+                          title={`Posizione: ${f.percorsoRelativo}`}
+                        >
                           Posizione: <span className="font-mono">{f.percorsoRelativo}</span> • Dimensione: {(f.dimensione / 1024 / 1024).toFixed(2)} MB • Data: {f.dataModifica.toLocaleDateString("it-IT")}
                         </p>
                       </div>
