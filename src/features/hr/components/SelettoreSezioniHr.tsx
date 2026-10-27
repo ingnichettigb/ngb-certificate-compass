@@ -6,6 +6,7 @@
  *   rev 1 — 26/10/2026 15:10 — Creazione: selettore attestati ricevuti vs archiviati.
  *   rev 2 — 26/10/2026 17:45 — Uniformazione stile: verde tenue a riposo e verde scuro attivo con bordo verde scuro.
  *   rev 3 — 26/10/2026 20:10 — Spazio sotto la riga perché la barra fissa in alto resti leggibile.
+ *   rev 4 — 27/10/2026 09:25 — Rimozione wrapper pagina per allineamento sulla stessa riga dei comandi operativi.
  */
 import { Archive, Inbox } from "lucide-react";
 
@@ -30,7 +31,7 @@ export function SelettoreSezioniHr({
     { id: "archiviati" as const, label: "Gestione attestati archiviati", Icona: Archive },
   ];
   return (
-    <div className="mx-auto flex max-w-[1600px] flex-wrap gap-2 px-5 pb-3 pt-4">
+    <div className="flex flex-wrap items-center gap-2">
       {voci.map(({ id, label, Icona }) => (
         <button
           key={id}
