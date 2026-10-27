@@ -15,5 +15,6 @@ export * from "./formattazione";
 export * from "./incarichi";
 export * from "./documenti";
 export * from "./cartella-locale";
+export * from "./cartelle-multiple";
 export * from "./integrazioni-dvr";
 export * from "./ruoli";
