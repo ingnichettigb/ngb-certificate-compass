@@ -5,10 +5,12 @@
  * Revisioni:
  *   rev 1 — 20/10/2026 14:00 — Testata home: logo, titolo, backup e accessi rapidi.
  *   rev 2 — 26/10/2026 17:45 — Bottoni verde tenue a riposo, verde pieno attivo con bordo verde scuro elettrico.
+ *   rev 3 — 27/10/2026 21:20 — Aggiunto bottone «Esporta dati in Excel» in fila agli accessi rapidi.
  */
 import { Link } from "@tanstack/react-router";
 import { Bot, Monitor, Smartphone } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
+import { DialogEsportaAttestati } from "@/features/esporta-attestati/DialogEsportaAttestati";
 import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
 
 export function IntestazioneHome() {
@@ -52,6 +54,7 @@ export function IntestazioneHome() {
               {label}
             </Link>
           ))}
+          <DialogEsportaAttestati />
         </div>
       </div>
     </header>
