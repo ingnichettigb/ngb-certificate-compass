@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 26/10/2026 20:10 — Creazione: bottoni «Aggancia attestato come allegato» e «Aggiungi
  *            attestato» nella barra fissa del Cruscotto HR, nello stile verde standard.
+ *   rev 2 — 27/10/2026 09:25 — Rimozione wrapper pagina per affiancamento orizzontale ai selettori di sezione.
  *
  * I due comandi agiscono sul lavoratore attualmente aperto nella scheda
  * (pubblicato da DocumentiAttestati tramite barra-azioni.ts).
@@ -25,7 +26,7 @@ export function AzioniAttestatiBarra() {
   const suggerimento = attivo ? undefined : "Apri prima un lavoratore nella scheda";
 
   return (
-    <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-end gap-2 px-5 pb-3">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         disabled={!attivo}
