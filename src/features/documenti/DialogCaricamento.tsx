@@ -3,6 +3,7 @@
  * Percorso:  src/features/documenti/DialogCaricamento.tsx
  * Finestra «Aggiungi attestato PDF»: campi, trascinamento del file, anteprima e conferma.
  */
+import { SceltaCartellaSalvataggio } from "./SceltaCartellaSalvataggio";
 import { useRef } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function DialogCaricamento({
     drag, setDrag,
     busy,
     anchLocale, setAnchLocale,
+    cartellaDest, setCartellaDest,
     nomeFinale,
     accetta,
     conferma,
@@ -176,6 +178,9 @@ export function DialogCaricamento({
             Salva anche in locale (cartella "Archivio Attestati Sicurezza", solo
             Chrome/Edge da computer)
           </label>
+          {anchLocale && (
+            <SceltaCartellaSalvataggio valore={cartellaDest} onChange={setCartellaDest} />
+          )}
         </div>
 
         <DialogFooter>
