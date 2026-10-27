@@ -5,6 +5,7 @@
  *   rev 2 — 26/10/2026 15:10 — Aggiunte sezioni «ricevuti» e «archiviati».
  *   rev 3 — 26/10/2026 20:10 — Blocco in alto fisso durante lo scorrimento; bottoni
  *            «Aggancia/Aggiungi attestato» inclusi nella barra fissa.
+ *   rev 4 — 27/10/2026 09:25 — Selettori di sezione e bottoni operativi disposti sulla stessa riga (justify-between).
  * Dashboard HR: compone lista, filtri e dettaglio con la logica degli hook.
  */
 import { useState } from "react";
@@ -26,8 +27,10 @@ export function HrPage() {
       {/* Blocco in alto sempre visibile durante lo scorrimento */}
       <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <IntestazioneHr onImported={refresh} />
-        <SelettoreSezioniHr sezione={sezione} onCambia={setSezione} />
-        {sezione === "archiviati" ? <AzioniAttestatiBarra /> : null}
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-5 py-3">
+          <SelettoreSezioniHr sezione={sezione} onCambia={setSezione} />
+          {sezione === "archiviati" ? <AzioniAttestatiBarra /> : null}
+        </div>
       </div>
 
       {sezione === "archiviati" ? (
