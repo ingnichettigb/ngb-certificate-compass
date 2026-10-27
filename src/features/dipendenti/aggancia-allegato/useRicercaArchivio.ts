@@ -5,12 +5,12 @@
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Logica ricerca ricorsiva e selezione singola (ripresa da "Aggancia").
  */
+import { cercaInTutteLeCartelle } from "@/lib/api/cartelle-multiple";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   getCartellaArchivio,
   scegliCartellaLocale,
-  cercaFileRicorsivo,
   type FileTrovato,
 } from "@/lib/api/cartella-locale";
 
@@ -38,7 +38,7 @@ export function useRicercaArchivio(open: boolean, cognomeIniziale: string) {
         }
         setHaCartella(true);
       }
-      const files = await cercaFileRicorsivo(root, testo);
+      const files = await cercaInTutteLeCartelle(testo);
       setRisultati(files);
       if (files.length === 0) toast.info("Nessun file trovato nelle cartelle");
     } catch (e) {
@@ -67,7 +67,7 @@ export function useRicercaArchivio(open: boolean, cognomeIniziale: string) {
   }
 
   function scegli(f: FileTrovato) {
-    setSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo ? null : f));
+    setSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo && prev?.cartella === f.cartella ? null : f));
   }
 
   return { chiave, setChiave, inRicerca, risultati, haCartella, selezionato, cerca, scegli, scegliCartella };

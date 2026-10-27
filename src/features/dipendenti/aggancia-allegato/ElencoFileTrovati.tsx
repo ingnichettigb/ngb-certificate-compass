@@ -33,10 +33,10 @@ export function ElencoFileTrovati({
       ) : (
         <div className="divide-y divide-border rounded-xl border border-border bg-surface">
           {risultati.map((f) => {
-            const on = selezionato?.percorsoRelativo === f.percorsoRelativo;
+            const on = selezionato?.percorsoRelativo === f.percorsoRelativo && selezionato?.cartella === f.cartella;
             return (
               <div
-                key={f.percorsoRelativo}
+                key={`${f.cartella}/${f.percorsoRelativo}`}
                 onClick={() => onScegli(f)}
                 className={`flex cursor-pointer items-center gap-3 p-3 ${
                   on ? "border-l-4 border-success bg-success/10" : "hover:bg-muted/40"
@@ -63,7 +63,7 @@ export function ElencoFileTrovati({
                     className="truncate text-xs text-muted-foreground"
                     title={f.percorsoRelativo}
                   >
-                    <span className="font-mono">{f.percorsoRelativo}</span> •{" "}
+                    <span className="font-mono">{f.cartella ? `[${f.cartella}] ` : ""}{f.percorsoRelativo}</span> •{" "}
                     {f.dataModifica.toLocaleDateString("it-IT")}
                   </p>
                 </div>
