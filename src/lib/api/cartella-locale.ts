@@ -6,6 +6,7 @@
  *   - Rev 1 (2026-10-25 09:07): Implementazione gestione handle IndexedDB e scansione ricorsiva.
  *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
  *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
+ *   - Rev 4 (2026-10-27 21:05): Campo cartella su FileTrovato ed esportata scriviInCartella per il multi-cartella.
  */
 
 const DB_NOME = "app_archivio_locale";
@@ -21,6 +22,8 @@ export type FileTrovato = {
   handle: FileSystemFileHandle;
   dimensione: number;
   dataModifica: Date;
+  /** Nome della cartella collegata in cui è stato trovato (multi-cartella). */
+  cartella?: string;
 };
 
 /** Verifica se il browser supporta l'accesso alle cartelle locali (Chrome, Edge, Opera, Brave). */
@@ -251,7 +254,16 @@ export async function salvaInLocale(
 ): Promise<boolean> {
   const root = await getCartellaArchivio(true);
   if (!root) return false;
+  return scriviInCartella(root, file, nomeFile, sottocartella);
+}
 
+/** Scrive il file nella cartella indicata (sottocartelle create se mancano). */
+export async function scriviInCartella(
+  root: FileSystemDirectoryHandle,
+  file: File,
+  nomeFile: string,
+  sottocartella?: string,
+): Promise<boolean> {
   let dir = root;
   for (const parte of (sottocartella || "").split("/").filter(Boolean)) {
     dir = await dir.getDirectoryHandle(parte, { create: true });
