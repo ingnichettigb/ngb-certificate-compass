@@ -4,6 +4,7 @@
  * Data creazione: 2026-10-26
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Elenco file trovati con spunta singola (come "Aggancia").
+ *   - Rev 2 (2026-10-27 10:38): Aggiunto attributo title su nome file e percorso per visualizzazione per esteso al passaggio del mouse.
  */
 import { FileText } from "lucide-react";
 import type { FileTrovato } from "@/lib/api/cartella-locale";
@@ -51,9 +52,17 @@ export function ElencoFileTrovati({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <FileText className="size-4 shrink-0 text-primary" />
-                    <span className="truncate text-sm font-semibold">{f.nome}</span>
+                    <span
+                      className="truncate text-sm font-semibold"
+                      title={f.nome}
+                    >
+                      {f.nome}
+                    </span>
                   </div>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p
+                    className="truncate text-xs text-muted-foreground"
+                    title={f.percorsoRelativo}
+                  >
                     <span className="font-mono">{f.percorsoRelativo}</span> •{" "}
                     {f.dataModifica.toLocaleDateString("it-IT")}
                   </p>
