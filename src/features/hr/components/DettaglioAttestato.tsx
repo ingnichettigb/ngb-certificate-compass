@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-22 10:00): Creazione pannello dettaglio attestato HR con form e anteprima.
  *   - Rev 2 (2026-10-28 11:35): Collegamento dell'azione onScollegaLink per rimuovere link non validi.
+ *   - Rev 4 (2026-10-28 11:50): Popup «Approva in attesa di integrazione».
  *   - Rev 3 (2026-10-28 11:22): Supporto codice corso per i filtri rapidi in CampiValidazione.
  */
 import { ImageViewer } from "@/components/ImageViewer";
@@ -13,6 +14,7 @@ import { AnagraficaAttestato } from "./AnagraficaAttestato";
 import { CampiValidazione } from "./CampiValidazione";
 import { OpzioneEmail } from "./OpzioneEmail";
 import { AzioniValidazione } from "./AzioniValidazione";
+import { DialogIntegrazioneAselli } from "./DialogIntegrazioneAselli";
 import { useDecisioneAttestato } from "../hooks/useDecisioneAttestato";
 
 export function DettaglioAttestato({
@@ -58,12 +60,24 @@ export function DettaglioAttestato({
           setMostraNote={decisione.setMostraNote}
           onDecidi={decisione.decidi}
           onScollegaLink={decisione.scollegaLink}
+          onApriIntegrazione={() => decisione.setDialogIntegrazione(true)}
         />
       </div>
 
       <div>
         <ImageViewer fronte={attestato.url_foto_fronte} retro={attestato.url_foto_retro} />
       </div>
+
+      {decisione.dialogIntegrazione && (
+        <DialogIntegrazioneAselli
+          open
+          onOpenChange={decisione.setDialogIntegrazione}
+          attestato={attestato}
+          busy={decisione.busy}
+          haEmail={decisione.haEmail}
+          onConferma={decisione.confermaIntegrazione}
+        />
+      )}
     </section>
   );
 }

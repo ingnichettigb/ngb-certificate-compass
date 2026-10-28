@@ -68,6 +68,39 @@ export function useDecisioneAttestato({
     }
   }
 
+  /** Rev 3: approva «In attesa di integrazione» e crea il debito formativo SIC-SPI-04. */
+  async function confermaIntegrazione(dati: { ore: number; note: string; inviaEmail: boolean }) {
+    setBusy(true);
+    try {
+      const agg = await aggiornaAttestato(attestato.id, {
+        tipo_corso_id: tipoCorsoId,
+        data_corso: dataCorso,
+        ore_dichiarate: ore ? Number(ore) : null,
+        stato_validazione: "In attesa di integrazione",
+        note_rifiuto: dati.note || null,
+        data_validazione: new Date().toISOString(),
+      });
+      await creaIntegrazioneDvr({
+        dipendente_id: attestato.dipendente_id,
+        attestato_origine_id: attestato.id,
+        tipo_corso_nome: agg.tipi_corso?.nome_corso ?? attestato.tipi_corso?.nome_corso ?? null,
+        descrizione: dati.note || "Integrazione SIC-SPI-04",
+        ore: dati.ore,
+        argomenti_mancanti: ["[SIC-SPI-04] Sicurezza Specifica Rischio MEDIO integrazione al DVR Liceo Aselli"],
+      });
+      setDialogIntegrazione(false);
+      if (dati.inviaEmail) apriEmailEsito(agg, "In attesa di integrazione");
+      toast.success("Approvato in attesa di integrazione", {
+        description: "Nella scheda del lavoratore compare il corso integrativo SIC-SPI-04 da completare.",
+      });
+      onChanged();
+    } catch (e) {
+      toast.error("Operazione non riuscita", { description: String(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /**
    * Rev 3 (2026-10-28 10:55): rimuove il link errato, conferma corso/data/ore
    * e toglie l'attestato dalla lista «In attesa» (finisce in «Senza PDF»).
@@ -114,6 +147,9 @@ export function useDecisioneAttestato({
     setNote,
     mostraNote,
     setMostraNote,
+    dialogIntegrazione,
+    setDialogIntegrazione,
+    confermaIntegrazione,
     busy,
     haEmail,
     inviaEmail,
