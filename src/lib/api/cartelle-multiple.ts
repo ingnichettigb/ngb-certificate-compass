@@ -7,6 +7,7 @@
  *     ricerca su tutte, apertura da percorso su tutte, salvataggio con memoria dell'ultima cartella.
  *   - Rev 2 (2026-10-28 10:00): Aggiunte funzioni per il recupero diretto del file locale e
  *     risoluzione unificata del documento (Cloud / Locale) per la visualizzazione dell'attestato.
+ *   - Rev 3 (2026-10-28 10:05): Riesportata verificaPermessi per chi la importa da questo modulo.
  */
 import {
   getCartellaArchivio,
@@ -17,6 +18,7 @@ import {
   scriviInCartella,
   type FileTrovato,
 } from "./cartella-locale";
+export { verificaPermessi };
 import { supabase } from "@/integrations/supabase/client";
 
 const DB_NOME = "app_archivio_cartelle";
