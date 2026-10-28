@@ -1,7 +1,10 @@
 /*
- * File:      DettaglioAttestato.tsx
- * Percorso:  src/features/hr/components/DettaglioAttestato.tsx
- * Dettaglio di un attestato da validare: dati, correzioni, opzione email, azioni e immagini.
+ * File:          DettaglioAttestato.tsx
+ * Percorso:      src/features/hr/components/DettaglioAttestato.tsx
+ * Data creazione: 2026-10-22
+ * Revisioni:
+ *   - Rev 1 (2026-10-22 10:00): Creazione pannello dettaglio attestato HR con form e anteprima.
+ *   - Rev 2 (2026-10-28 11:35): Collegamento dell'azione onScollegaLink per rimuovere link non validi.
  */
 import { ImageViewer } from "@/components/ImageViewer";
 import { type Attestato } from "@/lib/api";
@@ -53,6 +56,7 @@ export function DettaglioAttestato({
           mostraNote={decisione.mostraNote}
           setMostraNote={decisione.setMostraNote}
           onDecidi={decisione.decidi}
+          onScollegaLink={decisione.scollegaLink}
         />
       </div>
 
