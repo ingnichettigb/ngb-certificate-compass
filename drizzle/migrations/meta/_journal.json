@@ -15,6 +15,13 @@
       "when": 1793130713238,
       "tag": "0001_aggiorna_catalogo_corsi_26",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793175803108,
+      "tag": "0002_contratti_dipendenti",
+      "breakpoints": true
     }
   ]
 }

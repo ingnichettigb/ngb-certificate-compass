@@ -23,7 +23,29 @@ export type Dipendente = {
   data_nascita: string | null;
   /** Codici ATECO letti dall'attestato (testo libero, anche più codici). */
   codice_ateco?: string | null;
+  /** Gestione contrattuale (rev 28/10/2026). */
+  tipo_contratto?: "indeterminato" | "determinato" | string;
+  data_assunzione?: string | null;
+  data_fine_contratto?: string | null;
+  /** "in_forza" oppure "cessato" (limbo: mai cancellato). */
+  stato_lavoratore?: "in_forza" | "cessato" | string;
+  data_cessazione?: string | null;
+  note_contratto?: string | null;
 };
+
+export type DatiContratto = Pick<
+  Dipendente,
+  "tipo_contratto" | "data_assunzione" | "data_fine_contratto" | "stato_lavoratore" | "data_cessazione" | "note_contratto"
+>;
+
+/** Aggiorna i dati contrattuali (riconferma, termine, riattivazione). */
+export async function aggiornaContrattoDipendente(id: string, dati: DatiContratto) {
+  const pulito = Object.fromEntries(
+    Object.entries(dati).map(([k, v]) => [k, v === "" ? null : v]),
+  );
+  const { error } = await sb.from("dipendenti").update(pulito).eq("id", id);
+  if (error) throw error;
+}
 
 /** Cambia il reparto di un dipendente già in archivio. */
 export async function aggiornaRepartoDipendente(
@@ -76,6 +98,10 @@ export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipen
     sottoreparto: d.sottoreparto?.trim() || null,
     classe_concorso: d.classe_concorso?.trim().toUpperCase() || null,
     materia: d.materia?.trim() || null,
+    ...(d.data_assunzione !== undefined && { data_assunzione: d.data_assunzione || null }),
+    ...(d.data_fine_contratto !== undefined && { data_fine_contratto: d.data_fine_contratto || null }),
+    ...(d.data_cessazione !== undefined && { data_cessazione: d.data_cessazione || null }),
+    ...(d.note_contratto !== undefined && { note_contratto: d.note_contratto?.trim() || null }),
   };
   const { data, error } = await sb
     .from("dipendenti")

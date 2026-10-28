@@ -23,6 +23,10 @@ export const VUOTO: Omit<Dipendente, "id"> = {
   luogo_nascita: "",
   data_nascita: "",
   codice_ateco: "",
+  tipo_contratto: "indeterminato",
+  data_assunzione: "",
+  data_fine_contratto: "",
+  note_contratto: "",
 };
 
 /** Riga della tabella «Tutti gli attestati»: un attestato oppure un'integrazione DVR. */
