@@ -8,6 +8,7 @@
  *   - Rev 3 (2026-10-28 11:50): Aggiunta azione confermaIntegrazione (stato «In attesa di integrazione» + debito formativo SIC-SPI-04).
  *   - Rev 4 (2026-10-28 14:15): Aggiunta azione approvaERinomina (rinomina file nella cartella di origine + sostituzione link nel DB).
  *   - Rev 5 (2026-10-28 14:17): Import helper da ../decisione, patch senza null non ammessi, integrazione DVR con i campi reali.
+ *   - Rev 6 (2026-10-28 14:25): Ripristinata normalizzazione data corso a YYYY-MM-DD (input type=date).
  */
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,7 +38,7 @@ export function useDecisioneAttestato({
   onChanged: () => void;
 }) {
   const [tipoCorsoId, setTipoCorsoId] = useState(attestato.tipo_corso_id ?? "");
-  const [dataCorso, setDataCorso] = useState(attestato.data_corso ?? "");
+  const [dataCorso, setDataCorso] = useState((attestato.data_corso ?? "").slice(0, 10));
   const [ore, setOre] = useState(
     attestato.ore_dichiarate != null ? String(attestato.ore_dichiarate) : "",
   );
