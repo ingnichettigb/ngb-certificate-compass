@@ -5,15 +5,19 @@
  * Revisioni:
  *   - Rev 1 (2026-10-27 21:05): Gestione di più cartelle archivio (principale + aggiuntive),
  *     ricerca su tutte, apertura da percorso su tutte, salvataggio con memoria dell'ultima cartella.
+ *   - Rev 2 (2026-10-28 10:00): Aggiunte funzioni per il recupero diretto del file locale e
+ *     risoluzione unificata del documento (Cloud / Locale) per la visualizzazione dell'attestato.
  */
 import {
   getCartellaArchivio,
   verificaPermessi,
   cercaFileRicorsivo,
   apriDaPercorsoRelativo,
+  ottieniFileDaPercorso,
   scriviInCartella,
   type FileTrovato,
 } from "./cartella-locale";
+import { supabase } from "@/integrations/supabase/client";
 
 const DB_NOME = "app_archivio_cartelle";
 const STORE = "cartelle";
@@ -112,6 +116,126 @@ export async function apriDaPercorsoInTutte(percorso: string): Promise<boolean> 
     if (await apriDaPercorsoRelativo(c.handle, percorso)) return true;
   }
   return false;
+}
+
+/**
+ * Recupera l'oggetto File cercando prima per percorso relativo esatto,
+ * e se non trovato cercando ricorsivamente per nome file in tutte le cartelle collegate.
+ */
+export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<File | null> {
+  const cartelle = await elencoCartelle();
+  if (cartelle.length === 0) return null;
+
+  // 1. Tentativo con percorso relativo esatto
+  for (const c of cartelle) {
+    if (!(await verificaPermessi(c.handle, false))) continue;
+    const file = await ottieniFileDaPercorso(c.handle, percorso);
+    if (file) return file;
+  }
+
+  // 2. Tentativo per nome file ricorsivo
+  const nomeFile = percorso.replace(/^.*[\\/]/, "").trim();
+  if (!nomeFile) return null;
+
+  for (const c of cartelle) {
+    if (!(await verificaPermessi(c.handle, false))) continue;
+    const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 5);
+    const esatto = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
+    if (esatto) {
+      try {
+        return await esatto.handle.getFile();
+      } catch {
+        /* ignora */
+      }
+    }
+  }
+
+  return null;
+}
+
+export type EsitoRisoluzioneDocumento = {
+  url: string | null;
+  nomeFile: string;
+  isPdf: boolean;
+  sorgente: "cloud" | "locale" | "non_trovato" | "mancante";
+  percorsoOriginale: string;
+};
+
+/**
+ * Risolve un percorso attestato provando prima lo storage Cloud,
+ * e successivamente l'archivio locale su disco/rete del PC.
+ */
+export async function risolviDocumentoAttestato(percorso: string | null): Promise<EsitoRisoluzioneDocumento> {
+  if (!percorso || !percorso.trim()) {
+    return {
+      url: null,
+      nomeFile: "",
+      isPdf: false,
+      sorgente: "mancante",
+      percorsoOriginale: "",
+    };
+  }
+
+  const percorsoPulito = percorso.trim();
+  const nomeFile = percorsoPulito.replace(/^.*[\\/]/, "");
+  const isPdf = nomeFile.toLowerCase().endsWith(".pdf") || percorsoPulito.toLowerCase().includes(".pdf");
+
+  // Se è già un URL completo http/https
+  if (percorsoPulito.startsWith("http://") || percorsoPulito.startsWith("https://")) {
+    return {
+      url: percorsoPulito,
+      nomeFile,
+      isPdf,
+      sorgente: "cloud",
+      percorsoOriginale: percorsoPulito,
+    };
+  }
+
+  // 1. Prova Cloud Storage (se il percorso punta allo storage Supabase)
+  if (
+    percorsoPulito.startsWith("Archivio Attestati") ||
+    percorsoPulito.startsWith("Coda/") ||
+    !percorsoPulito.includes("/")
+  ) {
+    try {
+      const { data } = await supabase.storage.from("attestati").createSignedUrl(percorsoPulito, 3600);
+      if (data?.signedUrl) {
+        return {
+          url: data.signedUrl,
+          nomeFile,
+          isPdf,
+          sorgente: "cloud",
+          percorsoOriginale: percorsoPulito,
+        };
+      }
+    } catch {
+      /* Continua su archivio locale */
+    }
+  }
+
+  // 2. Prova archivio locale su PC
+  try {
+    const fileLocale = await recuperaFileDaPercorsoInTutte(percorsoPulito);
+    if (fileLocale) {
+      return {
+        url: URL.createObjectURL(fileLocale),
+        nomeFile: fileLocale.name,
+        isPdf: fileLocale.type === "application/pdf" || fileLocale.name.toLowerCase().endsWith(".pdf"),
+        sorgente: "locale",
+        percorsoOriginale: percorsoPulito,
+      };
+    }
+  } catch {
+    /* Fallback non trovato */
+  }
+
+  return {
+    url: null,
+    nomeFile,
+    isPdf,
+    sorgente: "non_trovato",
+    percorsoOriginale: percorsoPulito,
+  };
 }
 
 export function getUltimaCartella(): string | null {
