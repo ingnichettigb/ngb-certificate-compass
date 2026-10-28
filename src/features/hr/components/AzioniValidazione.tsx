@@ -6,9 +6,10 @@
  *   - Rev 1 (2026-10-22 10:00): Creazione pulsanti Approva, Respingi e reinvio email di esito.
  *   - Rev 2 (2026-10-28 11:35): Aggiunto pulsante «Scollega link errato» accanto ad Approva e Respingi.
  *   - Rev 3 (2026-10-28 11:50): Aggiunto pulsante «Approva in attesa di integrazione».
+ *   - Rev 4 (2026-10-28 14:15): Aggiunto pulsante «Approva e rinomina file» nella cartella di origine.
  */
 import { toast } from "sonner";
-import { Loader2, Check, X, Mail, Unlink, Clock } from "lucide-react";
+import { Loader2, Check, X, Mail, Unlink, Clock, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apriEmailEsito, type Attestato, type Stato } from "@/lib/api";
 
@@ -19,6 +20,7 @@ export function AzioniValidazione({
   mostraNote,
   setMostraNote,
   onDecidi,
+  onApprovaERinomina,
   onScollegaLink,
   onApriIntegrazione,
 }: {
@@ -28,6 +30,7 @@ export function AzioniValidazione({
   mostraNote: boolean;
   setMostraNote: (v: boolean) => void;
   onDecidi: (esito: Stato) => void;
+  onApprovaERinomina?: () => void;
   onScollegaLink?: () => void;
   onApriIntegrazione?: () => void;
 }) {
@@ -39,6 +42,19 @@ export function AzioniValidazione({
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
         Approva
       </Button>
+
+      {haDocumento && onApprovaERinomina && (
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={onApprovaERinomina}
+          className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 dark:text-teal-300"
+          title="Rinomina il file fisico nella cartella originaria come CODICE-COGNOME-NOME-CORSO-ORE-CF.pdf, aggiorna il link nel DB e approva"
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <FileEdit className="size-4" />}
+          Approva e rinomina file
+        </Button>
+      )}
 
       {onApriIntegrazione && (
         <Button
