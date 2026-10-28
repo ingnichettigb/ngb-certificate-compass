@@ -7,6 +7,7 @@
  *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
  *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
  *   - Rev 4 (2026-10-27 21:05): Campo cartella su FileTrovato ed esportata scriviInCartella per il multi-cartella.
+ *   - Rev 5 (2026-10-28 10:00): Aggiunta ottieniFileDaPercorso per consentire la lettura diretta del Blob per l'anteprima in pagina.
  */
 
 const DB_NOME = "app_archivio_locale";
@@ -118,106 +119,140 @@ export async function getCartellaArchivio(richiediPermessi = false): Promise<Fil
   return null;
 }
 
-/** Apre il selettore di cartella e memorizza la scelta in modo permanente. */
-export async function scegliCartellaLocale(): Promise<FileSystemDirectoryHandle | null> {
+/** Apre il selettore di cartelle nativo del browser e salva l'handle. */
+export async function scegliCartellaArchivio(): Promise<FileSystemDirectoryHandle | null> {
+  if (!supportaCartellaLocale()) {
+    throw new Error("Il tuo browser non supporta la selezione delle cartelle locali. Usa Chrome o Edge da PC.");
+  }
   const w = window as unknown as {
     showDirectoryPicker?: (o?: unknown) => Promise<FileSystemDirectoryHandle>;
   };
-  if (!w.showDirectoryPicker) {
-    throw new Error("Il tuo browser non supporta la selezione delle cartelle locali. Usa Chrome o Edge.");
-  }
-  const scelta = await w.showDirectoryPicker({
-    id: "archivio-attestati-root",
+  if (!w.showDirectoryPicker) return null;
+  const handle = await w.showDirectoryPicker({
+    id: "archivio-attestati-sicurezza",
     mode: "readwrite",
-    startIn: "documents",
   });
-  cacheHandle = scelta;
-  await salvaHandleSuDb(scelta);
-  return scelta;
+  cacheHandle = handle;
+  await salvaHandleSuDb(handle);
+  return handle;
 }
 
-/** Rimuove il riferimento alla cartella salvata nelle impostazioni. */
-export async function dimenticaCartellaLocale(): Promise<void> {
+/** Rimuove la cartella configurata. */
+export async function disconnettiCartellaArchivio(): Promise<void> {
   cacheHandle = null;
   await salvaHandleSuDb(null);
 }
 
+// Normalizza stringhe per la ricerca (minuscolo, senza accenti, spazi singoli)
+function normalizzaPerRicerca(testo: string): string {
+  return testo
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_.\s]+/g, " ")
+    .trim();
+}
+
 /**
- * Scansione ricorsiva di tutte le sottocartelle a partire dalla cartella radice.
- * Tollerante ad accenti, trattini, maiuscole/minuscole e separatori.
+ * Cerca ricorsivamente tutti i file nella cartella che contengono la chiave nel nome
+ * o nel percorso relativo. La ricerca è case-insensitive e ignora accenti e separatori.
  */
 export async function cercaFileRicorsivo(
-  root: FileSystemDirectoryHandle,
-  chiaveRicerca: string,
+  dirHandle: FileSystemDirectoryHandle,
+  chiave: string,
+  percorsoAttuale = "",
+  risultati: FileTrovato[] = [],
+  profondita = 0,
+  maxRisultati = 200,
 ): Promise<FileTrovato[]> {
-  const normalizza = (str: string) =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Rimuove accenti
-      .replace(/[._\-/\\]+/g, " ");   // Trattini e underscore trasformati in spazi
+  if (profondita > 10 || risultati.length >= maxRisultati) return risultati;
 
-  const termini = normalizza(chiaveRicerca)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const paroleChiave = normalizzaPerRicerca(chiave).split(" ").filter(Boolean);
 
-  const risultati: FileTrovato[] = [];
+  const iteratore = (dirHandle as unknown as {
+    values: () => AsyncIterable<FileSystemHandle>;
+  }).values();
 
-  async function navigaCartella(dir: FileSystemDirectoryHandle, percorsoAttuale: string) {
-    for await (const entry of dir.values()) {
-      if (entry.kind === "file") {
-        const nomeLower = entry.name.toLowerCase();
-        const isDoc =
-          nomeLower.endsWith(".pdf") ||
-          nomeLower.endsWith(".jpg") ||
-          nomeLower.endsWith(".jpeg") ||
-          nomeLower.endsWith(".png");
+  for await (const voce of iteratore) {
+    if (risultati.length >= maxRisultati) break;
+    const percorsoVoce = percorsoAttuale ? `${percorsoAttuale}/${voce.name}` : voce.name;
 
-        if (!isDoc) continue;
-
-        const stringaConfronto = normalizza(
-          percorsoAttuale ? `${percorsoAttuale} ${entry.name}` : entry.name,
-        );
-
-        // Corrisponde se tutti i termini cercati compaiono nel nome del file o nella sottocartella
+    if (voce.kind === "file") {
+      const nomeLower = voce.name.toLowerCase();
+      if (
+        nomeLower.endsWith(".pdf") ||
+        nomeLower.endsWith(".jpg") ||
+        nomeLower.endsWith(".jpeg") ||
+        nomeLower.endsWith(".png")
+      ) {
+        const testoConfronto = normalizzaPerRicerca(percorsoVoce);
         const corrisponde =
-          termini.length === 0 || termini.every((t) => stringaConfronto.includes(t));
+          paroleChiave.length === 0 ||
+          paroleChiave.every((parola) => testoConfronto.includes(parola));
 
         if (corrisponde) {
           try {
-            const fileHandle = entry as FileSystemFileHandle;
-            const fileData = await fileHandle.getFile();
+            const fileHandle = voce as FileSystemFileHandle;
+            const file = await fileHandle.getFile();
             risultati.push({
-              nome: entry.name,
-              percorsoRelativo: percorsoAttuale ? `${percorsoAttuale}/${entry.name}` : entry.name,
+              nome: voce.name,
+              percorsoRelativo: percorsoVoce,
               handle: fileHandle,
-              dimensione: fileData.size,
-              dataModifica: new Date(fileData.lastModified),
+              dimensione: file.size,
+              dataModifica: new Date(file.lastModified),
             });
           } catch {
-            // Continua con i file successivi se un file ha restrizioni del sistema operativo
+            // Ignora file non accessibili
           }
         }
-      } else if (entry.kind === "directory") {
-        const subDir = entry as FileSystemDirectoryHandle;
-        const nuovoPercorso = percorsoAttuale ? `${percorsoAttuale}/${entry.name}` : entry.name;
-        await navigaCartella(subDir, nuovoPercorso);
+      }
+    } else if (voce.kind === "directory") {
+      // Salta cartelle di sistema o pesanti
+      if (!voce.name.startsWith(".") && voce.name !== "node_modules") {
+        await cercaFileRicorsivo(
+          voce as FileSystemDirectoryHandle,
+          chiave,
+          percorsoVoce,
+          risultati,
+          profondita + 1,
+          maxRisultati,
+        );
       }
     }
   }
 
-  await navigaCartella(root, "");
-  // Ordina per data di modifica più recente
-  return risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
+  return risultati;
 }
 
-/** Apre un file locale in una nuova scheda per consultarlo o leggerlo. */
+/** Apre un file locale in una nuova scheda del browser creando un blob URL temporaneo. */
 export async function apriFileLocale(fileHandle: FileSystemFileHandle): Promise<void> {
   const file = await fileHandle.getFile();
   const url = URL.createObjectURL(file);
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+/** Restituisce l'oggetto File locale a partire da un percorso relativo, se presente. */
+export async function ottieniFileDaPercorso(
+  root: FileSystemDirectoryHandle,
+  percorsoRelativo: string,
+): Promise<File | null> {
+  try {
+    const parti = percorsoRelativo
+      .replace(/^(\.\.\/|\.\/)+/, "")
+      .split("/")
+      .filter(Boolean);
+    let dir = root;
+    for (let i = 0; i < parti.length - 1; i++) {
+      dir = await dir.getDirectoryHandle(parti[i]!);
+    }
+    const nomeFile = parti[parti.length - 1];
+    if (!nomeFile) return null;
+    const fileHandle = await dir.getFileHandle(nomeFile);
+    return await fileHandle.getFile();
+  } catch {
+    return null;
+  }
 }
 
 /** Cerca un file a partire dal suo percorso relativo memorizzato e lo apre. */
@@ -226,7 +261,10 @@ export async function apriDaPercorsoRelativo(
   percorsoRelativo: string,
 ): Promise<boolean> {
   try {
-    const parti = percorsoRelativo.split("/").filter(Boolean);
+    const parti = percorsoRelativo
+      .replace(/^(\.\.\/|\.\/)+/, "")
+      .split("/")
+      .filter(Boolean);
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
       dir = await dir.getDirectoryHandle(parti[i]!);
