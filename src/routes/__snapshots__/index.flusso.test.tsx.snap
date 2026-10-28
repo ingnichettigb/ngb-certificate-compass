@@ -110,12 +110,12 @@ exports[`Home: contatori, schede e link > registra tutto quello che la pagina mo
     ],
     [
       "Nichetti Gian Battista → /logo-test.jpg",
-      "QR code per il modulo lavoratore → data:image/png;base64,QR[http://localhost:3000/carica]",
+      "QR code per il modulo auto invio attestato → data:image/png;base64,QR[http://localhost:3000/carica]",
     ],
     [
       "/hr «Cruscotto risorse umane»",
-      "/carica «Modulo lavoratore»",
-      "/operatore «Postazione operatore»",
+      "/carica «Modulo auto invio attestato»",
+      "/operatore «Inserimento attestati»",
       "/dipendenti «Dipendenti4»",
       "/hr «Attestati9»",
       "/hr «In attesa di validazione3»",
@@ -125,9 +125,9 @@ exports[`Home: contatori, schede e link > registra tutto quello che la pagina mo
       "/hr «Apri cruscotto»",
       "/dipendenti «Elenco dipendenti»",
       "/scadenze «Scaduti»",
-      "/operatore «Apri postazione»",
+      "/operatore «Apri inserimento»",
     ],
-    "Archivio Attestati SicurezzaNichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008 Impostazioni generaliSalva DB su cartellaCarica DB da fileCruscotto risorse umaneModulo lavoratorePostazione operatoreDipendenti4Attestati9In attesa di validazione3In scadenza (6 mesi)5Scaduti2Apri il moduloModulo lavoratoreIl lavoratore compila i propri dati, sceglie il corso e allega la foto dell'attestato direttamente dal telefono.http://localhost:3000/caricaCopia linkApri cruscottoCruscotto risorse umaneElenco degli attestati caricati: visualizza l'immagine, correggi i dati letti dal documento e valida o respingi l'attestato.Elenco dipendentiScadutiApri postazionePostazione operatoreCarica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza artificiale, archivia i documenti e compila i registri.Lettura automatica con AIEstrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.",
+    "Archivio Attestati SicurezzaNichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008 Impostazioni generaliSalva DB su cartellaCarica DB da fileCruscotto risorse umaneModulo auto invio attestatoInserimento attestati Esporta dati in ExcelDipendenti4Attestati9In attesa di validazione3In scadenza (6 mesi)5Scaduti2Apri il moduloModulo auto invio attestatoIl lavoratore compila i propri dati, sceglie il corso e allega la foto dell'attestato direttamente dal telefono.http://localhost:3000/caricaCopia linkApri cruscottoCruscotto risorse umaneElenco degli attestati caricati: visualizza l'immagine, correggi i dati letti dal documento e valida o respingi l'attestato.Elenco dipendentiScadutiApri inserimentoInserimento attestatiCarica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza artificiale, archivia i documenti e compila i registri.Lettura automatica con AIEstrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.",
   ],
   [
     "clipboard.writeText",
