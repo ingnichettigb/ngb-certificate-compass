@@ -1,11 +1,9 @@
-/*
- * File:      DocumentiAttestati.tsx
- * Percorso:  src/features/documenti/DocumentiAttestati.tsx
- * Elenco degli attestati PDF di un dipendente, con apertura, eliminazione e caricamento.
- * Revisioni:
- *   rev 2 — 26/10/2026 20:10 — Bottoni nello stile verde standard; i comandi «Aggancia» e
- *            «Aggiungi» sono eseguibili anche dalla barra fissa del Cruscotto HR
- *            (con bottoniInBarra i due bottoni locali restano nascosti).
+/**
+ * @file DocumentiAttestati.tsx
+ * @path src/features/documenti/DocumentiAttestati.tsx
+ * @created 2024-05-10
+ * @revision 2026-10-28 20:20 - rev 3 - Utilizzo di Button unificato per aggancio e aggiunta attestati
+ * @description Elenco degli attestati PDF di un dipendente, con apertura, eliminazione e caricamento.
  */
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,14 +16,11 @@ import {
   type Dipendente,
   type DocumentoAttestato,
 } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { RigaDocumento } from "./RigaDocumento";
 import { DialogCaricamento } from "./DialogCaricamento";
 import { SchermoAgganciaAllegato } from "@/features/dipendenti/aggancia-allegato/SchermoAgganciaAllegato";
 import { pubblicaDipendente, registraComando } from "./barra-azioni";
-
-// Stile standard: verde tenue a riposo, verde scuro al passaggio, bordo verde scuro.
-const BOTTONI =
-  "inline-flex items-center gap-1.5 rounded-lg border-2 border-primary bg-primary/15 px-3 py-1.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground";
 
 export function DocumentiAttestati({
   dipendente,
@@ -78,12 +73,12 @@ export function DocumentiAttestati({
         <h3 className="text-sm font-semibold">Attestati (PDF)</h3>
         {!bottoniInBarra ? (
           <div className="flex flex-col items-end gap-1.5">
-            <button type="button" className={BOTTONI} onClick={() => setAggancia(true)}>
+            <Button type="button" onClick={() => setAggancia(true)}>
               <Paperclip className="size-4" /> Aggancia attestato come allegato
-            </button>
-            <button type="button" className={BOTTONI} onClick={() => setOpen(true)}>
+            </Button>
+            <Button type="button" onClick={() => setOpen(true)}>
               <Plus className="size-4" /> Aggiungi attestato
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>
