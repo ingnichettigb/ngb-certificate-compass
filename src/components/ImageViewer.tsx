@@ -7,7 +7,8 @@
  *   - Rev 2 (2026-10-28 10:00): Supporto completo a file PDF, risoluzione cartelle collegate e permessi.
  *   - Rev 3 (2026-10-28 14:10): Rotazione reale via canvas per evitare restringimenti e vuoti laterali.
  *   - Rev 4 (2026-10-28 14:20): Tipo RisoluzioneDocumento allineato all'export reale.
- *   - Rev 5 (2026-10-28 14:35): Gestione distinta per documento mancante (nessun allegato) vs registrato su disco.
+ *   - Rev 5 (2026-10-28 14:35): Gestione distinta per documento mancante vs registrato su disco.
+ *   - Rev 6 (2026-10-28 14:55): Contenimento rigido della rotazione PDF per impedire la sovrapposizione ai comandi.
  */
 import { useEffect, useState } from "react";
 import {
@@ -15,7 +16,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  ImageOff,
   ExternalLink,
   Loader2,
   FolderOpen,
@@ -195,12 +195,12 @@ export function ImageViewer({
         size="sm"
         onClick={() => setRotazione((r) => (r + 90) % 360)}
         className="h-8 gap-1.5 text-xs"
-        title="Ruota di 90 gradi"
+        title="Ruota di 90 gradi in senso orario"
         disabled={inRotazione}
       >
         <RotateCw className="size-3.5" />
         <span>Ruota</span>
-        {rotazione > 0 && <span className="font-mono text-[10px] opacity-70">{rotazione}°</span>}
+        {rotazione > 0 && <span className="font-mono text-[10px] font-semibold text-primary">{rotazione}°</span>}
       </Button>
 
       <Button
@@ -210,6 +210,7 @@ export function ImageViewer({
         className="size-8"
         onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
         aria-label="Riduci zoom"
+        title="Riduci zoom"
       >
         <ZoomOut className="size-4" />
       </Button>
@@ -225,6 +226,7 @@ export function ImageViewer({
         className="size-8"
         onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
         aria-label="Aumenta zoom"
+        title="Aumenta zoom"
       >
         <ZoomIn className="size-4" />
       </Button>
@@ -286,28 +288,37 @@ export function ImageViewer({
 
     if (esitoAttuale?.url) {
       if (esitoAttuale.isPdf) {
+        // Quando il PDF è ruotato di 90° o 270°, l'altezza e la larghezza visive
+        // si invertono: per evitare che sbordi e copra i controlli, scambiamo le
+        // dimensioni fisiche dell'iframe così che il risultato ruotato rimanga
+        // perfettamente iscritto nel riquadro senza tracimare.
+        const altezzaContenitore = isInModal ? "h-[82vh]" : "h-[62vh]";
+        const larghezzaIframe = isRuotato90
+          ? isInModal ? "h-[85vw] max-h-[80vh] w-[75vh]" : "h-[90%] w-[60vh] max-w-full"
+          : "h-full w-full";
+
         return (
-          <div
-            className="flex h-full w-full items-center justify-center transition-all duration-200"
-            style={{
-              transform: `scale(${zoom}) rotate(${rotazione}deg)`,
-              transformOrigin: "center center",
-            }}
-          >
-            <iframe
-              src={`${esitoAttuale.url}#toolbar=0&view=FitH`}
-              title={`Attestato ${lato}`}
-              className={`rounded-lg border border-border bg-background shadow-md transition-all ${
-                isInModal ? "h-[85vh] w-full" : isRuotato90 ? "h-[70vh] w-[80vw] max-w-full" : "h-[65vh] w-full"
-              }`}
-            />
+          <div className={`relative flex ${altezzaContenitore} w-full items-center justify-center overflow-hidden`}>
+            <div
+              className="flex items-center justify-center transition-transform duration-200"
+              style={{
+                transform: `scale(${zoom}) rotate(${rotazione}deg)`,
+                transformOrigin: "center center",
+              }}
+            >
+              <iframe
+                src={`${esitoAttuale.url}#toolbar=0&view=FitH`}
+                title={`Attestato ${lato}`}
+                className={`rounded-lg border border-border bg-background shadow-md transition-all ${larghezzaIframe}`}
+              />
+            </div>
           </div>
         );
       }
 
       const sorgenteImg = urlRuotato || esitoAttuale.url;
       return (
-        <div className="flex h-full w-full items-center justify-center overflow-auto p-2">
+        <div className="flex h-full w-full items-center justify-center overflow-hidden p-2">
           <img
             src={sorgenteImg}
             alt={`Attestato ${lato}`}
@@ -316,7 +327,7 @@ export function ImageViewer({
               transformOrigin: "center center",
             }}
             className={`rounded-lg object-contain shadow-sm transition-transform ${
-              isInModal ? "max-h-[85vh] max-w-full" : "max-h-[68vh] w-auto max-w-full"
+              isInModal ? "max-h-[82vh] max-w-full" : "max-h-[62vh] w-auto max-w-full"
             }`}
           />
         </div>
@@ -412,7 +423,7 @@ export function ImageViewer({
         {controlliBarra}
       </div>
 
-      <div className="flex min-h-[460px] flex-1 items-center justify-center rounded-xl border border-border bg-muted/20 p-2">
+      <div className="relative flex min-h-[460px] flex-1 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/20 p-2">
         {renderingDocumento(false)}
       </div>
 
@@ -424,7 +435,7 @@ export function ImageViewer({
             </span>
             {controlliBarra}
           </div>
-          <div className="flex flex-1 items-center justify-center overflow-auto p-4">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4">
             {renderingDocumento(true)}
           </div>
         </div>
