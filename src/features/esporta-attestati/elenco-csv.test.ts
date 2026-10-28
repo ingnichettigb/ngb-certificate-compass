@@ -1,3 +1,10 @@
+/*
+ * File:           elenco-csv.test.ts
+ * Percorso:       src/features/esporta-attestati/elenco-csv.test.ts
+ * Data creazione: 2026-10-27
+ * Revisioni:
+ *   - Rev 1 (2026-10-27 21:20): Test unitari per filtri e colonna percorso opzionale.
+ */
 import { describe, expect, it } from "vitest";
 import { csvElencoAttestati, filtraAttestati } from "./elenco-csv";
 
