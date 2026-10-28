@@ -5,8 +5,9 @@
  * Revisioni:
  *   - Rev 1 (2026-10-22 10:00): Creazione pannello dettaglio attestato HR con form e anteprima.
  *   - Rev 2 (2026-10-28 11:35): Collegamento dell'azione onScollegaLink per rimuovere link non validi.
- *   - Rev 4 (2026-10-28 11:50): Popup «Approva in attesa di integrazione».
  *   - Rev 3 (2026-10-28 11:22): Supporto codice corso per i filtri rapidi in CampiValidazione.
+ *   - Rev 4 (2026-10-28 11:50): Popup «Approva in attesa di integrazione».
+ *   - Rev 5 (2026-10-28 14:15): Collegamento azione onApprovaERinomina per rinomina e sostituzione link.
  */
 import { ImageViewer } from "@/components/ImageViewer";
 import { type Attestato, type TipoCorso } from "@/lib/api";
@@ -26,7 +27,7 @@ export function DettaglioAttestato({
   corsi: TipoCorso[];
   onChanged: () => void;
 }) {
-  const decisione = useDecisioneAttestato({ attestato, onChanged });
+  const decisione = useDecisioneAttestato({ attestato, corsi, onChanged });
   const d = attestato.dipendenti;
 
   return (
@@ -59,6 +60,7 @@ export function DettaglioAttestato({
           mostraNote={decisione.mostraNote}
           setMostraNote={decisione.setMostraNote}
           onDecidi={decisione.decidi}
+          onApprovaERinomina={decisione.approvaERinomina}
           onScollegaLink={decisione.scollegaLink}
           onApriIntegrazione={() => decisione.setDialogIntegrazione(true)}
         />
