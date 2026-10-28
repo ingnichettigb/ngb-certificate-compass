@@ -1,11 +1,20 @@
 /*
- * File:      useDecisioneAttestato.ts
- * Percorso:  src/features/hr/hooks/useDecisioneAttestato.ts
- * Stato del modulo di validazione di un attestato e decisione (approva/respingi).
+ * File:          useDecisioneAttestato.ts
+ * Percorso:      src/features/hr/hooks/useDecisioneAttestato.ts
+ * Data creazione: 2026-10-22
+ * Revisioni:
+ *   - Rev 1 (2026-10-22 10:00): Stato del modulo di validazione e decisione approva/respingi.
+ *   - Rev 2 (2026-10-28 11:35): Aggiunta funzione scollegaLink per azzerare il percorso file conservando i dati del corso.
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { aggiornaAttestato, apriEmailEsito, type Attestato, type Stato } from "@/lib/api";
+import {
+  aggiornaAttestato,
+  apriEmailEsito,
+  scollegaDocumentoAttestato,
+  type Attestato,
+  type Stato,
+} from "@/lib/api";
 import { erroreDecisione, costruisciAggiornamento, descrizioneEsito } from "../decisione";
 
 export function useDecisioneAttestato({
@@ -57,6 +66,29 @@ export function useDecisioneAttestato({
     }
   }
 
+  /** Rimuove il link al file errato lasciando invariati corso, ore e date. */
+  async function scollegaLink() {
+    if (
+      !confirm(
+        "Vuoi rimuovere il link a questo file? L'attestato rimarrà in archivio come corso svolto, ma senza documento allegato."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await scollegaDocumentoAttestato(attestato.id);
+      toast.success("Link al file rimosso", {
+        description: "L'attestato rimane in archivio senza documento PDF.",
+      });
+      onChanged();
+    } catch (e) {
+      toast.error("Errore durante la rimozione del link", { description: String(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return {
     tipoCorsoId,
     setTipoCorsoId,
@@ -73,5 +105,6 @@ export function useDecisioneAttestato({
     inviaEmail,
     setInviaEmail,
     decidi,
+    scollegaLink,
   };
 }
