@@ -8,6 +8,7 @@
  *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
  *   - Rev 4 (2026-10-27 21:05): Campo cartella su FileTrovato ed esportata scriviInCartella per il multi-cartella.
  *   - Rev 5 (2026-10-28 10:00): Aggiunta ottieniFileDaPercorso per consentire la lettura diretta del Blob per l'anteprima in pagina.
+ *   - Rev 6 (2026-10-28 10:05): Aggiunti alias scegliCartellaLocale e dimenticaCartellaLocale per le schermate che usano i nomi storici.
  */
 
 const DB_NOME = "app_archivio_locale";
@@ -331,3 +332,9 @@ async function nuovoHandleFile(
   }
   throw new Error("Impossibile salvare il file: nome già occupato troppe volte");
 }
+
+/** Nome storico usato dalle schermate: apre il selettore della cartella archivio principale. */
+export const scegliCartellaLocale = scegliCartellaArchivio;
+
+/** Nome storico usato dalle schermate: scollega la cartella archivio principale. */
+export const dimenticaCartellaLocale = disconnettiCartellaArchivio;
