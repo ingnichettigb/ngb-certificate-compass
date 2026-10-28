@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import {
   aggiornaAttestato,
   apriEmailEsito,
-  scollegaDocumentoAttestato,
   type Attestato,
   type Stato,
 } from "@/lib/api";
