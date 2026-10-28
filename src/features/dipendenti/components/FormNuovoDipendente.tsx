@@ -2,6 +2,8 @@
  * File:      FormNuovoDipendente.tsx
  * Percorso:  src/features/dipendenti/components/FormNuovoDipendente.tsx
  * Modulo «Nuovo dipendente».
+ * Revisioni:
+ *   rev 2 — 28/10/2026 10:00 — Campi contrattuali (tipo, assunzione, scadenza libera, note).
  */
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { type Dipendente } from "@/lib/api";
 import { Campo } from "./Campo";
+import { CampiContratto } from "@/features/contratti/CampiContratto";
 
 export function FormNuovoDipendente({
   form,
@@ -98,6 +101,7 @@ export function FormNuovoDipendente({
           onChange={(v) => setForm({ ...form, data_nascita: v })}
         />
       </div>
+      <CampiContratto valori={form} onChange={(v) => setForm({ ...form, ...v })} />
       <div className="flex gap-2">
         <Button onClick={onSalva} disabled={saving}>
           {saving && <Loader2 className="size-4 animate-spin" />} Salva

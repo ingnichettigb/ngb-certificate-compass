@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 2 — 26/10/2026 20:10 — Prop bottoniInBarra: nel Cruscotto HR i bottoni Aggancia/Aggiungi
  *            stanno nella barra fissa in alto, non nella scheda.
+ *   rev 3 — 28/10/2026 10:00 — Filtro stato contrattuale (In forza/In scadenza/Cessati/Tutti).
  */
 import { useMemo, useState } from "react";
 import { type Dipendente } from "@/lib/api";
@@ -18,6 +19,8 @@ import { SchedaDipendente } from "./components/SchedaDipendente";
 import { useDatiDipendenti } from "./hooks/useDatiDipendenti";
 import { useOrdinamentoAttestati } from "./hooks/useOrdinamentoAttestati";
 import { useAzioniDipendente } from "./hooks/useAzioniDipendente";
+import { SelettoreStato } from "@/features/contratti/SelettoreStato";
+import { filtraPerStato, type FiltroStato } from "@/features/contratti/contratto";
 
 export function DipendentiPage({
   senzaIntestazione = false,
@@ -28,6 +31,7 @@ export function DipendentiPage({
   const [form, setForm] = useState<Omit<Dipendente, "id"> | null>(null);
   const [filtroReparto, setFiltroReparto] = useState(TUTTI);
   const [filtroRuolo, setFiltroRuolo] = useState(TUTTI);
+  const [filtroStato, setFiltroStato] = useState<FiltroStato>("in_forza");
 
   const { repartiElenco, dipendenti, isLoading, attestati, ruoliCatalogo, assegnazioni, integrazioni } =
     useDatiDipendenti();
@@ -44,8 +48,8 @@ export function DipendentiPage({
   const repartiFiltro = useMemo(() => calcolaRepartiFiltro(repartiElenco, dipendenti), [repartiElenco, dipendenti]);
 
   const filtrati = useMemo(
-    () => filtraDipendenti({ dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati }),
-    [dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati],
+    () => filtraPerStato(filtraDipendenti({ dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati }), filtroStato),
+    [filtroStato, dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati],
   );
 
   const corrente = dipendenti.find((d) => d.id === sel) ?? null;
@@ -68,6 +72,7 @@ export function DipendentiPage({
             ruoliAttivi={ruoliAttivi}
             onNuovo={() => setForm({ ...VUOTO })}
           />
+          <SelettoreStato valore={filtroStato} onCambia={setFiltroStato} dipendenti={dipendenti} />
           <ListaDipendenti isLoading={isLoading} filtrati={filtrati} attestati={attestati} sel={sel} setSel={setSel} />
         </div>
 
