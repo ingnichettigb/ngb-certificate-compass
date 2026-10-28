@@ -8,6 +8,8 @@
  *   - Rev 2 (2026-10-28 10:00): Aggiunte funzioni per il recupero diretto del file locale e
  *     risoluzione unificata del documento (Cloud / Locale) per la visualizzazione dell'attestato.
  *   - Rev 3 (2026-10-28 10:05): Riesportata verificaPermessi per chi la importa da questo modulo.
+ *   - Rev 4 (2026-10-28 14:15): Aggiunta funzione rinominaFileNelPercorso per rinomina fisica
+ *     del file direttamente nella cartella locale di provenienza del link.
  */
 import {
   getCartellaArchivio,
@@ -121,79 +123,109 @@ export async function apriDaPercorsoInTutte(percorso: string): Promise<boolean> 
 }
 
 /**
- * Recupera l'oggetto File cercando prima per percorso relativo esatto,
- * e se non trovato cercando ricorsivamente per nome file in tutte le cartelle collegate.
+ * Cerca un file locale a partire dal suo percorso relativo in tutte le cartelle collegate.
  */
 export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<File | null> {
-  const cartelle = await elencoCartelle();
-  if (cartelle.length === 0) return null;
-
-  // 1. Tentativo con percorso relativo esatto
-  for (const c of cartelle) {
+  for (const c of await elencoCartelle()) {
     if (!(await verificaPermessi(c.handle, false))) continue;
     const file = await ottieniFileDaPercorso(c.handle, percorso);
     if (file) return file;
   }
-
-  // 2. Tentativo per nome file ricorsivo
-  const nomeFile = percorso.replace(/^.*[\\/]/, "").trim();
-  if (!nomeFile) return null;
-
-  for (const c of cartelle) {
-    if (!(await verificaPermessi(c.handle, false))) continue;
-    const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 5);
-    const esatto = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
-    if (esatto) {
-      try {
-        return await esatto.handle.getFile();
-      } catch {
-        /* ignora */
-      }
-    }
-  }
-
   return null;
 }
 
-export type EsitoRisoluzioneDocumento = {
+/**
+ * Rinomina fisicamente un file nella cartella locale in cui si trova il percorso originale.
+ * Crea il nuovo file con il nome specificato e rimuove il vecchio file.
+ * Restituisce il nuovo percorso relativo aggiornato.
+ */
+export async function rinominaFileNelPercorso(
+  percorsoRelativoOriginale: string,
+  nuovoNomeFile: string,
+): Promise<{ success: boolean; nuovoPercorso?: string; errore?: string }> {
+  try {
+    const parti = percorsoRelativoOriginale
+      .replace(/^(\.\.\/|\.\/)+/, "")
+      .split("/")
+      .filter(Boolean);
+    const vecchioNome = parti[parti.length - 1];
+    if (!vecchioNome) return { success: false, errore: "Percorso non valido" };
+
+    const cartelle = await elencoCartelle();
+
+    for (const c of cartelle) {
+      if (!(await verificaPermessi(c.handle, true))) continue;
+
+      try {
+        let dir = c.handle;
+        for (let i = 0; i < parti.length - 1; i++) {
+          dir = await dir.getDirectoryHandle(parti[i]!);
+        }
+
+        // Trova il file originale
+        const vecchioHandle = await dir.getFileHandle(vecchioNome);
+        const file = await vecchioHandle.getFile();
+
+        // Scrive il nuovo file rinominato nella stessa identica cartella
+        const nuovoHandle = await dir.getFileHandle(nuovoNomeFile, { create: true });
+        const writer = await nuovoHandle.createWritable();
+        await writer.write(file);
+        await writer.close();
+
+        // Rimuove il vecchio file se ha un nome diverso
+        if (vecchioNome !== nuovoNomeFile) {
+          try {
+            await dir.removeEntry(vecchioNome);
+          } catch {
+            /* Se fallisce la rimozione, il nuovo file è comunque pronto */
+          }
+        }
+
+        const percorsoPadre = parti.slice(0, parti.length - 1).join("/");
+        const nuovoPercorso = percorsoPadre ? `${percorsoPadre}/${nuovoNomeFile}` : nuovoNomeFile;
+
+        return { success: true, nuovoPercorso };
+      } catch {
+        // Non trovato in questa cartella, tenta la successiva
+        continue;
+      }
+    }
+
+    return { success: false, errore: "File originario non trovato nelle cartelle collegate o permessi mancanti" };
+  } catch (e) {
+    return { success: false, errore: String(e) };
+  }
+}
+
+export type RisoluzioneDocumento = {
   url: string | null;
   nomeFile: string;
   isPdf: boolean;
-  sorgente: "cloud" | "locale" | "non_trovato" | "mancante";
+  sorgente: "cloud" | "locale" | "non_trovato";
   percorsoOriginale: string;
 };
 
 /**
- * Risolve un percorso attestato provando prima lo storage Cloud,
- * e successivamente l'archivio locale su disco/rete del PC.
+ * Risolve la sorgente di un attestato (Cloud Supabase Storage o Archivio Locale su disco).
  */
-export async function risolviDocumentoAttestato(percorso: string | null): Promise<EsitoRisoluzioneDocumento> {
-  if (!percorso || !percorso.trim()) {
+export async function risolviDocumentoAttestato(
+  percorso: string | null | undefined,
+): Promise<RisoluzioneDocumento> {
+  const percorsoPulito = (percorso || "").trim();
+  const nomeFile = percorsoPulito.split("/").pop() || percorsoPulito;
+  const isPdf = nomeFile.toLowerCase().endsWith(".pdf") || percorsoPulito.toLowerCase().includes(".pdf");
+
+  if (!percorsoPulito) {
     return {
       url: null,
       nomeFile: "",
       isPdf: false,
-      sorgente: "mancante",
+      sorgente: "non_trovato",
       percorsoOriginale: "",
     };
   }
 
-  const percorsoPulito = percorso.trim();
-  const nomeFile = percorsoPulito.replace(/^.*[\\/]/, "");
-  const isPdf = nomeFile.toLowerCase().endsWith(".pdf") || percorsoPulito.toLowerCase().includes(".pdf");
-
-  // Se è già un URL completo http/https
-  if (percorsoPulito.startsWith("http://") || percorsoPulito.startsWith("https://")) {
-    return {
-      url: percorsoPulito,
-      nomeFile,
-      isPdf,
-      sorgente: "cloud",
-      percorsoOriginale: percorsoPulito,
-    };
-  }
-
-  // 1. Prova Cloud Storage (se il percorso punta allo storage Supabase)
+  // 1. Prova Cloud Storage
   if (
     percorsoPulito.startsWith("Archivio Attestati") ||
     percorsoPulito.startsWith("Coda/") ||
