@@ -4,14 +4,26 @@
  * Data creaz: 28/10/2026
  * Revisioni:
  *   rev 1 — 28/10/2026 17:40 — Vista Piano Corsi aggregata Reparto x Corso con accordion nominativo ed export.
+ *   rev 2 — 28/10/2026 21:50 — Corretto il tipo in ingresso: usa Attestato reale (campi dipendenti/tipi_corso)
+ *                              invece del tipo inesistente RigaScadenza; stato scadenza calcolato qui.
  */
 import { useMemo, useState } from "react";
 import { Building2, ChevronDown, ChevronUp, Download, GraduationCap, Users } from "lucide-react";
-import { type RigaScadenza } from "../hooks/useScadenze";
+import type { Attestato } from "@/lib/api";
 import { esportaPianoCorsiCSV, type GruppoPianoCorso, type PartecipantePiano } from "../export-piano-corsi";
 
 interface Props {
-  righe: RigaScadenza[];
+  righe: Attestato[];
+}
+
+type StatoScadenza = "scaduto" | "in_scadenza";
+
+/** Calcola lo stato di urgenza rispetto a oggi (null se non urgente o senza scadenza). */
+function statoScadenza(dataScadenza: string | null, oggiStr: string, fra90Str: string): StatoScadenza | null {
+  if (!dataScadenza) return null;
+  if (dataScadenza < oggiStr) return "scaduto";
+  if (dataScadenza <= fra90Str) return "in_scadenza";
+  return null;
 }
 
 export function VistaPianoCorsi({ righe }: Props) {
@@ -20,14 +32,20 @@ export function VistaPianoCorsi({ righe }: Props) {
 
   // Raggruppa le scadenze (scaduti o entro 90 giorni) per Reparto e Corso
   const gruppi = useMemo<GruppoPianoCorso[]>(() => {
+    const oggi = new Date();
+    const oggiStr = oggi.toISOString().slice(0, 10);
+    const fra90 = new Date(oggi);
+    fra90.setDate(fra90.getDate() + 90);
+    const fra90Str = fra90.toISOString().slice(0, 10);
+
     const mappa = new Map<string, GruppoPianoCorso>();
 
     righe.forEach((r) => {
-      // Ignora quelli non urgenti
-      if (r.statoScadenza !== "scaduto" && r.statoScadenza !== "in_scadenza") return;
+      const stato = statoScadenza(r.data_scadenza_calcolata, oggiStr, fra90Str);
+      if (!stato) return;
 
-      const rep = r.reparto?.trim() || "Non Assegnato";
-      const cor = r.titoloCorso?.trim() || "Corso";
+      const rep = r.dipendenti?.reparto?.trim() || "Non Assegnato";
+      const cor = r.tipi_corso?.nome_corso?.trim() || "Corso";
       const chiave = `${rep}|||${cor}`;
 
       if (!mappa.has(chiave)) {
@@ -42,20 +60,20 @@ export function VistaPianoCorsi({ righe }: Props) {
       }
 
       const g = mappa.get(chiave)!;
-      if (r.statoScadenza === "scaduto") g.scaduti++;
+      if (stato === "scaduto") g.scaduti++;
       else g.inScadenza++;
       g.totale++;
 
       const p: PartecipantePiano = {
         id: r.id,
-        cognome: r.cognome,
-        nome: r.nome,
-        codiceFiscale: r.codiceFiscale,
+        cognome: r.dipendenti?.cognome ?? "",
+        nome: r.dipendenti?.nome ?? "",
+        codiceFiscale: r.codice_fiscale,
         reparto: rep,
-        mansione: r.ruolo || "",
+        mansione: r.dipendenti?.sottoreparto || r.dipendenti?.materia || "",
         corso: cor,
-        dataScadenza: r.scadenza || "",
-        stato: r.statoScadenza,
+        dataScadenza: r.data_scadenza_calcolata ?? "",
+        stato,
       };
       g.partecipanti.push(p);
     });
