@@ -66,20 +66,32 @@ export function useDecisioneAttestato({
     }
   }
 
-  /** Rimuove il link al file errato lasciando invariati corso, ore e date. */
+  /**
+   * Rev 3 (2026-10-28 10:55): rimuove il link errato, conferma corso/data/ore
+   * e toglie l'attestato dalla lista «In attesa» (finisce in «Senza PDF»).
+   */
   async function scollegaLink() {
     if (
       !confirm(
-        "Vuoi rimuovere il link a questo file? L'attestato rimarrà in archivio come corso svolto, ma senza documento allegato."
+        "Rimuovere il link al file e togliere l'attestato dalla lista in attesa? Corso, data e ore restano registrati (senza PDF).",
       )
     ) {
       return;
     }
     setBusy(true);
     try {
-      await scollegaDocumentoAttestato(attestato.id);
-      toast.success("Link al file rimosso", {
-        description: "L'attestato rimane in archivio senza documento PDF.",
+      await aggiornaAttestato(attestato.id, {
+        tipo_corso_id: tipoCorsoId,
+        data_corso: dataCorso,
+        ore_dichiarate: ore ? Number(ore) : null,
+        url_foto_fronte: null,
+        url_foto_retro: null,
+        stato_validazione: "Approvato",
+        note_rifiuto: null,
+        data_validazione: new Date().toISOString(),
+      });
+      toast.success("Link rimosso ed escluso dall'attesa", {
+        description: "L'attestato ora si trova nella sezione «Senza PDF».",
       });
       onChanged();
     } catch (e) {

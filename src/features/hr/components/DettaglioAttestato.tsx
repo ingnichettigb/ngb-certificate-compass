@@ -56,7 +56,6 @@ export function DettaglioAttestato({
           mostraNote={decisione.mostraNote}
           setMostraNote={decisione.setMostraNote}
           onDecidi={decisione.decidi}
-          onScollegaEdApprova={decisione.scollegaEdApprova}
           onScollegaLink={decisione.scollegaLink}
         />
       </div>
