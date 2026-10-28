@@ -94,8 +94,9 @@ export function SelettoreCorsiDipendente({
     const cNome = corso.nome_corso.toLowerCase();
     const cCod = (corso.codice || "").toLowerCase();
     return attestati.some((att) => {
-      if (att.dipendente_id !== corrente.id || !att.tipo) return false;
-      const t = att.tipo.toLowerCase();
+      const nomeAtt = att.tipi_corso?.nome_corso;
+      if (att.dipendente_id !== corrente.id || !nomeAtt) return false;
+      const t = nomeAtt.toLowerCase();
       return (cCod && t.includes(cCod)) || t.includes(cNome);
     });
   };
@@ -321,9 +322,9 @@ export function SelettoreCorsiDipendente({
                 }`}
               >
                 {haDoc ? (
-                  <FileCheck className="h-3.5 w-3.5 text-primary shrink-0" title="Attestato in regola" />
+                  <span title="Attestato in regola"><FileCheck className="h-3.5 w-3.5 text-primary shrink-0" /></span>
                 ) : (
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" title="Da formare: attestato mancante" />
+                  <span title="Da formare: attestato mancante"><AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" /></span>
                 )}
                 <span className="font-medium">
                   {c.codice ? `[${c.codice}] ` : ""}

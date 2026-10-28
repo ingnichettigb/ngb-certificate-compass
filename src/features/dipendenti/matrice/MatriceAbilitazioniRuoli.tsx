@@ -196,8 +196,9 @@ export function MatriceAbilitazioniRuoli({
     const cNome = corso.nome_corso.toLowerCase();
     const cCod = (corso.codice || "").toLowerCase();
     return attestati.some((att) => {
-      if (att.dipendente_id !== dipendenteId || !att.tipo) return false;
-      const t = att.tipo.toLowerCase();
+      const nomeAtt = att.tipi_corso?.nome_corso;
+      if (att.dipendente_id !== dipendenteId || !nomeAtt) return false;
+      const t = nomeAtt.toLowerCase();
       return (cCod && t.includes(cCod)) || t.includes(cNome);
     });
   };
