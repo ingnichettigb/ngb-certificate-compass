@@ -28,7 +28,7 @@ export function CampiContratto({
                 type="radio"
                 checked={(valori.tipo_contratto ?? "indeterminato") === t}
                 onChange={() =>
-                  onChange({ ...valori, tipo_contratto: t, data_fine_contratto: t === "determinato" ? valori.data_fine_contratto : null })
+                  onChange({ ...valori, tipo_contratto: t, data_fine_contratto: t === "determinato" ? (valori.data_fine_contratto ?? null) : null })
                 }
               />
               Tempo {t}
