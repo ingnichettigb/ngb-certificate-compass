@@ -9,9 +9,9 @@ import { OperatorePage } from "@/features/operatore/OperatorePage";
 export const Route = createFileRoute("/operatore")({
   head: () => ({
     meta: [
-      { title: "Postazione Operatore — Archivio Sicurezza · Nichetti Gian Battista" },
+      { title: "Inserimento attestati — Archivio Sicurezza · Nichetti Gian Battista" },
       { name: "description", content: "Lettura automatica con AI degli attestati di sicurezza, verifica dei dati e archiviazione." },
-      { property: "og:title", content: "Postazione Operatore" },
+      { property: "og:title", content: "Inserimento attestati" },
       { property: "og:description", content: "Carica un attestato, verifica i dati letti dall'AI e archivialo nel database." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

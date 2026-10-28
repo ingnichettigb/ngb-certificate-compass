@@ -6,6 +6,7 @@
  *   rev 1 — 20/10/2026 14:00 — Testata home: logo, titolo, backup e accessi rapidi.
  *   rev 2 — 26/10/2026 17:45 — Bottoni verde tenue a riposo, verde pieno attivo con bordo verde scuro elettrico.
  *   rev 3 — 27/10/2026 21:20 — Aggiunto bottone «Esporta dati in Excel» in fila agli accessi rapidi.
+ *   rev 4 — 28/10/2026 09:30 — Rinomina accessi: «Modulo auto invio attestato», «Inserimento attestati».
  *   rev 4 — 28/10/2026 09:30 — Rinomina accessi: «Modulo auto invio attestato» e «Inserimento attestati».
  */
 import { Link } from "@tanstack/react-router";
