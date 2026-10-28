@@ -43,7 +43,7 @@ import {
 type TipoOrdinamento = "asc" | "desc" | null;
 
 const LARGHEZZA_BASE_CORSO = 130;
-const LARGHEZZE_FISSE_BASE: Record<string, number> = {
+const LARGHEZZE_FISSE_BASE = {
   nome: 240,
   funzione: 180,
   ruolo: 160,
@@ -140,7 +140,7 @@ export function MatriceAbilitazioniRuoli({
   }
 
   function resetLarghezza(id: string) {
-    setLarghezze((prev) => ({ ...prev, [id]: LARGHEZZE_FISSE_BASE[id] || LARGHEZZA_BASE_CORSO }));
+    setLarghezze((prev) => ({ ...prev, [id]: (LARGHEZZE_FISSE_BASE as Record<string, number>)[id] || LARGHEZZA_BASE_CORSO }));
   }
 
   // Corsi attualmente visibili
@@ -171,9 +171,9 @@ export function MatriceAbilitazioniRuoli({
   // Calcolo larghezza complessiva tabella
   const larghezzaTotale = useMemo(() => {
     const fisse =
-      (larghezze.nome || LARGHEZZE_FISSE_BASE.nome) +
-      (larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione) +
-      (larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo);
+      (larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome) +
+      (larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione) +
+      (larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo);
     const corsi = corsiVisibili.reduce((acc, c) => acc + (larghezze[c.id] || LARGHEZZA_BASE_CORSO), 0);
     return fisse + corsi;
   }, [larghezze, corsiVisibili]);
@@ -405,9 +405,9 @@ export function MatriceAbilitazioniRuoli({
           }}
         >
           <colgroup>
-            <col style={{ width: `${larghezze.nome || LARGHEZZE_FISSE_BASE.nome}px` }} />
-            <col style={{ width: `${larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione}px` }} />
-            <col style={{ width: `${larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo}px` }} />
+            <col style={{ width: `${larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome}px` }} />
+            <col style={{ width: `${larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione}px` }} />
+            <col style={{ width: `${larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo}px` }} />
             {corsiVisibili.map((c) => (
               <col key={c.id} style={{ width: `${larghezze[c.id] || LARGHEZZA_BASE_CORSO}px` }} />
             ))}
@@ -441,7 +441,7 @@ export function MatriceAbilitazioniRuoli({
                 </div>
 
                 <div
-                  onMouseDown={(e) => iniziaResize("nome", larghezze.nome || LARGHEZZE_FISSE_BASE.nome, e)}
+                  onMouseDown={(e) => iniziaResize("nome", larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome, e)}
                   onDoubleClick={() => resetLarghezza("nome")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
                   title="Trascina per ridimensionare (doppio clic per ripristinare)"
@@ -458,7 +458,7 @@ export function MatriceAbilitazioniRuoli({
                   {renderFreccia("funzione")}
                 </div>
                 <div
-                  onMouseDown={(e) => iniziaResize("funzione", larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione, e)}
+                  onMouseDown={(e) => iniziaResize("funzione", larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione, e)}
                   onDoubleClick={() => resetLarghezza("funzione")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
                   title="Trascina per ridimensionare"
@@ -475,7 +475,7 @@ export function MatriceAbilitazioniRuoli({
                   {renderFreccia("ruolo")}
                 </div>
                 <div
-                  onMouseDown={(e) => iniziaResize("ruolo", larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo, e)}
+                  onMouseDown={(e) => iniziaResize("ruolo", larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo, e)}
                   onDoubleClick={() => resetLarghezza("ruolo")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
                   title="Trascina per ridimensionare"
