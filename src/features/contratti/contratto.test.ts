@@ -22,3 +22,14 @@ describe("gestione contrattuale", () => {
     expect(filtraPerStato(lista, "tutti")).toHaveLength(2);
   });
 });
+
+describe("filtro Senza PDF", () => {
+  it("mostra solo i lavoratori con almeno un attestato senza file", () => {
+    const lista = [{ id: "a" }, { id: "b" }] as never[];
+    const att = [
+      { dipendente_id: "a", url_foto_fronte: null },
+      { dipendente_id: "b", url_foto_fronte: "x.pdf" },
+    ];
+    expect(filtraPerStato(lista, "senza_pdf", new Date(), att).map((d: { id: string }) => d.id)).toEqual(["a"]);
+  });
+});
