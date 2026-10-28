@@ -31,7 +31,20 @@ export type Attestato = {
   tipi_corso?: TipoCorso | null;
 };
 
-export async function getAttestati(stato?: Stato | "Tutti"): Promise<Attestato[]> {
+export type FiltroAttestati = Stato | "Senza PDF" | "Tutti";
+
+/** Rev 3 (2026-10-28 10:55): filtro «Senza PDF» = attestati senza file collegato. */
+export async function getAttestati(stato?: FiltroAttestati): Promise<Attestato[]> {
+  if (stato === "Senza PDF") {
+    return leggiTutto<Attestato>(() =>
+      sb
+        .from("attestati_caricati")
+        .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
+        .or("url_foto_fronte.is.null,url_foto_fronte.eq.")
+        .order("created_at", { ascending: false })
+        .order("id"),
+    );
+  }
   return leggiTutto<Attestato>(() => {
     let q = sb
       .from("attestati_caricati")

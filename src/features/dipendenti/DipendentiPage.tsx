@@ -48,7 +48,7 @@ export function DipendentiPage({
   const repartiFiltro = useMemo(() => calcolaRepartiFiltro(repartiElenco, dipendenti), [repartiElenco, dipendenti]);
 
   const filtrati = useMemo(
-    () => filtraPerStato(filtraDipendenti({ dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati }), filtroStato),
+    () => filtraPerStato(filtraDipendenti({ dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati }), filtroStato, new Date(), attestati),
     [filtroStato, dipendenti, q, filtroReparto, filtroRuolo, ruoliCatalogo, assegnazioni, attestati],
   );
 
@@ -72,7 +72,7 @@ export function DipendentiPage({
             ruoliAttivi={ruoliAttivi}
             onNuovo={() => setForm({ ...VUOTO })}
           />
-          <SelettoreStato valore={filtroStato} onCambia={setFiltroStato} dipendenti={dipendenti} />
+          <SelettoreStato valore={filtroStato} onCambia={setFiltroStato} dipendenti={dipendenti} attestati={attestati} />
           <ListaDipendenti isLoading={isLoading} filtrati={filtrati} attestati={attestati} sel={sel} setSel={setSel} />
         </div>
 

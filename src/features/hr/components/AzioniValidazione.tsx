@@ -56,7 +56,7 @@ export function AzioniValidazione({
           title="Rimuove il link al file errato ma conserva il corso e le date inserite"
         >
           <Unlink className="size-4" />
-          Scollega link errato
+          Scollega link ed escludi dall'attesa
         </Button>
       )}
 

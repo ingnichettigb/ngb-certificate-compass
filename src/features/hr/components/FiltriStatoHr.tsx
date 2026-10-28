@@ -3,15 +3,14 @@
  * Percorso:  src/features/hr/components/FiltriStatoHr.tsx
  * Pulsanti per filtrare gli attestati per stato.
  */
-import { type Stato } from "@/lib/api";
-import { FILTRI } from "../types";
+import { FILTRI, type FiltroHr } from "../types";
 
 export function FiltriStatoHr({
   filtro,
   onCambia,
 }: {
-  filtro: Stato | "Tutti";
-  onCambia: (f: Stato | "Tutti") => void;
+  filtro: FiltroHr;
+  onCambia: (f: FiltroHr) => void;
 }) {
   return (
   <div className="flex flex-wrap gap-2">

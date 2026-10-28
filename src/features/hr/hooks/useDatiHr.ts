@@ -5,11 +5,12 @@
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAttestati, getTipiCorso, type Stato } from "@/lib/api";
+import { getAttestati, getTipiCorso } from "@/lib/api";
+import { type FiltroHr } from "../types";
 
 export function useDatiHr() {
   const qc = useQueryClient();
-  const [filtro, setFiltro] = useState<Stato | "Tutti">("In attesa");
+  const [filtro, setFiltro] = useState<FiltroHr>("In attesa");
   const [sel, setSel] = useState<string | null>(null);
 
   const { data: attestati = [], isLoading } = useQuery({
@@ -29,7 +30,7 @@ export function useDatiHr() {
   }
 
   /** Cambia il filtro per stato e toglie la selezione. */
-  function cambiaFiltro(f: Stato | "Tutti") {
+  function cambiaFiltro(f: FiltroHr) {
     setFiltro(f);
     setSel(null);
   }
