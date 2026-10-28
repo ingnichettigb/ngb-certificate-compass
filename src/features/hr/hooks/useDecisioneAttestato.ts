@@ -7,6 +7,7 @@
  *   - Rev 2 (2026-10-28 11:35): Aggiunta azione scollegaLink (imposta Approvato, azzera link ed esclude dall'attesa).
  *   - Rev 3 (2026-10-28 11:50): Aggiunta azione confermaIntegrazione (stato «In attesa di integrazione» + debito formativo SIC-SPI-04).
  *   - Rev 4 (2026-10-28 14:15): Aggiunta azione approvaERinomina (rinomina file nella cartella di origine + sostituzione link nel DB).
+ *   - Rev 5 (2026-10-28 14:17): Import helper da ../decisione, patch senza null non ammessi, integrazione DVR con i campi reali.
  */
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,7 +25,7 @@ import {
   costruisciAggiornamento,
   descrizioneEsito,
   erroreDecisione,
-} from "./supportoDecisione";
+} from "../decisione";
 
 export function useDecisioneAttestato({
   attestato,
@@ -107,8 +108,8 @@ export function useDecisioneAttestato({
 
       // 2. Aggiornamento attestato nel database con il nuovo link e approvazione
       const agg = await aggiornaAttestato(attestato.id, {
-        tipo_corso_id: tipoCorsoId || null,
-        data_corso: dataCorso || null,
+        ...(tipoCorsoId ? { tipo_corso_id: tipoCorsoId } : {}),
+        ...(dataCorso ? { data_corso: dataCorso } : {}),
         ore_dichiarate: ore ? Number(ore) : null,
         stato_validazione: "Approvato",
         url_foto_fronte: nuovoLink,
@@ -148,10 +149,10 @@ export function useDecisioneAttestato({
       await creaIntegrazioneDvr({
         dipendente_id: attestato.dipendente_id,
         attestato_origine_id: attestato.id,
-        corso_integrazione_codice: "SIC-SPI-04",
-        corso_integrazione_nome: "Sicurezza Specifica Rischio MEDIO integrazione al DVR Liceo Aselli",
-        ore_mancanti: dati.ore,
-        note: dati.note,
+        tipo_corso_nome: "Sicurezza Specifica Rischio MEDIO integrazione al DVR Liceo Aselli",
+        descrizione: "Integrazione SIC-SPI-04 (debito formativo)",
+        ore: dati.ore,
+        argomenti_mancanti: dati.note.trim() ? [dati.note.trim()] : [],
       });
 
       const descr = descrizioneEsito(
