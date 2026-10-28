@@ -1,7 +1,10 @@
 /*
  * File:      IntestazioneOperatore.tsx
  * Percorso:  src/features/operatore/components/IntestazioneOperatore.tsx
- * Titolo della pagina, impostazioni AI e pulsante «Carica documento».
+ * Data creaz: 20/10/2026
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Titolo della pagina, impostazioni AI e pulsante «Carica documento».
+ *   rev 2 — 28/10/2026 09:30 — Titolo aggiornato in «Inserimento Attestati».
  */
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
@@ -24,7 +27,7 @@ export function IntestazioneOperatore({ onFile }: { onFile: (f: File) => void })
           <ArrowLeft className="size-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Postazione Operatore</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Inserimento Attestati</h1>
           <p className="text-sm text-muted-foreground">Verifica, lettura automatica con AI e archiviazione attestati</p>
         </div>
       </div>
