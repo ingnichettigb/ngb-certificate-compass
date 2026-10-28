@@ -3,7 +3,7 @@
  * Percorso:  src/features/home/HomePage.tsx
  * Pagina iniziale: testata, contatori e tre schede di accesso (lavoratore, HR, operatore).
  */
-import { AlertTriangle, CalendarClock, Clock, FileCheck2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CalendarClock, Clock, FileCheck2, FileX, ShieldCheck } from "lucide-react";
 import { IntestazioneHome } from "./components/IntestazioneHome";
 import { CardStatistica } from "./components/CardStatistica";
 import { CardModuloLavoratore } from "./components/CardModuloLavoratore";
@@ -11,6 +11,7 @@ import { CardDashboardHr } from "./components/CardDashboardHr";
 import { CardPostazioneOperatore } from "./components/CardPostazioneOperatore";
 import { useStatisticheHome } from "./hooks/useStatisticheHome";
 
+// Rev 2 (2026-10-28 10:55): sesto contatore «Senza PDF».
 export function HomePage() {
   const { data: stats } = useStatisticheHome();
 
@@ -19,7 +20,7 @@ export function HomePage() {
       <IntestazioneHome />
 
       <section className="mx-auto max-w-6xl px-5 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <CardStatistica
             label="Dipendenti"
             value={stats?.dipendenti}
@@ -48,6 +49,7 @@ export function HomePage() {
             tone="destructive"
             to="/scadenze"
           />
+          <CardStatistica label="Senza PDF" value={stats?.senzaPdf} icon={FileX} to="/hr" />
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">

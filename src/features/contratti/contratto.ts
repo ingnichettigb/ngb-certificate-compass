@@ -5,12 +5,13 @@
  * Revisioni:
  *   rev 1 — 28/10/2026 09:40 — Regole pure della gestione contrattuale (avviso scadenza, filtro stato).
  */
-import { type Dipendente } from "@/lib/api";
+import { type Dipendente, type Attestato } from "@/lib/api";
+// rev 2 — 28/10/2026 10:55 — Filtro «senza_pdf»: lavoratori con almeno un attestato senza file.
 
 /** Giorni di anticipo con cui un contratto determinato viene segnalato "in scadenza". */
 export const GIORNI_AVVISO = 30;
 
-export type FiltroStato = "in_forza" | "in_scadenza" | "cessati" | "tutti";
+export type FiltroStato = "in_forza" | "in_scadenza" | "cessati" | "senza_pdf" | "tutti";
 
 export function isCessato(d: Pick<Dipendente, "stato_lavoratore">) {
   return d.stato_lavoratore === "cessato";
@@ -30,7 +31,12 @@ export function richiedeDecisione(d: Dipendente, oggi = new Date()) {
   return g !== null && g <= GIORNI_AVVISO;
 }
 
-export function filtraPerStato(lista: Dipendente[], filtro: FiltroStato, oggi = new Date()) {
+export function filtraPerStato(
+  lista: Dipendente[],
+  filtro: FiltroStato,
+  oggi = new Date(),
+  attestati: Pick<Attestato, "dipendente_id" | "url_foto_fronte">[] = [],
+) {
   switch (filtro) {
     case "in_forza":
       return lista.filter((d) => !isCessato(d));
@@ -38,6 +44,12 @@ export function filtraPerStato(lista: Dipendente[], filtro: FiltroStato, oggi = 
       return lista.filter((d) => richiedeDecisione(d, oggi));
     case "cessati":
       return lista.filter(isCessato);
+    case "senza_pdf": {
+      const ids = new Set(
+        attestati.filter((a) => !a.url_foto_fronte?.trim()).map((a) => a.dipendente_id),
+      );
+      return lista.filter((d) => ids.has(d.id));
+    }
     default:
       return lista;
   }
