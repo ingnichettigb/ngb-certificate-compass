@@ -1,13 +1,12 @@
-/*
- * File:      SelettoreStato.tsx
- * Percorso:  src/features/contratti/SelettoreStato.tsx
- * Data creaz: 28/10/2026
- * Revisioni:
- *   rev 1 — 28/10/2026 09:55 — Filtro rapido In forza / In scadenza / Cessati / Tutti.
- *   rev 2 — 28/10/2026 10:55 — Pulsante «Senza PDF» con conteggio.
- *   rev 3 — 28/10/2026 17:40 — Aggiunto pulsante «Nuovi arrivati» (ultimi 60 giorni).
+/**
+ * @file SelettoreStato.tsx
+ * @path src/features/contratti/SelettoreStato.tsx
+ * @created 2026-10-28
+ * @revision 2026-10-28 20:20 - rev 4 - Unificazione con il componente Button (verde standard e attivo)
+ * @description Filtro rapido In forza / In scadenza / Cessati / Senza PDF / Tutti.
  */
 import { type Dipendente, type Attestato } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { filtraPerStato, type FiltroStato } from "./contratto";
 
 const VOCI: { id: FiltroStato; label: string }[] = [
@@ -32,21 +31,21 @@ export function SelettoreStato({
 }) {
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
-      {VOCI.map(({ id, label }) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={valore === id}
-          onClick={() => onCambia(id)}
-          className={`rounded-lg border-2 border-primary px-3 py-1 text-xs font-semibold transition-all ${
-            valore === id
-              ? "bg-primary text-primary-foreground"
-              : "bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground"
-          }`}
-        >
-          {label} ({filtraPerStato(dipendenti, id, new Date(), attestati).length})
-        </button>
-      ))}
+      {VOCI.map(({ id, label }) => {
+        const attivo = valore === id;
+        return (
+          <Button
+            key={id}
+            type="button"
+            size="sm"
+            aria-pressed={attivo}
+            onClick={() => onCambia(id)}
+            className={attivo ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : ""}
+          >
+            {label} ({filtraPerStato(dipendenti, id, new Date(), attestati).length})
+          </Button>
+        );
+      })}
     </div>
   );
 }
