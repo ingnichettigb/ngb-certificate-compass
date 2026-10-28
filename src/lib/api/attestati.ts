@@ -5,13 +5,14 @@
  * Revisioni:
  *   - Rev 1 (2026-10-22 10:00): Funzioni base get, upload, crea e aggiorna attestati.
  *   - Rev 2 (2026-10-25 20:30): Aggiunte funzioni eliminaAttestato e scollegaDocumentoAttestato.
+ *   - Rev 4 (2026-10-28 11:50): Aggiunto stato «In attesa di integrazione».
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
 import type { Dipendente } from "./dipendenti";
 import type { TipoCorso } from "./tipi-corso";
 
-export type Stato = "In attesa" | "Approvato" | "Respinto";
+export type Stato = "In attesa" | "Approvato" | "Respinto" | "In attesa di integrazione";
 
 export type Attestato = {
   id: string;

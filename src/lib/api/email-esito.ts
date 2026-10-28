@@ -31,6 +31,19 @@ export function costruisciMailto(a: Attestato, esito: Stato): string | null {
       "",
       "Grazie per la collaborazione.",
     ];
+  } else if (esito === "In attesa di integrazione") {
+    // Rev 2 (2026-10-28 11:50): email per approvazione con integrazione SIC-SPI-04.
+    oggetto = `Attestato registrato in attesa di integrazione: ${corso}`;
+    righe = [
+      `Gentile ${nome},`,
+      "",
+      `il tuo attestato "${corso}" (corso del ${dataCorso}) è stato registrato ed è in attesa di integrazione.`,
+      "Il percorso si intenderà completo e approvato dopo il corso integrativo:",
+      "[SIC-SPI-04] Sicurezza Specifica Rischio MEDIO integrazione al DVR Liceo Aselli.",
+      ...(a.note_rifiuto?.trim() ? ["", `Note: ${a.note_rifiuto.trim()}`] : []),
+      "",
+      "Grazie per la collaborazione.",
+    ];
   } else {
     oggetto = `Attestato respinto: ${corso}`;
     righe = [
