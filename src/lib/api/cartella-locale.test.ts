@@ -14,7 +14,7 @@ import * as locale from "@/lib/api/cartella-locale";
 import * as multiple from "@/lib/api/cartelle-multiple";
 
 describe("nomi esportati del modulo cartella locale", () => {
-  it("scegliCartellaLocale è la funzionecanonical scegliCartellaArchivio", () => {
+  it("scegliCartellaLocale è la funzione canonical scegliCartellaArchivio", () => {
     expect(typeof locale.scegliCartellaLocale).toBe("function");
     expect(locale.scegliCartellaLocale).toBe(locale.scegliCartellaArchivio);
   });
