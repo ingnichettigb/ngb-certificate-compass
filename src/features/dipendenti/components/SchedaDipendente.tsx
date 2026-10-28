@@ -1,12 +1,14 @@
 /*
  * File:      SchedaDipendente.tsx
  * Percorso:  src/features/dipendenti/components/SchedaDipendente.tsx
- * Scheda del dipendente selezionato: anagrafica, reparto, ruoli, incarichi, PDF e tabella attestati.
+ * Scheda del dipendente selezionato: anagrafica, reparto, ruoli, corsi assegnati, PDF e attestati.
  * Revisioni:
  *   rev 2 — 25/10/2026 11:26 — Passato il dipendente alla tabella: attivi "Aggancia" e ricerca in cartella.
  *   rev 3 — 26/10/2026 20:10 — Prop bottoniInBarra: nel Cruscotto HR i bottoni Aggancia/Aggiungi
  *            stanno nella barra fissa in alto, non nella sezione PDF.
  *   rev 4 — 28/10/2026 10:00 — Aggiunto riquadro Contratto.
+ *   rev 5 — 28/10/2026 21:45 — Integrato SelettoreCorsiDipendente con menu a tendina, spunte
+ *            e bottoni attivi sincronizzati con la tabella generale.
  */
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +25,7 @@ import { costruisciRigheAttestati } from "../ordinamento";
 import { AnagraficaDipendente } from "./AnagraficaDipendente";
 import { SelezioneReparto } from "./SelezioneReparto";
 import { BloccoRuoli } from "./BloccoRuoli";
+import { SelettoreCorsiDipendente } from "./SelettoreCorsiDipendente";
 import { BloccoContratto } from "@/features/contratti/BloccoContratto";
 import { BloccoIncarichi } from "./BloccoIncarichi";
 import { TabellaAttestati } from "./TabellaAttestati";
@@ -74,6 +77,8 @@ export function SchedaDipendente({
       <AnagraficaDipendente corrente={corrente} />
       <SelezioneReparto corrente={corrente} repartiAttivi={repartiAttivi} onCambia={onCambiaReparto} />
       <BloccoContratto corrente={corrente} />
+
+      {/* Ruoli e Incarichi di sicurezza */}
       <BloccoRuoli
         corrente={corrente}
         ruoliAttivi={ruoliAttivi}
@@ -82,6 +87,15 @@ export function SchedaDipendente({
         suoi={suoi}
         onSpunta={onSpuntaRuolo}
       />
+
+      {/* Nuovo Selettore Corsi con Menu a Tendina e Bottoni Attivi */}
+      <SelettoreCorsiDipendente
+        corrente={corrente}
+        ruoliCatalogo={ruoliCatalogo}
+        assegnazioni={assegnazioni}
+        attestati={attestati}
+      />
+
       <BloccoIncarichi
         integAperte={integAperte}
         suoi={suoi}
