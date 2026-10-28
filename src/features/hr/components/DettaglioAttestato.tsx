@@ -5,9 +5,10 @@
  * Revisioni:
  *   - Rev 1 (2026-10-22 10:00): Creazione pannello dettaglio attestato HR con form e anteprima.
  *   - Rev 2 (2026-10-28 11:35): Collegamento dell'azione onScollegaLink per rimuovere link non validi.
+ *   - Rev 3 (2026-10-28 11:22): Supporto codice corso per i filtri rapidi in CampiValidazione.
  */
 import { ImageViewer } from "@/components/ImageViewer";
-import { type Attestato } from "@/lib/api";
+import { type Attestato, type TipoCorso } from "@/lib/api";
 import { AnagraficaAttestato } from "./AnagraficaAttestato";
 import { CampiValidazione } from "./CampiValidazione";
 import { OpzioneEmail } from "./OpzioneEmail";
@@ -20,7 +21,7 @@ export function DettaglioAttestato({
   onChanged,
 }: {
   attestato: Attestato;
-  corsi: { id: string; nome_corso: string; macro_categoria: string }[];
+  corsi: TipoCorso[];
   onChanged: () => void;
 }) {
   const decisione = useDecisioneAttestato({ attestato, onChanged });
