@@ -1,7 +1,10 @@
 /*
  * File:      CardModuloLavoratore.tsx
  * Percorso:  src/features/home/components/CardModuloLavoratore.tsx
- * Scheda del modulo lavoratore: QR code, link da copiare e pulsante di apertura.
+ * Data creaz: 20/10/2026
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Scheda modulo lavoratore con QR code e copia link.
+ *   rev 2 — 28/10/2026 09:30 — Rinomina titolo in «Modulo auto invio attestato».
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, Copy, Smartphone } from "lucide-react";
@@ -25,7 +28,7 @@ export function CardModuloLavoratore() {
         </Button>
       </div>
 
-      <h2 className="mt-4 text-xl font-semibold">Modulo lavoratore</h2>
+      <h2 className="mt-4 text-xl font-semibold">Modulo auto invio attestato</h2>
 
       <p className="mt-2 text-sm text-muted-foreground">
         Il lavoratore compila i propri dati, sceglie il corso e allega la foto dell&apos;attestato
@@ -36,7 +39,7 @@ export function CardModuloLavoratore() {
         {qr && (
           <img
             src={qr}
-            alt="QR code per il modulo lavoratore"
+            alt="QR code per il modulo auto invio attestato"
             className="size-32 rounded-lg border border-border bg-card p-1"
           />
         )}
@@ -47,7 +50,6 @@ export function CardModuloLavoratore() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-
             <Button variant="outline" onClick={copiaLink}>
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               {copied ? "Copiato" : "Copia link"}
