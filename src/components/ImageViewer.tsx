@@ -8,9 +8,9 @@
  *   - Rev 3 (2026-10-28 14:10): Rotazione reale via canvas per evitare restringimenti e vuoti laterali.
  *   - Rev 4 (2026-10-28 14:20): Tipo RisoluzioneDocumento allineato all'export reale.
  *   - Rev 5 (2026-10-28 14:35): Gestione distinta per documento mancante vs registrato su disco.
- *   - Rev 6 (2026-10-28 14:55): Contenimento rigido della rotazione PDF per impedire la sovrapposizione ai comandi.
+ *   - Rev 6 (2026-10-28 15:05): Aggiunta maniglie di resize su tutti e 4 i vertici e occupazione a piena dimensione.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   RotateCw,
   ZoomIn,
@@ -59,6 +59,8 @@ function ruotaDataUrl(sorgenteUrl: string, gradi: number): Promise<string> {
   });
 }
 
+type VerticeResize = "nw" | "ne" | "sw" | "se";
+
 export function ImageViewer({
   fronte,
   retro,
@@ -77,6 +79,18 @@ export function ImageViewer({
   const [haCartelleCollegate, setHaCartelleCollegate] = useState(false);
   const [inConnessione, setInConnessione] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Dimensioni personalizzabili tramite trascinamento dei 4 vertici
+  const [altezzaCustom, setAltezzaCustom] = useState<number>(620);
+  const [larghezzaCustom, setLarghezzaCustom] = useState<number | null>(null);
+  const dragRef = useRef<{
+    vertice: VerticeResize;
+    startX: number;
+    startY: number;
+    startW: number;
+    startH: number;
+  } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   async function caricaDocumenti() {
     setInCaricamento(true);
@@ -141,6 +155,59 @@ export function ImageViewer({
       attivo = false;
     };
   }, [esitoAttuale?.url, esitoAttuale?.isPdf, rotazione]);
+
+  // Gestione trascinamento dei 4 vertici
+  function iniziaResize(vertice: VerticeResize, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = containerRef.current;
+    const rect = el ? el.getBoundingClientRect() : { width: 500, height: altezzaCustom };
+
+    dragRef.current = {
+      vertice,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: rect.width,
+      startH: rect.height,
+    };
+
+    function onMouseMove(moveEvent: MouseEvent) {
+      if (!dragRef.current) return;
+      const { vertice: v, startX, startY, startW, startH } = dragRef.current;
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      let nuovoH = startH;
+      let nuovoW = startW;
+
+      // Invertiamo il delta per i vertici superiori / sinistri
+      if (v === "se") {
+        nuovoW = startW + deltaX;
+        nuovoH = startH + deltaY;
+      } else if (v === "sw") {
+        nuovoW = startW - deltaX;
+        nuovoH = startH + deltaY;
+      } else if (v === "ne") {
+        nuovoW = startW + deltaX;
+        nuovoH = startH - deltaY;
+      } else if (v === "nw") {
+        nuovoW = startW - deltaX;
+        nuovoH = startH - deltaY;
+      }
+
+      setAltezzaCustom(Math.max(380, Math.min(1400, Math.round(nuovoH))));
+      setLarghezzaCustom(Math.max(400, Math.min(1800, Math.round(nuovoW))));
+    }
+
+    function onMouseUp() {
+      dragRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }
 
   async function handleAutorizzaCartelle() {
     setInConnessione(true);
@@ -239,9 +306,11 @@ export function ImageViewer({
         onClick={() => {
           setZoom(1);
           setRotazione(0);
+          setAltezzaCustom(620);
+          setLarghezzaCustom(null);
         }}
-        aria-label="Reimposta zoom e rotazione"
-        title="Reimposta zoom e rotazione"
+        aria-label="Reimposta zoom, rotazione e dimensioni"
+        title="Reimposta tutto al 100%"
       >
         <RotateCcw className="size-4" />
       </Button>
@@ -288,19 +357,10 @@ export function ImageViewer({
 
     if (esitoAttuale?.url) {
       if (esitoAttuale.isPdf) {
-        // Quando il PDF è ruotato di 90° o 270°, l'altezza e la larghezza visive
-        // si invertono: per evitare che sbordi e copra i controlli, scambiamo le
-        // dimensioni fisiche dell'iframe così che il risultato ruotato rimanga
-        // perfettamente iscritto nel riquadro senza tracimare.
-        const altezzaContenitore = isInModal ? "h-[82vh]" : "h-[62vh]";
-        const larghezzaIframe = isRuotato90
-          ? isInModal ? "h-[85vw] max-h-[80vh] w-[75vh]" : "h-[90%] w-[60vh] max-w-full"
-          : "h-full w-full";
-
         return (
-          <div className={`relative flex ${altezzaContenitore} w-full items-center justify-center overflow-hidden`}>
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
             <div
-              className="flex items-center justify-center transition-transform duration-200"
+              className="flex h-full w-full items-center justify-center transition-transform duration-200"
               style={{
                 transform: `scale(${zoom}) rotate(${rotazione}deg)`,
                 transformOrigin: "center center",
@@ -309,7 +369,9 @@ export function ImageViewer({
               <iframe
                 src={`${esitoAttuale.url}#toolbar=0&view=FitH`}
                 title={`Attestato ${lato}`}
-                className={`rounded-lg border border-border bg-background shadow-md transition-all ${larghezzaIframe}`}
+                className={`rounded-lg border border-border bg-background shadow-md ${
+                  isRuotato90 ? "h-[92vw] max-h-full w-[92vh] max-w-full" : "h-full w-full"
+                }`}
               />
             </div>
           </div>
@@ -326,9 +388,7 @@ export function ImageViewer({
               transform: `scale(${zoom})`,
               transformOrigin: "center center",
             }}
-            className={`rounded-lg object-contain shadow-sm transition-transform ${
-              isInModal ? "max-h-[82vh] max-w-full" : "max-h-[62vh] w-auto max-w-full"
-            }`}
+            className="h-full w-full rounded-lg object-contain shadow-sm transition-transform"
           />
         </div>
       );
@@ -399,6 +459,10 @@ export function ImageViewer({
     );
   };
 
+  // Stile maniglia vertice riutilizzabile
+  const classeManiglia =
+    "absolute z-30 size-4 rounded-sm border-2 border-primary bg-background shadow-md transition-colors hover:bg-primary hover:border-primary-foreground";
+
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -423,7 +487,56 @@ export function ImageViewer({
         {controlliBarra}
       </div>
 
-      <div className="relative flex min-h-[460px] flex-1 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/20 p-2">
+      {/* Riquadro visore con le maniglie di resize su tutti i 4 vertici */}
+      <div
+        ref={containerRef}
+        style={{
+          height: `${altezzaCustom}px`,
+          width: larghezzaCustom ? `${larghezzaCustom}px` : "100%",
+          maxWidth: "100%",
+        }}
+        className="group relative flex items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/20 p-2 transition-[border-color] hover:border-primary/50"
+      >
+        {/* Vertice 1: Alto-Sinistra (NW) */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Ridimensiona da alto sinistra"
+          title="Trascina per allargare/alzare"
+          onMouseDown={(e) => iniziaResize("nw", e)}
+          className={`${classeManiglia} -top-1 -left-1 cursor-nwse-resize`}
+        />
+
+        {/* Vertice 2: Alto-Destra (NE) */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Ridimensiona da alto destra"
+          title="Trascina per allargare/alzare"
+          onMouseDown={(e) => iniziaResize("ne", e)}
+          className={`${classeManiglia} -top-1 -right-1 cursor-nesw-resize`}
+        />
+
+        {/* Vertice 3: Basso-Sinistra (SW) */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Ridimensiona da basso sinistra"
+          title="Trascina per allargare/abbassare"
+          onMouseDown={(e) => iniziaResize("sw", e)}
+          className={`${classeManiglia} -bottom-1 -left-1 cursor-nesw-resize`}
+        />
+
+        {/* Vertice 4: Basso-Destra (SE) */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Ridimensiona da basso destra"
+          title="Trascina per allargare/abbassare"
+          onMouseDown={(e) => iniziaResize("se", e)}
+          className={`${classeManiglia} -bottom-1 -right-1 cursor-nwse-resize`}
+        />
+
         {renderingDocumento(false)}
       </div>
 
