@@ -7,6 +7,7 @@
  *   rev 2 — 26/10/2026 17:45 — Uniformazione stile: verde tenue a riposo e verde scuro attivo con bordo verde scuro.
  *   rev 3 — 26/10/2026 20:10 — Spazio sotto la riga perché la barra fissa in alto resti leggibile.
  *   rev 4 — 27/10/2026 09:25 — Rimozione wrapper pagina per allineamento sulla stessa riga dei comandi operativi.
+ *   rev 5 — 28/10/2026 09:30 — Rinomina sezione ricevuti: «Modulo auto invio attestato».
  */
 import { Archive, Inbox } from "lucide-react";
 
@@ -27,7 +28,7 @@ export function SelettoreSezioniHr({
   onCambia: (s: SezioneHr) => void;
 }) {
   const voci = [
-    { id: "ricevuti" as const, label: "Gestione attestati ricevuti da Modulo lavoratore", Icona: Inbox },
+    { id: "ricevuti" as const, label: "Gestione attestati ricevuti da Modulo auto invio", Icona: Inbox },
     { id: "archiviati" as const, label: "Gestione attestati archiviati", Icona: Archive },
   ];
   return (
