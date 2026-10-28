@@ -1,9 +1,9 @@
-/*
- * File:           DialogEsportaAttestati.tsx
- * Percorso:       src/features/esporta-attestati/DialogEsportaAttestati.tsx
- * Data creazione: 2026-10-27
- * Revisioni:
- *   - Rev 1 (2026-10-27 21:20): Bottone «Esporta dati» e finestra con ambito, spunte corsi, contatore e colonna percorso.
+/**
+ * @file DialogEsportaAttestati.tsx
+ * @path src/features/esporta-attestati/DialogEsportaAttestati.tsx
+ * @created 2026-10-27
+ * @revision 2026-10-28 20:20 - rev 2 - Conversione bottoni d'azione al componente Button unificato
+ * @description Bottone «Esporta dati in Excel» e finestra con ambito, spunte corsi e contatore.
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -15,8 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getAttestati, getTipiCorso } from "@/lib/api";
 import { GRUPPI_ARGOMENTO, assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { csvElencoAttestati, filtraAttestati, nomeFileElenco, type Ambito } from "./elenco-csv";
-
-const STILE = "inline-flex items-center gap-2 rounded-lg border-2 border-primary bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md";
 
 export function DialogEsportaAttestati() {
   const [aperto, setAperto] = useState(false);
@@ -49,16 +47,24 @@ export function DialogEsportaAttestati() {
 
   return (
     <>
-      <button type="button" className={STILE} onClick={() => setAperto(true)}>
+      <Button type="button" onClick={() => setAperto(true)}>
         <FileSpreadsheet className="size-4" /> Esporta dati in Excel
-      </button>
+      </Button>
       <Dialog open={aperto} onOpenChange={setAperto}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Esporta elenco attestati in Excel</DialogTitle></DialogHeader>
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap gap-2">
               {([["tutto", "Tutto l'archivio"], ["categoria", "Per categoria"], ["corsi", "Per attestato"]] as const).map(([v, l]) => (
-                <button key={v} type="button" onClick={() => setTipo(v)} className={`${STILE} ${tipo === v ? "!bg-primary !text-primary-foreground" : ""}`}>{l}</button>
+                <Button
+                  key={v}
+                  type="button"
+                  size="sm"
+                  onClick={() => setTipo(v)}
+                  className={tipo === v ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : ""}
+                >
+                  {l}
+                </Button>
               ))}
             </div>
             {tipo === "categoria" && (
@@ -90,7 +96,7 @@ export function DialogEsportaAttestati() {
               <Checkbox checked={conPercorso} onCheckedChange={(v) => setConPercorso(v === true)} />
               Includi colonna percorso e nome file nel PC
             </label>
-            <div className="rounded-md bg-primary/10 px-3 py-2 font-medium text-primary">
+            <div className="rounded-md bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 font-medium text-emerald-950 dark:text-emerald-200">
               {caricamento ? "Caricamento…" : selezionati.length ? `${selezionati.length} attestati selezionati per l'esportazione` : "Nessun attestato trovato con i criteri selezionati"}
             </div>
             <div className="flex justify-end">
