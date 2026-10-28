@@ -3,28 +3,29 @@
  * Percorso:      src/components/ImageViewer.tsx
  * Data creazione: 2026-10-22
  * Revisioni:
- *   - Rev 1 (2026-10-22 10:00): Visualizzatore base immagini fronte/retro da storage.
+ *   - Rev 1 (2026-10-22 10:00): Creazione visualizzatore fronte/retro con zoom e rotazione CSS.
  *   - Rev 2 (2026-10-28 10:00): Supporto completo a file PDF, risoluzione cartelle collegate e permessi.
- *   - Rev 3 (2026-10-28 14:10): Rotazione reale via canvas per evitare restringimenti e vuoti laterali,
- *     adattamento geometrico 90°/270° e nuova modalità visualizzazione a schermo intero.
- *   - Rev 4 (2026-10-28 14:20): Nome del tipo di risoluzione corretto in RisoluzioneDocumento (export reale del modulo).
+ *   - Rev 3 (2026-10-28 14:10): Rotazione reale via canvas per evitare restringimenti e vuoti laterali.
+ *   - Rev 4 (2026-10-28 14:20): Tipo RisoluzioneDocumento allineato all'export reale.
+ *   - Rev 5 (2026-10-28 14:35): Gestione distinta per documento mancante (nessun allegato) vs registrato su disco.
  */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
+  RotateCw,
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  RotateCw,
   ImageOff,
   ExternalLink,
-  FileText,
-  FolderSearch,
   Loader2,
   FolderOpen,
+  FolderSearch,
   Maximize2,
   Minimize2,
-  X,
+  FileText,
+  FileQuestion,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   risolviDocumentoAttestato,
@@ -33,8 +34,30 @@ import {
   aggiungiCartella,
   verificaPermessi,
 } from "@/lib/api/cartelle-multiple";
-import { ruotaDataUrl } from "@/components/cattura-ocr/ruota-immagine";
-import { toast } from "sonner";
+
+function ruotaDataUrl(sorgenteUrl: string, gradi: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Contesto canvas non disponibile"));
+
+      const rad = (gradi * Math.PI) / 180;
+      const is90o270 = gradi === 90 || gradi === 270;
+      canvas.width = is90o270 ? img.naturalHeight : img.naturalWidth;
+      canvas.height = is90o270 ? img.naturalWidth : img.naturalHeight;
+
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+    img.onerror = () => reject(new Error("Impossibile caricare immagine per la rotazione"));
+    img.src = sorgenteUrl;
+  });
+}
 
 export function ImageViewer({
   fronte,
@@ -92,7 +115,6 @@ export function ImageViewer({
   const esitoAttuale = lato === "fronte" ? esitoFronte : esitoRetro;
   const percorsoGrezzo = lato === "fronte" ? fronte : retro;
 
-  // Ruota fisicamente le immagini con Canvas per azzerare distorsioni e vuoti laterali
   useEffect(() => {
     let attivo = true;
     if (!esitoAttuale?.url || esitoAttuale.isPdf) {
@@ -165,7 +187,6 @@ export function ImageViewer({
 
   const isRuotato90 = rotazione === 90 || rotazione === 270;
 
-  // Controlli standard riutilizzabili sia nel riquadro sia nel modal fullscreen
   const controlliBarra = (
     <div className="flex flex-wrap items-center gap-1.5">
       <Button
@@ -302,7 +323,8 @@ export function ImageViewer({
       );
     }
 
-    if (esitoAttuale?.sorgente === "non_trovato" || (percorsoGrezzo && !esitoAttuale?.url)) {
+    // Caso 1: C'era un percorso memorizzato ma il file non è stato trovato o servono permessi
+    if (percorsoGrezzo && esitoAttuale?.sorgente === "non_trovato") {
       return (
         <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface p-6 text-center shadow-sm">
           <div className="rounded-full bg-primary/10 p-3 text-primary">
@@ -352,17 +374,22 @@ export function ImageViewer({
       );
     }
 
+    // Caso 2: Nessun documento registrato o link rimosso
     return (
-      <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-        <ImageOff className="size-8" />
-        Nessuna immagine {lato} caricata
+      <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface p-8 text-center text-muted-foreground shadow-sm">
+        <FileQuestion className="size-8 opacity-60" />
+        <div className="space-y-1">
+          <p className="font-semibold text-foreground">Nessun documento PDF allegato</p>
+          <p className="text-xs text-muted-foreground">
+            I dati del corso sono salvati nell'anagrafica. Puoi approvare l'attestato senza allegato per archiviarlo.
+          </p>
+        </div>
       </div>
     );
   };
 
   return (
     <div className="flex h-full flex-col gap-3">
-      {/* Barra superiore con selettore Fronte/Retro e comandi */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border border-border bg-surface p-1">
           {(["fronte", "retro"] as const).map((l) => (
@@ -373,58 +400,31 @@ export function ImageViewer({
                 setLato(l);
                 setZoom(1);
                 setRotazione(0);
-                setUrlRuotato(null);
               }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                lato === l
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                lato === l ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {l}
             </button>
           ))}
         </div>
-
         {controlliBarra}
       </div>
 
-      {/* Riquadro visualizzazione documento inline */}
-      <div className="relative flex min-h-[460px] flex-1 items-center justify-center overflow-auto rounded-xl border border-border bg-muted/40 p-2">
+      <div className="flex min-h-[460px] flex-1 items-center justify-center rounded-xl border border-border bg-muted/20 p-2">
         {renderingDocumento(false)}
       </div>
 
-      {/* Modal a schermo intero reale (apribile con il tasto Schermo intero) */}
       {fullscreen && (
-        <div className="fixed inset-0 z-[200] flex flex-col bg-background/95 p-4 backdrop-blur-sm sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">
-                Visualizzazione attestato ({lato.toUpperCase()})
-              </span>
-              {esitoAttuale?.nomeFile && (
-                <span className="font-mono text-xs text-muted-foreground">
-                  — {esitoAttuale.nomeFile}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {controlliBarra}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => setFullscreen(false)}
-                title="Chiudi schermo intero (Esc)"
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
+        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <span className="font-semibold text-foreground">
+              Visualizzazione documento ({lato})
+            </span>
+            {controlliBarra}
           </div>
-
-          <div className="relative flex flex-1 items-center justify-center overflow-auto p-4">
+          <div className="flex flex-1 items-center justify-center overflow-auto p-4">
             {renderingDocumento(true)}
           </div>
         </div>
