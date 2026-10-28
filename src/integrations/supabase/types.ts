@@ -247,14 +247,20 @@ export type Database = {
           codice_fiscale: string
           cognome: string
           created_at: string
+          data_assunzione: string | null
+          data_cessazione: string | null
+          data_fine_contratto: string | null
           data_nascita: string | null
           email: string | null
           id: string
           luogo_nascita: string | null
           materia: string | null
           nome: string
+          note_contratto: string | null
           reparto: string | null
           sottoreparto: string | null
+          stato_lavoratore: string
+          tipo_contratto: string
           updated_at: string
         }
         Insert: {
@@ -263,14 +269,20 @@ export type Database = {
           codice_fiscale: string
           cognome: string
           created_at?: string
+          data_assunzione?: string | null
+          data_cessazione?: string | null
+          data_fine_contratto?: string | null
           data_nascita?: string | null
           email?: string | null
           id?: string
           luogo_nascita?: string | null
           materia?: string | null
           nome: string
+          note_contratto?: string | null
           reparto?: string | null
           sottoreparto?: string | null
+          stato_lavoratore?: string
+          tipo_contratto?: string
           updated_at?: string
         }
         Update: {
@@ -279,14 +291,20 @@ export type Database = {
           codice_fiscale?: string
           cognome?: string
           created_at?: string
+          data_assunzione?: string | null
+          data_cessazione?: string | null
+          data_fine_contratto?: string | null
           data_nascita?: string | null
           email?: string | null
           id?: string
           luogo_nascita?: string | null
           materia?: string | null
           nome?: string
+          note_contratto?: string | null
           reparto?: string | null
           sottoreparto?: string | null
+          stato_lavoratore?: string
+          tipo_contratto?: string
           updated_at?: string
         }
         Relationships: []
