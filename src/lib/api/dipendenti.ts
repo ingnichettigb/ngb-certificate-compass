@@ -98,6 +98,10 @@ export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipen
     sottoreparto: d.sottoreparto?.trim() || null,
     classe_concorso: d.classe_concorso?.trim().toUpperCase() || null,
     materia: d.materia?.trim() || null,
+    ...(d.data_assunzione !== undefined && { data_assunzione: d.data_assunzione || null }),
+    ...(d.data_fine_contratto !== undefined && { data_fine_contratto: d.data_fine_contratto || null }),
+    ...(d.data_cessazione !== undefined && { data_cessazione: d.data_cessazione || null }),
+    ...(d.note_contratto !== undefined && { note_contratto: d.note_contratto?.trim() || null }),
   };
   const { data, error } = await sb
     .from("dipendenti")
