@@ -1,7 +1,10 @@
 /*
  * File:      CardPostazioneOperatore.tsx
  * Percorso:  src/features/home/components/CardPostazioneOperatore.tsx
- * Scheda della postazione operatore (lettura automatica con AI e archiviazione).
+ * Data creaz: 20/10/2026
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Scheda postazione operatore con OCR AI.
+ *   rev 2 — 28/10/2026 09:30 — Rinomina titolo in «Inserimento attestati».
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Bot, Sparkles } from "lucide-react";
@@ -16,13 +19,13 @@ export function CardPostazioneOperatore() {
         </span>
         <Button asChild>
           <Link to="/operatore">
-            Apri postazione
+            Apri inserimento
             <ArrowRight className="size-4" />
           </Link>
         </Button>
       </div>
 
-      <h2 className="mt-4 text-xl font-semibold">Postazione operatore</h2>
+      <h2 className="mt-4 text-xl font-semibold">Inserimento attestati</h2>
 
       <p className="mt-2 text-sm text-muted-foreground">
         Carica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza
@@ -38,7 +41,6 @@ export function CardPostazioneOperatore() {
           Estrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.
         </p>
       </div>
-
     </article>
   );
 }
