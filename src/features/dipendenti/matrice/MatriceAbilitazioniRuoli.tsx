@@ -4,13 +4,14 @@
  * Data creazione: 2026-10-28
  * Revisioni:
  *   - Rev 1 (2026-10-28 20:35): Prima stesura matrice di sicurezza.
- *   - Rev 2 (2026-10-28 20:50): Ordinamento crescente/decrescente ed esportazione CSV.
- *   - Rev 3 (2026-10-28 21:05): Correzione ridimensionamento reale con tableLayout: fixed,
- *     colgroup dedicato e ridefinizione concettuale a "Fabbisogno Formativo e Aggiornamenti".
+ *   - Rev 2 (2026-10-28 20:50): Ordinamento clic crescente/decrescente ed export CSV.
+ *   - Rev 3 (2026-10-28 21:05): Tabella fixed con colgroup e logica fabbisogno formativo.
+ *   - Rev 4 (2026-10-28 21:15): Colonne dinamiche lette dal DB (tipi_corso), wrap a capo del testo
+ *     quando si stringe la colonna, spunta in alto a destra per nascondere e spunta master in cella A1.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowUpDown,
@@ -23,6 +24,7 @@ import {
   Users,
   X,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,45 +34,20 @@ import {
   type RuoloSicurezza,
   type AssegnazioneRuolo,
   type Attestato,
+  type TipoCorso,
+  getTipiCorso,
   impostaRuoloDipendente,
   aggiungiRuolo,
 } from "@/lib/api";
 
-export interface ColonnaFormazione {
-  id: string;
-  titolo: string;
-  ruoloNome: string;
-  chiaveCorso: string;
-}
+type TipoOrdinamento = "asc" | "desc" | null;
 
-export const COLONNE_FORMAZIONE: ColonnaFormazione[] = [
-  { id: "gen", titolo: "Formazione Generale", ruoloNome: "Lavoratore", chiaveCorso: "Generale" },
-  { id: "spe", titolo: "Formazione Specifica", ruoloNome: "Formazione Specifica", chiaveCorso: "Specifica" },
-  { id: "ant", titolo: "Antincendio", ruoloNome: "Addetto Antincendio", chiaveCorso: "Antincendio" },
-  { id: "pso", titolo: "Primo Soccorso", ruoloNome: "Addetto Primo Soccorso", chiaveCorso: "Primo Soccorso" },
-  { id: "pre", titolo: "Preposti", ruoloNome: "Preposto", chiaveCorso: "Preposto" },
-  { id: "eva", titolo: "Evacuazione", ruoloNome: "Addetto Evacuazione", chiaveCorso: "Evacuazione" },
-  { id: "bls", titolo: "Defibrillatore", ruoloNome: "Addetto BLSD / Defibrillatore", chiaveCorso: "Defibrillatore" },
-  { id: "rls", titolo: "RLS", ruoloNome: "RLS", chiaveCorso: "RLS" },
-  { id: "asp", titolo: "ASPP", ruoloNome: "ASPP", chiaveCorso: "ASPP" },
-];
-
-const LARGHEZZE_BASE: Record<string, number> = {
+const LARGHEZZA_BASE_CORSO = 130;
+const LARGHEZZE_FISSE_BASE: Record<string, number> = {
   nome: 240,
   funzione: 180,
   ruolo: 160,
-  gen: 130,
-  spe: 130,
-  ant: 115,
-  pso: 115,
-  pre: 115,
-  eva: 115,
-  bls: 115,
-  rls: 115,
-  asp: 115,
 };
-
-type TipoOrdinamento = "asc" | "desc" | null;
 
 export function MatriceAbilitazioniRuoli({
   open,
@@ -92,31 +69,53 @@ export function MatriceAbilitazioniRuoli({
   const [rigaSelezionata, setRigaSelezionata] = useState<string | null>(null);
   const [inSalvataggio, setInSalvataggio] = useState<string | null>(null);
 
+  // 1. Carica dinamica dei corsi dal Database
+  const { data: corsiDb = [], isLoading: caricandoCorsi } = useQuery<TipoCorso[]>({
+    queryKey: ["tipi-corso"],
+    queryFn: getTipiCorso,
+  });
+
   const [colonnaOrd, setColonnaOrd] = useState<string>("nome");
   const [versoOrd, setVersoOrd] = useState<TipoOrdinamento>("asc");
 
-  const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
+  // 2. Colonne nascoste con memoria in localStorage
+  const [colonneNascoste, setColonneNascoste] = useState<Set<string>>(() => {
     try {
-      const salvate = localStorage.getItem("matrice_colonne_larghezze_v2");
-      return salvate ? { ...LARGHEZZE_BASE, ...JSON.parse(salvate) } : LARGHEZZE_BASE;
+      const salvate = localStorage.getItem("matrice_colonne_nascoste_v1");
+      return salvate ? new Set(JSON.parse(salvate)) : new Set<string>();
     } catch {
-      return LARGHEZZE_BASE;
+      return new Set<string>();
     }
   });
 
-  const dragRef = useRef<{ id: string; startX: number; startW: number } | null>(null);
+  useEffect(() => {
+    try {
+      localStorage.setItem("matrice_colonne_nascoste_v1", JSON.stringify([...colonneNascoste]));
+    } catch {}
+  }, [colonneNascoste]);
+
+  // 3. Larghezze colonne con memoria in localStorage
+  const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
+    try {
+      const salvate = localStorage.getItem("matrice_colonne_larghezze_v3");
+      return salvate ? { ...LARGHEZZE_FISSE_BASE, ...JSON.parse(salvate) } : LARGHEZZE_FISSE_BASE;
+    } catch {
+      return LARGHEZZE_FISSE_BASE;
+    }
+  });
 
   useEffect(() => {
     try {
-      localStorage.setItem("matrice_colonne_larghezze_v2", JSON.stringify(larghezze));
+      localStorage.setItem("matrice_colonne_larghezze_v3", JSON.stringify(larghezze));
     } catch {}
   }, [larghezze]);
 
-  // Ridimensionamento effettivo con calcolo larghezza fissa e blocco selezione testo
-  function iniziaResize(id: string, e: React.MouseEvent) {
+  const dragRef = useRef<{ id: string; startX: number; startW: number } | null>(null);
+
+  function iniziaResize(id: string, larghezzaIniziale: number, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    dragRef.current = { id, startX: e.clientX, startW: larghezze[id] || LARGHEZZE_BASE[id] || 120 };
+    dragRef.current = { id, startX: e.clientX, startW: larghezzaIniziale };
 
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
@@ -141,38 +140,66 @@ export function MatriceAbilitazioniRuoli({
   }
 
   function resetLarghezza(id: string) {
-    setLarghezze((prev) => ({ ...prev, [id]: LARGHEZZE_BASE[id] || 120 }));
+    setLarghezze((prev) => ({ ...prev, [id]: LARGHEZZE_FISSE_BASE[id] || LARGHEZZA_BASE_CORSO }));
   }
 
-  const larghezzaTotale = useMemo(() => {
-    return (
-      (larghezze.nome || LARGHEZZE_BASE.nome) +
-      (larghezze.funzione || LARGHEZZE_BASE.funzione) +
-      (larghezze.ruolo || LARGHEZZE_BASE.ruolo) +
-      COLONNE_FORMAZIONE.reduce((acc, c) => acc + (larghezze[c.id] || LARGHEZZE_BASE[c.id] || 115), 0)
-    );
-  }, [larghezze]);
+  // Corsi attualmente visibili
+  const corsiVisibili = useMemo(() => {
+    return corsiDb.filter((c) => !colonneNascoste.has(c.id));
+  }, [corsiDb, colonneNascoste]);
 
+  // Gestione visibilità colonne singole e master A1
+  function toggleVisibilitaColonna(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setColonneNascoste((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleMostraTutteA1() {
+    if (colonneNascoste.size > 0) {
+      setColonneNascoste(new Set());
+      toast.success("Tutte le colonne sono ora visibili");
+    } else {
+      toast.info("Tutte le colonne sono già visibili");
+    }
+  }
+
+  // Calcolo larghezza complessiva tabella
+  const larghezzaTotale = useMemo(() => {
+    const fisse =
+      (larghezze.nome || LARGHEZZE_FISSE_BASE.nome) +
+      (larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione) +
+      (larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo);
+    const corsi = corsiVisibili.reduce((acc, c) => acc + (larghezze[c.id] || LARGHEZZA_BASE_CORSO), 0);
+    return fisse + corsi;
+  }, [larghezze, corsiVisibili]);
+
+  // Mappa ruoli catalogo
   const mappaRuoli = useMemo(() => {
     const map = new Map<string, RuoloSicurezza>();
     ruoliCatalogo.forEach((r) => map.set(r.nome.toLowerCase().trim(), r));
     return map;
   }, [ruoliCatalogo]);
 
-  const haObbligo = (dipendenteId: string, colonna: ColonnaFormazione): boolean => {
-    const ruoloTrovato = mappaRuoli.get(colonna.ruoloNome.toLowerCase().trim());
+  const haObbligoCorso = (dipendenteId: string, corso: TipoCorso): boolean => {
+    const ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
     if (!ruoloTrovato) return false;
     if (ruoloTrovato.obbligatorio_tutti) return true;
     return assegnazioni.some((a) => a.dipendente_id === dipendenteId && a.ruolo_id === ruoloTrovato.id);
   };
 
-  const haAttestatoValido = (dipendenteId: string, colonna: ColonnaFormazione): boolean => {
-    return attestati.some(
-      (att) =>
-        att.dipendente_id === dipendenteId &&
-        att.tipo &&
-        att.tipo.toLowerCase().includes(colonna.chiaveCorso.toLowerCase()),
-    );
+  const haAttestatoCorso = (dipendenteId: string, corso: TipoCorso): boolean => {
+    const cNome = corso.nome_corso.toLowerCase();
+    const cCod = (corso.codice || "").toLowerCase();
+    return attestati.some((att) => {
+      if (att.dipendente_id !== dipendenteId || !att.tipo) return false;
+      const t = att.tipo.toLowerCase();
+      return (cCod && t.includes(cCod)) || t.includes(cNome);
+    });
   };
 
   function handleOrdina(id: string) {
@@ -202,46 +229,40 @@ export function MatriceAbilitazioniRuoli({
     return [...res].sort((a, b) => {
       let comp = 0;
       if (colonnaOrd === "nome") {
-        const na = `${a.cognome || ""} ${a.nome || ""}`.toLowerCase();
-        const nb = `${b.cognome || ""} ${b.nome || ""}`.toLowerCase();
-        comp = na.localeCompare(nb);
+        comp = `${a.cognome || ""} ${a.nome || ""}`.localeCompare(`${b.cognome || ""} ${b.nome || ""}`);
       } else if (colonnaOrd === "funzione") {
-        const fa = (a.reparto || "").toLowerCase();
-        const fb = (b.reparto || "").toLowerCase();
-        comp = fa.localeCompare(fb);
+        comp = (a.reparto || "").localeCompare(b.reparto || "");
       } else if (colonnaOrd === "ruolo") {
-        const ra = (a.classe_concorso || "").toLowerCase();
-        const rb = (b.classe_concorso || "").toLowerCase();
-        comp = ra.localeCompare(rb);
+        comp = (a.classe_concorso || "").localeCompare(b.classe_concorso || "");
       } else {
-        const col = COLONNE_FORMAZIONE.find((c) => c.id === colonnaOrd);
-        if (col) {
-          const vA = haObbligo(a.id, col) ? 1 : 0;
-          const vB = haObbligo(b.id, col) ? 1 : 0;
+        const corso = corsiDb.find((c) => c.id === colonnaOrd);
+        if (corso) {
+          const vA = haObbligoCorso(a.id, corso) ? 1 : 0;
+          const vB = haObbligoCorso(b.id, corso) ? 1 : 0;
           comp = vA - vB;
         }
       }
       return versoOrd === "desc" ? -comp : comp;
     });
-  }, [dipendenti, ricerca, colonnaOrd, versoOrd, mappaRuoli, assegnazioni]);
+  }, [dipendenti, ricerca, colonnaOrd, versoOrd, corsiDb, mappaRuoli, assegnazioni]);
 
-  async function toggleObbligo(dipendente: Dipendente, colonna: ColonnaFormazione, e: React.MouseEvent) {
+  async function toggleObbligo(dipendente: Dipendente, corso: TipoCorso, e: React.MouseEvent) {
     e.stopPropagation();
-    const chiaveOp = `${dipendente.id}-${colonna.id}`;
+    const chiaveOp = `${dipendente.id}-${corso.id}`;
     if (inSalvataggio === chiaveOp) return;
 
-    let ruoloTrovato = mappaRuoli.get(colonna.ruoloNome.toLowerCase().trim());
+    let ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
     if (!ruoloTrovato) {
       try {
         setInSalvataggio(chiaveOp);
         await aggiungiRuolo({
-          nome: colonna.ruoloNome,
-          macro_categoria: colonna.titolo,
+          nome: corso.nome_corso,
+          macro_categoria: corso.macro_categoria || "Corsi",
           obbligatorio_tutti: false,
           ordine: ruoliCatalogo.length + 1,
         });
         await qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] });
-        ruoloTrovato = mappaRuoli.get(colonna.ruoloNome.toLowerCase().trim());
+        ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
       } catch (err) {
         toast.error("Errore inizializzazione corso", { description: (err as Error).message });
         setInSalvataggio(null);
@@ -251,15 +272,15 @@ export function MatriceAbilitazioniRuoli({
 
     if (!ruoloTrovato || ruoloTrovato.obbligatorio_tutti) return;
 
-    const giaObbligato = haObbligo(dipendente.id, colonna);
+    const giaObbligato = haObbligoCorso(dipendente.id, corso);
     setInSalvataggio(chiaveOp);
     try {
       await impostaRuoloDipendente(dipendente.id, ruoloTrovato.id, !giaObbligato);
       await qc.invalidateQueries({ queryKey: ["dipendenti-ruoli"] });
       toast.success(
         !giaObbligato
-          ? `Obbligo aggiunto: ${colonna.titolo} per ${dipendente.cognome} ${dipendente.nome}`
-          : `Obbligo rimosso: ${colonna.titolo} per ${dipendente.cognome} ${dipendente.nome}`,
+          ? `Obbligo aggiunto: ${corso.nome_corso} per ${dipendente.cognome} ${dipendente.nome}`
+          : `Obbligo rimosso: ${corso.nome_corso} per ${dipendente.cognome} ${dipendente.nome}`,
       );
     } catch (err) {
       toast.error("Errore salvataggio", { description: (err as Error).message });
@@ -269,20 +290,20 @@ export function MatriceAbilitazioniRuoli({
   }
 
   function esportaCsv() {
-    const separatore = ";";
+    const sep = ";";
     const intestazioni = [
       "Cognome e Nome",
       "Codice Fiscale",
       "Funzione / Reparto",
       "Ruolo Aziendale",
-      ...COLONNE_FORMAZIONE.map((c) => c.titolo),
+      ...corsiVisibili.map((c) => `${c.codice ? `[${c.codice}] ` : ""}${c.nome_corso}`),
     ];
 
     const righe = listaElaborata.map((d) => {
       const fn = [d.reparto, d.sottoreparto, d.materia].filter(Boolean).join(" - ") || "";
-      const corsi = COLONNE_FORMAZIONE.map((c) => {
-        const ob = haObbligo(d.id, c);
-        const at = haAttestatoValido(d.id, c);
+      const corsiVal = corsiVisibili.map((c) => {
+        const ob = haObbligoCorso(d.id, c);
+        const at = haAttestatoCorso(d.id, c);
         if (ob && at) return "OBBLIGATORIO (REGOLARE)";
         if (ob && !at) return "OBBLIGATORIO (DA FORMARE)";
         return "NON PREVISTO";
@@ -292,11 +313,11 @@ export function MatriceAbilitazioniRuoli({
         `"${d.codice_fiscale || ""}"`,
         `"${fn.replace(/"/g, '""')}"`,
         `"${(d.classe_concorso || "Lavoratore").replace(/"/g, '""')}"`,
-        ...corsi,
-      ].join(separatore);
+        ...corsiVal,
+      ].join(sep);
     });
 
-    const csvContent = "\uFEFF" + [intestazioni.join(separatore), ...righe].join("\r\n");
+    const csvContent = "\uFEFF" + [intestazioni.join(sep), ...righe].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -310,17 +331,19 @@ export function MatriceAbilitazioniRuoli({
   if (!open) return null;
 
   function renderFreccia(id: string) {
-    if (colonnaOrd !== id) return <ArrowUpDown className="size-3 opacity-30 group-hover:opacity-100" />;
+    if (colonnaOrd !== id) return <ArrowUpDown className="size-3 opacity-30 group-hover:opacity-100 shrink-0" />;
     return versoOrd === "asc" ? (
-      <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400" />
+      <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
     ) : (
-      <ArrowDown className="size-3 text-emerald-600 dark:text-emerald-400" />
+      <ArrowDown className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
     );
   }
 
+  const tutteVisibili = colonneNascoste.size === 0;
+
   return createPortal(
     <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col bg-background text-foreground">
-      {/* Testata */}
+      {/* Testata Superiore */}
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={onChiudi} className="gap-1.5">
@@ -333,13 +356,20 @@ export function MatriceAbilitazioniRuoli({
             <div>
               <h1 className="text-base font-bold leading-tight">Piano Fabbisogno Formativo e Ruoli</h1>
               <p className="text-xs text-muted-foreground">
-                {listaElaborata.length} di {dipendenti.length} lavoratori • Spunta i corsi e aggiornamenti obbligatori
+                {listaElaborata.length} di {dipendenti.length} lavoratori • {corsiVisibili.length} corsi visualizzati
+                {colonneNascoste.size > 0 && ` (${colonneNascoste.size} nascosti)`}
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {colonneNascoste.size > 0 && (
+            <Button variant="outline" size="sm" onClick={toggleMostraTutteA1} className="gap-1.5 text-xs">
+              <Eye className="size-3.5" /> Mostra tutte ({corsiDb.length})
+            </Button>
+          )}
+
           <div className="relative w-64 md:w-80">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -365,7 +395,7 @@ export function MatriceAbilitazioniRuoli({
         </div>
       </header>
 
-      {/* Contenitore con larghezza totale calcolata e scorrimento fluido */}
+      {/* Area Tabella con scorrimento orizzontale in fondo */}
       <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
         <table
           className="border-collapse text-left text-sm"
@@ -374,37 +404,52 @@ export function MatriceAbilitazioniRuoli({
             width: `${larghezzaTotale}px`,
           }}
         >
-          {/* Definizione fissa delle larghezze colonna per ridimensionamento reale */}
           <colgroup>
-            <col style={{ width: `${larghezze.nome || LARGHEZZE_BASE.nome}px` }} />
-            <col style={{ width: `${larghezze.funzione || LARGHEZZE_BASE.funzione}px` }} />
-            <col style={{ width: `${larghezze.ruolo || LARGHEZZE_BASE.ruolo}px` }} />
-            {COLONNE_FORMAZIONE.map((c) => (
-              <col key={c.id} style={{ width: `${larghezze[c.id] || LARGHEZZE_BASE[c.id]}px` }} />
+            <col style={{ width: `${larghezze.nome || LARGHEZZE_FISSE_BASE.nome}px` }} />
+            <col style={{ width: `${larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione}px` }} />
+            <col style={{ width: `${larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo}px` }} />
+            {corsiVisibili.map((c) => (
+              <col key={c.id} style={{ width: `${larghezze[c.id] || LARGHEZZA_BASE_CORSO}px` }} />
             ))}
           </colgroup>
 
           <thead className="sticky top-0 z-20 border-b border-border bg-surface shadow-sm select-none">
             <tr className="divide-x divide-border">
-              {/* Cognome e Nome */}
-              <th className="group relative sticky left-0 z-30 bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-1"
-                  onClick={() => handleOrdina("nome")}
-                >
-                  <span className="truncate">Cognome e Nome</span>
-                  {renderFreccia("nome")}
+              {/* CELLA A1: COGNOME E NOME CON SPUNTA MASTER PER MOSTRARE TUTTO */}
+              <th className="group relative sticky left-0 z-30 bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground shadow-[2px_0_5px_rgba(0,0,0,0.05)] align-top">
+                <div className="flex items-start justify-between gap-2">
+                  <div
+                    className="flex flex-1 cursor-pointer items-center justify-between gap-1"
+                    onClick={() => handleOrdina("nome")}
+                  >
+                    <span className="truncate">Cognome e Nome</span>
+                    {renderFreccia("nome")}
+                  </div>
+
+                  {/* SPUNTA MASTER CELLA A1 */}
+                  <input
+                    type="checkbox"
+                    checked={tutteVisibili}
+                    onChange={toggleMostraTutteA1}
+                    className="size-4 cursor-pointer rounded accent-emerald-600 mt-0.5"
+                    title={
+                      tutteVisibili
+                        ? "Tutte le colonne dei corsi sono visibili"
+                        : "Clicca per mostrare tutte le colonne nascoste"
+                    }
+                  />
                 </div>
+
                 <div
-                  onMouseDown={(e) => iniziaResize("nome", e)}
+                  onMouseDown={(e) => iniziaResize("nome", larghezze.nome || LARGHEZZE_FISSE_BASE.nome, e)}
                   onDoubleClick={() => resetLarghezza("nome")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per allargare/stringere (doppio clic per ripristinare)"
+                  title="Trascina per ridimensionare (doppio clic per ripristinare)"
                 />
               </th>
 
-              {/* Funzione / Reparto */}
-              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {/* FUNZIONE / REPARTO */}
+              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground align-top">
                 <div
                   className="flex cursor-pointer items-center justify-between gap-1"
                   onClick={() => handleOrdina("funzione")}
@@ -413,15 +458,15 @@ export function MatriceAbilitazioniRuoli({
                   {renderFreccia("funzione")}
                 </div>
                 <div
-                  onMouseDown={(e) => iniziaResize("funzione", e)}
+                  onMouseDown={(e) => iniziaResize("funzione", larghezze.funzione || LARGHEZZE_FISSE_BASE.funzione, e)}
                   onDoubleClick={() => resetLarghezza("funzione")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per allargare/stringere"
+                  title="Trascina per ridimensionare"
                 />
               </th>
 
-              {/* Ruolo Aziendale */}
-              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {/* RUOLO AZIENDALE */}
+              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground align-top">
                 <div
                   className="flex cursor-pointer items-center justify-between gap-1"
                   onClick={() => handleOrdina("ruolo")}
@@ -430,38 +475,59 @@ export function MatriceAbilitazioniRuoli({
                   {renderFreccia("ruolo")}
                 </div>
                 <div
-                  onMouseDown={(e) => iniziaResize("ruolo", e)}
+                  onMouseDown={(e) => iniziaResize("ruolo", larghezze.ruolo || LARGHEZZE_FISSE_BASE.ruolo, e)}
                   onDoubleClick={() => resetLarghezza("ruolo")}
                   className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per allargare/stringere"
+                  title="Trascina per ridimensionare"
                 />
               </th>
 
-              {/* Colonne Formazione e Aggiornamenti */}
-              {COLONNE_FORMAZIONE.map((col) => {
-                const conObbligo = dipendenti.filter((d) => haObbligo(d.id, col)).length;
+              {/* COLONNE CORSI DINAMICHE DAL DATABASE */}
+              {corsiVisibili.map((c) => {
+                const conObbligo = dipendenti.filter((d) => haObbligoCorso(d.id, c)).length;
+                const larghCol = larghezze[c.id] || LARGHEZZA_BASE_CORSO;
+
                 return (
                   <th
-                    key={col.id}
-                    className="group relative bg-surface px-2 py-2.5 text-center text-xs font-bold tracking-tight text-foreground"
+                    key={c.id}
+                    className="group relative bg-surface px-2 py-2 text-center text-xs font-bold tracking-tight text-foreground align-top"
                   >
-                    <div
-                      className="flex cursor-pointer flex-col items-center justify-center gap-0.5"
-                      onClick={() => handleOrdina(col.id)}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="truncate font-semibold">{col.titolo}</span>
-                        {renderFreccia(col.id)}
-                      </div>
+                    {/* Spunta in alto a destra per nascondere la colonna */}
+                    <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-normal text-muted-foreground">
-                        {conObbligo} obbligati
+                        {conObbligo} obbl.
                       </span>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => {}}
+                        onClick={(e) => toggleVisibilitaColonna(c.id, e)}
+                        className="size-3.5 cursor-pointer rounded accent-emerald-600"
+                        title="Togli la spunta per nascondere questa colonna"
+                      />
                     </div>
+
+                    {/* Testo dell'intestazione con WORD-WRAP dinamico se si stringe */}
                     <div
-                      onMouseDown={(e) => iniziaResize(col.id, e)}
-                      onDoubleClick={() => resetLarghezza(col.id)}
+                      className="flex cursor-pointer flex-col items-center justify-center gap-0.5 text-center whitespace-normal break-words leading-tight"
+                      onClick={() => handleOrdina(c.id)}
+                    >
+                      {c.codice && (
+                        <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {c.codice}
+                        </span>
+                      )}
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="font-semibold text-xs leading-tight">{c.nome_corso}</span>
+                        {renderFreccia(c.id)}
+                      </div>
+                    </div>
+
+                    <div
+                      onMouseDown={(e) => iniziaResize(c.id, larghCol, e)}
+                      onDoubleClick={() => resetLarghezza(c.id)}
                       className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                      title="Trascina per allargare/stringere"
+                      title="Trascina per allargare o stringere"
                     />
                   </th>
                 );
@@ -472,7 +538,7 @@ export function MatriceAbilitazioniRuoli({
           <tbody className="divide-y divide-border">
             {listaElaborata.length === 0 ? (
               <tr>
-                <td colSpan={3 + COLONNE_FORMAZIONE.length} className="p-12 text-center text-muted-foreground">
+                <td colSpan={3 + corsiVisibili.length} className="p-12 text-center text-muted-foreground">
                   Nessun lavoratore corrisponde ai criteri di ricerca.
                 </td>
               </tr>
@@ -515,17 +581,18 @@ export function MatriceAbilitazioniRuoli({
                       </span>
                     </td>
 
-                    {COLONNE_FORMAZIONE.map((col) => {
-                      const obbligato = haObbligo(dip.id, col);
-                      const haAttestato = haAttestatoValido(dip.id, col);
-                      const chiaveOp = `${dip.id}-${col.id}`;
+                    {/* Caselle di spunta corsi dal DB */}
+                    {corsiVisibili.map((c) => {
+                      const obbligato = haObbligoCorso(dip.id, c);
+                      const haAttestato = haAttestatoCorso(dip.id, c);
+                      const chiaveOp = `${dip.id}-${c.id}`;
                       const isBusy = inSalvataggio === chiaveOp;
 
                       return (
                         <td
-                          key={col.id}
+                          key={c.id}
                           className="px-2 py-2 text-center"
-                          onClick={(e) => toggleObbligo(dip, col, e)}
+                          onClick={(e) => toggleObbligo(dip, c, e)}
                         >
                           <div className="flex items-center justify-center gap-1.5">
                             {isBusy ? (
@@ -538,20 +605,19 @@ export function MatriceAbilitazioniRuoli({
                                 className="size-4 cursor-pointer rounded accent-emerald-600"
                                 title={
                                   obbligato
-                                    ? "Obbligo formativo assegnato (clicca per rimuovere)"
-                                    : "Clicca per assegnare l'obbligo di questo corso"
+                                    ? "Corso obbligatorio (clicca per rimuovere l'obbligo)"
+                                    : "Clicca per rendere obbligatorio questo corso"
                                 }
                               />
                             )}
 
-                            {/* Stato dell'attestato rispetto all'obbligo */}
                             {obbligato && haAttestato && (
                               <span title="Regolare: corso svolto con attestato valido">
                                 <FileCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                               </span>
                             )}
                             {obbligato && !haAttestato && (
-                              <span title="Attenzione: corso obbligatorio ma attestato non ancora registrato">
+                              <span title="Obbligatorio ma attestato non registrato (da formare)">
                                 <AlertCircle className="size-3.5 text-amber-500" />
                               </span>
                             )}
@@ -567,19 +633,19 @@ export function MatriceAbilitazioniRuoli({
         </table>
       </div>
 
-      {/* Didascalia */}
+      {/* Didascalia inferiore */}
       <footer className="flex shrink-0 items-center justify-between border-t border-border bg-surface px-6 py-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="size-3 rounded border border-emerald-600 bg-emerald-600" /> Obbligo formazione assegnato
+            <span className="size-3 rounded border border-emerald-600 bg-emerald-600" /> Obbligo assegnato
           </span>
           <span className="flex items-center gap-1.5">
-            <FileCheck className="size-3.5 text-emerald-600" /> Attestato valido presente (In regola)
+            <FileCheck className="size-3.5 text-emerald-600" /> In regola (attestato valido)
           </span>
           <span className="flex items-center gap-1.5">
-            <AlertCircle className="size-3.5 text-amber-500" /> Obbligatorio ma da formare
+            <AlertCircle className="size-3.5 text-amber-500" /> Da formare
           </span>
-          <span>Trascina i divisori per regolare la larghezza</span>
+          <span>Spunta in A1 per mostrare tutte • Spunta su colonna per nascondere</span>
         </div>
         <div>
           Totale lavoratori: <strong>{dipendenti.length}</strong>
