@@ -5,9 +5,10 @@
  * Revisioni:
  *   - Rev 1 (2026-10-22 10:00): Creazione pulsanti Approva, Respingi e reinvio email di esito.
  *   - Rev 2 (2026-10-28 11:35): Aggiunto pulsante «Scollega link errato» accanto ad Approva e Respingi.
+ *   - Rev 3 (2026-10-28 11:50): Aggiunto pulsante «Approva in attesa di integrazione».
  */
 import { toast } from "sonner";
-import { Loader2, Check, X, Mail, Unlink } from "lucide-react";
+import { Loader2, Check, X, Mail, Unlink, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apriEmailEsito, type Attestato, type Stato } from "@/lib/api";
 
@@ -19,6 +20,7 @@ export function AzioniValidazione({
   setMostraNote,
   onDecidi,
   onScollegaLink,
+  onApriIntegrazione,
 }: {
   attestato: Attestato;
   busy: boolean;
@@ -27,6 +29,7 @@ export function AzioniValidazione({
   setMostraNote: (v: boolean) => void;
   onDecidi: (esito: Stato) => void;
   onScollegaLink?: () => void;
+  onApriIntegrazione?: () => void;
 }) {
   const haDocumento = Boolean(attestato.url_foto_fronte?.trim() || attestato.url_foto_retro?.trim());
 
@@ -36,6 +39,20 @@ export function AzioniValidazione({
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
         Approva
       </Button>
+
+      {onApriIntegrazione && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={onApriIntegrazione}
+          className="border-amber-500/60 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 dark:text-amber-300"
+          title="Approva con riserva: serve il corso integrativo SIC-SPI-04"
+        >
+          <Clock className="size-4" />
+          Approva in attesa di integrazione
+        </Button>
+      )}
 
       <Button
         variant="destructive"
