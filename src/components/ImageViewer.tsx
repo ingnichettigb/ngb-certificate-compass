@@ -7,6 +7,7 @@
  *   - Rev 2 (2026-10-28 10:00): Supporto completo a file PDF, risoluzione cartelle collegate e permessi.
  *   - Rev 3 (2026-10-28 14:10): Rotazione reale via canvas per evitare restringimenti e vuoti laterali,
  *     adattamento geometrico 90°/270° e nuova modalità visualizzazione a schermo intero.
+ *   - Rev 4 (2026-10-28 14:20): Nome del tipo di risoluzione corretto in RisoluzioneDocumento (export reale del modulo).
  */
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -27,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   risolviDocumentoAttestato,
-  type EsitoRisoluzioneDocumento,
+  type RisoluzioneDocumento,
   elencoCartelle,
   aggiungiCartella,
   verificaPermessi,
@@ -42,8 +43,8 @@ export function ImageViewer({
   fronte: string | null;
   retro: string | null;
 }) {
-  const [esitoFronte, setEsitoFronte] = useState<EsitoRisoluzioneDocumento | null>(null);
-  const [esitoRetro, setEsitoRetro] = useState<EsitoRisoluzioneDocumento | null>(null);
+  const [esitoFronte, setEsitoFronte] = useState<RisoluzioneDocumento | null>(null);
+  const [esitoRetro, setEsitoRetro] = useState<RisoluzioneDocumento | null>(null);
   const [inCaricamento, setInCaricamento] = useState(true);
   const [lato, setLato] = useState<"fronte" | "retro">("fronte");
   const [zoom, setZoom] = useState(1);

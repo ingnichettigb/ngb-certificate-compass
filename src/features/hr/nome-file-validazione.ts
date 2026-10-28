@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-28 14:15): Generatore nome file per rinomina e archiviazione
  *     secondo la convenzione: CODICE_CORSO-COGNOME-NOME-TIPO_DI_CORSO-ORE-CF.pdf
+ *   - Rev 2 (2026-10-28 14:17): Campi reali del catalogo corsi (nome_corso, ore_minime_legge).
  */
 import type { Attestato, TipoCorso } from "@/lib/api";
 
@@ -34,7 +35,7 @@ export function generaNomeFileRinominato(
 
   // 4. Tipo di corso / descrizione (es. Formazione_Generale_Lavoratori)
   const tipoCorso = pulisciStringa(
-    corsoSelezionato?.nome || attestato.tipi_corso?.nome,
+    corsoSelezionato?.nome_corso || attestato.tipi_corso?.nome_corso,
     "TIPO_CORSO",
   );
 
@@ -42,8 +43,8 @@ export function generaNomeFileRinominato(
   const oreVal =
     oreDichiarate != null && String(oreDichiarate).trim() !== ""
       ? String(oreDichiarate).trim()
-      : corsoSelezionato?.ore != null
-        ? String(corsoSelezionato.ore)
+      : corsoSelezionato?.ore_minime_legge != null
+        ? String(corsoSelezionato.ore_minime_legge)
         : attestato.ore_dichiarate != null
           ? String(attestato.ore_dichiarate)
           : "0";
