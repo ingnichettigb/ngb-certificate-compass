@@ -7,9 +7,10 @@
  *   - Rev 2 (2026-10-28 11:35): Aggiunto pulsante «Scollega link errato» accanto ad Approva e Respingi.
  *   - Rev 3 (2026-10-28 11:50): Aggiunto pulsante «Approva in attesa di integrazione».
  *   - Rev 4 (2026-10-28 14:15): Aggiunto pulsante «Approva e rinomina file» nella cartella di origine.
+ *   - Rev 5 (2026-10-29 13:25): Pulsante «Sdoppia corso cumulativo» a due passaggi con informativa e annullamento.
  */
 import { toast } from "sonner";
-import { Loader2, Check, X, Mail, Unlink, Clock, FileEdit } from "lucide-react";
+import { Loader2, Check, X, Mail, Unlink, Clock, FileEdit, Copy, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apriEmailEsito, type Attestato, type Stato } from "@/lib/api";
 
@@ -23,6 +24,9 @@ export function AzioniValidazione({
   onApprovaERinomina,
   onScollegaLink,
   onApriIntegrazione,
+  onSdoppia,
+  onAnnullaSdoppia,
+  faseSdoppia = false,
 }: {
   attestato: Attestato;
   busy: boolean;
@@ -33,6 +37,9 @@ export function AzioniValidazione({
   onApprovaERinomina?: () => void;
   onScollegaLink?: () => void;
   onApriIntegrazione?: () => void;
+  onSdoppia?: () => void;
+  onAnnullaSdoppia?: () => void;
+  faseSdoppia?: boolean;
 }) {
   const haDocumento = Boolean(attestato.url_foto_fronte?.trim() || attestato.url_foto_retro?.trim());
 
@@ -54,6 +61,39 @@ export function AzioniValidazione({
           {busy ? <Loader2 className="size-4 animate-spin" /> : <FileEdit className="size-4" />}
           Approva e rinomina file
         </Button>
+      )}
+
+      {haDocumento && onSdoppia && (
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={onSdoppia}
+          title={
+            faseSdoppia
+              ? "Rinomina il PDF originale con i dati del 2° corso e approva"
+              : "Salva una copia del PDF nella stessa cartella con i dati del 1° corso e la archivia"
+          }
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : faseSdoppia ? <CheckCheck className="size-4" /> : <Copy className="size-4" />}
+          {faseSdoppia ? "Completa 2° corso e rinomina PDF" : "Sdoppia corso cumulativo"}
+        </Button>
+      )}
+
+      {faseSdoppia && onAnnullaSdoppia && (
+        <Button type="button" variant="outline" disabled={busy} onClick={onAnnullaSdoppia}>
+          Annulla 2° passaggio
+        </Button>
+      )}
+
+      {faseSdoppia && (
+        <div className="basis-full rounded-lg border-2 border-primary bg-primary/10 p-3 text-sm text-foreground">
+          <p className="font-semibold">1° corso archiviato con la copia del PDF nella stessa cartella.</p>
+          <p className="mt-1">
+            Ora modifica sopra <b>tipo corso</b>, <b>data</b> e <b>ore</b> con i dati del 2° corso (es. formazione
+            specifica), poi clicca <b>«Completa 2° corso e rinomina PDF»</b>: il file originale verrà rinominato
+            con i nuovi dati e l'attestato approvato.
+          </p>
+        </div>
       )}
 
       {onApriIntegrazione && (
