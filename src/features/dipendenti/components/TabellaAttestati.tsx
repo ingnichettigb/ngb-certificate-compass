@@ -9,6 +9,7 @@
  *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
  *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic.
  *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
+ *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR (prefisso radice e ricerca per nome).
  */
 import { useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -37,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apriDaPercorsoInTutte } from "@/lib/api/cartelle-multiple";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export function TabellaAttestati({
   righe,
