@@ -262,6 +262,9 @@ export function useDecisioneAttestato({
     busy,
     decidi,
     approvaERinomina,
+    sdoppiaCorso,
+    faseSdoppia,
+    annullaSdoppia: () => setFaseSdoppia(false),
     confermaIntegrazione,
     scollegaLink,
   };
