@@ -36,7 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { apriDaPercorsoInTutte } from "@/lib/api/cartelle-multiple";
+import { risolviDocumentoAttestato } from "@/lib/api/cartelle-multiple";
 import { toast } from "sonner";
 
 export function TabellaAttestati({
