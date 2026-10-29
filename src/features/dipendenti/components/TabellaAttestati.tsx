@@ -60,21 +60,21 @@ export function TabellaAttestati({
   const [eliminazioneInCorso, setEliminazioneInCorso] = useState(false);
 
   async function apriDocumento(percorso: string) {
+    // Apertura immediata della scheda per evitare il blocco popup del browser
+    const finestra = window.open("", "_blank");
     try {
-      if (percorso.startsWith("Archivio Attestati") || percorso.startsWith("Coda/")) {
-        const { data } = await supabase.storage.from("attestati").createSignedUrl(percorso, 3600);
-        if (data?.signedUrl) {
-          window.open(data.signedUrl, "_blank", "noopener");
-          return;
-        }
+      const esito = await risolviDocumentoAttestato(percorso);
+      if (esito.url) {
+        if (finestra) finestra.location.href = esito.url;
+        else window.open(esito.url, "_blank");
+        return;
       }
-
-      if (await apriDaPercorsoInTutte(percorso)) return;
-
-      toast.info("File locale non trovato nel percorso memorizzato", {
-        description: "Puoi cercarlo o riagganciarlo cliccando sull'icona di sostituzione.",
+      finestra?.close();
+      toast.info("File non trovato nelle cartelle collegate", {
+        description: "Controlla la cartella in Impostazioni generali o riaggancialo con l'icona di sostituzione.",
       });
     } catch (e) {
+      finestra?.close();
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
     }
   }
