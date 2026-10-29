@@ -9,18 +9,20 @@
  *   - Rev 4 (2026-10-28 14:15): Aggiunta azione approvaERinomina (rinomina file nella cartella di origine + sostituzione link nel DB).
  *   - Rev 5 (2026-10-28 14:17): Import helper da ../decisione, patch senza null non ammessi, integrazione DVR con i campi reali.
  *   - Rev 6 (2026-10-28 14:25): Ripristinata normalizzazione data corso a YYYY-MM-DD (input type=date).
+ *   - Rev 7 (2026-10-29 13:25): Azione sdoppiaCorso a due passaggi (copia PDF + nuovo attestato, poi rinomina originale).
  */
 import { useState } from "react";
 import { toast } from "sonner";
 import {
   aggiornaAttestato,
+  creaAttestato,
   creaIntegrazioneDvr,
   apriEmailEsito,
   type Attestato,
   type Stato,
   type TipoCorso,
 } from "@/lib/api";
-import { rinominaFileNelPercorso } from "@/lib/api/cartelle-multiple";
+import { rinominaFileNelPercorso, duplicaFileNelPercorso } from "@/lib/api/cartelle-multiple";
 import { generaNomeFileRinominato } from "../nome-file-validazione";
 import {
   costruisciAggiornamento,
@@ -46,6 +48,7 @@ export function useDecisioneAttestato({
   const [mostraNote, setMostraNote] = useState(false);
   const [dialogIntegrazione, setDialogIntegrazione] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [faseSdoppia, setFaseSdoppia] = useState(false);
   const d = attestato.dipendenti;
   const haEmail = Boolean(d?.email?.trim());
   const [inviaEmail, setInviaEmail] = useState(haEmail);
@@ -134,6 +137,52 @@ export function useDecisioneAttestato({
     }
   }
 
+  /**
+   * «Sdoppia corso cumulativo».
+   * 1° click: copia il PDF nella stessa cartella col nome del 1° corso e salva un nuovo attestato Approvato.
+   * 2° click: rinomina l'originale con i dati del 2° corso e approva il record corrente.
+   */
+  async function sdoppiaCorso() {
+    if (faseSdoppia) {
+      await approvaERinomina();
+      setFaseSdoppia(false);
+      return;
+    }
+    const link = attestato.url_foto_fronte?.trim() || attestato.url_foto_retro?.trim();
+    if (!link) return void toast.error("Nessun file o link associato a questo attestato");
+    if (!tipoCorsoId || !dataCorso) return void toast.error("Seleziona tipo corso e data del 1° corso");
+    setBusy(true);
+    try {
+      const nome = generaNomeFileRinominato(attestato, corsoSelezionato, ore);
+      const copia = await duplicaFileNelPercorso(link, nome);
+      if (!copia.success) {
+        toast.error("Impossibile creare la copia del PDF", {
+          description: copia.errore || "Verifica i permessi sulla cartella locale del file",
+        });
+        return;
+      }
+      const nuovo = await creaAttestato({
+        dipendente_id: attestato.dipendente_id,
+        codice_fiscale: attestato.codice_fiscale,
+        tipo_corso_id: tipoCorsoId,
+        data_corso: dataCorso,
+        ore_dichiarate: ore ? Number(ore) : null,
+        url_foto_fronte: copia.nuovoPercorso || nome,
+        url_foto_retro: null,
+      });
+      await aggiornaAttestato(nuovo.id, {
+        stato_validazione: "Approvato",
+        data_validazione: new Date().toISOString(),
+      });
+      setFaseSdoppia(true);
+      toast.success("1° corso archiviato", { description: `Copia salvata: ${nome}` });
+    } catch (e) {
+      toast.error("Errore durante lo sdoppiamento", { description: String(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /** Approva «In attesa di integrazione» e crea il debito formativo SIC-SPI-04. */
   async function confermaIntegrazione(dati: { ore: number; note: string; inviaEmail: boolean }) {
     setBusy(true);
@@ -213,6 +262,9 @@ export function useDecisioneAttestato({
     busy,
     decidi,
     approvaERinomina,
+    sdoppiaCorso,
+    faseSdoppia,
+    annullaSdoppia: () => setFaseSdoppia(false),
     confermaIntegrazione,
     scollegaLink,
   };

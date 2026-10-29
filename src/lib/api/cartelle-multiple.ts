@@ -8,6 +8,7 @@
  *   - Rev 3 (2026-10-28 10:05): Riesportata verificaPermessi per compatibilità import.
  *   - Rev 4 (2026-10-28 14:15): Funzione rinominaFileNelPercorso per rinomina fisica cartella origine.
  *   - Rev 5 (2026-10-28 14:35): Ripristino ricerca ricorsiva, rimozione prefisso radice e gestione percorso vuoto come «mancante».
+ *   - Rev 6 (2026-10-29 13:25): Aggiunta duplicaFileNelPercorso (copia nella stessa cartella per «Sdoppia corso cumulativo»).
  */
 import {
   getCartellaArchivio,
@@ -168,11 +169,22 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
 }
 
 /**
+ * Crea una copia fisica del file nella stessa cartella di origine (l'originale resta intatto).
+ */
+export async function duplicaFileNelPercorso(
+  percorsoRelativoOriginale: string,
+  nuovoNomeFile: string,
+): Promise<{ success: boolean; nuovoPercorso?: string; errore?: string }> {
+  return rinominaFileNelPercorso(percorsoRelativoOriginale, nuovoNomeFile, true);
+}
+
+/**
  * Rinomina fisicamente un file nella cartella locale di origine.
  */
 export async function rinominaFileNelPercorso(
   percorsoRelativoOriginale: string,
   nuovoNomeFile: string,
+  mantieniOriginale = false,
 ): Promise<{ success: boolean; nuovoPercorso?: string; errore?: string }> {
   try {
     const percorsoNorm = percorsoRelativoOriginale.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "");
@@ -206,7 +218,7 @@ export async function rinominaFileNelPercorso(
           await writer.write(file);
           await writer.close();
 
-          if (vecchioNome !== nuovoNomeFile) {
+          if (!mantieniOriginale && vecchioNome !== nuovoNomeFile) {
             try {
               await dir.removeEntry(vecchioNome);
             } catch {

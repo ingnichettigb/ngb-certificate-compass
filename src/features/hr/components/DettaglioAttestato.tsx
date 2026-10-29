@@ -8,6 +8,7 @@
  *   - Rev 3 (2026-10-28 11:22): Supporto codice corso per i filtri rapidi in CampiValidazione.
  *   - Rev 4 (2026-10-28 11:50): Popup «Approva in attesa di integrazione».
  *   - Rev 5 (2026-10-28 14:15): Collegamento azione onApprovaERinomina per rinomina e sostituzione link.
+ *   - Rev 6 (2026-10-29 13:25): Collegamento «Sdoppia corso cumulativo».
  */
 import { ImageViewer } from "@/components/ImageViewer";
 import { type Attestato, type TipoCorso } from "@/lib/api";
@@ -63,6 +64,9 @@ export function DettaglioAttestato({
           onApprovaERinomina={decisione.approvaERinomina}
           onScollegaLink={decisione.scollegaLink}
           onApriIntegrazione={() => decisione.setDialogIntegrazione(true)}
+          onSdoppia={decisione.sdoppiaCorso}
+          onAnnullaSdoppia={decisione.annullaSdoppia}
+          faseSdoppia={decisione.faseSdoppia}
         />
       </div>
 
