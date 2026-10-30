@@ -32,6 +32,9 @@ const CHIAVE_ULTIMA = "ultima_cartella_salvataggio";
 export type CartellaCollegata = {
   id: string;
   nome: string;
+  /** Alias di nome (compatibilità) */
+  name: string;
+  principale?: boolean;
   handle: FileSystemDirectoryHandle;
   dataAggiunta: Date;
 };
@@ -65,6 +68,8 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
     lista.push({
       id: "principale",
       nome: base.name,
+      name: base.name,
+      principale: true,
       handle: base,
       dataAggiunta: new Date(0),
     });
@@ -85,6 +90,7 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
       lista.push({
         id: r.id,
         nome: r.nome || r.handle.name,
+        name: r.nome || r.handle.name,
         handle: r.handle,
         dataAggiunta: new Date(r.dataAggiunta),
       });
@@ -96,7 +102,10 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
   return lista;
 }
 
-export async function aggiungiCartella(handle: FileSystemDirectoryHandle, nomePersonalizzato?: string): Promise<CartellaCollegata> {
+export async function aggiungiCartella(handleIn?: FileSystemDirectoryHandle, nomePersonalizzato?: string): Promise<CartellaCollegata> {
+  const handle =
+    handleIn ??
+    (await (window as unknown as { showDirectoryPicker: (o?: object) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker({ mode: "readwrite" }));
   const db = await apriDb();
   const id = `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const record: RecordCartellaDb = {
@@ -116,6 +125,7 @@ export async function aggiungiCartella(handle: FileSystemDirectoryHandle, nomePe
   return {
     id: record.id,
     nome: record.nome,
+    name: record.nome,
     handle: record.handle,
     dataAggiunta: new Date(record.dataAggiunta),
   };
@@ -130,6 +140,8 @@ export async function rimuoviCartella(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+export const rimuoviCartellaAggiuntiva = rimuoviCartella;
 
 export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovato[]> {
   const cartelle = await elencoCartelle();
@@ -309,9 +321,18 @@ export type RisoluzioneDocumento = {
   isPdf: boolean;
   nomeFile: string;
   percorsoOriginale: string;
+  /** Alias compatibilità: "locale" | "storage" | "non_trovato" */
+  sorgente?: "locale" | "storage" | "non_trovato";
 };
 
 export async function risolviDocumentoAttestato(
+  percorso: string | null | undefined,
+): Promise<RisoluzioneDocumento> {
+  const r = await risolviInterno(percorso);
+  return { ...r, sorgente: r.tipo === "mancante" ? "non_trovato" : r.tipo };
+}
+
+async function risolviInterno(
   percorso: string | null | undefined,
 ): Promise<RisoluzioneDocumento> {
   const percorsoPulito = (percorso || "").trim();
