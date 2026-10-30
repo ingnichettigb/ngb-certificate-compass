@@ -11,12 +11,14 @@
  *   - Rev 6 (2026-10-29 13:25): Aggiunta duplicaFileNelPercorso (copia nella stessa cartella per «Sdoppia corso cumulativo»).
  *   - Rev 7 (2026-10-30 11:10): Apertura potenziata con fallback a ricerca ricorsiva per nome file ed esportazione apriFileLocale.
  *   - Rev 8 (2026-10-30 11:35): Ripristinati getUltimaCartella, setUltimaCartella e salvaInCartellaScelta.
+ *   - Rev 9 (2026-10-30 19:30): apriDaPercorsoInTutte restituisce l'esito dettagliato (nessuna cartella, permesso,
+ *     non trovato, bloccato); permesso in sola lettura; apertura solo del file con nome identico, file simili
+ *     restituiti a parte; rilevamento blocco popup (apriFileConControllo).
  */
 import {
   getCartellaArchivio,
   cercaFileRicorsivo,
   verificaPermessi,
-  apriDaPercorsoRelativo,
   ottieniFileDaPercorso,
   scriviInCartella,
   apriFileLocale,
@@ -158,34 +160,107 @@ export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovat
   return risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
 }
 
-/** Prova ad aprire un percorso relativo in ciascuna cartella collegata, con fallback a ricerca per nome file. */
-export async function apriDaPercorsoInTutte(percorso: string): Promise<boolean> {
-  const cartelle = await elencoCartelle();
-  if (cartelle.length === 0) return false;
+export type MotivoApertura = "ok" | "nessuna_cartella" | "permesso" | "non_trovato" | "bloccato";
 
+export type EsitoApertura = {
+  motivo: MotivoApertura;
+  nomeFile: string;
+  /** Nomi delle cartelle in cui la ricerca è stata effettivamente eseguita. */
+  cartelleControllate: string[];
+  /** Nomi delle cartelle per cui il browser non ha concesso l'accesso. */
+  cartelleSenzaPermesso: string[];
+  /** File con nome simile (non identico): mai aperti automaticamente. */
+  simili: FileTrovato[];
+};
+
+function nomeConfrontabile(n: string): string {
+  return n.normalize("NFC").trim().toLowerCase();
+}
+
+/** Apre un file in una nuova scheda. Restituisce false se il browser blocca la finestra. */
+export async function apriFileConControllo(handle: FileSystemFileHandle): Promise<boolean> {
+  const file = await handle.getFile();
+  const url = URL.createObjectURL(file);
+  // Senza "noopener" window.open restituisce il riferimento: serve per rilevare il blocco popup.
+  const w = window.open(url, "_blank");
+  if (!w) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+  try {
+    w.opener = null;
+  } catch {
+    /* ignora */
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return true;
+}
+
+/**
+ * Prova ad aprire un percorso relativo in ciascuna cartella collegata, con fallback a ricerca per nome file.
+ * Apre solo il file con nome identico; eventuali file simili vengono restituiti in `simili`.
+ */
+export async function apriDaPercorsoInTutte(percorso: string): Promise<EsitoApertura> {
   const percorsoNorm = percorso.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
   const nomeFile = percorsoNorm.split("/").pop()?.trim() || "";
+  const esito: EsitoApertura = {
+    motivo: "non_trovato",
+    nomeFile,
+    cartelleControllate: [],
+    cartelleSenzaPermesso: [],
+    simili: [],
+  };
 
-  // 1. Prova percorso relativo esatto
+  const cartelle = await elencoCartelle();
+  if (cartelle.length === 0) return { ...esito, motivo: "nessuna_cartella" };
+
+  // Permessi richiesti subito (in sola lettura), così il prompt del browser parte dal clic dell'utente.
+  const autorizzate: CartellaCollegata[] = [];
   for (const c of cartelle) {
-    if (!(await verificaPermessi(c.handle, true))) continue;
-    if (await apriDaPercorsoRelativo(c.handle, percorsoNorm)) return true;
+    if (await verificaPermessi(c.handle, true, "read")) autorizzate.push(c);
+    else esito.cartelleSenzaPermesso.push(c.nome);
+  }
+  esito.cartelleControllate = autorizzate.map((c) => c.nome);
+  if (autorizzate.length === 0) return { ...esito, motivo: "permesso" };
+
+  // 1. Percorso relativo esatto
+  for (const c of autorizzate) {
+    const h = await trovaHandleDaPercorso(c.handle, percorsoNorm);
+    if (h) return { ...esito, motivo: (await apriFileConControllo(h)) ? "ok" : "bloccato" };
   }
 
-  // 2. Fallback: cerca ricorsivamente il file per nome nella cartella
+  // 2. Fallback: stesso nome file in qualunque sottocartella
   if (nomeFile) {
-    for (const c of cartelle) {
-      if (!(await verificaPermessi(c.handle, true))) continue;
+    const cercato = nomeConfrontabile(nomeFile);
+    for (const c of autorizzate) {
       const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 8);
-      const corrispondenza = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
-      if (corrispondenza) {
-        await apriFileLocale(corrispondenza.handle);
-        return true;
-      }
+      const identico = trovati.find((t) => nomeConfrontabile(t.nome) === cercato);
+      if (identico) return { ...esito, motivo: (await apriFileConControllo(identico.handle)) ? "ok" : "bloccato" };
+      for (const t of trovati) if (esito.simili.length < 5) esito.simili.push({ ...t, cartella: c.nome });
     }
   }
 
-  return false;
+  return esito;
+}
+
+/** Restituisce l'handle del file dato un percorso relativo (con gli stessi accorgimenti di ottieniFileDaPercorso). */
+async function trovaHandleDaPercorso(
+  root: FileSystemDirectoryHandle,
+  percorsoRelativo: string,
+): Promise<FileSystemFileHandle | null> {
+  try {
+    let parti = percorsoRelativo.split("/").filter(Boolean);
+    if (parti.length > 0 && parti[0]?.toLowerCase() === root.name.toLowerCase()) parti = parti.slice(1);
+    let dir = root;
+    for (let i = 0; i < parti.length - 1; i++) {
+      const sotto = parti[i];
+      if (sotto) dir = await dir.getDirectoryHandle(sotto);
+    }
+    const nome = parti[parti.length - 1];
+    return nome ? await dir.getFileHandle(nome) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Restituisce il File locale cercando il percorso o il nome file in tutte le cartelle. */
@@ -215,7 +290,7 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
     for (const c of cartelle) {
       if (!(await verificaPermessi(c.handle, true))) continue;
       const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 8);
-      const corrispondenza = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
+      const corrispondenza = trovati.find((t) => nomeConfrontabile(t.nome) === nomeConfrontabile(nomeFile));
       if (corrispondenza) {
         try {
           return await corrispondenza.handle.getFile();

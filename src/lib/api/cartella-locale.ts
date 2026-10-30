@@ -10,6 +10,7 @@
  *   - Rev 5 (2026-10-25 21:00): Funzione ottieniFileDaPercorso per apertura immediata senza riaprire il picker.
  *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso nome cartella radice.
  *   - Rev 7 (2026-10-30 11:35): Ripristinati alias canonical e supporto browser per compilazione produzione.
+ *   - Rev 8 (2026-10-30 19:30): verificaPermessi accetta la modalità (read/readwrite); default invariato.
  */
 
 const DB_NOME = "app_archivio_attestati";
@@ -78,6 +79,7 @@ async function leggiHandleDaDb(): Promise<FileSystemDirectoryHandle | null> {
 export async function verificaPermessi(
   handle: FileSystemDirectoryHandle,
   richiediSeMancanti = true,
+  modo: "read" | "readwrite" = "readwrite",
 ): Promise<boolean> {
   try {
     const h = handle as unknown as {
@@ -85,10 +87,10 @@ export async function verificaPermessi(
       requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
     };
     if (!h.queryPermission) return true;
-    const stato = await h.queryPermission({ mode: "readwrite" });
+    const stato = await h.queryPermission({ mode: modo });
     if (stato === "granted") return true;
     if (richiediSeMancanti && h.requestPermission) {
-      const nuovoStato = await h.requestPermission({ mode: "readwrite" });
+      const nuovoStato = await h.requestPermission({ mode: modo });
       return nuovoStato === "granted";
     }
     return false;
