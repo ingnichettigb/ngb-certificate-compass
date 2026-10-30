@@ -1,11 +1,13 @@
 /*
  * File:      CaricaPage.tsx
  * Percorso:  src/features/carica/CaricaPage.tsx
+ * Data creazione: 2026-09-19
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 20:25): Passaggio onCambiaClasseConcorso a SezioneDati.
  * Pagina «Carica il tuo attestato»: compone sezioni e hook.
  */
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { suggerimentiClassi, suggerimentiMaterie } from "./selezione";
 import { IntestazioneCarica } from "./components/IntestazioneCarica";
 import { CaricaCompletato } from "./components/CaricaCompletato";
 import { SezioneDati } from "./components/SezioneDati";
@@ -40,6 +42,7 @@ export function CaricaPage() {
           anagrafica={modulo.anagrafica}
           set={modulo.set}
           onCambiaReparto={modulo.cambiaReparto}
+          onCambiaClasseConcorso={modulo.cambiaClasseConcorso}
           reparti={dati.reparti}
           sottoreparti={modulo.sottoreparti}
           chiedeInsegnamento={modulo.chiedeInsegnamento}
