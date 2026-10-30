@@ -3,7 +3,7 @@
  * Percorso:  src/features/dipendenti/components/IntestazioneDipendenti.tsx
  * Intestazione della pagina: titolo, numero di nominativi, impostazioni, backup e matrice abilitazioni.
  * Revisioni:
- *   - Rev 2 (2026-10-28 20:35): Aggiunto pulsante Matrice Abilitazioni e Ruoli.
+ *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -11,11 +11,9 @@ import { ArrowLeft, Table, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
-import { useDatiDipendenti } from "../hooks/useDatiDipendenti";
 
 export function IntestazioneDipendenti({ totale }: { totale: number }) {
   const [apriMatrice, setApriMatrice] = useState(false);
-  const { dipendenti, ruoliCatalogo, assegnazioni, attestati } = useDatiDipendenti();
 
   return (
     <>
@@ -50,14 +48,7 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
       </header>
 
       {/* Matrice a tutto schermo */}
-      <MatriceAbilitazioniRuoli
-        open={apriMatrice}
-        onChiudi={() => setApriMatrice(false)}
-        dipendenti={dipendenti}
-        ruoliCatalogo={ruoliCatalogo}
-        assegnazioni={assegnazioni}
-        attestati={attestati}
-      />
+      <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
     </>
   );
 }

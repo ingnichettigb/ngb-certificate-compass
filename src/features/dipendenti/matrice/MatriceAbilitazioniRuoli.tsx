@@ -10,6 +10,8 @@
  *     quando si stringe la colonna, spunta in alto a destra per nascondere e spunta master in cella A1.
  *   - Rev 5 (2026-10-30 20:25): Dicitura completa Funzione / Reparto (Docente - [Classe] - [Materia]),
  *     larghezza base aumentata e ordinamento/export allineati.
+ *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione: salvataggio obblighi con impostaRuoloDipendente,
+ *     query attestati senza filtro, filtro cessati su stato_lavoratore.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -20,7 +22,7 @@ import {
   getAttestati,
   getRuoliSicurezza,
   getAssegnazioniRuoli,
-  salvaAssegnazioneRuolo,
+  impostaRuoloDipendente,
   type Dipendente,
   type TipoCorso,
   type Attestato,
@@ -107,7 +109,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   const { data: attestati = [] } = useQuery({
     queryKey: ["attestati"],
-    queryFn: getAttestati,
+    queryFn: () => getAttestati(),
   });
 
   const { data: ruoli = [] } = useQuery({
@@ -203,7 +205,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     const nuovoStato = !giaAssegnato;
 
     try {
-      await salvaAssegnazioneRuolo(dipendente.id, ruolo.id, nuovoStato);
+      await impostaRuoloDipendente(dipendente.id, ruolo.id, nuovoStato);
       await queryClient.invalidateQueries({ queryKey: ["assegnazioni_ruoli"] });
       toast.success(
         nuovoStato
@@ -283,7 +285,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   }
 
   const listaElaborata = useMemo(() => {
-    let res = dipendenti.filter((d) => d.stato_contratto !== "cessato");
+    let res = dipendenti.filter((d) => d.stato_lavoratore !== "cessato");
 
     if (ricerca.trim()) {
       const q = ricerca.toLowerCase().trim();
