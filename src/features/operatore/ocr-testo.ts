@@ -14,6 +14,7 @@ export const ETICHETTE_OCR: Record<CampoOcr, string> = {
   data_corso: "Data emanazione",
   ore: "Ore corso",
   note: "Note",
+  numero_attestato: "Numero attestato",
 };
 
 /**
@@ -34,6 +35,9 @@ export function pulisciTestoOcr(testoGrezzo: string, campo?: CampoOcr): string {
   }
   if (campo === "email") {
     return pulito.toLowerCase().replace(/\s+/g, "");
+  }
+  if (campo === "numero_attestato") {
+    return pulito.toUpperCase().replace(/\s+/g, "");
   }
   if (campo === "ore") {
     return pulito.replace(/[^0-9.,]/g, "");

@@ -2,6 +2,8 @@
  * File:      types.ts
  * Percorso:  src/features/operatore/types.ts
  * Tipi e valori iniziali della Postazione Operatore.
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 10:40): Campo numero_attestato.
  */
 
 export interface TipoCorso {
@@ -29,6 +31,8 @@ export interface Riga {
   /** Solo nel modulo: non è una colonna della coda (ricavato da tipo_corso_id). */
   tipo_corso_codice?: string | null | undefined;
   data_corso: string;
+  /** Numero/protocollo dell'attestato; se vuoto si genera AAMMGG-CODICE. */
+  numero_attestato: string;
   ore: number | null;
   ente: string;
   argomenti: string[];
@@ -50,11 +54,11 @@ export type CodaRiga = Omit<Riga, "esito"> & {
   argomenti_mancanti: string[];
 };
 
-export type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "email" | "codice_ateco" | "data_corso" | "ore" | "note";
+export type CampoOcr = "cognome" | "nome" | "codice_fiscale" | "email" | "codice_ateco" | "data_corso" | "ore" | "note" | "numero_attestato";
 
 export const VUOTA: Omit<Riga, "id"> = {
   cognome: "", nome: "", codice_fiscale: "", data_nascita: "", luogo_nascita: "", codice_ateco: "",
-  email: "", reparto: "", tipo_corso_id: null, tipo_corso_nome: "", data_corso: "", ore: null,
+  email: "", reparto: "", tipo_corso_id: null, tipo_corso_nome: "", data_corso: "", numero_attestato: "", ore: null,
   ente: "", argomenti: [], esito: "Valido", note: "", integrazione: "",
 };
 

@@ -2,11 +2,13 @@
  * File:      useArchiviazione.ts
  * Percorso:  src/features/operatore/hooks/useArchiviazione.ts
  * Archiviazione delle righe della coda nel database (dipendente, attestato, integrazione DVR).
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 10:40): Numero attestato (automatico AAMMGG-CODICE se assente) e blocco doppioni.
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, creaIntegrazioneDvr } from "@/lib/api";
+import { generaNumeroAttestato, pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, creaIntegrazioneDvr } from "@/lib/api";
 import { estensioneFile, nomeFileStandard } from "../nome-file";
 import { riepilogo } from "../bozza-email";
 import type { CodaRiga } from "../types";
@@ -47,6 +49,22 @@ export function useArchiviazione(ricarica: () => unknown) {
             data_nascita: r.data_nascita || null,
             ...(r.codice_ateco ? { codice_ateco: r.codice_ateco } : {}),
           });
+          const codiceCorso = r.tipo_corso_codice || codici.get(r.tipo_corso_id) || null;
+          const numero = (r.numero_attestato || "").trim() || generaNumeroAttestato(r.data_corso, codiceCorso);
+          const { data: gia } = await db
+            .from("attestati_caricati")
+            .select("id, created_at")
+            .eq("dipendente_id", dip.id)
+            .eq("tipo_corso_id", r.tipo_corso_id)
+            .eq("data_corso", r.data_corso)
+            .neq("stato_validazione", "Respinto")
+            .limit(1);
+          if (gia?.length) {
+            const quando = new Date(gia[0].created_at).toLocaleDateString("it-IT");
+            if (!window.confirm(`${r.cognome} ${r.nome}: attestato «${r.tipo_corso_nome}» del ${r.data_corso} già presente (registrato il ${quando}).\n\nRegistrarlo comunque?`)) {
+              throw new Error(`${r.cognome}: attestato già presente, non registrato`);
+            }
+          }
           let percorsoFinale = r.percorso_file;
           if (r.percorso_file) {
             const nomeDoc = nomeFileStandard({ ...r, tipo_corso_codice: r.tipo_corso_codice || codici.get(r.tipo_corso_id) || null });
@@ -61,6 +79,7 @@ export function useArchiviazione(ricarica: () => unknown) {
             tipo_corso_id: r.tipo_corso_id,
             data_corso: r.data_corso,
             ore_dichiarate: r.ore,
+            numero_attestato: numero,
             url_foto_fronte: percorsoFinale,
             url_foto_retro: null,
             stato_validazione: r.esito === "Non valido" ? "Respinto" : "Approvato",
