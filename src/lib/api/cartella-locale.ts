@@ -1,42 +1,25 @@
 /*
  * File:          cartella-locale.ts
  * Percorso:      src/lib/api/cartella-locale.ts
- * Data creazione: 2026-10-25
+ * Data creazione: 2026-10-24
  * Revisioni:
- *   - Rev 1 (2026-10-25 09:07): Implementazione gestione handle IndexedDB e scansione ricorsiva.
- *   - Rev 2 (2026-10-25 11:00): Normalizzazione ricerca con rimozione accenti e tolleranza separatori per sottocartelle.
- *   - Rev 3 (2026-10-25 11:14): Aggiunta salvaInLocale: copia di un file nell'archivio locale con sottocartelle e rinomina anti-sovrascrittura.
- *   - Rev 4 (2026-10-27 21:05): Campo cartella su FileTrovato ed esportata scriviInCartella per il multi-cartella.
- *   - Rev 5 (2026-10-28 10:00): Aggiunta ottieniFileDaPercorso per consentire la lettura diretta del Blob per l'anteprima in pagina.
- *   - Rev 6 (2026-10-28 10:05): Aggiunti alias scegliCartellaLocale e dimenticaCartellaLocale per le schermate che usano i nomi storici.
+ *   - Rev 1 (2026-10-24 16:30): Selezione cartella locale archivio con File System Access API.
+ *   - Rev 2 (2026-10-24 17:15): Salvataggio automatico duplicati con suffisso numerico.
+ *   - Rev 3 (2026-10-25 08:45): Apertura diretta file PDF/immagini da handle in nuova scheda browser.
+ *   - Rev 4 (2026-10-25 10:45): Ricerca ricorsiva per cognome/testo con filtro solo file PDF/immagini.
+ *   - Rev 5 (2026-10-25 21:00): Funzione ottieniFileDaPercorso per apertura immediata senza riaprire il picker.
+ *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso nome cartella radice.
  */
 
-const DB_NOME = "app_archivio_locale";
-const DB_VERSIONE = 1;
+const DB_NOME = "app_archivio_attestati";
 const STORE_NOME = "impostazioni";
-const CHIAVE_HANDLE = "cartella_radice";
+const CHIAVE_HANDLE = "cartella_archivio_handle";
 
 let cacheHandle: FileSystemDirectoryHandle | null = null;
 
-export type FileTrovato = {
-  nome: string;
-  percorsoRelativo: string;
-  handle: FileSystemFileHandle;
-  dimensione: number;
-  dataModifica: Date;
-  /** Nome della cartella collegata in cui è stato trovato (multi-cartella). */
-  cartella?: string;
-};
-
-/** Verifica se il browser supporta l'accesso alle cartelle locali (Chrome, Edge, Opera, Brave). */
-export function supportaCartellaLocale(): boolean {
-  return typeof window !== "undefined" && "showDirectoryPicker" in window;
-}
-
-// Helper interno per IndexedDB nativo senza dipendenze esterne
 function apriDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NOME, DB_VERSIONE);
+    const req = indexedDB.open(DB_NOME, 1);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NOME)) {
@@ -48,16 +31,23 @@ function apriDb(): Promise<IDBDatabase> {
   });
 }
 
-async function salvaHandleSuDb(handle: FileSystemDirectoryHandle | null): Promise<void> {
+async function salvaHandleSuDb(handle: FileSystemDirectoryHandle): Promise<void> {
   const db = await apriDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NOME, "readwrite");
     const store = tx.objectStore(STORE_NOME);
-    if (handle) {
-      store.put(handle, CHIAVE_HANDLE);
-    } else {
-      store.delete(CHIAVE_HANDLE);
-    }
+    store.put(handle, CHIAVE_HANDLE);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function rimuoviHandleDaDb(): Promise<void> {
+  const db = await apriDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NOME, "readwrite");
+    const store = tx.objectStore(STORE_NOME);
+    store.delete(CHIAVE_HANDLE);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -120,105 +110,130 @@ export async function getCartellaArchivio(richiediPermessi = false): Promise<Fil
   return null;
 }
 
-/** Apre il selettore di cartelle nativo del browser e salva l'handle. */
-export async function scegliCartellaArchivio(): Promise<FileSystemDirectoryHandle | null> {
-  if (!supportaCartellaLocale()) {
-    throw new Error("Il tuo browser non supporta la selezione delle cartelle locali. Usa Chrome o Edge da PC.");
-  }
+/** Chiede all'utente di selezionare la cartella dell'archivio attestati sul PC. */
+export async function selezionaCartellaArchivio(): Promise<FileSystemDirectoryHandle | null> {
   const w = window as unknown as {
     showDirectoryPicker?: (o?: unknown) => Promise<FileSystemDirectoryHandle>;
   };
-  if (!w.showDirectoryPicker) return null;
+  if (!w.showDirectoryPicker) {
+    throw new Error(
+      "Il tuo browser non supporta la selezione delle cartelle locali. Usa Google Chrome, Microsoft Edge o Opera.",
+    );
+  }
+
   const handle = await w.showDirectoryPicker({
     id: "archivio-attestati-sicurezza",
     mode: "readwrite",
   });
+
   cacheHandle = handle;
   await salvaHandleSuDb(handle);
   return handle;
 }
 
-/** Rimuove la cartella configurata. */
-export async function disconnettiCartellaArchivio(): Promise<void> {
+/** Scollega la cartella configurata. */
+export async function scollegaCartellaArchivio(): Promise<void> {
   cacheHandle = null;
-  await salvaHandleSuDb(null);
+  await rimuoviHandleDaDb();
 }
 
-// Normalizza stringhe per la ricerca (minuscolo, senza accenti, spazi singoli)
-function normalizzaPerRicerca(testo: string): string {
-  return testo
+/** Formatta la dimensione file in formato leggibile. */
+export function formattaDimensione(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export type FileTrovato = {
+  nome: string;
+  percorsoRelativo: string;
+  dimensione: number;
+  dataModifica: Date;
+  tipo: string;
+  cartella?: string;
+  handle: FileSystemFileHandle;
+};
+
+const ESTENSIONI_VALIDE = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
+
+function haEstensioneValida(nome: string): boolean {
+  const lower = nome.toLowerCase();
+  return ESTENSIONI_VALIDE.some((ext) => lower.endsWith(ext));
+}
+
+function normalizzaTesto(t: string): string {
+  return t
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[-_.\s]+/g, " ")
+    .replace(/[^a-z0-9]/g, " ")
     .trim();
 }
 
 /**
- * Cerca ricorsivamente tutti i file nella cartella che contengono la chiave nel nome
- * o nel percorso relativo. La ricerca è case-insensitive e ignora accenti e separatori.
+ * Cerca ricorsivamente i file nella cartella che contengono tutte le parole chiave nel nome.
  */
 export async function cercaFileRicorsivo(
-  dirHandle: FileSystemDirectoryHandle,
-  chiave: string,
-  percorsoAttuale = "",
+  dir: FileSystemDirectoryHandle,
+  chiaveRicerca: string,
+  prefisso = "",
   risultati: FileTrovato[] = [],
   profondita = 0,
-  maxRisultati = 200,
+  maxProfondita = 8,
+  maxRisultati = 60,
 ): Promise<FileTrovato[]> {
-  if (profondita > 10 || risultati.length >= maxRisultati) return risultati;
+  if (profondita > maxProfondita || risultati.length >= maxRisultati) {
+    return risultati;
+  }
 
-  const paroleChiave = normalizzaPerRicerca(chiave).split(" ").filter(Boolean);
+  const parole = normalizzaTesto(chiaveRicerca).split(/\s+/).filter(Boolean);
 
-  const iteratore = (dirHandle as unknown as {
+  const entriesIter = dir as unknown as {
     values: () => AsyncIterable<FileSystemHandle>;
-  }).values();
+  };
 
-  for await (const voce of iteratore) {
+  if (!entriesIter.values) return risultati;
+
+  for await (const entry of entriesIter.values()) {
     if (risultati.length >= maxRisultati) break;
-    const percorsoVoce = percorsoAttuale ? `${percorsoAttuale}/${voce.name}` : voce.name;
 
-    if (voce.kind === "file") {
-      const nomeLower = voce.name.toLowerCase();
-      if (
-        nomeLower.endsWith(".pdf") ||
-        nomeLower.endsWith(".jpg") ||
-        nomeLower.endsWith(".jpeg") ||
-        nomeLower.endsWith(".png")
-      ) {
-        const testoConfronto = normalizzaPerRicerca(percorsoVoce);
-        const corrisponde =
-          paroleChiave.length === 0 ||
-          paroleChiave.every((parola) => testoConfronto.includes(parola));
+    const percorso = prefisso ? `${prefisso}/${entry.name}` : entry.name;
 
-        if (corrisponde) {
-          try {
-            const fileHandle = voce as FileSystemFileHandle;
-            const file = await fileHandle.getFile();
-            risultati.push({
-              nome: voce.name,
-              percorsoRelativo: percorsoVoce,
-              handle: fileHandle,
-              dimensione: file.size,
-              dataModifica: new Date(file.lastModified),
-            });
-          } catch {
-            // Ignora file non accessibili
-          }
+    if (entry.kind === "file") {
+      if (!haEstensioneValida(entry.name)) continue;
+
+      const nomeNorm = normalizzaTesto(entry.name);
+      const corrisponde = parole.every((p) => nomeNorm.includes(p));
+
+      if (corrisponde) {
+        try {
+          const fileHandle = entry as FileSystemFileHandle;
+          const file = await fileHandle.getFile();
+          risultati.push({
+            nome: entry.name,
+            percorsoRelativo: percorso,
+            dimensione: file.size,
+            dataModifica: new Date(file.lastModified),
+            tipo: file.type || "application/octet-stream",
+            handle: fileHandle,
+          });
+        } catch {
+          // Ignora file non leggibili
         }
       }
-    } else if (voce.kind === "directory") {
-      // Salta cartelle di sistema o pesanti
-      if (!voce.name.startsWith(".") && voce.name !== "node_modules") {
-        await cercaFileRicorsivo(
-          voce as FileSystemDirectoryHandle,
-          chiave,
-          percorsoVoce,
-          risultati,
-          profondita + 1,
-          maxRisultati,
-        );
+    } else if (entry.kind === "directory") {
+      if (entry.name.startsWith(".") || entry.name.toLowerCase() === "node_modules") {
+        continue;
       }
+      await cercaFileRicorsivo(
+        entry as FileSystemDirectoryHandle,
+        chiaveRicerca,
+        percorso,
+        risultati,
+        profondita + 1,
+        maxProfondita,
+        maxRisultati,
+      );
     }
   }
 
@@ -239,10 +254,14 @@ export async function ottieniFileDaPercorso(
   percorsoRelativo: string,
 ): Promise<File | null> {
   try {
-    const parti = percorsoRelativo
+    const percorsoNorm = percorsoRelativo
+      .replace(/\\/g, "/")
       .replace(/^(\.\.\/|\.\/)+/, "")
-      .split("/")
-      .filter(Boolean);
+      .trim();
+    let parti = percorsoNorm.split("/").filter(Boolean);
+    if (parti.length > 0 && parti[0].toLowerCase() === root.name.toLowerCase()) {
+      parti = parti.slice(1);
+    }
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
       dir = await dir.getDirectoryHandle(parti[i]!);
@@ -262,10 +281,14 @@ export async function apriDaPercorsoRelativo(
   percorsoRelativo: string,
 ): Promise<boolean> {
   try {
-    const parti = percorsoRelativo
+    const percorsoNorm = percorsoRelativo
+      .replace(/\\/g, "/")
       .replace(/^(\.\.\/|\.\/)+/, "")
-      .split("/")
-      .filter(Boolean);
+      .trim();
+    let parti = percorsoNorm.split("/").filter(Boolean);
+    if (parti.length > 0 && parti[0].toLowerCase() === root.name.toLowerCase()) {
+      parti = parti.slice(1);
+    }
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
       dir = await dir.getDirectoryHandle(parti[i]!);
@@ -303,38 +326,55 @@ export async function scriviInCartella(
   nomeFile: string,
   sottocartella?: string,
 ): Promise<boolean> {
-  let dir = root;
-  for (const parte of (sottocartella || "").split("/").filter(Boolean)) {
-    dir = await dir.getDirectoryHandle(parte, { create: true });
-  }
-
-  const handle = await nuovoHandleFile(dir, nomeFile);
-  const scrittura = await handle.createWritable();
-  await scrittura.write(file);
-  await scrittura.close();
-  return true;
-}
-
-/** Handle di un file libero: se il nome è già occupato aggiunge " (2)", " (3)"... */
-async function nuovoHandleFile(
-  dir: FileSystemDirectoryHandle,
-  nomeFile: string,
-): Promise<FileSystemFileHandle> {
-  const base = nomeFile.replace(/\.[^.]+$/, "");
-  const estensione = nomeFile.slice(base.length);
-  for (let n = 1; n <= 50; n++) {
-    const candidato = n === 1 ? nomeFile : `${base} (${n})${estensione}`;
-    try {
-      await dir.getFileHandle(candidato);
-    } catch {
-      return dir.getFileHandle(candidato, { create: true });
+  try {
+    let dir = root;
+    if (sottocartella) {
+      const parti = sottocartella
+        .replace(/\\/g, "/")
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      for (const p of parti) {
+        dir = await dir.getDirectoryHandle(p, { create: true });
+      }
     }
+
+    const nomeUnivoco = await trovaNomeDisponibile(dir, nomeFile);
+    const fileHandle = await dir.getFileHandle(nomeUnivoco, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    return true;
+  } catch {
+    return false;
   }
-  throw new Error("Impossibile salvare il file: nome già occupato troppe volte");
 }
 
-/** Nome storico usato dalle schermate: apre il selettore della cartella archivio principale. */
-export const scegliCartellaLocale = scegliCartellaArchivio;
+/** Se il file esiste già nella cartella, genera "Nome (1).ext", "Nome (2).ext", ecc. */
+async function trovaNomeDisponibile(
+  dir: FileSystemDirectoryHandle,
+  nomeIniziale: string,
+): Promise<string> {
+  const punto = nomeIniziale.lastIndexOf(".");
+  const base = punto > 0 ? nomeIniziale.slice(0, punto) : nomeIniziale;
+  const ext = punto > 0 ? nomeIniziale.slice(punto) : "";
 
-/** Nome storico usato dalle schermate: scollega la cartella archivio principale. */
-export const dimenticaCartellaLocale = disconnettiCartellaArchivio;
+  let nome = nomeIniziale;
+  let contatore = 1;
+
+  while (await fileEsiste(dir, nome)) {
+    nome = `${base} (${contatore})${ext}`;
+    contatore++;
+  }
+
+  return nome;
+}
+
+async function fileEsiste(dir: FileSystemDirectoryHandle, nome: string): Promise<boolean> {
+  try {
+    await dir.getFileHandle(nome);
+    return true;
+  } catch {
+    return false;
+  }
+}
