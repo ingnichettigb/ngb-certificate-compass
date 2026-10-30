@@ -62,7 +62,7 @@ describe("pulisciTestoOcr", () => {
     expect(pulisciTestoOcr("  corso  valido. ", "note")).toBe("corso valido");
   });
   it("ogni campo ha un'etichetta", () => {
-    expect(Object.keys(ETICHETTE_OCR)).toHaveLength(8);
+    expect(Object.keys(ETICHETTE_OCR)).toHaveLength(9);
     expect(ETICHETTE_OCR.codice_fiscale).toBe("Codice Fiscale");
   });
 });
