@@ -1,6 +1,9 @@
 /*
  * File:      SezioneDati.tsx
  * Percorso:  src/features/carica/components/SezioneDati.tsx
+ * Data creazione: 2026-09-19
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 20:25): Box anteprima dicitura completa (Docente - [Classe] - [Materia]) e callback onCambiaClasseConcorso.
  * Sezione «1. I tuoi dati»: anagrafica, reparto, profilo, classe di concorso e materia.
  */
 import { CampoSuggerito, type Suggerimento } from "@/components/CampoSuggerito";
@@ -14,13 +17,13 @@ import {
 } from "@/components/ui/select";
 import { etichettaSottoreparto, type Reparto, type Sottoreparto } from "@/lib/api";
 import { type Anagrafica } from "../types";
-import { suggerimentiClassi, suggerimentiMaterie } from "../selezione";
 import { Field } from "./Field";
 
 export function SezioneDati({
   anagrafica,
   set,
   onCambiaReparto,
+  onCambiaClasseConcorso,
   reparti,
   sottoreparti,
   chiedeInsegnamento,
@@ -30,6 +33,7 @@ export function SezioneDati({
   anagrafica: Anagrafica;
   set: (k: keyof Anagrafica, v: string) => void;
   onCambiaReparto: (v: string) => void;
+  onCambiaClasseConcorso?: (v: string) => void;
   reparti: Reparto[];
   sottoreparti: Sottoreparto[];
   chiedeInsegnamento: boolean;
@@ -123,7 +127,7 @@ export function SezioneDati({
           <Field label="Classe di concorso *">
             <CampoSuggerito
               value={anagrafica.classe_concorso}
-              onChange={(v: string) => set("classe_concorso", v)}
+              onChange={(v: string) => (onCambiaClasseConcorso ? onCambiaClasseConcorso(v) : set("classe_concorso", v))}
               suggerimenti={suggerimentiClassi}
               placeholder="es. A-26"
               maiuscolo
@@ -133,6 +137,16 @@ export function SezioneDati({
               Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.
             </p>
           </Field>
+
+          {anagrafica.classe_concorso && (
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-3 text-xs">
+              <span className="font-semibold text-primary">Dicitura completa nel piano formativo:</span>
+              <p className="mt-0.5 font-mono text-sm font-bold text-foreground">
+                {[anagrafica.reparto || "Docente", anagrafica.classe_concorso, anagrafica.materia].filter(Boolean).join(" - ")}
+              </p>
+            </div>
+          )}
+
           <Field label="Materia insegnata *">
             <CampoSuggerito
               value={anagrafica.materia}
