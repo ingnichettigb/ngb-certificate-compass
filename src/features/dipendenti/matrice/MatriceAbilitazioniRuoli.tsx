@@ -10,6 +10,8 @@
  *     quando si stringe la colonna, spunta in alto a destra per nascondere e spunta master in cella A1.
  *   - Rev 5 (2026-10-30 20:25): Dicitura completa Funzione / Reparto (Docente - [Classe] - [Materia]),
  *     larghezza base aumentata e ordinamento/export allineati.
+ *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione: salvataggio obblighi con impostaRuoloDipendente,
+ *     query attestati senza filtro, filtro cessati su stato_lavoratore.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
