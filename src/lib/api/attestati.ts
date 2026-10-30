@@ -31,6 +31,7 @@ export type Attestato = {
   stato_validazione: Stato;
   note_rifiuto: string | null;
   data_validazione: string | null;
+  numero_attestato?: string | null;
   created_at: string;
   dipendenti?: Dipendente | null;
   tipi_corso?: TipoCorso | null;

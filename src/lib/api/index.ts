@@ -9,6 +9,7 @@ export * from "./reparti";
 export * from "./insegnamento";
 export * from "./categorie";
 export * from "./attestati";
+export * from "./duplicati-attestati";
 export * from "./email-esito";
 export * from "./backup";
 export * from "./formattazione";
