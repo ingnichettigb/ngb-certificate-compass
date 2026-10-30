@@ -9,9 +9,9 @@
  *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
  *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic.
  *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
+ *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR.
  *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
- *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR (prefisso radice e ricerca per nome).
- *   - Rev 9 (2026-10-30 10:45): Ripristinata apertura precedente del tasto Vedi (richiesta permessi cartella) con ricerca per nome come ripiego.
+ *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -68,7 +68,6 @@ export function TabellaAttestati({
   );
 
   async function apriDocumento(percorso: string) {
-    // Metodo precedente (funzionante): cloud, poi percorso esatto chiedendo i permessi della cartella
     try {
       if (percorso.startsWith("Archivio Attestati") || percorso.startsWith("Coda/")) {
         const { data } = await supabase.storage.from("attestati").createSignedUrl(percorso, 3600);
@@ -80,10 +79,9 @@ export function TabellaAttestati({
 
       if (await apriDaPercorsoInTutte(percorso)) return;
 
-      // Ripiego: ricerca per nome nelle sottocartelle (permessi ora già concessi)
       const esito = await risolviDocumentoAttestato(percorso);
       if (esito.url) {
-        window.open(esito.url, "_blank");
+        window.open(esito.url, "_blank", "noopener");
         return;
       }
 
