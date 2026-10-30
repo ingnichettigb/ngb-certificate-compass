@@ -1,6 +1,9 @@
 /*
  * File:      useModuloCarica.ts
  * Percorso:  src/features/carica/hooks/useModuloCarica.ts
+ * Data creazione: 2026-09-19
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 20:25): Aggiunta cambiaClasseConcorso con precompilazione automatica della materia ufficiale.
  * Stato del modulo di invio attestato e valori derivati (categorie, livelli, corsi, suggerimenti).
  */
 import { useMemo, useState } from "react";
@@ -63,6 +66,17 @@ export function useModuloCarica(dati: ReturnType<typeof useDatiCarica>) {
     setAnagrafica((a) => ({ ...a, [k]: v }));
   }
 
+  /** Cambio classe di concorso: imposta la classe e precompila la materia con la denominazione ufficiale */
+  function cambiaClasseConcorso(v: string) {
+    const pulito = v.trim().toUpperCase();
+    const trovata = classi.find((c) => c.codice.toUpperCase() === pulito);
+    setAnagrafica((a) => ({
+      ...a,
+      classe_concorso: v,
+      materia: trovata?.denominazione ? trovata.denominazione : a.materia,
+    }));
+  }
+
   /** Cambio reparto: azzera profilo, classe di concorso e materia. */
   function cambiaReparto(v: string) {
     setAnagrafica((a) => ({
@@ -100,6 +114,7 @@ export function useModuloCarica(dati: ReturnType<typeof useDatiCarica>) {
     anagrafica,
     set,
     cambiaReparto,
+    cambiaClasseConcorso,
     macro,
     macros,
     livello,
