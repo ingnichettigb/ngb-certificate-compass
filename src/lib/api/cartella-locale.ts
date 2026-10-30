@@ -9,6 +9,7 @@
  *   - Rev 4 (2026-10-25 10:45): Ricerca ricorsiva per cognome/testo con filtro solo file PDF/immagini.
  *   - Rev 5 (2026-10-25 21:00): Funzione ottieniFileDaPercorso per apertura immediata senza riaprire il picker.
  *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso nome cartella radice.
+ *   - Rev 7 (2026-10-30 11:35): Ripristinati alias canonical e supporto browser per compilazione produzione.
  */
 
 const DB_NOME = "app_archivio_attestati";
@@ -16,6 +17,11 @@ const STORE_NOME = "impostazioni";
 const CHIAVE_HANDLE = "cartella_archivio_handle";
 
 let cacheHandle: FileSystemDirectoryHandle | null = null;
+
+/** Verifica se il browser supporta l'accesso nativo alle cartelle locali (Chrome, Edge, Opera). */
+export function supportaCartellaLocale(): boolean {
+  return typeof window !== "undefined" && "showDirectoryPicker" in window;
+}
 
 function apriDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -111,7 +117,7 @@ export async function getCartellaArchivio(richiediPermessi = false): Promise<Fil
 }
 
 /** Chiede all'utente di selezionare la cartella dell'archivio attestati sul PC. */
-export async function selezionaCartellaArchivio(): Promise<FileSystemDirectoryHandle | null> {
+export async function scegliCartellaArchivio(): Promise<FileSystemDirectoryHandle | null> {
   const w = window as unknown as {
     showDirectoryPicker?: (o?: unknown) => Promise<FileSystemDirectoryHandle>;
   };
@@ -132,7 +138,7 @@ export async function selezionaCartellaArchivio(): Promise<FileSystemDirectoryHa
 }
 
 /** Scollega la cartella configurata. */
-export async function scollegaCartellaArchivio(): Promise<void> {
+export async function disconnettiCartellaArchivio(): Promise<void> {
   cacheHandle = null;
   await rimuoviHandleDaDb();
 }
@@ -170,9 +176,7 @@ function normalizzaTesto(t: string): string {
     .trim();
 }
 
-/**
- * Cerca ricorsivamente i file nella cartella che contengono tutte le parole chiave nel nome.
- */
+/** Cerca ricorsivamente i file nella cartella che contengono tutte le parole chiave nel nome. */
 export async function cercaFileRicorsivo(
   dir: FileSystemDirectoryHandle,
   chiaveRicerca: string,
@@ -259,12 +263,15 @@ export async function ottieniFileDaPercorso(
       .replace(/^(\.\.\/|\.\/)+/, "")
       .trim();
     let parti = percorsoNorm.split("/").filter(Boolean);
-    if (parti.length > 0 && parti[0].toLowerCase() === root.name.toLowerCase()) {
+    if (parti.length > 0 && parti[0]?.toLowerCase() === root.name.toLowerCase()) {
       parti = parti.slice(1);
     }
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parti[i]!);
+      const sotto = parti[i];
+      if (sotto) {
+        dir = await dir.getDirectoryHandle(sotto);
+      }
     }
     const nomeFile = parti[parti.length - 1];
     if (!nomeFile) return null;
@@ -286,12 +293,15 @@ export async function apriDaPercorsoRelativo(
       .replace(/^(\.\.\/|\.\/)+/, "")
       .trim();
     let parti = percorsoNorm.split("/").filter(Boolean);
-    if (parti.length > 0 && parti[0].toLowerCase() === root.name.toLowerCase()) {
+    if (parti.length > 0 && parti[0]?.toLowerCase() === root.name.toLowerCase()) {
       parti = parti.slice(1);
     }
     let dir = root;
     for (let i = 0; i < parti.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parti[i]!);
+      const sotto = parti[i];
+      if (sotto) {
+        dir = await dir.getDirectoryHandle(sotto);
+      }
     }
     const nomeFile = parti[parti.length - 1];
     if (!nomeFile) return false;
@@ -303,12 +313,7 @@ export async function apriDaPercorsoRelativo(
   }
 }
 
-/**
- * Salva una copia del file nella cartella archivio configurata, creando le
- * sottocartelle necessarie. Se esiste già un file con lo stesso nome ne crea
- * uno con suffisso progressivo, così nessuna copia va sovrascritta.
- * Restituisce false se la cartella non è configurata o i permessi sono negati.
- */
+/** Salva una copia del file nella cartella archivio configurata con sottocartelle. */
 export async function salvaInLocale(
   file: File,
   nomeFile: string,
@@ -350,7 +355,6 @@ export async function scriviInCartella(
   }
 }
 
-/** Se il file esiste già nella cartella, genera "Nome (1).ext", "Nome (2).ext", ecc. */
 async function trovaNomeDisponibile(
   dir: FileSystemDirectoryHandle,
   nomeIniziale: string,
@@ -378,3 +382,9 @@ async function fileEsiste(dir: FileSystemDirectoryHandle, nome: string): Promise
     return false;
   }
 }
+
+/* Alias di compatibilità per schermate storiche e test */
+export const selezionaCartellaArchivio = scegliCartellaArchivio;
+export const scollegaCartellaArchivio = disconnettiCartellaArchivio;
+export const scegliCartellaLocale = scegliCartellaArchivio;
+export const dimenticaCartellaLocale = disconnettiCartellaArchivio;
