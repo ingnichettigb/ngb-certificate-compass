@@ -42,6 +42,7 @@ export type Database = {
           dipendente_id: string
           id: string
           note_rifiuto: string | null
+          numero_attestato: string | null
           ore_dichiarate: number | null
           stato_validazione: string
           tipo_corso_id: string
@@ -58,6 +59,7 @@ export type Database = {
           dipendente_id: string
           id?: string
           note_rifiuto?: string | null
+          numero_attestato?: string | null
           ore_dichiarate?: number | null
           stato_validazione?: string
           tipo_corso_id: string
@@ -74,6 +76,7 @@ export type Database = {
           dipendente_id?: string
           id?: string
           note_rifiuto?: string | null
+          numero_attestato?: string | null
           ore_dichiarate?: number | null
           stato_validazione?: string
           tipo_corso_id?: string
@@ -175,6 +178,7 @@ export type Database = {
           nome: string | null
           nome_file: string | null
           note: string | null
+          numero_attestato: string | null
           ore: number | null
           percorso_file: string | null
           reparto: string | null
@@ -203,6 +207,7 @@ export type Database = {
           nome?: string | null
           nome_file?: string | null
           note?: string | null
+          numero_attestato?: string | null
           ore?: number | null
           percorso_file?: string | null
           reparto?: string | null
@@ -231,6 +236,7 @@ export type Database = {
           nome?: string | null
           nome_file?: string | null
           note?: string | null
+          numero_attestato?: string | null
           ore?: number | null
           percorso_file?: string | null
           reparto?: string | null
