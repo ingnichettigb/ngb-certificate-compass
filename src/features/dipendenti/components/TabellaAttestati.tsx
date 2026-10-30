@@ -12,6 +12,7 @@
  *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR.
  *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
  *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
+ *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, non trovato, bloccato).
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -39,7 +40,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { risolviDocumentoAttestato, apriDaPercorsoInTutte } from "@/lib/api/cartelle-multiple";
+import {
+  apriDaPercorsoInTutte,
+  apriFileConControllo,
+  aggiungiCartella,
+} from "@/lib/api/cartelle-multiple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -67,7 +72,8 @@ export function TabellaAttestati({
     [righe],
   );
 
-  async function apriDocumento(percorso: string) {
+  async function apriDocumento(att: Attestato) {
+    const percorso = att.url_foto_fronte ?? "";
     try {
       if (percorso.startsWith("Archivio Attestati") || percorso.startsWith("Coda/")) {
         const { data } = await supabase.storage.from("attestati").createSignedUrl(percorso, 3600);
@@ -77,16 +83,71 @@ export function TabellaAttestati({
         }
       }
 
-      if (await apriDaPercorsoInTutte(percorso)) return;
+      const esito = await apriDaPercorsoInTutte(percorso);
+      if (esito.motivo === "ok") return;
 
-      const esito = await risolviDocumentoAttestato(percorso);
-      if (esito.url) {
-        window.open(esito.url, "_blank", "noopener");
+      if (esito.motivo === "nessuna_cartella") {
+        toast.info("Nessuna cartella collegata", {
+          description: "Collega la cartella dell'archivio per aprire i file salvati sul PC.",
+          action: {
+            label: "Collega cartella",
+            onClick: async () => {
+              try {
+                await aggiungiCartella();
+                toast.success("Cartella collegata", { description: "Premi di nuovo «Vedi»." });
+              } catch {
+                /* selezione annullata */
+              }
+            },
+          },
+        });
         return;
       }
 
-      toast.info("File non trovato nelle cartelle collegate", {
-        description: "Controlla la cartella in Impostazioni generali o riaggancialo con l'icona di sostituzione.",
+      if (esito.motivo === "permesso") {
+        toast.warning("Permesso alla cartella non concesso", {
+          description: `Il browser non ha dato l'accesso a: ${esito.cartelleSenzaPermesso.join(", ")}.`,
+          action: { label: "Autorizza e riprova", onClick: () => void apriDocumento(att) },
+        });
+        return;
+      }
+
+      if (esito.motivo === "bloccato") {
+        toast.warning("Il browser ha bloccato l'apertura", {
+          description: "Consenti i popup per questo sito (icona nella barra degli indirizzi) e riprova.",
+        });
+        return;
+      }
+
+      // non_trovato: messaggio dettagliato
+      const dove = esito.cartelleControllate.join(", ");
+      const primoSimile = esito.simili[0];
+      if (primoSimile) {
+        const elenco = esito.simili
+          .slice(0, 3)
+          .map((f) => f.nome)
+          .join(" · ");
+        toast.info(`File «${esito.nomeFile}» non trovato`, {
+          description: `Cercato in: ${dove}. File simili: ${elenco}. Oppure usa l'icona di sostituzione.`,
+          action: {
+            label: "Apri il più simile",
+            onClick: async () => {
+              if (!(await apriFileConControllo(primoSimile.handle))) {
+                toast.warning("Il browser ha bloccato l'apertura", {
+                  description: "Consenti i popup per questo sito e riprova.",
+                });
+              }
+            },
+          },
+        });
+        return;
+      }
+
+      toast.info(`File «${esito.nomeFile}» non trovato`, {
+        description: `Cercato in: ${dove}. Controlla la cartella collegata o riaggancia il file.`,
+        ...(dipendente
+          ? { action: { label: "Aggancia file", onClick: () => setAttestatoDaAgganciare(att) } }
+          : {}),
       });
     } catch (e) {
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
@@ -186,7 +247,7 @@ export function TabellaAttestati({
                           <>
                             <button
                               type="button"
-                              onClick={() => apriDocumento(a.url_foto_fronte!)}
+                              onClick={() => apriDocumento(a)}
                               className="inline-flex items-center gap-1.5 rounded-md border border-emerald-600/30 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                               title={`Visualizza documento allegato: ${a.url_foto_fronte}`}
                             >
