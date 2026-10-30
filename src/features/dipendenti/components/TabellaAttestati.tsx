@@ -11,6 +11,7 @@
  *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
  *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
  *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR (prefisso radice e ricerca per nome).
+ *   - Rev 9 (2026-10-30 10:45): Ripristinata apertura precedente del tasto Vedi (richiesta permessi cartella) con ricerca per nome come ripiego.
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -38,7 +39,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { risolviDocumentoAttestato } from "@/lib/api/cartelle-multiple";
+import { risolviDocumentoAttestato, apriDaPercorsoInTutte } from "@/lib/api/cartelle-multiple";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function TabellaAttestati({
@@ -66,21 +68,29 @@ export function TabellaAttestati({
   );
 
   async function apriDocumento(percorso: string) {
-    // Apertura immediata della scheda per evitare il blocco popup del browser
-    const finestra = window.open("", "_blank");
+    // Metodo precedente (funzionante): cloud, poi percorso esatto chiedendo i permessi della cartella
     try {
+      if (percorso.startsWith("Archivio Attestati") || percorso.startsWith("Coda/")) {
+        const { data } = await supabase.storage.from("attestati").createSignedUrl(percorso, 3600);
+        if (data?.signedUrl) {
+          window.open(data.signedUrl, "_blank", "noopener");
+          return;
+        }
+      }
+
+      if (await apriDaPercorsoInTutte(percorso)) return;
+
+      // Ripiego: ricerca per nome nelle sottocartelle (permessi ora già concessi)
       const esito = await risolviDocumentoAttestato(percorso);
       if (esito.url) {
-        if (finestra) finestra.location.href = esito.url;
-        else window.open(esito.url, "_blank");
+        window.open(esito.url, "_blank");
         return;
       }
-      finestra?.close();
+
       toast.info("File non trovato nelle cartelle collegate", {
         description: "Controlla la cartella in Impostazioni generali o riaggancialo con l'icona di sostituzione.",
       });
     } catch (e) {
-      finestra?.close();
       toast.error("Impossibile aprire il file", { description: (e as Error).message });
     }
   }
