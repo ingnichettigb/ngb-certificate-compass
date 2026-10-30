@@ -218,17 +218,17 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
   [
     "pagina",
     "categoria Antincendio",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "pagina",
     "livello Aggiornamento",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio aggiornamento2 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio aggiornamento2 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "pagina",
     "livello Base",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "valori",
@@ -238,12 +238,12 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
   [
     "pagina",
     "scadenza calcolata",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "pagina",
     "cambio categoria (corso azzerato)",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *PrepostoAntincendioPrepostoLivello *SpecificoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *PrepostoAntincendioPrepostoLivello *SpecificoData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "toast.error",
@@ -253,12 +253,12 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
   [
     "pagina",
     "foto allegate",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteRetroInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteRetroInvia attestato",
   ],
   [
     "pagina",
     "rimossa una foto",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *MatematicaA026Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarateScadenza calcolata: 15/03/20313. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroInvia attestato",
   ],
   [
     "sb",
@@ -352,7 +352,7 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
   [
     "pagina",
     "secondo attestato",
-    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Materia insegnata *Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
+    "Carica il tuo attestatoFormazione sicurezza1. I tuoi datiCodice fiscale *Cognome *Nome *EmailReparto *DocenteDocenteATAClasse di concorso *Scegli dall'elenco oppure scrivila: se manca, viene aggiunta all'archivio.Dicitura completa nel piano formativo:Docente - A-26 - MatematicaMateria insegnata *Luogo di nascitaData di nascita2. Il corsoCategoria del corso *AntincendioAntincendioPrepostoLivello *BaseAggiornamentoCorso *Antincendio rischio basso4 ore · validità 5 anniAntincendio rischio medio8 ore · validità 5 anniData del corso *Ore dichiarate3. Foto attestatoFronteTocca per scattare o scegliere una fotoRetroTocca per scattare o scegliere una fotoInvia attestato",
   ],
   [
     "valori",
