@@ -8,129 +8,251 @@
  *   - Rev 3 (2026-10-28 21:05): Tabella fixed con colgroup e logica fabbisogno formativo.
  *   - Rev 4 (2026-10-28 21:15): Colonne dinamiche lette dal DB (tipi_corso), wrap a capo del testo
  *     quando si stringe la colonna, spunta in alto a destra per nascondere e spunta master in cella A1.
+ *   - Rev 5 (2026-10-30 20:25): Dicitura completa Funzione / Reparto (Docente - [Classe] - [Materia]),
+ *     larghezza base aumentata e ordinamento/export allineati.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getDipendenti,
+  getTipiCorso,
+  getAttestati,
+  getRuoliSicurezza,
+  getAssegnazioniRuoli,
+  salvaAssegnazioneRuolo,
+  type Dipendente,
+  type TipoCorso,
+  type Attestato,
+  type RuoloSicurezza,
+  type AssegnazioneRuolo,
+} from "@/lib/api";
 import {
   ArrowLeft,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   Download,
-  FileCheck,
-  Loader2,
   Search,
-  Users,
-  X,
-  AlertCircle,
+  Check,
+  CheckSquare,
+  Square,
   Eye,
+  EyeOff,
+  RotateCcw,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import {
-  type Dipendente,
-  type RuoloSicurezza,
-  type AssegnazioneRuolo,
-  type Attestato,
-  type TipoCorso,
-  getTipiCorso,
-  impostaRuoloDipendente,
-  aggiungiRuolo,
-} from "@/lib/api";
 
-type TipoOrdinamento = "asc" | "desc" | null;
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
 
-const LARGHEZZA_BASE_CORSO = 130;
+type TipoOrdinamento = "asc" | "desc" | "none";
+
+const CHIAVE_LARGHEZZE = "matrice_sicurezza_larghezze_v2";
+const CHIAVE_NASCOSTI = "matrice_sicurezza_corsi_nascosti_v2";
+
 const LARGHEZZE_FISSE_BASE = {
-  nome: 240,
-  funzione: 180,
-  ruolo: 160,
+  nominativo: 220,
+  funzione: 240,
+  ruolo: 130,
+  corso: 120,
 };
 
-export function MatriceAbilitazioniRuoli({
-  open,
-  onChiudi,
-  dipendenti,
-  ruoliCatalogo,
-  assegnazioni,
-  attestati,
-}: {
-  open: boolean;
-  onChiudi: () => void;
-  dipendenti: Dipendente[];
-  ruoliCatalogo: RuoloSicurezza[];
-  assegnazioni: AssegnazioneRuolo[];
-  attestati: Attestato[];
-}) {
-  const qc = useQueryClient();
+export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
+  const queryClient = useQueryClient();
   const [ricerca, setRicerca] = useState("");
   const [rigaSelezionata, setRigaSelezionata] = useState<string | null>(null);
-  const [inSalvataggio, setInSalvataggio] = useState<string | null>(null);
 
-  // 1. Carica dinamica dei corsi dal Database
-  const { data: corsiDb = [], isLoading: caricandoCorsi } = useQuery<TipoCorso[]>({
-    queryKey: ["tipi-corso"],
+  const [colonnaOrd, setColonnaOrd] = useState<string | null>("nominativo");
+  const [direzioneOrd, setDirezioneOrd] = useState<TipoOrdinamento>("asc");
+
+  const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
+    try {
+      const salvate = localStorage.getItem(CHIAVE_LARGHEZZE);
+      return salvate ? JSON.parse(salvate) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [corsiNascosti, setCorsiNascosti] = useState<string[]>(() => {
+    try {
+      const salvati = localStorage.getItem(CHIAVE_NASCOSTI);
+      return salvati ? JSON.parse(salvati) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const resizingRef = useRef<{
+    colKey: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const { data: dipendenti = [] } = useQuery({
+    queryKey: ["dipendenti"],
+    queryFn: getDipendenti,
+  });
+
+  const { data: tipiCorso = [] } = useQuery({
+    queryKey: ["tipi_corso"],
     queryFn: getTipiCorso,
   });
 
-  const [colonnaOrd, setColonnaOrd] = useState<string>("nome");
-  const [versoOrd, setVersoOrd] = useState<TipoOrdinamento>("asc");
-
-  // 2. Colonne nascoste con memoria in localStorage
-  const [colonneNascoste, setColonneNascoste] = useState<Set<string>>(() => {
-    try {
-      const salvate = localStorage.getItem("matrice_colonne_nascoste_v1");
-      return salvate ? new Set(JSON.parse(salvate)) : new Set<string>();
-    } catch {
-      return new Set<string>();
-    }
+  const { data: attestati = [] } = useQuery({
+    queryKey: ["attestati"],
+    queryFn: getAttestati,
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("matrice_colonne_nascoste_v1", JSON.stringify([...colonneNascoste]));
-    } catch {}
-  }, [colonneNascoste]);
-
-  // 3. Larghezze colonne con memoria in localStorage
-  const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
-    try {
-      const salvate = localStorage.getItem("matrice_colonne_larghezze_v3");
-      return salvate ? { ...LARGHEZZE_FISSE_BASE, ...JSON.parse(salvate) } : LARGHEZZE_FISSE_BASE;
-    } catch {
-      return LARGHEZZE_FISSE_BASE;
-    }
+  const { data: ruoli = [] } = useQuery({
+    queryKey: ["ruoli_sicurezza"],
+    queryFn: getRuoliSicurezza,
   });
 
-  useEffect(() => {
+  const { data: assegnazioni = [] } = useQuery({
+    queryKey: ["assegnazioni_ruoli"],
+    queryFn: getAssegnazioniRuoli,
+  });
+
+  const corsiCatalogo = useMemo(() => {
+    return [...tipiCorso].sort((a, b) => (a.ordine ?? 999) - (b.ordine ?? 999));
+  }, [tipiCorso]);
+
+  const corsiVisibili = useMemo(() => {
+    return corsiCatalogo.filter((c) => !corsiNascosti.includes(c.id));
+  }, [corsiCatalogo, corsiNascosti]);
+
+  const tuttiVisibili = corsiNascosti.length === 0;
+
+  function toggleNascondiTutti() {
+    if (tuttiVisibili) {
+      const tuttiIds = corsiCatalogo.map((c) => c.id);
+      setCorsiNascosti(tuttiIds);
+      localStorage.setItem(CHIAVE_NASCOSTI, JSON.stringify(tuttiIds));
+      toast.info("Tutte le colonne dei corsi sono state nascoste");
+    } else {
+      setCorsiNascosti([]);
+      localStorage.removeItem(CHIAVE_NASCOSTI);
+      toast.success("Tutte le colonne dei corsi sono ora visibili");
+    }
+  }
+
+  function toggleVisibilitaCorso(corsoId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setCorsiNascosti((prev) => {
+      const next = prev.includes(corsoId) ? prev.filter((id) => id !== corsoId) : [...prev, corsoId];
+      localStorage.setItem(CHIAVE_NASCOSTI, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  const mappaRuoliPerNome = useMemo(() => {
+    const map = new Map<string, RuoloSicurezza>();
+    for (const r of ruoli) {
+      map.set(r.nome.toLowerCase().trim(), r);
+    }
+    return map;
+  }, [ruoli]);
+
+  const mappaAssegnazioni = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of assegnazioni) {
+      set.add(`${a.dipendente_id}_${a.ruolo_id}`);
+    }
+    return set;
+  }, [assegnazioni]);
+
+  const mappaAttestatiValidi = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const att of attestati) {
+      if (att.stato_validazione !== "Approvato" && att.stato_validazione !== "In attesa") continue;
+      if (!att.dipendente_id || !att.tipo_corso_id) continue;
+      if (!map.has(att.dipendente_id)) {
+        map.set(att.dipendente_id, new Set());
+      }
+      map.get(att.dipendente_id)!.add(att.tipo_corso_id);
+    }
+    return map;
+  }, [attestati]);
+
+  function haObbligoCorso(dipendenteId: string, corso: TipoCorso): boolean {
+    const ruoloCorrispondente = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
+    if (!ruoloCorrispondente) return false;
+    return mappaAssegnazioni.has(`${dipendenteId}_${ruoloCorrispondente.id}`);
+  }
+
+  function haAttestatoCorso(dipendenteId: string, corso: TipoCorso): boolean {
+    const set = mappaAttestatiValidi.get(dipendenteId);
+    return set ? set.has(corso.id) : false;
+  }
+
+  async function handleToggleObbligo(dipendente: Dipendente, corso: TipoCorso) {
+    let ruolo = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
+    if (!ruolo) {
+      toast.error(`Nessun ruolo di sicurezza censito per "${corso.nome_corso}"`);
+      return;
+    }
+
+    const giaAssegnato = mappaAssegnazioni.has(`${dipendente.id}_${ruolo.id}`);
+    const nuovoStato = !giaAssegnato;
+
     try {
-      localStorage.setItem("matrice_colonne_larghezze_v3", JSON.stringify(larghezze));
-    } catch {}
-  }, [larghezze]);
+      await salvaAssegnazioneRuolo(dipendente.id, ruolo.id, nuovoStato);
+      await queryClient.invalidateQueries({ queryKey: ["assegnazioni_ruoli"] });
+      toast.success(
+        nuovoStato
+          ? `Obbligo "${corso.nome_corso}" assegnato a ${dipendente.cognome}`
+          : `Obbligo rimosso per ${dipendente.cognome}`,
+      );
+    } catch (e) {
+      toast.error("Errore salvataggio", { description: (e as Error).message });
+    }
+  }
 
-  const dragRef = useRef<{ id: string; startX: number; startW: number } | null>(null);
+  const larghezzaTotaleTabella = useMemo(() => {
+    let tot =
+      (larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo) +
+      (larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione) +
+      (larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo);
+    for (const c of corsiVisibili) {
+      tot += larghezze[c.id] || LARGHEZZE_FISSE_BASE.corso;
+    }
+    return Math.max(tot, 1100);
+  }, [larghezze, corsiVisibili]);
 
-  function iniziaResize(id: string, larghezzaIniziale: number, e: React.MouseEvent) {
+  function iniziaResize(colKey: string, currentWidth: number, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    dragRef.current = { id, startX: e.clientX, startW: larghezzaIniziale };
-
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+    resizingRef.current = {
+      colKey,
+      startX: e.clientX,
+      startWidth: currentWidth,
+    };
 
     function onMouseMove(ev: MouseEvent) {
-      if (!dragRef.current) return;
-      const diff = ev.clientX - dragRef.current.startX;
-      const nuovaW = Math.max(70, dragRef.current.startW + diff);
-      setLarghezze((prev) => ({ ...prev, [dragRef.current!.id]: nuovaW }));
+      if (!resizingRef.current) return;
+      const delta = ev.clientX - resizingRef.current.startX;
+      const nuova = Math.max(70, resizingRef.current.startWidth + delta);
+      setLarghezze((prev) => {
+        const aggiornate = { ...prev, [resizingRef.current!.colKey]: nuova };
+        return aggiornate;
+      });
     }
 
     function onMouseUp() {
-      dragRef.current = null;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      if (resizingRef.current) {
+        setLarghezze((prev) => {
+          localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(prev));
+          return prev;
+        });
+      }
+      resizingRef.current = null;
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     }
@@ -139,155 +261,75 @@ export function MatriceAbilitazioniRuoli({
     window.addEventListener("mouseup", onMouseUp);
   }
 
-  function resetLarghezza(id: string) {
-    setLarghezze((prev) => ({ ...prev, [id]: (LARGHEZZE_FISSE_BASE as Record<string, number>)[id] || LARGHEZZA_BASE_CORSO }));
-  }
-
-  // Corsi attualmente visibili
-  const corsiVisibili = useMemo(() => {
-    return corsiDb.filter((c) => !colonneNascoste.has(c.id));
-  }, [corsiDb, colonneNascoste]);
-
-  // Gestione visibilità colonne singole e master A1
-  function toggleVisibilitaColonna(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    setColonneNascoste((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  function resetLarghezza(colKey: string) {
+    setLarghezze((prev) => {
+      const copia = { ...prev };
+      delete copia[colKey];
+      localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(copia));
+      return copia;
     });
   }
 
-  function toggleMostraTutteA1() {
-    if (colonneNascoste.size > 0) {
-      setColonneNascoste(new Set());
-      toast.success("Tutte le colonne sono ora visibili");
+  function handleOrdina(colonna: string) {
+    if (colonnaOrd !== colonna) {
+      setColonnaOrd(colonna);
+      setDirezioneOrd("asc");
+    } else if (direzioneOrd === "asc") {
+      setDirezioneOrd("desc");
     } else {
-      toast.info("Tutte le colonne sono già visibili");
-    }
-  }
-
-  // Calcolo larghezza complessiva tabella
-  const larghezzaTotale = useMemo(() => {
-    const fisse =
-      (larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome) +
-      (larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione) +
-      (larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo);
-    const corsi = corsiVisibili.reduce((acc, c) => acc + (larghezze[c.id] || LARGHEZZA_BASE_CORSO), 0);
-    return fisse + corsi;
-  }, [larghezze, corsiVisibili]);
-
-  // Mappa ruoli catalogo
-  const mappaRuoli = useMemo(() => {
-    const map = new Map<string, RuoloSicurezza>();
-    ruoliCatalogo.forEach((r) => map.set(r.nome.toLowerCase().trim(), r));
-    return map;
-  }, [ruoliCatalogo]);
-
-  const haObbligoCorso = (dipendenteId: string, corso: TipoCorso): boolean => {
-    const ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
-    if (!ruoloTrovato) return false;
-    if (ruoloTrovato.obbligatorio_tutti) return true;
-    return assegnazioni.some((a) => a.dipendente_id === dipendenteId && a.ruolo_id === ruoloTrovato.id);
-  };
-
-  const haAttestatoCorso = (dipendenteId: string, corso: TipoCorso): boolean => {
-    const cNome = corso.nome_corso.toLowerCase();
-    const cCod = (corso.codice || "").toLowerCase();
-    return attestati.some((att) => {
-      const nomeAtt = att.tipi_corso?.nome_corso;
-      if (att.dipendente_id !== dipendenteId || !nomeAtt) return false;
-      const t = nomeAtt.toLowerCase();
-      return (cCod && t.includes(cCod)) || t.includes(cNome);
-    });
-  };
-
-  function handleOrdina(id: string) {
-    if (colonnaOrd !== id) {
-      setColonnaOrd(id);
-      setVersoOrd("asc");
-    } else if (versoOrd === "asc") {
-      setVersoOrd("desc");
-    } else if (versoOrd === "desc") {
-      setColonnaOrd("nome");
-      setVersoOrd("asc");
+      setColonnaOrd(null);
+      setDirezioneOrd("none");
     }
   }
 
   const listaElaborata = useMemo(() => {
-    const q = ricerca.trim().toLowerCase();
-    let res = dipendenti;
+    let res = dipendenti.filter((d) => d.stato_contratto !== "cessato");
 
-    if (q) {
-      res = res.filter((d) => {
-        const nc = `${d.cognome || ""} ${d.nome || ""}`.toLowerCase();
-        const fz = `${d.reparto || ""} ${d.sottoreparto || ""} ${d.materia || ""}`.toLowerCase();
-        return nc.includes(q) || fz.includes(q);
+    if (ricerca.trim()) {
+      const q = ricerca.toLowerCase().trim();
+      res = res.filter(
+        (d) =>
+          d.cognome.toLowerCase().includes(q) ||
+          d.nome.toLowerCase().includes(q) ||
+          d.codice_fiscale.toLowerCase().includes(q) ||
+          (d.reparto && d.reparto.toLowerCase().includes(q)) ||
+          (d.materia && d.materia.toLowerCase().includes(q)) ||
+          (d.classe_concorso && d.classe_concorso.toLowerCase().includes(q)),
+      );
+    }
+
+    if (colonnaOrd && direzioneOrd !== "none") {
+      res = [...res].sort((a, b) => {
+        let comp = 0;
+        if (colonnaOrd === "nominativo") {
+          const nomA = `${a.cognome} ${a.nome}`.toLowerCase();
+          const nomB = `${b.cognome} ${b.nome}`.toLowerCase();
+          comp = nomA.localeCompare(nomB);
+        } else if (colonnaOrd === "funzione") {
+          const fnA = [a.reparto, a.sottoreparto, a.classe_concorso, a.materia].filter(Boolean).join(" - ").toLowerCase();
+          const fnB = [b.reparto, b.sottoreparto, b.classe_concorso, b.materia].filter(Boolean).join(" - ").toLowerCase();
+          comp = fnA.localeCompare(fnB);
+        } else if (colonnaOrd === "ruolo") {
+          comp = (a.classe_concorso || "Lavoratore").localeCompare(b.classe_concorso || "Lavoratore");
+        } else {
+          const c = corsiCatalogo.find((x) => x.id === colonnaOrd);
+          if (c) {
+            const obA = haObbligoCorso(a.id, c) ? 1 : 0;
+            const obB = haObbligoCorso(b.id, c) ? 1 : 0;
+            comp = obA - obB;
+          }
+        }
+        return direzioneOrd === "asc" ? comp : -comp;
       });
     }
 
-    return [...res].sort((a, b) => {
-      let comp = 0;
-      if (colonnaOrd === "nome") {
-        comp = `${a.cognome || ""} ${a.nome || ""}`.localeCompare(`${b.cognome || ""} ${b.nome || ""}`);
-      } else if (colonnaOrd === "funzione") {
-        comp = (a.reparto || "").localeCompare(b.reparto || "");
-      } else if (colonnaOrd === "ruolo") {
-        comp = (a.classe_concorso || "").localeCompare(b.classe_concorso || "");
-      } else {
-        const corso = corsiDb.find((c) => c.id === colonnaOrd);
-        if (corso) {
-          const vA = haObbligoCorso(a.id, corso) ? 1 : 0;
-          const vB = haObbligoCorso(b.id, corso) ? 1 : 0;
-          comp = vA - vB;
-        }
-      }
-      return versoOrd === "desc" ? -comp : comp;
-    });
-  }, [dipendenti, ricerca, colonnaOrd, versoOrd, corsiDb, mappaRuoli, assegnazioni]);
+    return res;
+  }, [dipendenti, ricerca, colonnaOrd, direzioneOrd, corsiCatalogo, mappaRuoliPerNome, mappaAssegnazioni]);
 
-  async function toggleObbligo(dipendente: Dipendente, corso: TipoCorso, e: React.MouseEvent) {
-    e.stopPropagation();
-    const chiaveOp = `${dipendente.id}-${corso.id}`;
-    if (inSalvataggio === chiaveOp) return;
-
-    let ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
-    if (!ruoloTrovato) {
-      try {
-        setInSalvataggio(chiaveOp);
-        await aggiungiRuolo({
-          nome: corso.nome_corso,
-          macro_categoria: corso.macro_categoria || "Corsi",
-          obbligatorio_tutti: false,
-          ordine: ruoliCatalogo.length + 1,
-        });
-        await qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] });
-        ruoloTrovato = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
-      } catch (err) {
-        toast.error("Errore inizializzazione corso", { description: (err as Error).message });
-        setInSalvataggio(null);
-        return;
-      }
-    }
-
-    if (!ruoloTrovato || ruoloTrovato.obbligatorio_tutti) return;
-
-    const giaObbligato = haObbligoCorso(dipendente.id, corso);
-    setInSalvataggio(chiaveOp);
-    try {
-      await impostaRuoloDipendente(dipendente.id, ruoloTrovato.id, !giaObbligato);
-      await qc.invalidateQueries({ queryKey: ["dipendenti-ruoli"] });
-      toast.success(
-        !giaObbligato
-          ? `Obbligo aggiunto: ${corso.nome_corso} per ${dipendente.cognome} ${dipendente.nome}`
-          : `Obbligo rimosso: ${corso.nome_corso} per ${dipendente.cognome} ${dipendente.nome}`,
-      );
-    } catch (err) {
-      toast.error("Errore salvataggio", { description: (err as Error).message });
-    } finally {
-      setInSalvataggio(null);
-    }
+  function renderFreccia(colonna: string) {
+    if (colonnaOrd !== colonna) return <ArrowUpDown className="size-3 text-muted-foreground/60 inline ml-1" />;
+    if (direzioneOrd === "asc") return <ArrowUp className="size-3 text-primary inline ml-1 font-bold" />;
+    return <ArrowDown className="size-3 text-primary inline ml-1 font-bold" />;
   }
 
   function esportaCsv() {
@@ -301,7 +343,7 @@ export function MatriceAbilitazioniRuoli({
     ];
 
     const righe = listaElaborata.map((d) => {
-      const fn = [d.reparto, d.sottoreparto, d.materia].filter(Boolean).join(" - ") || "";
+      const fn = [d.reparto, d.sottoreparto, d.classe_concorso, d.materia].filter(Boolean).join(" - ") || "";
       const corsiVal = corsiVisibili.map((c) => {
         const ob = haObbligoCorso(d.id, c);
         const at = haAttestatoCorso(d.id, c);
@@ -323,333 +365,324 @@ export function MatriceAbilitazioniRuoli({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `030ArchAttestati_Piano_Formazione_${new Date().toISOString().slice(0, 10)}.csv`;
+    const now = new Date();
+    const dataFmt = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+    a.download = `030ArchAttestati_PianoFabbisognoCorsi_${dataFmt}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Esportazione piano formazione completata");
+    toast.success("Esportazione completata");
   }
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onClose]);
 
-  function renderFreccia(id: string) {
-    if (colonnaOrd !== id) return <ArrowUpDown className="size-3 opacity-30 group-hover:opacity-100 shrink-0" />;
-    return versoOrd === "asc" ? (
-      <ArrowUp className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-    ) : (
-      <ArrowDown className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-    );
-  }
-
-  const tutteVisibili = colonneNascoste.size === 0;
+  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col bg-background text-foreground">
-      {/* Testata Superiore */}
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3 shadow-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[120] flex h-screen w-screen flex-col bg-background text-foreground animate-in fade-in duration-150"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3.5 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={onChiudi} className="gap-1.5">
-            <ArrowLeft className="size-4" /> Torna
+          <Button
+            onClick={onClose}
+            className="border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-semibold px-4"
+          >
+            <ArrowLeft className="size-4 mr-2" /> Torna
           </Button>
-          <div className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <Users className="size-4" />
-            </span>
+
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600/15 text-emerald-700 dark:text-emerald-400">
+              <Users className="size-5" />
+            </div>
             <div>
-              <h1 className="text-base font-bold leading-tight">Piano Fabbisogno Formativo e Ruoli</h1>
+              <h1 className="text-lg font-bold leading-tight flex items-center gap-2">
+                Piano Fabbisogno Formativo e Ruoli
+              </h1>
               <p className="text-xs text-muted-foreground">
-                {listaElaborata.length} di {dipendenti.length} lavoratori • {corsiVisibili.length} corsi visualizzati
-                {colonneNascoste.size > 0 && ` (${colonneNascoste.size} nascosti)`}
+                {listaElaborata.length} di {dipendenti.length} lavoratori · {corsiVisibili.length} corsi visualizzati
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {colonneNascoste.size > 0 && (
-            <Button variant="outline" size="sm" onClick={toggleMostraTutteA1} className="gap-1.5 text-xs">
-              <Eye className="size-3.5" /> Mostra tutte ({corsiDb.length})
-            </Button>
-          )}
-
-          <div className="relative w-64 md:w-80">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
-              type="text"
-              placeholder="Cerca cognome, nome, reparto..."
               value={ricerca}
               onChange={(e) => setRicerca(e.target.value)}
-              className="pl-9 pr-8"
+              placeholder="Cerca lavoratore..."
+              className="pl-8 h-9 text-xs"
             />
-            {ricerca && (
-              <button
-                type="button"
-                onClick={() => setRicerca("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            )}
           </div>
-          <Button variant="outline" size="sm" onClick={esportaCsv} className="gap-1.5">
-            <Download className="size-4" /> Esporta Excel (CSV)
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleNascondiTutti}
+            className="h-9 border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground text-xs"
+            title={tuttiVisibili ? "Nascondi tutte le colonne dei corsi" : "Mostra tutte le colonne dei corsi"}
+          >
+            {tuttiVisibili ? <EyeOff className="size-3.5 mr-1.5" /> : <Eye className="size-3.5 mr-1.5" />}
+            {tuttiVisibili ? "Nascondi corsi" : "Mostra tutti i corsi"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={esportaCsv}
+            className="h-9 border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground text-xs font-semibold"
+          >
+            <Download className="size-3.5 mr-1.5" /> Esporta CSV
           </Button>
         </div>
       </header>
 
-      {/* Area Tabella con scorrimento orizzontale in fondo */}
-      <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
-        <table
-          className="border-collapse text-left text-sm"
-          style={{
-            tableLayout: "fixed",
-            width: `${larghezzaTotale}px`,
-          }}
-        >
-          <colgroup>
-            <col style={{ width: `${larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome}px` }} />
-            <col style={{ width: `${larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione}px` }} />
-            <col style={{ width: `${larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo}px` }} />
-            {corsiVisibili.map((c) => (
-              <col key={c.id} style={{ width: `${larghezze[c.id] || LARGHEZZA_BASE_CORSO}px` }} />
-            ))}
-          </colgroup>
+      <main className="flex-1 overflow-auto bg-muted/20 p-4">
+        <div className="rounded-xl border border-border bg-surface shadow-sm inline-block min-w-full">
+          <table
+            className="border-collapse text-left text-xs"
+            style={{ tableLayout: "fixed", width: `${larghezzaTotaleTabella}px` }}
+          >
+            <colgroup>
+              <col style={{ width: `${larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo}px` }} />
+              <col style={{ width: `${larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione}px` }} />
+              <col style={{ width: `${larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo}px` }} />
+              {corsiVisibili.map((c) => (
+                <col key={c.id} style={{ width: `${larghezze[c.id] || LARGHEZZE_FISSE_BASE.corso}px` }} />
+              ))}
+            </colgroup>
 
-          <thead className="sticky top-0 z-20 border-b border-border bg-surface shadow-sm select-none">
-            <tr className="divide-x divide-border">
-              {/* CELLA A1: COGNOME E NOME CON SPUNTA MASTER PER MOSTRARE TUTTO */}
-              <th className="group relative sticky left-0 z-30 bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground shadow-[2px_0_5px_rgba(0,0,0,0.05)] align-top">
-                <div className="flex items-start justify-between gap-2">
-                  <div
-                    className="flex flex-1 cursor-pointer items-center justify-between gap-1"
-                    onClick={() => handleOrdina("nome")}
-                  >
-                    <span className="truncate">Cognome e Nome</span>
-                    {renderFreccia("nome")}
+            <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur border-b border-border shadow-sm">
+              <tr className="divide-x divide-border">
+                {/* Colonna Nominativo con pulsante A1 master */}
+                <th
+                  className="sticky left-0 z-30 bg-muted/95 px-3 py-2.5 font-bold text-foreground select-none relative group"
+                  style={{ width: `${larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo}px` }}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      onClick={() => handleOrdina("nominativo")}
+                      className="cursor-pointer hover:text-primary transition-colors flex items-center"
+                    >
+                      COGNOME E NOME {renderFreccia("nominativo")}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={toggleNascondiTutti}
+                      title={tuttiVisibili ? "Nascondi tutte le colonne dei corsi" : "Mostra tutte le colonne dei corsi"}
+                      className="p-0.5 rounded hover:bg-primary/20 text-primary transition-colors"
+                    >
+                      {tuttiVisibili ? (
+                        <CheckSquare className="size-4 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Square className="size-4 text-muted-foreground" />
+                      )}
+                    </button>
                   </div>
 
-                  {/* SPUNTA MASTER CELLA A1 */}
-                  <input
-                    type="checkbox"
-                    checked={tutteVisibili}
-                    onChange={toggleMostraTutteA1}
-                    className="size-4 cursor-pointer rounded accent-emerald-600 mt-0.5"
-                    title={
-                      tutteVisibili
-                        ? "Tutte le colonne dei corsi sono visibili"
-                        : "Clicca per mostrare tutte le colonne nascoste"
-                    }
+                  <div
+                    onMouseDown={(e) => iniziaResize("nominativo", larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo, e)}
+                    onDoubleClick={() => resetLarghezza("nominativo")}
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30 transition-colors"
                   />
-                </div>
+                </th>
 
-                <div
-                  onMouseDown={(e) => iniziaResize("nome", larghezze["nome"] || LARGHEZZE_FISSE_BASE.nome, e)}
-                  onDoubleClick={() => resetLarghezza("nome")}
-                  className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per ridimensionare (doppio clic per ripristinare)"
-                />
-              </th>
-
-              {/* FUNZIONE / REPARTO */}
-              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground align-top">
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-1"
-                  onClick={() => handleOrdina("funzione")}
+                {/* Colonna Funzione / Reparto */}
+                <th
+                  className="px-3 py-2.5 font-bold text-foreground select-none relative group"
+                  style={{ width: `${larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione}px` }}
                 >
-                  <span className="truncate">Funzione / Reparto</span>
-                  {renderFreccia("funzione")}
-                </div>
-                <div
-                  onMouseDown={(e) => iniziaResize("funzione", larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione, e)}
-                  onDoubleClick={() => resetLarghezza("funzione")}
-                  className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per ridimensionare"
-                />
-              </th>
-
-              {/* RUOLO AZIENDALE */}
-              <th className="group relative bg-surface px-3 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground align-top">
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-1"
-                  onClick={() => handleOrdina("ruolo")}
-                >
-                  <span className="truncate">Ruolo Aziendale</span>
-                  {renderFreccia("ruolo")}
-                </div>
-                <div
-                  onMouseDown={(e) => iniziaResize("ruolo", larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo, e)}
-                  onDoubleClick={() => resetLarghezza("ruolo")}
-                  className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                  title="Trascina per ridimensionare"
-                />
-              </th>
-
-              {/* COLONNE CORSI DINAMICHE DAL DATABASE */}
-              {corsiVisibili.map((c) => {
-                const conObbligo = dipendenti.filter((d) => haObbligoCorso(d.id, c)).length;
-                const larghCol = larghezze[c.id] || LARGHEZZA_BASE_CORSO;
-
-                return (
-                  <th
-                    key={c.id}
-                    className="group relative bg-surface px-2 py-2 text-center text-xs font-bold tracking-tight text-foreground align-top"
+                  <div
+                    onClick={() => handleOrdina("funzione")}
+                    className="cursor-pointer hover:text-primary transition-colors flex items-center justify-between"
                   >
-                    {/* Spunta in alto a destra per nascondere la colonna */}
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-normal text-muted-foreground">
-                        {conObbligo} obbl.
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        onChange={() => {}}
-                        onClick={(e) => toggleVisibilitaColonna(c.id, e)}
-                        className="size-3.5 cursor-pointer rounded accent-emerald-600"
-                        title="Togli la spunta per nascondere questa colonna"
-                      />
-                    </div>
+                    <span>FUNZIONE / REPARTO</span>
+                    {renderFreccia("funzione")}
+                  </div>
+                  <div
+                    onMouseDown={(e) => iniziaResize("funzione", larghezze["funzione"] || LARGHEZZE_FISSE_BASE.funzione, e)}
+                    onDoubleClick={() => resetLarghezza("funzione")}
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30 transition-colors"
+                  />
+                </th>
 
-                    {/* Testo dell'intestazione con WORD-WRAP dinamico se si stringe */}
-                    <div
-                      className="flex cursor-pointer flex-col items-center justify-center gap-0.5 text-center whitespace-normal break-words leading-tight"
-                      onClick={() => handleOrdina(c.id)}
+                {/* Colonna Ruolo */}
+                <th
+                  className="px-3 py-2.5 font-bold text-foreground select-none relative group"
+                  style={{ width: `${larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo}px` }}
+                >
+                  <div
+                    onClick={() => handleOrdina("ruolo")}
+                    className="cursor-pointer hover:text-primary transition-colors flex items-center justify-between"
+                  >
+                    <span className="truncate">RUOLO</span>
+                    {renderFreccia("ruolo")}
+                  </div>
+                  <div
+                    onMouseDown={(e) => iniziaResize("ruolo", larghezze["ruolo"] || LARGHEZZE_FISSE_BASE.ruolo, e)}
+                    onDoubleClick={() => resetLarghezza("ruolo")}
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30 transition-colors"
+                  />
+                </th>
+
+                {/* Colonne Corsi */}
+                {corsiVisibili.map((c) => {
+                  const w = larghezze[c.id] || LARGHEZZE_FISSE_BASE.corso;
+                  return (
+                    <th
+                      key={c.id}
+                      className="px-2 py-2 font-semibold text-foreground select-none relative group align-top"
+                      style={{ width: `${w}px` }}
                     >
-                      {c.codice && (
-                        <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                          {c.codice}
-                        </span>
-                      )}
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="font-semibold text-xs leading-tight">{c.nome_corso}</span>
-                        {renderFreccia(c.id)}
+                      <div className="flex items-start justify-between gap-1 mb-1">
+                        <span className="text-[10px] font-mono text-muted-foreground uppercase">{c.codice || "CORSO"}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleVisibilitaCorso(c.id, e)}
+                          title="Nascondi questa colonna"
+                          className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                        >
+                          <EyeOff className="size-3" />
+                        </button>
                       </div>
-                    </div>
 
-                    <div
-                      onMouseDown={(e) => iniziaResize(c.id, larghCol, e)}
-                      onDoubleClick={() => resetLarghezza(c.id)}
-                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-emerald-500/60"
-                      title="Trascina per allargare o stringere"
-                    />
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+                      <div
+                        onClick={() => handleOrdina(c.id)}
+                        className="cursor-pointer hover:text-primary transition-colors leading-tight break-words text-[11px]"
+                        title={c.nome_corso}
+                      >
+                        {c.nome_corso} {renderFreccia(c.id)}
+                      </div>
 
-          <tbody className="divide-y divide-border">
-            {listaElaborata.length === 0 ? (
-              <tr>
-                <td colSpan={3 + corsiVisibili.length} className="p-12 text-center text-muted-foreground">
-                  Nessun lavoratore corrisponde ai criteri di ricerca.
-                </td>
+                      <div
+                        onMouseDown={(e) => iniziaResize(c.id, w, e)}
+                        onDoubleClick={() => resetLarghezza(c.id)}
+                        className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30 transition-colors"
+                      />
+                    </th>
+                  );
+                })}
               </tr>
-            ) : (
-              listaElaborata.map((dip) => {
-                const isAttiva = rigaSelezionata === dip.id;
-                const funzione = [dip.reparto, dip.sottoreparto, dip.materia].filter(Boolean).join(" - ") || "—";
-                const ruoloAziendale = dip.classe_concorso || "Lavoratore";
+            </thead>
 
-                return (
-                  <tr
-                    key={dip.id}
-                    onClick={() => setRigaSelezionata(dip.id)}
-                    className={`cursor-pointer divide-x divide-border transition-colors ${
-                      isAttiva
-                        ? "bg-emerald-500/15 ring-2 ring-inset ring-emerald-500/60"
-                        : "hover:bg-muted/40"
-                    }`}
-                  >
-                    <td
-                      className={`sticky left-0 z-10 px-3 py-2.5 font-semibold text-foreground shadow-[2px_0_5px_rgba(0,0,0,0.05)] ${
-                        isAttiva ? "bg-emerald-500/20" : "bg-surface"
+            <tbody className="divide-y divide-border">
+              {listaElaborata.length === 0 ? (
+                <tr>
+                  <td colSpan={3 + corsiVisibili.length} className="p-12 text-center text-muted-foreground">
+                    Nessun lavoratore corrisponde ai criteri di ricerca.
+                  </td>
+                </tr>
+              ) : (
+                listaElaborata.map((dip) => {
+                  const isAttiva = rigaSelezionata === dip.id;
+                  const funzione = [dip.reparto, dip.sottoreparto, dip.classe_concorso, dip.materia].filter(Boolean).join(" - ") || "—";
+                  const ruoloAziendale = dip.classe_concorso || "Lavoratore";
+
+                  return (
+                    <tr
+                      key={dip.id}
+                      onClick={() => setRigaSelezionata(dip.id)}
+                      className={`cursor-pointer divide-x divide-border transition-colors ${
+                        isAttiva
+                          ? "bg-emerald-500/15 ring-2 ring-inset ring-emerald-500/60"
+                          : "hover:bg-muted/40"
                       }`}
                     >
-                      <div className="truncate">
-                        {dip.cognome} {dip.nome}
-                      </div>
-                      <div className="font-mono text-[11px] text-muted-foreground">{dip.codice_fiscale}</div>
-                    </td>
+                      <td
+                        className={`sticky left-0 z-10 px-3 py-2.5 font-semibold text-foreground shadow-[2px_0_5px_rgba(0,0,0,0.05)] ${
+                          isAttiva ? "bg-emerald-500/20" : "bg-surface"
+                        }`}
+                      >
+                        <div className="truncate">
+                          {dip.cognome} {dip.nome}
+                        </div>
+                        <div className="font-mono text-[11px] text-muted-foreground">{dip.codice_fiscale}</div>
+                      </td>
 
-                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                      <div className="truncate" title={funzione}>
-                        {funzione}
-                      </div>
-                    </td>
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                        <div className="truncate" title={funzione}>
+                          {funzione}
+                        </div>
+                      </td>
 
-                    <td className="px-3 py-2.5 text-xs">
-                      <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full">
-                        {ruoloAziendale}
-                      </span>
-                    </td>
+                      <td className="px-3 py-2.5 text-xs">
+                        <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full">
+                          {ruoloAziendale}
+                        </span>
+                      </td>
 
-                    {/* Caselle di spunta corsi dal DB */}
-                    {corsiVisibili.map((c) => {
-                      const obbligato = haObbligoCorso(dip.id, c);
-                      const haAttestato = haAttestatoCorso(dip.id, c);
-                      const chiaveOp = `${dip.id}-${c.id}`;
-                      const isBusy = inSalvataggio === chiaveOp;
+                      {corsiVisibili.map((c) => {
+                        const obbligatorio = haObbligoCorso(dip.id, c);
+                        const fatto = haAttestatoCorso(dip.id, c);
 
-                      return (
-                        <td
-                          key={c.id}
-                          className="px-2 py-2 text-center"
-                          onClick={(e) => toggleObbligo(dip, c, e)}
-                        >
-                          <div className="flex items-center justify-center gap-1.5">
-                            {isBusy ? (
-                              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                            ) : (
-                              <input
-                                type="checkbox"
-                                checked={obbligato}
-                                onChange={() => {}}
-                                className="size-4 cursor-pointer rounded accent-emerald-600"
-                                title={
-                                  obbligato
-                                    ? "Corso obbligatorio (clicca per rimuovere l'obbligo)"
-                                    : "Clicca per rendere obbligatorio questo corso"
-                                }
-                              />
-                            )}
+                        return (
+                          <td
+                            key={c.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleObbligo(dip, c);
+                            }}
+                            className="px-2 py-2 text-center select-none hover:bg-primary/10 transition-colors"
+                            title={`Clicca per cambiare obbligo: ${c.nome_corso}`}
+                          >
+                            <div className="flex items-center justify-center">
+                              <button
+                                type="button"
+                                className={`size-5 rounded border flex items-center justify-center transition-all ${
+                                  obbligatorio
+                                    ? fatto
+                                      ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                                      : "bg-amber-500/20 border-amber-600 text-amber-700 dark:text-amber-400 font-bold"
+                                    : "border-muted-foreground/30 hover:border-primary/60"
+                                }`}
+                              >
+                                {obbligatorio && (fatto ? <Check className="size-3.5 stroke-[3]" /> : "!")}
+                              </button>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
 
-                            {obbligato && haAttestato && (
-                              <span title="Regolare: corso svolto con attestato valido">
-                                <FileCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                              </span>
-                            )}
-                            {obbligato && !haAttestato && (
-                              <span title="Obbligatorio ma attestato non registrato (da formare)">
-                                <AlertCircle className="size-3.5 text-amber-500" />
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Didascalia inferiore */}
-      <footer className="flex shrink-0 items-center justify-between border-t border-border bg-surface px-6 py-2 text-xs text-muted-foreground">
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface px-6 py-2.5 text-xs text-muted-foreground shrink-0">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="size-3 rounded border border-emerald-600 bg-emerald-600" /> Obbligo assegnato
+            <span className="size-3.5 rounded bg-emerald-600 inline-block text-white text-[9px] font-bold text-center leading-3">
+              ✓
+            </span>
+            <span>Obbligatorio (regolare con attestato)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <FileCheck className="size-3.5 text-emerald-600" /> In regola (attestato valido)
+            <span className="size-3.5 rounded bg-amber-500/30 border border-amber-600 inline-block text-amber-700 dark:text-amber-400 text-[10px] font-bold text-center leading-3">
+              !
+            </span>
+            <span>Fabbisogno formativo da svolgere</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <AlertCircle className="size-3.5 text-amber-500" /> Da formare
+            <span className="size-3.5 rounded border border-muted-foreground/30 inline-block" />
+            <span>Non previsto per questa figura</span>
           </span>
-          <span>Spunta in A1 per mostrare tutte • Spunta su colonna per nascondere</span>
         </div>
-        <div>
-          Totale lavoratori: <strong>{dipendenti.length}</strong>
+        <div className="flex items-center gap-2">
+          <span>Clicca sulle celle per attivare/disattivare l'obbligo</span>
         </div>
       </footer>
     </div>,
