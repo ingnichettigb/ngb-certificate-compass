@@ -14,6 +14,8 @@
  *   - Rev 9 (2026-10-30 19:30): apriDaPercorsoInTutte restituisce l'esito dettagliato (nessuna cartella, permesso,
  *     non trovato, bloccato); permesso in sola lettura; apertura solo del file con nome identico, file simili
  *     restituiti a parte; rilevamento blocco popup (apriFileConControllo).
+ *   - Rev 10 (2026-10-30 20:30): Esiti con motivo per rinomina/copia (EsitoRinomina) e per il salvataggio locale
+ *     (salvaInCartellaSceltaEsito); ricerca in sola lettura; evento di cambio cartelle.
  */
 import {
   getCartellaArchivio,
@@ -22,6 +24,7 @@ import {
   ottieniFileDaPercorso,
   scriviInCartella,
   apriFileLocale,
+  notificaCartelleCambiate,
   type FileTrovato,
 } from "./cartella-locale";
 export { verificaPermessi, apriFileLocale };
@@ -123,6 +126,7 @@ export async function aggiungiCartella(handleIn?: FileSystemDirectoryHandle, nom
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  notificaCartelleCambiate();
 
   return {
     id: record.id,
@@ -141,6 +145,7 @@ export async function rimuoviCartella(id: string): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  notificaCartelleCambiate();
 }
 
 export const rimuoviCartellaAggiuntiva = rimuoviCartella;
@@ -150,7 +155,7 @@ export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovat
   const risultati: FileTrovato[] = [];
 
   for (const c of cartelle) {
-    if (!(await verificaPermessi(c.handle, false))) continue;
+    if (!(await verificaPermessi(c.handle, false, "read"))) continue;
     const trovati = await cercaFileRicorsivo(c.handle, chiave);
     for (const t of trovati) {
       risultati.push({ ...t, cartella: c.nome });
@@ -304,10 +309,17 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
   return null;
 }
 
+export type MotivoRinomina = "nessuna_cartella" | "permesso" | "non_trovato" | "scrittura" | "percorso";
+
 export type EsitoRinomina = {
   success: boolean;
   nuovoPercorso?: string;
+  /** Testo già pronto da mostrare all'utente. */
   errore?: string;
+  /** Causa dell'insuccesso (assente se success). */
+  motivo?: MotivoRinomina;
+  /** Cartelle per cui il browser non ha concesso il permesso di scrittura. */
+  cartelleSenzaPermesso?: string[];
 };
 
 /** Rinomina o copia un file nella cartella locale di origine. */
@@ -320,17 +332,33 @@ export async function rinominaFileNelPercorso(
     const percorsoNorm = percorsoVecchio.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
     const parti = percorsoNorm.split("/").filter(Boolean);
     if (parti.length === 0) {
-      return { success: false, errore: "Percorso non specificato" };
+      return { success: false, motivo: "percorso", errore: "Percorso non specificato" };
     }
 
     const vecchioNome = parti[parti.length - 1];
     if (!vecchioNome) {
-      return { success: false, errore: "Nome file originario non valido" };
+      return { success: false, motivo: "percorso", errore: "Nome file originario non valido" };
     }
 
     const cartelle = await elencoCartelle();
+    if (cartelle.length === 0) {
+      return {
+        success: false,
+        motivo: "nessuna_cartella",
+        errore: "Nessuna cartella collegata per la rinomina fisica del file: collegala e riprova.",
+      };
+    }
+
+    const senzaPermesso: string[] = [];
+    const controllate: string[] = [];
+    let erroreScrittura: string | null = null;
+
     for (const c of cartelle) {
-      if (!(await verificaPermessi(c.handle, true))) continue;
+      if (!(await verificaPermessi(c.handle, true))) {
+        senzaPermesso.push(c.nome);
+        continue;
+      }
+      controllate.push(c.nome);
 
       let dir: FileSystemDirectoryHandle = c.handle;
       const sottocartelle = parti.slice(0, -1);
@@ -351,8 +379,14 @@ export async function rinominaFileNelPercorso(
 
       if (!trovata) continue;
 
+      let fileOrigHandle: FileSystemFileHandle;
       try {
-        const fileOrigHandle = await dir.getFileHandle(vecchioNome);
+        fileOrigHandle = await dir.getFileHandle(vecchioNome);
+      } catch {
+        continue; // il file non è in questa cartella
+      }
+
+      try {
         const fileOrig = await fileOrigHandle.getFile();
 
         const nuovoHandle = await dir.getFileHandle(nuovoNomeFile, { create: true });
@@ -372,14 +406,37 @@ export async function rinominaFileNelPercorso(
           : nuovoNomeFile;
 
         return { success: true, nuovoPercorso: percorsoAggiornato };
-      } catch {
-        // Continua sulla cartella successiva
+      } catch (e) {
+        erroreScrittura = (e as Error)?.message || String(e);
       }
     }
 
-    return { success: false, errore: "File non trovato nella cartella locale collegata per la rinomina" };
+    if (erroreScrittura) {
+      return {
+        success: false,
+        motivo: "scrittura",
+        errore: `Il file è stato trovato ma la scrittura non è riuscita: ${erroreScrittura}`,
+      };
+    }
+    if (senzaPermesso.length > 0) {
+      const elenco = senzaPermesso.join(", ");
+      return {
+        success: false,
+        motivo: "permesso",
+        cartelleSenzaPermesso: senzaPermesso,
+        errore:
+          controllate.length === 0
+            ? `Permesso di scrittura negato per la cartella: ${elenco}. Autorizza e riprova.`
+            : `File non trovato nelle cartelle autorizzate e manca il permesso di scrittura per: ${elenco}. Autorizza e riprova.`,
+      };
+    }
+    return {
+      success: false,
+      motivo: "non_trovato",
+      errore: `File «${vecchioNome}» non trovato nelle cartelle collegate (${controllate.join(", ")}).`,
+    };
   } catch (e) {
-    return { success: false, errore: String(e) };
+    return { success: false, motivo: "scrittura", errore: String(e) };
   }
 }
 
@@ -480,19 +537,48 @@ export function setUltimaCartella(nome: string): void {
 
 export const getUltimaCartellaSalvataggio = getUltimaCartella;
 
+export type EsitoSalvataggioLocale =
+  | { esito: "ok"; cartella: string }
+  | { esito: "nessuna_cartella" }
+  | { esito: "permesso"; cartelle: string[] };
+
+/** Salva il file nella cartella scelta e dice esplicitamente perché, se non ci riesce. */
+export async function salvaInCartellaSceltaEsito(
+  nomeCartella: string | null | undefined,
+  file: File,
+  nomeFile: string,
+  sottocartella?: string,
+): Promise<EsitoSalvataggioLocale> {
+  const tutte = await elencoCartelle();
+  const c = tutte.find((x) => x.nome.toLowerCase() === (nomeCartella || "").toLowerCase()) ?? tutte[0];
+  if (!c) return { esito: "nessuna_cartella" };
+  if (!(await verificaPermessi(c.handle, true))) return { esito: "permesso", cartelle: [c.nome] };
+  await scriviInCartella(c.handle, file, nomeFile, sottocartella);
+  setUltimaCartella(c.nome);
+  return { esito: "ok", cartella: c.nome };
+}
+
+/**
+ * Chiede subito il permesso di scrittura per la cartella di destinazione (stessa scelta di salvaInCartellaSceltaEsito).
+ * Va chiamata da un clic, PRIMA di operazioni lunghe (es. il caricamento online): dopo qualche secondo il browser
+ * non accetta più la richiesta e il salvataggio locale fallirebbe anche se l'utente avrebbe acconsentito.
+ */
+export async function preautorizzaCartellaScelta(nomeCartella: string | null | undefined): Promise<boolean> {
+  const tutte = await elencoCartelle();
+  const c = tutte.find((x) => x.nome.toLowerCase() === (nomeCartella || "").toLowerCase()) ?? tutte[0];
+  if (!c) return false;
+  return verificaPermessi(c.handle, true);
+}
+
+/** Versione storica: restituisce il nome cartella oppure null se non è stato possibile salvare. */
 export async function salvaInCartellaScelta(
   nomeCartella: string | null | undefined,
   file: File,
   nomeFile: string,
   sottocartella?: string,
 ): Promise<string | null> {
-  const tutte = await elencoCartelle();
-  const c = tutte.find((x) => x.nome.toLowerCase() === (nomeCartella || "").toLowerCase()) ?? tutte[0];
-  if (!c) return null;
-  if (!(await verificaPermessi(c.handle, true))) return null;
-  await scriviInCartella(c.handle, file, nomeFile, sottocartella);
-  setUltimaCartella(c.nome);
-  return c.nome;
+  const r = await salvaInCartellaSceltaEsito(nomeCartella, file, nomeFile, sottocartella);
+  return r.esito === "ok" ? r.cartella : null;
 }
 
 export async function salvaInCartellaSpecifica(

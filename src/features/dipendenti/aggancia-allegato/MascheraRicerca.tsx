@@ -4,41 +4,37 @@
  * Data creazione: 2026-10-26
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Maschera di ricerca con cognome proposto e aggiunte rapide.
+ *   - Rev 2 (2026-10-30 20:30): Avviso cartelle con tre stati (nessuna / da autorizzare / ok) al posto di «non selezionata».
  */
-import { Search, Loader2, FolderOpen, AlertCircle } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Dipendente } from "@/lib/api";
+import type { StatoCartelle } from "@/lib/api/stato-cartelle";
+import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
 
 export function MascheraRicerca({
   dipendente,
   chiave,
   setChiave,
   inRicerca,
-  haCartella,
+  statoCartelle,
   onCerca,
   onScegliCartella,
+  onAutorizza,
 }: {
   dipendente: Dipendente;
   chiave: string;
   setChiave: (v: string | ((p: string) => string)) => void;
   inRicerca: boolean;
-  haCartella: boolean | null;
+  statoCartelle: StatoCartelle | null;
   onCerca: (t: string) => void;
   onScegliCartella: () => void;
+  onAutorizza: () => void;
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm">
-      {haCartella === false && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-2 text-sm">
-          <span className="flex items-center gap-2 font-medium">
-            <AlertCircle className="size-4 text-warning" /> Cartella archivio non selezionata.
-          </span>
-          <Button size="sm" variant="outline" onClick={onScegliCartella}>
-            <FolderOpen className="size-3.5" /> Seleziona cartella
-          </Button>
-        </div>
-      )}
+      <AvvisoCartelle stato={statoCartelle} onAutorizza={onAutorizza} onCollega={onScegliCartella} />
       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Ricerca nel nome dei file (proposto: cognome)
       </label>

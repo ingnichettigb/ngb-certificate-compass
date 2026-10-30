@@ -13,6 +13,7 @@
  *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
  *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
  *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, non trovato, bloccato).
+ *   - Rev 12 (2026-10-30 20:30): Toast condivisi (avvisi-cartella) al posto di quelli locali.
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -40,11 +41,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  apriDaPercorsoInTutte,
-  apriFileConControllo,
-  aggiungiCartella,
-} from "@/lib/api/cartelle-multiple";
+import { apriDaPercorsoInTutte, apriFileConControllo } from "@/lib/api/cartelle-multiple";
+import { avvisoNessunaCartella, avvisoPermesso, avvisoPopupBloccato } from "@/features/cartelle/avvisi-cartella";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -87,35 +85,17 @@ export function TabellaAttestati({
       if (esito.motivo === "ok") return;
 
       if (esito.motivo === "nessuna_cartella") {
-        toast.info("Nessuna cartella collegata", {
-          description: "Collega la cartella dell'archivio per aprire i file salvati sul PC.",
-          action: {
-            label: "Collega cartella",
-            onClick: async () => {
-              try {
-                await aggiungiCartella();
-                toast.success("Cartella collegata", { description: "Premi di nuovo «Vedi»." });
-              } catch {
-                /* selezione annullata */
-              }
-            },
-          },
-        });
+        avvisoNessunaCartella();
         return;
       }
 
       if (esito.motivo === "permesso") {
-        toast.warning("Permesso alla cartella non concesso", {
-          description: `Il browser non ha dato l'accesso a: ${esito.cartelleSenzaPermesso.join(", ")}.`,
-          action: { label: "Autorizza e riprova", onClick: () => void apriDocumento(att) },
-        });
+        avvisoPermesso({ cartelle: esito.cartelleSenzaPermesso, riprova: () => void apriDocumento(att) });
         return;
       }
 
       if (esito.motivo === "bloccato") {
-        toast.warning("Il browser ha bloccato l'apertura", {
-          description: "Consenti i popup per questo sito (icona nella barra degli indirizzi) e riprova.",
-        });
+        avvisoPopupBloccato();
         return;
       }
 
@@ -132,11 +112,7 @@ export function TabellaAttestati({
           action: {
             label: "Apri il più simile",
             onClick: async () => {
-              if (!(await apriFileConControllo(primoSimile.handle))) {
-                toast.warning("Il browser ha bloccato l'apertura", {
-                  description: "Consenti i popup per questo sito e riprova.",
-                });
-              }
+              if (!(await apriFileConControllo(primoSimile.handle))) avvisoPopupBloccato();
             },
           },
         });

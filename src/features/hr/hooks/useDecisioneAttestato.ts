@@ -10,6 +10,7 @@
  *   - Rev 5 (2026-10-28 14:17): Import helper da ../decisione, patch senza null non ammessi, integrazione DVR con i campi reali.
  *   - Rev 6 (2026-10-28 14:25): Ripristinata normalizzazione data corso a YYYY-MM-DD (input type=date).
  *   - Rev 7 (2026-10-29 13:25): Azione sdoppiaCorso a due passaggi (copia PDF + nuovo attestato, poi rinomina originale).
+ *   - Rev 8 (2026-10-30 20:30): Errori di rinomina/copia distinti (nessuna cartella, permesso di scrittura, non trovato).
  */
 import { useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import {
   type TipoCorso,
 } from "@/lib/api";
 import { rinominaFileNelPercorso, duplicaFileNelPercorso } from "@/lib/api/cartelle-multiple";
+import { mostraErroreRinomina } from "@/features/cartelle/avvisi-cartella";
 import { generaNomeFileRinominato } from "../nome-file-validazione";
 import {
   costruisciAggiornamento,
@@ -101,9 +103,7 @@ export function useDecisioneAttestato({
       const esitoRinomina = await rinominaFileNelPercorso(linkOriginale, nuovoNome);
 
       if (!esitoRinomina.success) {
-        toast.error("Impossibile rinominare il file fisico", {
-          description: esitoRinomina.errore || "Verifica i permessi sulla cartella locale del file",
-        });
+        mostraErroreRinomina("Impossibile rinominare il file fisico", esitoRinomina);
         setBusy(false);
         return;
       }
@@ -156,9 +156,7 @@ export function useDecisioneAttestato({
       const nome = generaNomeFileRinominato(attestato, corsoSelezionato, ore);
       const copia = await duplicaFileNelPercorso(link, nome);
       if (!copia.success) {
-        toast.error("Impossibile creare la copia del PDF", {
-          description: copia.errore || "Verifica i permessi sulla cartella locale del file",
-        });
+        mostraErroreRinomina("Impossibile creare la copia del PDF", copia);
         return;
       }
       const nuovo = await creaAttestato({

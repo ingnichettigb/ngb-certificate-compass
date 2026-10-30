@@ -26,6 +26,10 @@ import {
 } from "@/components/ui/select";
 import { TIPI_ATTESTATO_PDF, type Dipendente } from "@/lib/api";
 import { useCaricamentoAttestato } from "./hooks/useCaricamentoAttestato";
+import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
+import { useStatoCartelle } from "@/features/cartelle/useStatoCartelle";
+import { autorizzaCartelle, collegaCartella } from "@/lib/api/stato-cartelle";
+import { toast } from "sonner";
 
 export function DialogCaricamento({
   dipendente,
@@ -54,6 +58,21 @@ export function DialogCaricamento({
     accetta,
     conferma,
   } = useCaricamentoAttestato({ dipendente, open, onOpenChange, onDone });
+  const { stato: statoCartelle, aggiorna: aggiornaStatoCartelle } = useStatoCartelle();
+
+  async function autorizzaCartelleLocali() {
+    await autorizzaCartelle("readwrite");
+    await aggiornaStatoCartelle();
+  }
+
+  async function collegaCartellaLocale() {
+    try {
+      await collegaCartella();
+    } catch (e) {
+      toast.error("Collegamento cartella non riuscito", { description: (e as Error).message });
+    }
+    await aggiornaStatoCartelle();
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,6 +199,14 @@ export function DialogCaricamento({
           </label>
           {anchLocale && (
             <SceltaCartellaSalvataggio valore={cartellaDest} onChange={setCartellaDest} />
+          )}
+          {anchLocale && (
+            <AvvisoCartelle
+              stato={statoCartelle}
+              onAutorizza={() => void autorizzaCartelleLocali()}
+              onCollega={() => void collegaCartellaLocale()}
+              conseguenza="per salvare la copia locale"
+            />
           )}
         </div>
 
