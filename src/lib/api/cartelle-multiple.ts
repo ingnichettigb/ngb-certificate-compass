@@ -9,6 +9,7 @@
  *   - Rev 4 (2026-10-28 14:15): Funzione rinominaFileNelPercorso per rinomina fisica cartella origine.
  *   - Rev 5 (2026-10-28 14:35): Ripristino ricerca ricorsiva, rimozione prefisso radice e gestione percorso vuoto come «mancante».
  *   - Rev 6 (2026-10-29 13:25): Aggiunta duplicaFileNelPercorso (copia nella stessa cartella per «Sdoppia corso cumulativo»).
+ *   - Rev 7 (2026-10-30 11:10): Apertura potenziata con fallback a ricerca ricorsiva per nome file ed esportazione apriFileLocale.
  */
 import {
   getCartellaArchivio,
@@ -17,9 +18,10 @@ import {
   apriDaPercorsoRelativo,
   ottieniFileDaPercorso,
   scriviInCartella,
+  apriFileLocale,
   type FileTrovato,
 } from "./cartella-locale";
-export { verificaPermessi };
+export { verificaPermessi, apriFileLocale };
 import { supabase } from "@/integrations/supabase/client";
 
 const DB_NOME = "app_archivio_cartelle";
@@ -112,12 +114,33 @@ export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovat
   return risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
 }
 
-/** Prova ad aprire un percorso relativo in ciascuna cartella collegata. */
+/** Prova ad aprire un percorso relativo in ciascuna cartella collegata, con fallback a ricerca per nome file. */
 export async function apriDaPercorsoInTutte(percorso: string): Promise<boolean> {
-  for (const c of await elencoCartelle()) {
+  const cartelle = await elencoCartelle();
+  if (cartelle.length === 0) return false;
+
+  const percorsoNorm = percorso.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
+  const nomeFile = percorsoNorm.split("/").pop()?.trim() || "";
+
+  // 1. Prova percorso relativo esatto
+  for (const c of cartelle) {
     if (!(await verificaPermessi(c.handle, true))) continue;
-    if (await apriDaPercorsoRelativo(c.handle, percorso)) return true;
+    if (await apriDaPercorsoRelativo(c.handle, percorsoNorm)) return true;
   }
+
+  // 2. Fallback: cerca ricorsivamente il file per nome nella cartella
+  if (nomeFile) {
+    for (const c of cartelle) {
+      if (!(await verificaPermessi(c.handle, true))) continue;
+      const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 8);
+      const corrispondenza = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
+      if (corrispondenza) {
+        await apriFileLocale(corrispondenza.handle);
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -136,12 +159,11 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
 
   // 1 & 2. Tentativo con percorso relativo esatto (e senza prefisso nome cartella)
   for (const c of cartelle) {
-    if (!(await verificaPermessi(c.handle, false))) continue;
+    if (!(await verificaPermessi(c.handle, true))) continue;
 
     let f = await ottieniFileDaPercorso(c.handle, percorsoNorm);
     if (f) return f;
 
-    // Se il percorso inizia con il nome della cartella collegata, rimuovilo
     if (percorsoNorm.toLowerCase().startsWith(c.nome.toLowerCase() + "/")) {
       const relativoSenzaRadice = percorsoNorm.slice(c.nome.length + 1);
       f = await ottieniFileDaPercorso(c.handle, relativoSenzaRadice);
@@ -152,7 +174,7 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
   // 3. Ricerca ricorsiva per nome file come recupero sicuro
   if (nomeFile) {
     for (const c of cartelle) {
-      if (!(await verificaPermessi(c.handle, false))) continue;
+      if (!(await verificaPermessi(c.handle, true))) continue;
       const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 8);
       const corrispondenza = trovati.find((t) => t.nome.toLowerCase() === nomeFile.toLowerCase()) ?? trovati[0];
       if (corrispondenza) {
@@ -197,45 +219,52 @@ export async function rinominaFileNelPercorso(
     for (const c of cartelle) {
       if (!(await verificaPermessi(c.handle, true))) continue;
 
-      // Prova sia il percorso completo sia senza prefisso radice
-      const percorsiDaProvare = [parti];
-      if (parti[0] && parti[0].toLowerCase() === c.nome.toLowerCase()) {
-        percorsiDaProvare.push(parti.slice(1));
+      let dir: FileSystemDirectoryHandle = c.handle;
+      const sottocartelle = parti.slice(0, -1);
+
+      if (sottocartelle.length > 0 && sottocartelle[0]?.toLowerCase() === c.nome.toLowerCase()) {
+        sottocartelle.shift();
       }
 
-      for (const p of percorsiDaProvare) {
+      let trovata = true;
+      for (const sotto of sottocartelle) {
         try {
-          let dir = c.handle;
-          for (let i = 0; i < p.length - 1; i++) {
-            dir = await dir.getDirectoryHandle(p[i]!);
-          }
-
-          const vecchioHandle = await dir.getFileHandle(vecchioNome);
-          const file = await vecchioHandle.getFile();
-
-          const nuovoHandle = await dir.getFileHandle(nuovoNomeFile, { create: true });
-          const writer = await nuovoHandle.createWritable();
-          await writer.write(file);
-          await writer.close();
-
-          if (!mantieniOriginale && vecchioNome !== nuovoNomeFile) {
-            try {
-              await dir.removeEntry(vecchioNome);
-            } catch {
-              /* ignora */
-            }
-          }
-
-          const padre = p.slice(0, p.length - 1).join("/");
-          const nuovoPercorso = padre ? `${padre}/${nuovoNomeFile}` : nuovoNomeFile;
-          return { success: true, nuovoPercorso };
+          dir = await dir.getDirectoryHandle(sotto);
         } catch {
-          continue;
+          trovata = false;
+          break;
         }
+      }
+
+      if (!trovata) continue;
+
+      try {
+        const fileOrigHandle = await dir.getFileHandle(vecchioNome);
+        const fileOrig = await fileOrigHandle.getFile();
+
+        const nuovoHandle = await dir.getFileHandle(nuovoNomeFile, { create: true });
+        const writable = await nuovoHandle.createWritable();
+        await writable.write(fileOrig);
+        await writable.close();
+
+        if (!mantieniOriginale) {
+          const dirQualsiasi = dir as unknown as { removeEntry?: (n: string) => Promise<void> };
+          if (dirQualsiasi.removeEntry) {
+            await dirQualsiasi.removeEntry(vecchioNome);
+          }
+        }
+
+        const percorsoAggiornato = sottocartelle.length > 0
+          ? `${sottocartelle.join("/")}/${nuovoNomeFile}`
+          : nuovoNomeFile;
+
+        return { success: true, nuovoPercorso: percorsoAggiornato };
+      } catch {
+        // Continua sulla cartella successiva
       }
     }
 
-    return { success: false, errore: "File originario non trovato o permessi cartella mancanti" };
+    return { success: false, errore: "File non trovato nella cartella locale collegata per la rinomina" };
   } catch (e) {
     return { success: false, errore: String(e) };
   }
@@ -256,7 +285,7 @@ export async function risolviDocumentoAttestato(
   percorso: string | null | undefined,
 ): Promise<RisoluzioneDocumento> {
   const percorsoPulito = (percorso || "").trim();
-  const nomeFile = percorsoPulito.split("/").pop() || percorsoPulito;
+  const nomeFile = percorsoPulito.replace(/\\/g, "/").split("/").pop() || percorsoPulito;
   const isPdf = nomeFile.toLowerCase().endsWith(".pdf") || percorsoPulito.toLowerCase().includes(".pdf");
 
   if (!percorsoPulito) {
@@ -316,33 +345,38 @@ export async function risolviDocumentoAttestato(
   };
 }
 
-export function getUltimaCartella(): string | null {
+/** Salva il file nella cartella specificata o nella principale. */
+export async function salvaInCartellaSpecifica(
+  nomeCartella: string | undefined,
+  file: File,
+  nomeFile: string,
+  sottocartella?: string,
+): Promise<boolean> {
+  const cartelle = await elencoCartelle();
+  if (cartelle.length === 0) return false;
+
+  const target = nomeCartella
+    ? cartelle.find((c) => c.nome.toLowerCase() === nomeCartella.toLowerCase()) || cartelle[0]
+    : cartelle[0];
+
+  if (!target) return false;
+  if (!(await verificaPermessi(target.handle, true))) return false;
+
+  const salvato = await scriviInCartella(target.handle, file, nomeFile, sottocartella);
+  if (salvato) {
+    try {
+      localStorage.setItem(CHIAVE_ULTIMA, target.nome);
+    } catch {
+      // Ignora errori di storage
+    }
+  }
+  return salvato;
+}
+
+export function getUltimaCartellaSalvataggio(): string | null {
   try {
     return localStorage.getItem(CHIAVE_ULTIMA);
   } catch {
     return null;
   }
-}
-
-export function setUltimaCartella(nome: string): void {
-  try {
-    localStorage.setItem(CHIAVE_ULTIMA, nome);
-  } catch {
-    /* ignora */
-  }
-}
-
-export async function salvaInCartellaScelta(
-  nomeCartella: string | null,
-  file: File,
-  nomeFile: string,
-  sottocartella?: string,
-): Promise<string | null> {
-  const tutte = await elencoCartelle();
-  const c = tutte.find((x) => x.nome === nomeCartella) ?? tutte[0];
-  if (!c) return null;
-  if (!(await verificaPermessi(c.handle, true))) return null;
-  await scriviInCartella(c.handle, file, nomeFile, sottocartella);
-  setUltimaCartella(c.nome);
-  return c.nome;
 }
