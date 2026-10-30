@@ -9,15 +9,17 @@
  *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
  *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic.
  *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
+ *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
  *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR (prefisso radice e ricerca per nome).
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
 import {
   formatData,
   scaduto,
   statoBadgeClass,
   eliminaAttestato,
+  trovaDuplicati,
   scollegaDocumentoAttestato,
   type Dipendente,
   type Attestato,
@@ -58,6 +60,10 @@ export function TabellaAttestati({
   const [attestatoDaModificare, setAttestatoDaModificare] = useState<Attestato | null>(null);
   const [attestatoDaEliminare, setAttestatoDaEliminare] = useState<Attestato | null>(null);
   const [eliminazioneInCorso, setEliminazioneInCorso] = useState(false);
+  const doppioni = useMemo(
+    () => trovaDuplicati(righe.filter((r) => r.isAttestato && r.attestato).map((r) => r.attestato as Attestato)),
+    [righe],
+  );
 
   async function apriDocumento(percorso: string) {
     // Apertura immediata della scheda per evitare il blocco popup del browser
@@ -129,14 +135,22 @@ export function TabellaAttestati({
                 const haFile = Boolean(a.url_foto_fronte);
 
                 return (
-                  <tr key={a.id} className="hover:bg-muted/40">
+                  <tr key={a.id} className={doppioni.has(a.id) ? "bg-warning/20 hover:bg-warning/30" : "hover:bg-muted/40"}>
                     <td className="px-3 py-2 font-medium">
+                      {doppioni.has(a.id) && (
+                        <span className="mr-1.5 rounded border border-warning bg-warning/30 px-1.5 py-0.5 text-[10px] font-semibold" title="Stesso corso e stessa data registrati più volte: verifica e cancella la copia superflua">
+                          ⚠ Possibile doppione ({doppioni.get(a.id)})
+                        </span>
+                      )}
                       {a.tipi_corso?.codice && (
                         <span className="mr-1.5 font-mono text-xs text-muted-foreground">
                           [{a.tipi_corso.codice}]
                         </span>
                       )}
                       {a.tipi_corso?.nome_corso ?? "—"}
+                      {a.numero_attestato && (
+                        <span className="block font-mono text-[10px] text-muted-foreground">N. {a.numero_attestato}</span>
+                      )}
                     </td>
                     <td className="px-3 py-2">{formatData(a.data_corso)}</td>
                     <td
