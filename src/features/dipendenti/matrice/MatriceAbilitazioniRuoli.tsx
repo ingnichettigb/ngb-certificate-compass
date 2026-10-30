@@ -20,7 +20,7 @@ import {
   getAttestati,
   getRuoliSicurezza,
   getAssegnazioniRuoli,
-  salvaAssegnazioneRuolo,
+  impostaRuoloDipendente,
   type Dipendente,
   type TipoCorso,
   type Attestato,
@@ -107,7 +107,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   const { data: attestati = [] } = useQuery({
     queryKey: ["attestati"],
-    queryFn: getAttestati,
+    queryFn: () => getAttestati(),
   });
 
   const { data: ruoli = [] } = useQuery({
@@ -203,7 +203,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     const nuovoStato = !giaAssegnato;
 
     try {
-      await salvaAssegnazioneRuolo(dipendente.id, ruolo.id, nuovoStato);
+      await impostaRuoloDipendente(dipendente.id, ruolo.id, nuovoStato);
       await queryClient.invalidateQueries({ queryKey: ["assegnazioni_ruoli"] });
       toast.success(
         nuovoStato
@@ -283,7 +283,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   }
 
   const listaElaborata = useMemo(() => {
-    let res = dipendenti.filter((d) => d.stato_contratto !== "cessato");
+    let res = dipendenti.filter((d) => d.stato_lavoratore !== "cessato");
 
     if (ricerca.trim()) {
       const q = ricerca.toLowerCase().trim();
