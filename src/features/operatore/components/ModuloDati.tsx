@@ -4,6 +4,7 @@
  * Modulo dei dati estratti dall'attestato (con mirino OCR) e pulsanti di salvataggio.
  * Revisioni:
  *   rev 2 — 25/10/2026 10:15 — Reparto scelto da menu (SelezioneRepartoModulo).
+ *   rev 3 — 30/10/2026 10:40 — Campo Numero attestato con OCR e proposta automatica AAMMGG-CODICE.
  */
 import { Archive, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { pulisciCF } from "@/lib/api";
+import { generaNumeroAttestato, pulisciCF } from "@/lib/api";
 import { nomeFileStandard } from "../nome-file";
 import type { CampoOcr, Riga, TipoCorso } from "../types";
 import { MirinoOcr } from "./MirinoOcr";
@@ -154,6 +155,16 @@ export function ModuloDati({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="numatt">Numero / protocollo attestato{mirino("numero_attestato")}</Label>
+              <Input
+                id="numatt"
+                value={form.numero_attestato ?? ""}
+                placeholder={`Se vuoto: ${generaNumeroAttestato(form.data_corso, form.tipo_corso_codice ?? tipi.find((t) => t.id === form.tipo_corso_id)?.codice)}`}
+                onChange={(e) => set("numero_attestato", e.target.value.toUpperCase())}
+              />
             </div>
 
             <div>

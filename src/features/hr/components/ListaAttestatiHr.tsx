@@ -2,9 +2,12 @@
  * File:      ListaAttestatiHr.tsx
  * Percorso:  src/features/hr/components/ListaAttestatiHr.tsx
  * Elenco degli attestati (caricamento, vuoto o schede).
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 10:35): Evidenziazione doppioni.
  */
 import { Loader2 } from "lucide-react";
-import { type Attestato } from "@/lib/api";
+import { useMemo } from "react";
+import { trovaDuplicati, type Attestato } from "@/lib/api";
 import { RigaAttestatoHr } from "./RigaAttestatoHr";
 
 export function ListaAttestatiHr({
@@ -18,6 +21,7 @@ export function ListaAttestatiHr({
   sel: string | null;
   setSel: (id: string) => void;
 }) {
+  const doppioni = useMemo(() => trovaDuplicati(attestati), [attestati]);
   return (
   <div className="max-h-[70vh] space-y-2 overflow-auto pr-1">
     {isLoading && (
@@ -31,7 +35,7 @@ export function ListaAttestatiHr({
       </p>
     )}
     {attestati.map((a) => (
-      <RigaAttestatoHr key={a.id} a={a} selezionato={sel === a.id} onSel={() => setSel(a.id)} />
+      <RigaAttestatoHr key={a.id} a={a} selezionato={sel === a.id} onSel={() => setSel(a.id)} doppioni={doppioni.get(a.id) ?? 0} />
     ))}
   </div>
   );
