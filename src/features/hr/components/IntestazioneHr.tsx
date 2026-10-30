@@ -4,7 +4,7 @@
  * Data creazione: 2026-10-20
  * Revisioni:
  *   - Rev 1 (2026-10-20 14:00): Intestazione dashboard HR con backup.
- *   - Rev 2 (2026-10-28 20:50): Aggiunto pulsante e apertura Matrice Abilitazioni e Ruoli.
+ *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -12,11 +12,9 @@ import { ArrowLeft, ShieldCheck, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { MatriceAbilitazioniRuoli } from "@/features/dipendenti/matrice/MatriceAbilitazioniRuoli";
-import { useDatiDipendenti } from "@/features/dipendenti/hooks/useDatiDipendenti";
 
 export function IntestazioneHr({ onImported }: { onImported: () => void }) {
   const [apriMatrice, setApriMatrice] = useState(false);
-  const { dipendenti, ruoliCatalogo, assegnazioni, attestati } = useDatiDipendenti();
 
   return (
     <>
@@ -50,14 +48,7 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
       </header>
 
       {/* Finestra a tutto schermo della matrice */}
-      <MatriceAbilitazioniRuoli
-        open={apriMatrice}
-        onChiudi={() => setApriMatrice(false)}
-        dipendenti={dipendenti}
-        ruoliCatalogo={ruoliCatalogo}
-        assegnazioni={assegnazioni}
-        attestati={attestati}
-      />
+      <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
     </>
   );
 }
