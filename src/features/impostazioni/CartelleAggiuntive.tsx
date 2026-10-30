@@ -73,7 +73,7 @@ export function CartelleAggiuntive() {
                   className="text-destructive hover:bg-destructive/10"
                   onClick={async () => {
                     if (!window.confirm(`Scollegare "${c.nome}"?`)) return;
-                    await rimuoviCartellaAggiuntiva(c.handle);
+                    await rimuoviCartellaAggiuntiva(c.id);
                     ricarica();
                   }}
                 >
