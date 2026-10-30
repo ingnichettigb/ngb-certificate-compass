@@ -2,8 +2,16 @@
  * File:      useCaricamentoAttestato.ts
  * Percorso:  src/features/documenti/hooks/useCaricamentoAttestato.ts
  * Stato e logica del caricamento di un attestato PDF (campi, file, anteprima, salvataggio).
+ * Revisioni:
+ *   - Rev 2 (2026-10-30 20:30): Copia locale: permesso chiesto subito al clic, esito esplicito (nessuna cartella / permesso)
+ *     con pulsante «Autorizza e riprova»; il messaggio finale dice se la copia locale non è stata salvata.
  */
-import { salvaInCartellaScelta, getUltimaCartella } from "@/lib/api/cartelle-multiple";
+import {
+  salvaInCartellaSceltaEsito,
+  preautorizzaCartellaScelta,
+  getUltimaCartella,
+} from "@/lib/api/cartelle-multiple";
+import { avvisoCopiaLocale } from "@/features/cartelle/avvisi-cartella";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -75,8 +83,39 @@ export function useCaricamentoAttestato({
 
   async function conferma() {
     if (!nomeFinale || !file) return;
+    const nomeFile = nomeFinale;
+    const pdf = file;
+    const destinazione = cartellaDest;
+    const sottocartella = cartellaDipendente(dipendente);
+
+    /** Scrive la copia sul PC. Restituisce true se salvata; altrimenti avvisa con il motivo preciso. */
+    async function tentaCopiaLocale(): Promise<boolean> {
+      try {
+        const r = await salvaInCartellaSceltaEsito(destinazione, pdf, nomeFile, sottocartella);
+        if (r.esito === "ok") {
+          toast.success(`Copia salvata nella cartella "${r.cartella}"`);
+          return true;
+        }
+        avvisoCopiaLocale(r, () => void tentaCopiaLocale());
+        return false;
+      } catch (e) {
+        if ((e as DOMException)?.name !== "AbortError") {
+          toast.error("Copia locale non riuscita", { description: (e as Error).message });
+        }
+        return false;
+      }
+    }
+
     setBusy(true);
     try {
+      // Il permesso di scrittura si chiede ora (subito dopo il clic): dopo il caricamento online il browser lo rifiuterebbe.
+      if (anchLocale && supportaCartellaLocale()) {
+        try {
+          await preautorizzaCartellaScelta(destinazione);
+        } catch {
+          /* l'esito preciso viene gestito dopo il caricamento */
+        }
+      }
       await caricaDocumento({
         dipendente,
         tipo,
@@ -85,6 +124,7 @@ export function useCaricamentoAttestato({
         dataScadenza: scadenza,
         file,
       });
+      let copiaLocaleSalvata = true;
       if (anchLocale) {
         if (!supportaCartellaLocale()) {
           toast.info("Salvataggio locale non supportato", {
@@ -92,23 +132,12 @@ export function useCaricamentoAttestato({
               "La copia in cartella locale funziona solo su Chrome o Edge da computer. Il file è stato salvato online.",
           });
         } else {
-          try {
-            const scritto = await salvaInCartellaScelta(
-              cartellaDest,
-              file,
-              nomeFinale,
-              cartellaDipendente(dipendente),
-            );
-            if (scritto) toast.success(`Copia salvata nella cartella "${scritto}"`);
-          } catch (e) {
-            if ((e as DOMException)?.name !== "AbortError")
-              toast.error("Copia locale non riuscita", {
-                description: (e as Error).message,
-              });
-          }
+          copiaLocaleSalvata = await tentaCopiaLocale();
         }
       }
-      toast.success("Attestato caricato", { description: nomeFinale });
+      toast.success("Attestato caricato", {
+        description: copiaLocaleSalvata ? nomeFile : `${nomeFile} · copia locale NON salvata`,
+      });
       onDone();
       onOpenChange(false);
     } catch (e) {

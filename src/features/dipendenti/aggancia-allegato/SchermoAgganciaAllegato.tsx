@@ -98,9 +98,10 @@ export function SchermoAgganciaAllegato({
             chiave={r.chiave}
             setChiave={r.setChiave}
             inRicerca={r.inRicerca}
-            haCartella={r.haCartella}
+            statoCartelle={r.statoCartelle}
             onCerca={r.cerca}
             onScegliCartella={r.scegliCartella}
+            onAutorizza={r.autorizzaCartelle}
           />
           <ElencoFileTrovati risultati={r.risultati} chiave={r.chiave} selezionato={r.selezionato} onScegli={r.scegli} />
           <ZonaLavoratore dipendente={dipendente} dati={dati} onCambia={setDati} />

@@ -9,20 +9,18 @@
  *   - Rev 4 (2026-10-25 21:35): Selezione singola, pulsante verifica in alto.
  *   - Rev 5 (2026-10-25 21:45): Finestra a sé stante a tutto schermo (100vw x 100vh) senza vincoli modali stretti.
  *   - Rev 6 (2026-10-27 10:38): Aggiunto attributo title su nome file e percorso per visualizzazione per esteso al passaggio del mouse.
+ *   - Rev 7 (2026-10-30 20:30): Ricerca e stato cartelle condivisi con useRicercaArchivio (avviso nessuna cartella / da autorizzare).
  */
-import { cercaInTutteLeCartelle } from "@/lib/api/cartelle-multiple";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search, FileText, Eye, Loader2, FolderOpen, AlertCircle, ArrowRight, X } from "lucide-react";
+import { Search, FileText, Eye, Loader2, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import {
-  getCartellaArchivio,
-  scegliCartellaLocale,
-  apriFileLocale,
-  type FileTrovato,
-} from "@/lib/api/cartella-locale";
+import { apriFileConControllo } from "@/lib/api/cartelle-multiple";
+import { type FileTrovato } from "@/lib/api/cartella-locale";
+import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
+import { avvisoPopupBloccato } from "@/features/cartelle/avvisi-cartella";
+import { useRicercaArchivio } from "../aggancia-allegato/useRicercaArchivio";
 import { type Attestato, type Dipendente } from "@/lib/api";
 import { SchermoVerificaAttestato } from "../verifica-attestato/SchermoVerificaAttestato";
 
@@ -39,57 +37,23 @@ export function DialogCercaAgganciaAttestato({
   dipendente: Dipendente;
   onAgganciato: (percorso: string) => void;
 }) {
-  const [chiave, setChiave] = useState("");
-  const [inRicerca, setInRicerca] = useState(false);
-  const [risultati, setRisultati] = useState<FileTrovato[] | null>(null);
-  const [haCartella, setHaCartella] = useState<boolean | null>(null);
-  const [selezionato, setSelezionato] = useState<FileTrovato | null>(null);
+  const {
+    chiave,
+    setChiave,
+    inRicerca,
+    risultati,
+    statoCartelle,
+    selezionato,
+    cerca,
+    scegli,
+    scegliCartella,
+    autorizzaCartelle,
+  } = useRicercaArchivio(open && Boolean(attestato), dipendente.cognome || "");
   const [inVerifica, setInVerifica] = useState(false);
 
-  const cerca = useCallback(async (testo: string) => {
-    if (!testo.trim()) {
-      toast.error("Inserisci almeno un termine per la ricerca");
-      return;
-    }
-    setInRicerca(true);
-    setSelezionato(null);
-    try {
-      let root = await getCartellaArchivio(true);
-      if (!root) {
-        root = await scegliCartellaLocale();
-        if (!root) {
-          toast.info("Seleziona prima la cartella archivio");
-          return;
-        }
-        setHaCartella(true);
-      }
-      const files = await cercaInTutteLeCartelle(testo);
-      setRisultati(files);
-      if (files.length === 0) toast.info("Nessun file trovato nelle cartelle");
-    } catch (e) {
-      toast.error("Errore durante la ricerca", { description: (e as Error).message });
-    } finally {
-      setInRicerca(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (open && attestato) {
-      const cognome = (dipendente.cognome || "").trim();
-      setChiave(cognome);
-      setRisultati(null);
-      setSelezionato(null);
-      setInVerifica(false);
-      getCartellaArchivio(false).then((h) => {
-        setHaCartella(Boolean(h));
-        if (h && cognome) cerca(cognome);
-      });
-    }
-  }, [open, attestato, dipendente, cerca]);
-
-  function scegli(f: FileTrovato) {
-    setSelezionato((prev) => (prev?.percorsoRelativo === f.percorsoRelativo && prev?.cartella === f.cartella ? null : f));
-  }
+    if (open && attestato) setInVerifica(false);
+  }, [open, attestato]);
 
   if (!open || !attestato) return null;
 
@@ -151,25 +115,7 @@ export function DialogCercaAgganciaAttestato({
 
       {/* Corpo a tutto schermo */}
       <main className="flex-1 overflow-y-auto p-6 space-y-4">
-        {haCartella === false && (
-          <div className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <AlertCircle className="size-4 text-warning" /> Cartella dell'archivio non ancora selezionata.
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                scegliCartellaLocale().then((h) => {
-                  setHaCartella(Boolean(h));
-                  if (h && chiave) cerca(chiave);
-                })
-              }
-            >
-              <FolderOpen className="size-3.5" /> Seleziona cartella archivio
-            </Button>
-          </div>
-        )}
+        <AvvisoCartelle stato={statoCartelle} onAutorizza={autorizzaCartelle} onCollega={scegliCartella} />
 
         {/* Barra di ricerca ampia */}
         <div className="rounded-xl border border-border bg-surface p-4 shadow-sm space-y-3">
@@ -257,7 +203,9 @@ export function DialogCercaAgganciaAttestato({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          apriFileLocale(f.handle);
+                          void apriFileConControllo(f.handle).then((ok) => {
+                            if (!ok) avvisoPopupBloccato();
+                          });
                         }}
                         className="shrink-0 gap-1.5"
                       >

@@ -11,6 +11,7 @@
  *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso nome cartella radice.
  *   - Rev 7 (2026-10-30 11:35): Ripristinati alias canonical e supporto browser per compilazione produzione.
  *   - Rev 8 (2026-10-30 19:30): verificaPermessi accetta la modalità (read/readwrite); default invariato.
+ *   - Rev 9 (2026-10-30 20:30): Evento «cartelle:cambiate» (notificaCartelleCambiate) per aggiornare gli indicatori.
  */
 
 const DB_NOME = "app_archivio_attestati";
@@ -75,6 +76,14 @@ async function leggiHandleDaDb(): Promise<FileSystemDirectoryHandle | null> {
   }
 }
 
+/** Nome dell'evento di finestra emesso quando cambia lo stato delle cartelle collegate o dei permessi. */
+export const EVENTO_CARTELLE_CAMBIATE = "cartelle:cambiate";
+
+/** Avvisa le schermate (indicatore in testata, avvisi nei dialog) che lo stato delle cartelle è cambiato. */
+export function notificaCartelleCambiate(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENTO_CARTELLE_CAMBIATE));
+}
+
 /** Verifica se abbiamo i permessi di lettura sulla cartella, chiedendoli se necessario. */
 export async function verificaPermessi(
   handle: FileSystemDirectoryHandle,
@@ -91,6 +100,7 @@ export async function verificaPermessi(
     if (stato === "granted") return true;
     if (richiediSeMancanti && h.requestPermission) {
       const nuovoStato = await h.requestPermission({ mode: modo });
+      if (nuovoStato === "granted") notificaCartelleCambiate();
       return nuovoStato === "granted";
     }
     return false;
@@ -136,6 +146,7 @@ export async function scegliCartellaArchivio(): Promise<FileSystemDirectoryHandl
 
   cacheHandle = handle;
   await salvaHandleSuDb(handle);
+  notificaCartelleCambiate();
   return handle;
 }
 
@@ -143,6 +154,7 @@ export async function scegliCartellaArchivio(): Promise<FileSystemDirectoryHandl
 export async function disconnettiCartellaArchivio(): Promise<void> {
   cacheHandle = null;
   await rimuoviHandleDaDb();
+  notificaCartelleCambiate();
 }
 
 /** Formatta la dimensione file in formato leggibile. */
