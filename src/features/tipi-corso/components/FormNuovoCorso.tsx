@@ -23,6 +23,12 @@ export function FormNuovoCorso({
   return (
     <div className="flex flex-wrap gap-2">
       <Input
+        value={nuovo.codice}
+        onChange={(e) => setNuovo((n) => ({ ...n, codice: e.target.value.toUpperCase() }))}
+        placeholder="Codice (es. RLS-BAS-32)"
+        className="w-40 font-mono text-xs"
+      />
+      <Input
         value={nuovo.nome_corso}
         onChange={(e) => setNuovo((n) => ({ ...n, nome_corso: e.target.value }))}
         onKeyDown={(e) => {
@@ -30,6 +36,13 @@ export function FormNuovoCorso({
         }}
         placeholder="Nome del nuovo corso"
         className="min-w-[220px] flex-1"
+      />
+      <Input
+        value={nuovo.ore}
+        onChange={(e) => setNuovo((n) => ({ ...n, ore: e.target.value }))}
+        placeholder="Ore"
+        inputMode="decimal"
+        className="w-20"
       />
       <Input
         value={nuovo.macro_categoria}
