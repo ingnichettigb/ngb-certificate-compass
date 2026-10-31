@@ -56,6 +56,13 @@ export async function impostaClasseAttiva(id: string, attivo: boolean) {
   if (error) throw error;
 }
 
+/** Cambia la denominazione di una classe di concorso (vuoto = nessuna denominazione). */
+export async function aggiornaDenominazioneClasse(id: string, denominazione: string | null) {
+  const valore = denominazione?.trim() || null;
+  const { error } = await sb.from("classi_concorso").update({ denominazione: valore }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function eliminaClasseConcorso(id: string) {
   const { error } = await sb.from("classi_concorso").delete().eq("id", id);
   if (error) throw error;

@@ -2,11 +2,14 @@
  * File:      useInsegnamentoTab.ts
  * Percorso:  src/features/impostazioni/insegnamento/useInsegnamentoTab.ts
  * Dati e azioni della scheda Classi di concorso e materie.
+ * Revisioni:
+ *   - Rev 2 (2026-10-31 10:00): Aggiunta modifica della denominazione di una classe di concorso.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  aggiornaDenominazioneClasse,
   aggiungiClasseConcorso,
   eliminaClasseConcorso,
   eliminaMateria,
@@ -71,6 +74,21 @@ export function useInsegnamentoTab() {
     }
   }
 
+  /** Salva la nuova denominazione. Restituisce true se il salvataggio è riuscito. */
+  async function salvaDenominazione(id: string, testo: string): Promise<boolean> {
+    setBusy(id);
+    try {
+      await aggiornaDenominazioneClasse(id, testo);
+      refresh();
+      return true;
+    } catch (e) {
+      toast.error("Denominazione non salvata", { description: (e as Error).message });
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function rimuovi(id: string, etichetta: string) {
     if (!window.confirm(`Eliminare "${etichetta}" dai suggerimenti?`)) return;
     setBusy(id);
@@ -112,6 +130,7 @@ export function useInsegnamentoTab() {
     setFiltro,
     aggiungi,
     cambiaAttiva,
+    salvaDenominazione,
     rimuovi,
     rimuoviMateria,
   };
