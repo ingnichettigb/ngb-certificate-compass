@@ -2,8 +2,17 @@
  * File:      ruoli.ts
  * Percorso:  src/lib/api/ruoli.ts
  * Ruoli di sicurezza (Preposto, Antincendio, …).
+ * Revisioni:
+ *   - Rev 2 (2026-10-31 11:00): Chiavi di cache condivise (CHIAVE_RUOLI, CHIAVE_ASSEGNAZIONI_RUOLI) tra Matrice e Scheda.
  */
 import { leggiTutto, sb } from "./client";
+
+/**
+ * Chiavi TanStack Query dei ruoli. Matrice abilitazioni, scheda dipendente e impostazioni DEVONO usare queste:
+ * con chiavi diverse una spunta cambiata in una schermata restava vecchia nell'altra.
+ */
+export const CHIAVE_RUOLI = ["ruoli-sicurezza"] as const;
+export const CHIAVE_ASSEGNAZIONI_RUOLI = ["dipendenti-ruoli"] as const;
 
 export type RuoloSicurezza = {
   id: string;
