@@ -5,12 +5,14 @@
  * Revisioni:
  *   - Rev 1 (2026-10-20 14:00): Intestazione dashboard HR con backup.
  *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
+ *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ShieldCheck, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
+import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { MatriceAbilitazioniRuoli } from "@/features/dipendenti/matrice/MatriceAbilitazioniRuoli";
 
 export function IntestazioneHr({ onImported }: { onImported: () => void }) {
@@ -20,6 +22,7 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
     <>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4">
+          <IndicatoreCartella className="-mb-2 basis-full" />
           <div className="flex items-center gap-3">
             <Link to="/" aria-label="Torna alla home">
               <ArrowLeft className="size-5 text-muted-foreground" />

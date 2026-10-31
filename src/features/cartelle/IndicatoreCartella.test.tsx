@@ -4,6 +4,7 @@
  * Data creazione: 2026-10-30
  * Revisioni:
  *   - Rev 1 (2026-10-30 21:15): Verifica dei tre stati dell'indicatore in testata e dei clic che chiedono permesso / collegano.
+ *   - Rev 2 (2026-10-31 09:00): Stato attivo = sola informazione (nessun pulsante); rosso «Assegna» e giallo «Riautorizza» cliccabili.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -45,25 +46,29 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("IndicatoreCartella", () => {
-  it("verde con il nome della cartella quando è autorizzata", async () => {
+  it("cartella attiva: solo informazione con il nome, senza pulsanti", async () => {
     leggi.mockResolvedValue(ok);
     render(<IndicatoreCartella />);
-    expect(await screen.findByText(/Cartella: Archivio/)).toBeTruthy();
+    expect(await screen.findByText("Archivio")).toBeTruthy();
+    expect(screen.getByText(/Cartella locale:/)).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("arancione «Cartella scollegata»: il clic chiede il permesso", async () => {
+  it("cartella da riautorizzare: testo giallo cliccabile che chiede il permesso", async () => {
     leggi.mockResolvedValue(scollegata);
     autorizza.mockResolvedValue(ok);
     render(<IndicatoreCartella />);
-    fireEvent.click(await screen.findByRole("button", { name: /Cartella scollegata/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Riautorizza cartella locale/ }));
     await waitFor(() => expect(autorizza).toHaveBeenCalledTimes(1));
   });
 
-  it("«Nessuna cartella»: il clic apre il collegamento", async () => {
+  it("nessuna cartella: testo rosso «Assegna cartella locale» che avvia l'assegnazione", async () => {
     leggi.mockResolvedValue(nessuna);
     collega.mockResolvedValue("Archivio");
     render(<IndicatoreCartella />);
-    fireEvent.click(await screen.findByRole("button", { name: /Nessuna cartella/ }));
+    const bottone = await screen.findByRole("button", { name: /Assegna cartella locale/ });
+    expect(bottone.className).toMatch(/text-destructive/);
+    fireEvent.click(bottone);
     await waitFor(() => expect(collega).toHaveBeenCalledTimes(1));
   });
 

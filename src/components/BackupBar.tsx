@@ -8,6 +8,7 @@
  *   rev 3 — 26/10/2026 17:30 — DialogCaricaBackup selettivo 030ArchAttestati_.
  *   rev 4 — 26/10/2026 17:45 — Uniformazione stile bottoni verde tenue e bordo verde scuro elettrico.
  *   rev 5 — 30/10/2026 21:00 — Indicatore stato cartella locale accanto a Impostazioni generali.
+ *   rev 6 — 31/10/2026 09:00 — Indicatore spostato in alto a destra nelle testate; aggiunta prop className.
  */
 import { useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
@@ -16,12 +17,11 @@ import { Button } from "@/components/ui/button";
 import { esportaDb } from "@/lib/api";
 import { ImpostazioniDialog } from "@/components/ImpostazioniDialog";
 import { DialogCaricaBackup } from "@/components/DialogCaricaBackup";
-import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 
 const STILE_BOTTONE =
   "border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-medium";
 
-export function BackupBar({ onImported }: { onImported?: () => void }) {
+export function BackupBar({ onImported, className }: { onImported?: () => void; className?: string }) {
   const [busyExport, setBusyExport] = useState(false);
   const [dialogImportAperto, setDialogImportAperto] = useState(false);
 
@@ -42,9 +42,8 @@ export function BackupBar({ onImported }: { onImported?: () => void }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={`flex flex-wrap items-center gap-2 ${className ?? ""}`.trim()}>
       <ImpostazioniDialog />
-      <IndicatoreCartella />
 
       <Button
         variant="outline"
