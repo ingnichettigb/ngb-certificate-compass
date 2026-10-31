@@ -9,6 +9,8 @@
  *   - Rev 4 (2026-10-28 14:20): Tipo RisoluzioneDocumento allineato all'export reale.
  *   - Rev 5 (2026-10-28 14:35): Gestione distinta per documento mancante vs registrato su disco.
  *   - Rev 6 (2026-10-28 15:05): Aggiunta maniglie di resize su tutti e 4 i vertici e occupazione a piena dimensione.
+ *   - Rev 7 (2026-10-30 21:00): Pannello «file non trovato» distinto per nessuna cartella / permesso mancante / file assente;
+ *     controllo del popup bloccato in «Apri esterno».
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -27,13 +29,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { risolviDocumentoAttestato, type RisoluzioneDocumento } from "@/lib/api/cartelle-multiple";
 import {
-  risolviDocumentoAttestato,
-  type RisoluzioneDocumento,
-  elencoCartelle,
-  aggiungiCartella,
-  verificaPermessi,
-} from "@/lib/api/cartelle-multiple";
+  autorizzaCartelle,
+  collegaCartella,
+  leggiStatoCartelle,
+  type StatoCartelle,
+} from "@/lib/api/stato-cartelle";
+import { avvisoPopupBloccato } from "@/features/cartelle/avvisi-cartella";
 
 function ruotaDataUrl(sorgenteUrl: string, gradi: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -76,7 +79,7 @@ export function ImageViewer({
   const [rotazione, setRotazione] = useState(0);
   const [urlRuotato, setUrlRuotato] = useState<string | null>(null);
   const [inRotazione, setInRotazione] = useState(false);
-  const [haCartelleCollegate, setHaCartelleCollegate] = useState(false);
+  const [statoCartelle, setStatoCartelle] = useState<StatoCartelle | null>(null);
   const [inConnessione, setInConnessione] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -95,8 +98,7 @@ export function ImageViewer({
   async function caricaDocumenti() {
     setInCaricamento(true);
     try {
-      const cartelle = await elencoCartelle();
-      setHaCartelleCollegate(cartelle.length > 0);
+      setStatoCartelle(await leggiStatoCartelle());
 
       const [f, r] = await Promise.all([
         risolviDocumentoAttestato(fronte),
@@ -212,17 +214,14 @@ export function ImageViewer({
   async function handleAutorizzaCartelle() {
     setInConnessione(true);
     try {
-      const cartelle = await elencoCartelle();
-      let autorizzata = false;
-      for (const c of cartelle) {
-        const ok = await verificaPermessi(c.handle, true);
-        if (ok) autorizzata = true;
-      }
-      if (autorizzata) {
+      const stato = await autorizzaCartelle("read");
+      if (stato.autorizzate > 0) {
         toast.success("Accesso alla cartella autorizzato con successo");
         await caricaDocumenti();
       } else {
-        toast.error("Permesso negato per la cartella locale");
+        toast.error("Permesso negato per la cartella locale", {
+          description: "Conferma la richiesta del browser per poter leggere i file.",
+        });
       }
     } catch (e) {
       toast.error("Errore durante l'autorizzazione", { description: (e as Error).message });
@@ -234,9 +233,9 @@ export function ImageViewer({
   async function handleCollegaNuovaCartella() {
     setInConnessione(true);
     try {
-      const nuova = await aggiungiCartella();
-      if (nuova) {
-        toast.success(`Cartella "${nuova.name}" collegata`);
+      const nome = await collegaCartella();
+      if (nome) {
+        toast.success(`Cartella "${nome}" collegata`);
         await caricaDocumenti();
       }
     } catch (e) {
@@ -247,8 +246,17 @@ export function ImageViewer({
   }
 
   function handleApriEsterno() {
-    if (esitoAttuale?.url) {
-      window.open(esitoAttuale.url, "_blank", "noopener,noreferrer");
+    if (!esitoAttuale?.url) return;
+    // Senza «noopener» window.open restituisce il riferimento, utile per accorgersi del blocco popup.
+    const w = window.open(esitoAttuale.url, "_blank");
+    if (!w) {
+      avvisoPopupBloccato();
+      return;
+    }
+    try {
+      w.opener = null;
+    } catch {
+      /* ignora */
     }
   }
 
@@ -394,15 +402,33 @@ export function ImageViewer({
       );
     }
 
-    // Caso 1: C'era un percorso memorizzato ma il file non è stato trovato o servono permessi
+    // Caso 1: C'era un percorso memorizzato ma il file non è stato aperto: si dice esattamente perché
     if (percorsoGrezzo && esitoAttuale?.sorgente === "non_trovato") {
+      const stato = statoCartelle?.stato ?? "ok";
+      const nomiSenza = (statoCartelle?.cartelle ?? []).filter((c) => !c.autorizzata).map((c) => c.nome);
+      const nomiTutte = (statoCartelle?.cartelle ?? []).map((c) => c.nome);
+      const titolo =
+        stato === "nessuna"
+          ? "Nessuna cartella collegata"
+          : stato === "da_autorizzare"
+            ? "Permesso alla cartella non concesso"
+            : "File non trovato nelle cartelle collegate";
+      const spiegazione =
+        stato === "nessuna"
+          ? "Per aprire i PDF presenti sul tuo computer, collega la cartella in cui conservi gli attestati."
+          : stato === "da_autorizzare"
+            ? `Il browser deve autorizzare la lettura di: ${nomiSenza.join(", ")}. Il file potrebbe trovarsi lì.`
+            : `Cercato in: ${nomiTutte.join(", ")}. Il file potrebbe essere stato spostato o rinominato, oppure appartenere a un altro computer: usa l'icona di sostituzione per riagganciarlo.`;
       return (
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface p-6 text-center shadow-sm">
+        <div
+          role="alert"
+          className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface p-6 text-center shadow-sm"
+        >
           <div className="rounded-full bg-primary/10 p-3 text-primary">
             <FileText className="size-7" />
           </div>
           <div className="space-y-1">
-            <p className="font-semibold text-foreground">File registrato sul computer</p>
+            <p className="font-semibold text-foreground">{titolo}</p>
             <p
               className="line-clamp-2 font-mono text-xs text-muted-foreground"
               title={percorsoGrezzo || esitoAttuale?.nomeFile}
@@ -410,14 +436,10 @@ export function ImageViewer({
               {esitoAttuale?.nomeFile || percorsoGrezzo}
             </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {haCartelleCollegate
-              ? "Il file si trova sul tuo computer ma il browser necessita dell'autorizzazione per leggere la cartella."
-              : "Per aprire i PDF presenti sul tuo computer, collega la cartella in cui conservi gli attestati."}
-          </p>
+          <p className="text-xs text-muted-foreground">{spiegazione}</p>
 
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            {haCartelleCollegate ? (
+            {stato === "da_autorizzare" && (
               <Button
                 type="button"
                 size="sm"
@@ -428,7 +450,8 @@ export function ImageViewer({
                 <FolderOpen className="size-4" />
                 Autorizza cartella archivio
               </Button>
-            ) : (
+            )}
+            {stato === "nessuna" && (
               <Button
                 type="button"
                 size="sm"
@@ -438,6 +461,19 @@ export function ImageViewer({
               >
                 <FolderSearch className="size-4" />
                 Collega cartella dal computer
+              </Button>
+            )}
+            {stato === "ok" && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void caricaDocumenti()}
+                disabled={inConnessione}
+                className="gap-1.5"
+              >
+                <RotateCw className="size-4" />
+                Ricontrolla
               </Button>
             )}
           </div>
