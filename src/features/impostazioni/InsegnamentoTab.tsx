@@ -31,6 +31,7 @@ export function InsegnamentoTab() {
           onFiltro={t.setFiltro}
           busy={t.busy}
           onCambiaAttiva={t.cambiaAttiva}
+          onSalvaDenominazione={t.salvaDenominazione}
           onRimuovi={t.rimuovi}
         />
         <NuovaClasseConcorso
