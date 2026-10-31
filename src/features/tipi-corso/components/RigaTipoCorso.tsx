@@ -4,6 +4,7 @@
  * Una riga della tabella corsi: maniglia e frecce, celle modificabili, interruttore, cestino.
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Sfondo per argomento e blocco dei corsi standard del programma.
+ * - Rev 4: 2026-10-31 13:40 - Corsi standard modificabili (solo eliminazione bloccata).
  */
 import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,9 @@ export function RigaTipoCorso({
 }) {
   const gruppo = assegnaGruppoArgomento(c);
   const protetto = isCorsoProtetto(c);
-  const blocca = occupata || protetto;
-  const bloccoCls = protetto ? "cursor-not-allowed bg-background/40" : "";
+  // Rev 4 (31/10/2026 13:40): i corsi standard ora sono modificabili; restano solo non eliminabili.
+  const blocca = occupata;
+  const bloccoCls = "";
 
   return (
     <TableRow

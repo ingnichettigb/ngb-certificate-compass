@@ -77,13 +77,18 @@ export async function aggiungiTipoCorso(input: {
   macro_categoria: string;
   livello_specifico: string;
   ordine: number;
+  codice?: string;
+  ore?: string;
 }) {
   const nome = input.nome_corso.trim();
   if (!nome) throw new Error("Scrivi il nome del corso");
+  const ore = Number(String(input.ore ?? "").replace(",", "."));
   const { error } = await sb.from("tipi_corso").insert({
     nome_corso: nome,
     macro_categoria: input.macro_categoria.trim() || "Altro",
     livello_specifico: input.livello_specifico.trim() || "Base",
+    codice: input.codice?.trim().toUpperCase() || null,
+    ore_minime_legge: input.ore?.trim() && Number.isFinite(ore) ? ore : null,
     ordine: input.ordine,
   });
   if (error) throw error;
