@@ -28,6 +28,8 @@ import {
   type Attestato,
   type RuoloSicurezza,
   type AssegnazioneRuolo,
+  CHIAVE_RUOLI,
+  CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 import {
   ArrowLeft,
@@ -113,12 +115,12 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   });
 
   const { data: ruoli = [] } = useQuery({
-    queryKey: ["ruoli_sicurezza"],
+    queryKey: CHIAVE_RUOLI,
     queryFn: getRuoliSicurezza,
   });
 
   const { data: assegnazioni = [] } = useQuery({
-    queryKey: ["assegnazioni_ruoli"],
+    queryKey: CHIAVE_ASSEGNAZIONI_RUOLI,
     queryFn: getAssegnazioniRuoli,
   });
 
@@ -206,7 +208,10 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
     try {
       await impostaRuoloDipendente(dipendente.id, ruolo.id, nuovoStato);
-      await queryClient.invalidateQueries({ queryKey: ["assegnazioni_ruoli"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI }),
+        queryClient.invalidateQueries({ queryKey: CHIAVE_RUOLI }),
+      ]);
       toast.success(
         nuovoStato
           ? `Obbligo "${corso.nome_corso}" assegnato a ${dipendente.cognome}`

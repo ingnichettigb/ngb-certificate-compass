@@ -11,6 +11,8 @@ import {
   getReparti,
   getRuoliSicurezza,
   getAssegnazioniRuoli,
+  CHIAVE_RUOLI,
+  CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 
 export function useDatiDipendenti() {
@@ -28,12 +30,12 @@ export function useDatiDipendenti() {
     queryFn: () => getAttestati("Tutti"),
   });
   const { data: ruoliCatalogo = [] } = useQuery({
-    queryKey: ["ruoli-sicurezza"],
+    queryKey: CHIAVE_RUOLI,
     queryFn: getRuoliSicurezza,
     retry: false,
   });
   const { data: assegnazioni = [] } = useQuery({
-    queryKey: ["dipendenti-ruoli"],
+    queryKey: CHIAVE_ASSEGNAZIONI_RUOLI,
     queryFn: getAssegnazioniRuoli,
     retry: false,
   });

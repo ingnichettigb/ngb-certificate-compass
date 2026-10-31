@@ -13,6 +13,7 @@ import {
   upsertDipendente,
   type Dipendente,
   type IntegrazioneDvr,
+  CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 import { NESSUNO } from "../types";
 
@@ -32,7 +33,7 @@ export function useAzioniDipendente({
     if (!sel) return;
     try {
       await impostaRuoloDipendente(sel, ruoloId, v);
-      qc.invalidateQueries({ queryKey: ["dipendenti-ruoli"] });
+      qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
     } catch (e) {
       toast.error("Modifica non riuscita", { description: (e as Error).message });
     }

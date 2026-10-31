@@ -46,6 +46,8 @@ import {
   aggiungiTipoCorso,
   aggiungiRuolo,
   impostaRuoloDipendente,
+  CHIAVE_RUOLI,
+  CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 
 export function SelettoreCorsiDipendente({
@@ -114,7 +116,7 @@ export function SelettoreCorsiDipendente({
           obbligatorio_tutti: false,
           ordine: ruoliCatalogo.length + 1,
         });
-        await qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] });
+        await qc.invalidateQueries({ queryKey: CHIAVE_RUOLI });
         ruolo = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
       }
 
@@ -130,8 +132,8 @@ export function SelettoreCorsiDipendente({
       const attivo = haObbligoCorso(corso);
       await impostaRuoloDipendente(corrente.id, ruolo.id, !attivo);
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["dipendenti-ruoli"] }),
-        qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] }),
+        qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI }),
+        qc.invalidateQueries({ queryKey: CHIAVE_RUOLI }),
       ]);
 
       toast.success(
@@ -171,7 +173,7 @@ export function SelettoreCorsiDipendente({
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tipi-corso"] }),
-        qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] }),
+        qc.invalidateQueries({ queryKey: CHIAVE_RUOLI }),
       ]);
 
       toast.success(`Nuovo corso "${nome}" inserito nel catalogo`);

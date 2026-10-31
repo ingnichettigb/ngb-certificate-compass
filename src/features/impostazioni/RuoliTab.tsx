@@ -11,6 +11,8 @@ import {
   eliminaRuolo,
   getCategorieCorso,
   getRuoliSicurezza,
+  CHIAVE_RUOLI,
+  CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 
 /** Scheda Impostazioni: elenco ruoli/incarichi, aggiungibili in autonomia. */
@@ -20,13 +22,13 @@ export function RuoliTab() {
   const [categoria, setCategoria] = useState("");
   const [busy, setBusy] = useState(false);
   const { data: ruoli = [], isLoading, error } = useQuery({
-    queryKey: ["ruoli-sicurezza"],
+    queryKey: CHIAVE_RUOLI,
     queryFn: getRuoliSicurezza,
     retry: false,
   });
   const { data: categorie = [] } = useQuery({ queryKey: ["categorie-corso"], queryFn: getCategorieCorso });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["ruoli-sicurezza"] });
+  const refresh = () => qc.invalidateQueries({ queryKey: CHIAVE_RUOLI });
 
   async function aggiungi() {
     setBusy(true);
@@ -61,7 +63,7 @@ export function RuoliTab() {
     try {
       await eliminaRuolo(id);
       refresh();
-      qc.invalidateQueries({ queryKey: ["dipendenti-ruoli"] });
+      qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
     } catch (e) {
       toast.error("Eliminazione non riuscita", { description: (e as Error).message });
     }
