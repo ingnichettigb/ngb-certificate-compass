@@ -950,7 +950,7 @@ exports[`Tabella tipi di corso: percorso d'uso completo > registra tutto quello 
     "sb",
     "from.insert",
     "tipi_corso",
-    "[{"nome_corso":"Corso nuovo","macro_categoria":"Altro","livello_specifico":"Base","ordine":5}]",
+    "[{"nome_corso":"Corso nuovo","macro_categoria":"Altro","livello_specifico":"Base","codice":null,"ore_minime_legge":null,"ordine":5}]",
   ],
   [
     "sb",
@@ -986,7 +986,7 @@ exports[`Tabella tipi di corso: percorso d'uso completo > registra tutto quello 
     "sb",
     "from.insert",
     "tipi_corso",
-    "[{"nome_corso":"Altro corso","macro_categoria":"Antincendio","livello_specifico":"Base","ordine":5}]",
+    "[{"nome_corso":"Altro corso","macro_categoria":"Antincendio","livello_specifico":"Base","codice":null,"ore_minime_legge":null,"ordine":5}]",
   ],
   [
     "sb",
