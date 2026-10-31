@@ -8,10 +8,12 @@
  *   rev 3 — 27/10/2026 21:20 — Aggiunto bottone «Esporta dati in Excel» in fila agli accessi rapidi.
  *   rev 4 — 28/10/2026 09:30 — Rinomina accessi: «Modulo auto invio attestato», «Inserimento attestati».
  *   rev 4 — 28/10/2026 09:30 — Rinomina accessi: «Modulo auto invio attestato» e «Inserimento attestati».
+ *   rev 5 — 31/10/2026 09:00 — Stato cartella locale in alto a destra; backup su riga propria.
  */
 import { Link } from "@tanstack/react-router";
 import { Bot, Monitor, Smartphone } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
+import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { DialogEsportaAttestati } from "@/features/esporta-attestati/DialogEsportaAttestati";
 import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
 
@@ -34,7 +36,8 @@ export function IntestazioneHome() {
             </div>
           </div>
 
-          <BackupBar />
+          <IndicatoreCartella className="ml-auto max-w-[24rem] self-start" />
+          <BackupBar className="basis-full" />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
