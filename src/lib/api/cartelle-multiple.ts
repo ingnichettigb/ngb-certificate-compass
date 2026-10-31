@@ -16,6 +16,7 @@
  *     restituiti a parte; rilevamento blocco popup (apriFileConControllo).
  *   - Rev 10 (2026-10-30 20:30): Esiti con motivo per rinomina/copia (EsitoRinomina) e per il salvataggio locale
  *     (salvaInCartellaSceltaEsito); ricerca in sola lettura; evento di cambio cartelle.
+ *   - Rev 11 (2026-10-30 21:00): recuperaFileDaPercorsoInTutte legge in sola lettura senza richiedere permessi (usata al caricamento).
  */
 import {
   getCartellaArchivio,
@@ -278,7 +279,7 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
 
   // 1 & 2. Tentativo con percorso relativo esatto (e senza prefisso nome cartella)
   for (const c of cartelle) {
-    if (!(await verificaPermessi(c.handle, true))) continue;
+    if (!(await verificaPermessi(c.handle, false, "read"))) continue;
 
     let f = await ottieniFileDaPercorso(c.handle, percorsoNorm);
     if (f) return f;
@@ -293,7 +294,7 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
   // 3. Ricerca ricorsiva per nome file come recupero sicuro
   if (nomeFile) {
     for (const c of cartelle) {
-      if (!(await verificaPermessi(c.handle, true))) continue;
+      if (!(await verificaPermessi(c.handle, false, "read"))) continue;
       const trovati = await cercaFileRicorsivo(c.handle, nomeFile, "", [], 0, 8);
       const corrispondenza = trovati.find((t) => nomeConfrontabile(t.nome) === nomeConfrontabile(nomeFile));
       if (corrispondenza) {
