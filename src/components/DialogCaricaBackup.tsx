@@ -4,9 +4,10 @@
  * Data creaz: 26/10/2026
  * Revisioni:
  *   rev 1 — 26/10/2026 17:30 — Finestra interna con scansione esclusiva file 030ArchAttestati_.
+ *   rev 2 — 01/11/2026 12:35 — Rilevamento automatico all'apertura dalla sottocartella "Backup DB".
  */
-import { useState, useRef } from "react";
-import { FolderOpen, FileText, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { FolderOpen, FileText, Upload, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -21,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   elencaBackupDaCartella,
   importaDb,
+  getCartellaBackupDb,
   InfoFileBackup,
   PREFISSO_BACKUP,
 } from "@/lib/api";
@@ -38,7 +40,33 @@ export function DialogCaricaBackup({ aperto, onOpenChange, onImported }: Props) 
   const [ripristinoInCorso, setRipristinoInCorso] = useState(false);
   const inputSingoloRef = useRef<HTMLInputElement>(null);
 
-  async function scegliCartella() {
+  const caricaAutomatico = useCallback(async () => {
+    setCaricando(true);
+    try {
+      const backupDir = await getCartellaBackupDb(false);
+      if (backupDir) {
+        setNomeCartella(backupDir.nomePercorso);
+        const trovati = await elencaBackupDaCartella(backupDir.cartellaHandle);
+        setLista(trovati);
+      } else {
+        setNomeCartella(null);
+        setLista([]);
+      }
+    } catch {
+      setNomeCartella(null);
+      setLista([]);
+    } finally {
+      setCaricando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (aperto) {
+      caricaAutomatico();
+    }
+  }, [aperto, caricaAutomatico]);
+
+  async function scegliCartellaManuale() {
     const w = window as unknown as {
       showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
     };
@@ -107,16 +135,32 @@ export function DialogCaricaBackup({ aperto, onOpenChange, onImported }: Props) 
         <div className="space-y-4 pt-2">
           {/* Sezione selezione cartella */}
           <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/40">
-            <div>
+            <div className="min-w-0 pr-2">
               <p className="text-sm font-medium">Cartella di ricerca backup</p>
-              <p className="text-xs text-muted-foreground">
-                {nomeCartella ? `Cartella: ${nomeCartella}` : "Nessuna cartella selezionata"}
+              <p className="text-xs text-muted-foreground font-mono truncate">
+                {nomeCartella ? nomeCartella : "Nessuna cartella di backup rilevata"}
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={scegliCartella} disabled={caricando || ripristinoInCorso}>
-              {caricando ? <Loader2 className="size-4 animate-spin mr-1" /> : <FolderOpen className="size-4 mr-1" />}
-              {nomeCartella ? "Cambia cartella" : "Seleziona cartella"}
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={caricaAutomatico}
+                disabled={caricando || ripristinoInCorso}
+                title="Ricarica cartella Backup DB predefinita"
+              >
+                <RefreshCw className={`size-3.5 ${caricando ? "animate-spin" : ""}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scegliCartellaManuale}
+                disabled={caricando || ripristinoInCorso}
+              >
+                {caricando ? <Loader2 className="size-4 animate-spin mr-1" /> : <FolderOpen className="size-4 mr-1" />}
+                {nomeCartella ? "Cambia cartella" : "Seleziona cartella"}
+              </Button>
+            </div>
           </div>
 
           {/* Elenco dei file trovati filtrati */}
