@@ -29,6 +29,13 @@
       "when": 1793352425501,
       "tag": "0003_numero_attestato",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793529476817,
+      "tag": "0004_ditta_anagrafica_soglie",
+      "breakpoints": true
     }
   ]
 }
