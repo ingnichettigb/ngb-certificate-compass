@@ -1,13 +1,28 @@
 /*
  * File:      ArchivioTab.tsx
  * Percorso:  src/features/impostazioni/ArchivioTab.tsx
- * Rev (2026-10-27 21:05): aggiunta sezione cartelle aggiuntive.
- * Scheda Impostazioni per la configurazione della cartella locale/rete di destinazione attestati.
+ * Data creaz: 2026-10-24
+ * Revisioni:
+ *   rev 1 (2026-10-27 21:05): aggiunta sezione cartelle aggiuntive.
+ *   rev 2 (2026-11-01 12:20): visualizzazione percorso completo di salvataggio, apertura al clic e dialog sfoglia.
  */
 import { useEffect, useState } from "react";
-import { FolderCheck, FolderSync, FolderX, FolderOpen, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  FolderCheck,
+  FolderSync,
+  FolderX,
+  FolderOpen,
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  Check,
+  Edit2,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CartelleAggiuntive } from "./CartelleAggiuntive";
+import { DialogSfogliaArchivio } from "./DialogSfogliaArchivio";
 import { toast } from "sonner";
 import {
   getCartellaArchivio,
@@ -15,13 +30,20 @@ import {
   dimenticaCartellaLocale,
   supportaCartellaLocale,
   verificaPermessi,
+  salvaPercorsoTestuale,
+  leggiPercorsoTestuale,
 } from "@/lib/api/cartella-locale";
 
 export function ArchivioTab() {
   const [supportato] = useState(() => supportaCartellaLocale());
   const [nomeCartella, setNomeCartella] = useState<string | null>(null);
+  const [percorsoEsteso, setPercorsoEsteso] = useState<string>("");
+  const [inModificaPercorso, setInModificaPercorso] = useState(false);
+  const [tempPercorso, setTempPercorso] = useState("");
   const [haPermesso, setHaPermesso] = useState<boolean | null>(null);
   const [caricamento, setCaricamento] = useState(true);
+  const [dialogSfogliaAperto, setDialogSfogliaAperto] = useState(false);
+  const [copiato, setCopiato] = useState(false);
 
   useEffect(() => {
     async function controlla() {
@@ -32,8 +54,11 @@ export function ArchivioTab() {
           setNomeCartella(handle.name);
           const ok = await verificaPermessi(handle, false);
           setHaPermesso(ok);
+          const salvato = await leggiPercorsoTestuale();
+          setPercorsoEsteso(salvato || handle.name);
         } else {
           setNomeCartella(null);
+          setPercorsoEsteso("");
           setHaPermesso(null);
         }
       } catch {
@@ -51,6 +76,11 @@ export function ArchivioTab() {
       if (scelta) {
         setNomeCartella(scelta.name);
         setHaPermesso(true);
+        const percorsoAttuale = await leggiPercorsoTestuale();
+        if (!percorsoAttuale) {
+          await salvaPercorsoTestuale(scelta.name);
+          setPercorsoEsteso(scelta.name);
+        }
         toast.success(`Cartella "${scelta.name}" impostata come archivio principale`);
       }
     } catch (e) {
@@ -58,6 +88,23 @@ export function ArchivioTab() {
         toast.error("Impossibile selezionare la cartella", { description: (e as Error).message });
       }
     }
+  }
+
+  async function handleSalvaPercorso() {
+    await salvaPercorsoTestuale(tempPercorso);
+    setPercorsoEsteso(tempPercorso.trim() || nomeCartella || "");
+    setInModificaPercorso(false);
+    toast.success("Percorso salvato!");
+  }
+
+  function handleCopiaPercorso() {
+    if (!percorsoEsteso) return;
+    navigator.clipboard.writeText(percorsoEsteso);
+    setCopiato(true);
+    toast.success("Percorso copiato negli appunti!", {
+      description: "Puoi incollarlo nella barra degli indirizzi di Windows (Win + E).",
+    });
+    setTimeout(() => setCopiato(false), 2000);
   }
 
   async function handleRiconnetti() {
@@ -76,6 +123,7 @@ export function ArchivioTab() {
     if (!window.confirm("Vuoi scollegare la cartella archivio da questa postazione?")) return;
     await dimenticaCartellaLocale();
     setNomeCartella(null);
+    setPercorsoEsteso("");
     setHaPermesso(null);
     toast.info("Cartella archiviazione scollegata");
   }
@@ -108,14 +156,27 @@ export function ArchivioTab() {
           <p className="text-sm text-muted-foreground">Verifica impostazioni in corso…</p>
         ) : nomeCartella ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <FolderCheck className="size-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{nomeCartella}</span>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setDialogSfogliaAperto(true)}
+                  className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0 cursor-pointer"
+                  title="Clicca per aprire e sfogliare la cartella"
+                >
+                  <FolderCheck className="size-6" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setDialogSfogliaAperto(true)}
+                      className="font-semibold text-base hover:text-primary transition-colors text-left flex items-center gap-1.5 cursor-pointer"
+                      title="Clicca per aprire la cartella"
+                    >
+                      <span>{nomeCartella}</span>
+                      <ExternalLink className="size-3.5 opacity-60" />
+                    </button>
                     {haPermesso ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
                         <CheckCircle2 className="size-3" /> Collegata
@@ -126,27 +187,96 @@ export function ArchivioTab() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">Cartella principale dell'archivio</p>
+
+                  {/* Visualizzazione percorso completo con copia e modifica */}
+                  <div className="mt-1 flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground shrink-0">Percorso salvataggio:</span>
+                    {inModificaPercorso ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input
+                          size={1}
+                          className="h-7 text-xs font-mono"
+                          placeholder="Es. C:\Archivio\ALLEGATO 14 o \\SERVER\Condivisione\..."
+                          value={tempPercorso}
+                          onChange={(e) => setTempPercorso(e.target.value)}
+                        />
+                        <Button size="sm" className="h-7 px-2 text-xs" onClick={handleSalvaPercorso}>
+                          Salva
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setInModificaPercorso(false)}
+                        >
+                          Annulla
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span
+                          onClick={() => setDialogSfogliaAperto(true)}
+                          className="font-mono bg-muted/60 px-2 py-0.5 rounded text-foreground truncate cursor-pointer hover:bg-muted"
+                          title="Clicca per aprire la cartella"
+                        >
+                          {percorsoEsteso}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                          title="Copia percorso"
+                          onClick={handleCopiaPercorso}
+                        >
+                          {copiato ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                          title="Modifica percorso esteso di rete/disco"
+                          onClick={() => {
+                            setTempPercorso(percorsoEsteso);
+                            setInModificaPercorso(true);
+                          }}
+                        >
+                          <Edit2 className="size-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="gap-1.5 bg-primary/15 text-primary border border-primary/40 hover:bg-primary hover:text-primary-foreground font-semibold"
+                  onClick={() => setDialogSfogliaAperto(true)}
+                >
+                  <FolderOpen className="size-4" /> Apri e Sfoglia
+                </Button>
                 {!haPermesso && (
                   <Button size="sm" variant="outline" onClick={handleRiconnetti}>
-                    <FolderSync className="size-4" /> Autorizza accesso
+                    <FolderSync className="size-4" /> Autorizza
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={handleScegli}>
                   Cambia
                 </Button>
-                <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={handleRimuovi}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={handleRimuovi}
+                >
                   <FolderX className="size-4" /> Scollega
                 </Button>
               </div>
             </div>
 
             <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-              <p>✓ I file originali non vengono mai spostati o rinominati senza tua conferma.</p>
+              <p>✓ Cliccando sulla cartella o sul percorso puoi visualizzare direttamente tutti i file contenuti.</p>
               <p>✓ La ricerca di un attestato scansiona sia questa cartella sia tutte le sottocartelle presenti.</p>
             </div>
           </div>
@@ -167,7 +297,14 @@ export function ArchivioTab() {
           </div>
         )}
       </div>
-      {nomeCartella && <CartelleAggiuntive />}
+
+      {nomeCartella && <CartelleAggiuntive onSfoglia={() => setDialogSfogliaAperto(true)} />}
+
+      <DialogSfogliaArchivio
+        open={dialogSfogliaAperto}
+        onOpenChange={setDialogSfogliaAperto}
+        cartellaSelezionataId="principale"
+      />
     </div>
   );
 }
