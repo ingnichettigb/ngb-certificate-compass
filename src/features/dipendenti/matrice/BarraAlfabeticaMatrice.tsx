@@ -1,10 +1,12 @@
 /*
- * File:          BarraAlfabeticaMatrice.tsx
- * Percorso:      src/features/dipendenti/matrice/BarraAlfabeticaMatrice.tsx
+ * File:         BarraAlfabeticaMatrice.tsx
+ * Percorso:     src/features/dipendenti/matrice/BarraAlfabeticaMatrice.tsx
  * Data creazione: 2026-11-01
  * Revisioni:
  *   - Rev 1 (2026-11-01 21:55): Prima stesura componente modulare per indice alfabetico A-Z:
  *     barra orizzontale e barra laterale verticale fissa, conteggio lavoratori per iniziale e stile brand.
+ *   - Rev 2 (2026-11-01 22:00): Corretto errore di compilazione: rinominata la variabile "let"
+ *     (parola riservata) in "lettera" in entrambe le barre.
  */
 import { useMemo } from "react";
 import type { Dipendente } from "@/lib/api";
@@ -50,18 +52,18 @@ export function BarraAlfabeticaOrizzontale({
       </span>
 
       <div className="flex items-center gap-1 flex-wrap">
-        {ALFABETO.map((let) => {
-          const n = conteggi[let] || 0;
+        {ALFABETO.map((lettera) => {
+          const n = conteggi[lettera] || 0;
           const presente = n > 0;
-          const isSelezionata = letteraAttiva === let;
+          const isSelezionata = letteraAttiva === lettera;
 
           return (
             <button
-              key={let}
+              key={lettera}
               type="button"
               disabled={!presente}
-              onClick={() => onSelezionaLettera(let)}
-              title={presente ? `${let}: ${n} lavorator${n === 1 ? "e" : "i"}` : `Nessun lavoratore con la ${let}`}
+              onClick={() => onSelezionaLettera(lettera)}
+              title={presente ? `${lettera}: ${n} lavorator${n === 1 ? "e" : "i"}` : `Nessun lavoratore con la ${lettera}`}
               className={`min-w-6 h-6 px-1 rounded text-[11px] font-bold transition-all border flex items-center justify-center ${
                 !presente
                   ? "opacity-30 border-transparent text-muted-foreground/60 cursor-not-allowed"
@@ -70,7 +72,7 @@ export function BarraAlfabeticaOrizzontale({
                     : "border-emerald-600/40 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-700 hover:shadow-sm"
               }`}
             >
-              {let}
+              {lettera}
             </button>
           );
         })}
@@ -95,18 +97,18 @@ export function BarraAlfabeticaVerticale({
       className="fixed right-3 top-44 z-[130] flex flex-col items-center gap-0.5 rounded-lg border border-border/80 bg-surface/90 backdrop-blur p-1 shadow-md select-none max-h-[calc(100vh-14rem)] overflow-y-auto"
     >
       <span className="text-[9px] font-mono font-bold text-muted-foreground mb-0.5">A-Z</span>
-      {ALFABETO.map((let) => {
-        const n = conteggi[let] || 0;
+      {ALFABETO.map((lettera) => {
+        const n = conteggi[lettera] || 0;
         const presente = n > 0;
-        const isSelezionata = letteraAttiva === let;
+        const isSelezionata = letteraAttiva === lettera;
 
         return (
           <button
-            key={let}
+            key={lettera}
             type="button"
             disabled={!presente}
-            onClick={() => onSelezionaLettera(let)}
-            title={presente ? `${let}: ${n} lavorator${n === 1 ? "e" : "i"}` : `Nessuno con la ${let}`}
+            onClick={() => onSelezionaLettera(lettera)}
+            title={presente ? `${lettera}: ${n} lavorator${n === 1 ? "e" : "i"}` : `Nessuno con la ${lettera}`}
             className={`size-5 rounded text-[10px] font-bold transition-all flex items-center justify-center ${
               !presente
                 ? "opacity-25 text-muted-foreground/50 cursor-not-allowed"
@@ -115,7 +117,7 @@ export function BarraAlfabeticaVerticale({
                   : "text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white"
             }`}
           >
-            {let}
+            {lettera}
           </button>
         );
       })}
