@@ -14,6 +14,8 @@
  *     query attestati senza filtro, filtro cessati su stato_lavoratore.
  *   - Rev 7 (2026-11-01 21:40): Filtro pillole per macro-gruppo corso (colonne) e selettore a 3 stati lavoratori
  *     (Tutti / Solo assegnati / Senza incarico) integrando BarraFiltriGruppo.tsx.
+ *   - Rev 8 (2026-11-01 21:55): Navigazione alfabetica rapida: salto da tastiera (tasti A-Z), barre alfabetiche
+ *     orizzontale e laterale verticale sempre in vista con scrollIntoView fluido.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -27,9 +29,7 @@ import {
   impostaRuoloDipendente,
   type Dipendente,
   type TipoCorso,
-  type Attestato,
   type RuoloSicurezza,
-  type AssegnazioneRuolo,
   CHIAVE_RUOLI,
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { BarraFiltriGruppo, type FiltroStatoLavoratori } from "./BarraFiltriGruppo";
+import { BarraAlfabeticaOrizzontale, BarraAlfabeticaVerticale } from "./BarraAlfabeticaMatrice";
 
 interface Props {
   open: boolean;
@@ -74,6 +75,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   const queryClient = useQueryClient();
   const [ricerca, setRicerca] = useState("");
   const [rigaSelezionata, setRigaSelezionata] = useState<string | null>(null);
+  const [letteraCorrente, setLetteraCorrente] = useState<string | null>(null);
 
   const [colonnaOrd, setColonnaOrd] = useState<string | null>("nominativo");
   const [direzioneOrd, setDirezioneOrd] = useState<TipoOrdinamento>("asc");
@@ -226,11 +228,11 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   function handleCambiaGruppo(chiave: string | null) {
     setGruppoSelezionato(chiave);
-    setFiltroStatoLavoratori("tutti"); // Predefinito: mostra tutti i lavoratori per poter assegnare
+    setFiltroStatoLavoratori("tutti");
   }
 
   async function handleToggleObbligo(dipendente: Dipendente, corso: TipoCorso) {
-    let ruolo = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
+    const ruolo = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
     if (!ruolo) {
       toast.error(`Nessun ruolo di sicurezza censito per "${corso.nome_corso}"`);
       return;
@@ -340,7 +342,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   const listaElaborata = useMemo(() => {
     let res = dipendenti.filter((d) => d.stato_lavoratore !== "cessato");
 
-    // Filtro lavoratori in base allo stato nel gruppo selezionato (Soluzione 1)
     if (gruppoSelezionato && filtroStatoLavoratori !== "tutti") {
       res = res.filter((d) => {
         const haIncarico = haObbligoNelGruppo(d.id, gruppoSelezionato);
@@ -399,6 +400,29 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     mappaAssegnazioni,
   ]);
 
+  /**
+   * Esegue lo scorrimento automatico alla prima riga che inizia con la lettera indicata
+   */
+  function saltaALettera(lettera: string) {
+    const letUpper = lettera.toUpperCase();
+    const trovato = listaElaborata.find((d) =>
+      (d.cognome || "").trim().toUpperCase().startsWith(letUpper),
+    );
+
+    if (!trovato) {
+      toast.info(`Nessun lavoratore trovato con l'iniziale "${letUpper}"`, { duration: 1500 });
+      return;
+    }
+
+    setLetteraCorrente(letUpper);
+    setRigaSelezionata(trovato.id);
+
+    const elem = document.getElementById(`riga-dipendente-${trovato.id}`);
+    if (elem) {
+      elem.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   function renderFreccia(colonna: string) {
     if (colonnaOrd !== colonna) return <ArrowUpDown className="size-3 text-muted-foreground/60 inline ml-1" />;
     if (direzioneOrd === "asc") return <ArrowUp className="size-3 text-primary inline ml-1 font-bold" />;
@@ -446,14 +470,39 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     toast.success("Esportazione completata");
   }
 
+  // Listener per tasto ESC e salto rapido da tastiera con lettere A-Z
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      // Non intercettare se l'utente sta scrivendo in un campo di testo
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      // Se viene premuta una singola lettera A-Z
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        e.preventDefault();
+        saltaALettera(e.key.toUpperCase());
+      }
     };
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
+  }, [open, onClose, listaElaborata]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -529,6 +578,20 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
         conteggiCorsiPerGruppo={conteggiCorsiPerGruppo}
         totaleCorsi={corsiCatalogo.length}
         conteggiLavoratori={conteggiLavoratori}
+      />
+
+      {/* Barra alfabetica orizzontale sempre visibile */}
+      <BarraAlfabeticaOrizzontale
+        dipendenti={listaElaborata}
+        letteraAttiva={letteraCorrente}
+        onSelezionaLettera={saltaALettera}
+      />
+
+      {/* Barra alfabetica laterale verticale sempre visibile ancorata sul bordo destro */}
+      <BarraAlfabeticaVerticale
+        dipendenti={listaElaborata}
+        letteraAttiva={letteraCorrente}
+        onSelezionaLettera={saltaALettera}
       />
 
       <main className="flex-1 overflow-auto bg-muted/20 p-4">
@@ -676,6 +739,8 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                   return (
                     <tr
                       key={dip.id}
+                      id={`riga-dipendente-${dip.id}`}
+                      data-lettera={(dip.cognome || "").trim().charAt(0).toUpperCase()}
                       onClick={() => setRigaSelezionata(dip.id)}
                       className={`cursor-pointer divide-x divide-border transition-colors ${
                         isAttiva
@@ -766,7 +831,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span>Clicca sulle celle per attivare/disattivare l'obbligo</span>
+          <span>Tasti A-Z o clic sull'indice per scorrere rapidamente al cognome</span>
         </div>
       </footer>
     </div>,
