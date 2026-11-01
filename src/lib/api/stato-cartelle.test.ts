@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-30 20:45): Test dello stato cartelle (nessuna / da autorizzare / ok), della richiesta di permesso
  *     e degli esiti di rinomina e salvataggio locale, con cartelle simulate.
+ *   - Rev 2 (2026-11-01 20:45): IndexedDB finto con get/put/delete; messaggio rinomina allineato a «Manca il permesso di scrittura».
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -44,6 +45,7 @@ vi.mock("@/lib/api/cartella-locale", async (importOriginal) => {
 });
 
 function installaIndexedDbFinto() {
+  const dati = new Map<string, unknown>();
   const finto = {
     open() {
       const req: { result?: unknown; onsuccess?: () => void; onerror?: () => void; onupgradeneeded?: () => void } = {};
@@ -53,6 +55,23 @@ function installaIndexedDbFinto() {
           objectStore: () => ({
             getAll() {
               const r: { result?: unknown; onsuccess?: () => void } = { result: extraSimulate };
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            get(chiave: string) {
+              const r: { result?: unknown; onsuccess?: () => void } = { result: dati.get(chiave) };
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            put(valore: unknown, chiave: string) {
+              dati.set(chiave, valore);
+              const r: { onsuccess?: () => void } = {};
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            delete(chiave: string) {
+              dati.delete(chiave);
+              const r: { onsuccess?: () => void } = {};
               queueMicrotask(() => r.onsuccess?.());
               return r;
             },
@@ -147,7 +166,7 @@ describe("rinomina: motivo preciso dell'insuccesso", () => {
     const r = await rinominaFileNelPercorso("A/B/file.pdf", "nuovo.pdf");
     expect(r.motivo).toBe("permesso");
     expect(r.cartelleSenzaPermesso).toEqual(["Archivio"]);
-    expect(r.errore).toMatch(/Permesso di scrittura negato/);
+    expect(r.errore).toMatch(/Manca il permesso di scrittura/);
   });
 
   it("file davvero assente nelle cartelle autorizzate", async () => {
