@@ -4,8 +4,19 @@
  * Data creaz: 01/11/2026
  * Revisioni:
  *   rev 1 — 01/11/2026 12:00 — Scheda Ditta con anagrafica, figure sicurezza, ATECO, rischio e presenze.
+ *   rev 2 — 01/11/2026 12:15 — Evidenziazione gialla e avviso rosso se il dato inserito differisce dal D.Lgs. 81/08.
  */
-import { Building2, Save, ShieldAlert, Users, Plus, Trash2, Loader2, Info } from "lucide-react";
+import {
+  Building2,
+  Save,
+  ShieldAlert,
+  Users,
+  Plus,
+  Trash2,
+  Loader2,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,8 +49,33 @@ export function DittaTab() {
   // Calcolo delle deduzioni automatiche in base alle soglie D.Lgs. 81/08
   const esitoRls = calcolaSoglia(soglie, "rls", form.n_lavoratori_dichiarato);
   const esitoPs = calcolaSoglia(soglie, "primo_soccorso", form.n_lavoratori_dichiarato);
-  const esitoAntincendio = calcolaSoglia(soglie, "antincendio_presenze", form.presenze_contemporanee_max);
-  const esitoIdoneita = calcolaSoglia(soglie, "idoneita_tecnica_presenze", form.presenze_contemporanee_max);
+  const esitoAntincendio = calcolaSoglia(
+    soglie,
+    "antincendio_presenze",
+    form.presenze_contemporanee_max
+  );
+  const esitoIdoneita = calcolaSoglia(
+    soglie,
+    "idoneita_tecnica_presenze",
+    form.presenze_contemporanee_max
+  );
+
+  // Verifica se il livello antincendio attribuito differisce da quello proposto dalla legge per le presenze inserite
+  const livelloPropostoNum = esitoAntincendio
+    ? esitoAntincendio.esito.includes("1")
+      ? 1
+      : esitoAntincendio.esito.includes("2")
+        ? 2
+        : esitoAntincendio.esito.includes("3")
+          ? 3
+          : null
+    : null;
+
+  const antincendioDifferisce =
+    livelloPropostoNum !== null &&
+    form.livello_antincendio !== null &&
+    form.livello_antincendio !== undefined &&
+    form.livello_antincendio !== livelloPropostoNum;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-8">
@@ -376,11 +412,23 @@ export function DittaTab() {
             </div>
           </div>
 
-          <div className="space-y-1 pt-2">
-            <Label htmlFor="livello_antincendio">Livello Antincendio attribuito</Label>
+          {/* Campo Livello Antincendio attribuito con verifica e allerta gialla/rossa */}
+          <div className="space-y-1.5 pt-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="livello_antincendio">Livello Antincendio attribuito</Label>
+              {antincendioDifferisce && (
+                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                  Valore personalizzato
+                </span>
+              )}
+            </div>
             <select
               id="livello_antincendio"
-              className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              className={`w-full h-9 rounded-md text-sm shadow-sm transition-colors ${
+                antincendioDifferisce
+                  ? "border-2 border-amber-400 bg-amber-50 text-amber-950 font-medium focus:ring-amber-400 dark:bg-amber-950/30 dark:border-amber-600 dark:text-amber-200"
+                  : "border border-input bg-background text-foreground"
+              } px-3 py-1`}
               value={form.livello_antincendio || 2}
               onChange={(e) => updateCampo("livello_antincendio", Number(e.target.value) as 1 | 2 | 3)}
             >
@@ -388,10 +436,26 @@ export function DittaTab() {
               <option value={2}>Livello 2 (Rischio medio / Da 101 a 1.000 presenti / Scuole)</option>
               <option value={3}>Livello 3 (Rischio elevato / Oltre 1.000 presenti)</option>
             </select>
+
+            {/* Informativa in ROSSO se differisce da quanto proposto dal D.Lgs. 81/08 */}
+            {antincendioDifferisce && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <AlertTriangle className="size-4 shrink-0 text-destructive" />
+                  <span>Differisce dal D.Lgs. 81/08: sei sicuro?</span>
+                </div>
+                <p className="text-[11px] text-destructive/90 leading-relaxed">
+                  In base alle presenze massime dichiarate (
+                  <strong>{form.presenze_contemporanee_max}</strong>), la normativa propone{" "}
+                  <strong>{esitoAntincendio?.esito}</strong>, mentre è stato attribuito{" "}
+                  <strong>Livello {form.livello_antincendio}</strong>.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Sintesi deduzioni automatiche */}
+        {/* Sintesi deduzioni automatiche (in basso a destra) */}
         <div className="rounded-lg border bg-muted/15 p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
             <Info className="size-4 text-primary" /> Fabbisogni Normativi Dedotti (D.Lgs. 81/08)
@@ -415,11 +479,32 @@ export function DittaTab() {
               </strong>
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded bg-card border">
-              <span>Antincendio per presenze:</span>
-              <strong className="text-primary font-semibold">
-                {esitoAntincendio ? esitoAntincendio.esito : "Non determinato"}
-              </strong>
+            {/* Riquadro Antincendio: diventa GIALLO con avviso ROSSO se differisce */}
+            <div
+              className={`p-2 rounded border transition-colors ${
+                antincendioDifferisce
+                  ? "border-2 border-amber-400 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:border-amber-600 dark:text-amber-200"
+                  : "bg-card border"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span>Antincendio per presenze:</span>
+                <strong
+                  className={
+                    antincendioDifferisce
+                      ? "text-amber-900 dark:text-amber-300 font-bold"
+                      : "text-primary font-semibold"
+                  }
+                >
+                  {esitoAntincendio ? esitoAntincendio.esito : "Non determinato"}
+                </strong>
+              </div>
+              {antincendioDifferisce && (
+                <div className="pt-1 mt-1 border-t border-amber-300 dark:border-amber-700/50 flex items-center gap-1 text-[11px] font-semibold text-destructive">
+                  <AlertTriangle className="size-3.5 shrink-0" />
+                  <span>Differisce dal Livello {form.livello_antincendio} attribuito!</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-2 rounded bg-card border">
