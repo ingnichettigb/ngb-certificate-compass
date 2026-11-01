@@ -6,6 +6,7 @@
  * Revisioni:
  * - Rev 1: 2026-10-26 17:15 - Ordine argomenti, sfondi tenui e catalogo corsi protetti.
  * - Rev 2: 2026-10-27 20:55 - Evacuazione viola (più leggibile), Defibrillatore teal, protetti EME-PRO-02/EME-EAA-02.
+ * - Rev 3: 2026-11-01 11:00 - Antincendio solo con i codici VVF (VFF-FOR…): tolti i vecchi ANT-L1B-04, ANT-L1A-02, ANT-L2B-08, ANT-L2A-05.
  */
 
 export type GruppoArgomento = {
@@ -30,7 +31,6 @@ export const GRUPPI_ARGOMENTO: GruppoArgomento[] = [
 export const CODICI_STANDARD_PROTETTI = new Set<string>([
   "SIC-GEN-04", "SIC-SPE-04", "SIC-SPE-08", "SIC-SPE-12", "SIC-AGG-06",
   "PRP-BAS-12", "PRP-AGG-06", "EME-PRO-02", "EME-EVA-02", "EME-EAA-02",
-  "ANT-L1B-04", "ANT-L1A-02", "ANT-L2B-08", "ANT-L2A-05",
   "VFF-FOR1-4", "VFF-FOR1A2", "VFF-FOR2-8", "VFF-FOR2A5", "VFF-FOR316", "VFF-FOR3A8",
   "PSO-GAB-16", "PSO-GAA-06", "PSO-BCB-12", "PSO-AGB-04", "PSO-AGA-04",
   "BLS-BAS-05", "BLS-AGG-02",

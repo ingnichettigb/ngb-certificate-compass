@@ -367,7 +367,7 @@ export function SelettoreCorsiDipendente({
               <Input
                 value={nuovoNome}
                 onChange={(e) => setNuovoNome(e.target.value)}
-                placeholder="es. Antincendio Livello 2 - Rischio Medio"
+                placeholder="es. VVFF Livello 2 Base (FOR2)"
               />
             </div>
             <div>

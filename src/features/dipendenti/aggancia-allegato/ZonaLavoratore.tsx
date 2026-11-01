@@ -5,6 +5,8 @@
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Dati lavoratore precompilati e dati dell'allegato.
  *   - Rev 2 (2026-10-26 16:45): Catalogo corsi completo con codici standard, descrizione, spunta visiva e ricalcolo scadenza.
+ *   - Rev 3 (2026-11-01 11:00): Mappa nome→codice allineata al catalogo reale (codici VFF-FOR… per l'antincendio, PSO-AgB-04,
+ *     EME-PRO-02, SIC-SPE-…); i vecchi nomi dell'antincendio restano come alias.
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,25 +16,38 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getTipiCorso, type TipoCorso, type Dipendente } from "@/lib/api";
 
+/**
+ * Usata solo quando un corso non ha un codice nel catalogo. Nomi e codici sono quelli del catalogo reale;
+ * in fondo i vecchi nomi dell'antincendio (alias) puntano ai nuovi codici VVF.
+ */
 const CODICI_CORSI_STANDARD: Record<string, string> = {
   "Sicurezza Generale": "SIC-GEN-04",
-  "Sicurezza Specifica Rischio Basso": "SIC-BAS-04",
-  "Sicurezza Specifica Rischio Medio": "SIC-MED-08",
-  "Sicurezza Specifica Rischio Alto": "SIC-ALT-12",
+  "Sicurezza Specifica Rischio Basso": "SIC-SPE-04",
+  "Sicurezza Specifica Rischio Medio": "SIC-SPE-08",
+  "Sicurezza Specifica Rischio Alto": "SIC-SPE-12",
   "Aggiornamento Lavoratori": "SIC-AGG-06",
   "Preposto": "PRP-BAS-12",
   "Aggiornamento Preposto": "PRP-AGG-06",
-  "Antincendio Livello 1 Base": "ANT-L1B-04",
-  "Aggiornamento Antincendio Livello 1": "ANT-L1A-02",
-  "Antincendio Livello 2": "ANT-L2B-08",
-  "Aggiornamento Antincendio Livello 2": "ANT-L2A-05",
+  "VVFF Livello 1 Base (FOR1)": "VFF-FOR1-4",
+  "VVFF Livello 1 Aggiornamento (FOR1)": "VFF-FOR1A2",
+  "VVFF Livello 2 Base (FOR2)": "VFF-FOR2-8",
+  "VVFF Livello 2 Aggiornamento (FOR2)": "VFF-FOR2A5",
+  "VVFF Livello 3 Base (FOR3)": "VFF-FOR316",
+  "VVFF Livello 3 Aggiornamento (FOR3)": "VFF-FOR3A8",
   "Primo Soccorso Gruppo A Base": "PSO-GAB-16",
   "Aggiornamento Primo Soccorso Gruppo A": "PSO-GAA-06",
   "Primo Soccorso Gruppo B/C Base": "PSO-BCB-12",
-  "Aggiornamento Primo Soccorso Gruppo B/C": "PSO-BCA-04",
+  "Aggiornamento Primo Soccorso Gruppo B/C": "PSO-AgB-04",
   "Uso del DAE (BLSD)": "BLS-BAS-05",
   "Aggiornamento Uso del DAE (BLSD)": "BLS-AGG-02",
-  "Prova di Evacuazione / Emergenze": "EME-EVA-02",
+  "Evacuazione / Emergenze dell'Istituto": "EME-EVA-02",
+  "Aggiornamento Evacuazione / Emergenze dell'Istituto": "EME-EAA-02",
+  "Prova di Evacuazione / Emergenze": "EME-PRO-02",
+  // Alias: vecchi nomi dell'antincendio
+  "Antincendio Livello 1 Base": "VFF-FOR1-4",
+  "Aggiornamento Antincendio Livello 1": "VFF-FOR1A2",
+  "Antincendio Livello 2": "VFF-FOR2-8",
+  "Aggiornamento Antincendio Livello 2": "VFF-FOR2A5",
 };
 
 export type DatiAllegato = { tipo: string; altro: string; dataCorso: string; scadenza: string };
