@@ -62,13 +62,14 @@ export function DialogSfogliaArchivio({ open, onOpenChange, cartellaSelezionataI
   // Scansiona i file della cartella attiva
   useEffect(() => {
     if (!open || !cartellaAttiva) return;
+    const attiva = cartellaAttiva;
     async function carica() {
       setLoading(true);
       try {
-        const ok = await verificaPermessi(cartellaAttiva.handle, false, "read");
+        const ok = await verificaPermessi(attiva.handle, false, "read");
         setHaPermesso(ok);
         if (ok) {
-          const trovati = await cercaFileRicorsivo(cartellaAttiva.handle, "", "", [], 0, 6, 150);
+          const trovati = await cercaFileRicorsivo(attiva.handle, "", "", [], 0, 6, 150);
           setFiles(trovati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime()));
         } else {
           setFiles([]);

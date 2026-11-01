@@ -39,7 +39,7 @@ export type CartellaCollegata = {
   nome: string;
   /** Alias di nome (compatibilità) */
   name: string;
-  percorso?: string;
+  percorso?: string | undefined;
   principale?: boolean;
   handle: FileSystemDirectoryHandle;
   dataAggiunta: Date;
@@ -48,7 +48,7 @@ export type CartellaCollegata = {
 type RecordCartellaDb = {
   id: string;
   nome: string;
-  percorso?: string;
+  percorso?: string | undefined;
   handle: FileSystemDirectoryHandle;
   dataAggiunta: string;
 };
