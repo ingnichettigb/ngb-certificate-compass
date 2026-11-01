@@ -7,7 +7,8 @@
  *     suggerimento del rischio, anno scolastico e avvisi quando i dati dichiarati non sono più allineati alla realtà.
  */
 
-export type AmbitoSoglia = "rls" | "primo_soccorso" | "antincendio_presenze" | "idoneita_tecnica_presenze";
+export type AmbitoSoglia =
+  "rls" | "primo_soccorso" | "antincendio_presenze" | "idoneita_tecnica_presenze";
 
 export type Soglia = {
   id: string;
@@ -30,10 +31,16 @@ export type CodiceAteco = {
 };
 
 /** Trova la fascia (riga di soglie_ditta) che contiene il numero. */
-export function trovaSoglia(soglie: Soglia[], ambito: AmbitoSoglia, n: number | null | undefined): Soglia | null {
+export function trovaSoglia(
+  soglie: Soglia[],
+  ambito: AmbitoSoglia,
+  n: number | null | undefined,
+): Soglia | null {
   if (n === null || n === undefined || Number.isNaN(n)) return null;
   return (
-    soglie.find((s) => s.attiva && s.ambito === ambito && n >= s.da && (s.a === null || n <= s.a)) ?? null
+    soglie.find(
+      (s) => s.attiva && s.ambito === ambito && n >= s.da && (s.a === null || n <= s.a),
+    ) ?? null
   );
 }
 
@@ -91,7 +98,8 @@ export function calcolaAvvisi(
     avvisi.push({
       chiave: "lavoratori-mancanti",
       testo: "Numero dei lavoratori non dichiarato",
-      dettaglio: "Serve per stabilire RLS e gruppo di Primo Soccorso. Compilalo in Impostazioni generali > Ditta.",
+      dettaglio:
+        "Serve per stabilire RLS e gruppo di Primo Soccorso. Compilalo in Impostazioni generali > Ditta.",
     });
   } else if (inForza !== null) {
     const diversi: string[] = [];
@@ -99,7 +107,9 @@ export function calcolaAvvisi(
       const dich = trovaSoglia(soglie, ambito, dichiarati);
       const reale = trovaSoglia(soglie, ambito, inForza);
       if (dich && reale && dich.id !== reale.id) {
-        diversi.push(`${ambito === "rls" ? "RLS" : "Primo Soccorso"}: dichiarata «${dich.etichetta}», reale «${reale.etichetta}»`);
+        diversi.push(
+          `${ambito === "rls" ? "RLS" : "Primo Soccorso"}: dichiarata «${dich.etichetta}», reale «${reale.etichetta}»`,
+        );
       }
     }
     if (diversi.length > 0) {
@@ -117,13 +127,18 @@ export function calcolaAvvisi(
       avvisi.push({
         chiave: "presenze-mancanti",
         testo: "Presenze contemporanee della scuola non indicate",
-        dettaglio: "Servono per il livello antincendio. Compilale in Impostazioni generali > Ditta.",
+        dettaglio:
+          "Servono per il livello antincendio. Compilale in Impostazioni generali > Ditta.",
       });
-    } else if (!ditta.presenze_data_aggiornamento || ditta.presenze_data_aggiornamento < inizioAnnoScolastico(oggi)) {
+    } else if (
+      !ditta.presenze_data_aggiornamento ||
+      ditta.presenze_data_aggiornamento < inizioAnnoScolastico(oggi)
+    ) {
       avvisi.push({
         chiave: "presenze-vecchie",
         testo: "Presenze della scuola da aggiornare per l'anno scolastico in corso",
-        dettaglio: "Alunni + personale presenti contemporaneamente: controlla il numero e salvalo di nuovo.",
+        dettaglio:
+          "Alunni + personale presenti contemporaneamente: controlla il numero e salvalo di nuovo.",
       });
     }
   }

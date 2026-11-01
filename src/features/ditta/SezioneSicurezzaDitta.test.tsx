@@ -13,21 +13,36 @@ import type { Soglia } from "./regole-ditta";
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }));
 
 const soglia = (ambito: string, da: number, a: number | null, esito: string): Soglia => ({
-  id: `${ambito}-${da}`, ambito, da, a, etichetta: esito, esito, attiva: true,
+  id: `${ambito}-${da}`,
+  ambito,
+  da,
+  a,
+  etichetta: esito,
+  esito,
+  attiva: true,
 });
 const SOGLIE = [
-  soglia("rls", 16, 200, "1 RLS"), soglia("primo_soccorso", 3, null, "Gruppo B"),
-  soglia("antincendio_presenze", 101, 1000, "Livello 2"), soglia("idoneita_tecnica_presenze", 301, null, "Richiesta"),
+  soglia("rls", 16, 200, "1 RLS"),
+  soglia("primo_soccorso", 3, null, "Gruppo B"),
+  soglia("antincendio_presenze", 101, 1000, "Livello 2"),
+  soglia("idoneita_tecnica_presenze", 301, null, "Richiesta"),
 ];
 const VUOTO: FormSicurezza = {
-  codici_ateco: [], rischio_ditta: "", reparti_rischio_differenziato: false,
-  n_lavoratori_dichiarato: "", e_scuola: false, presenze_contemporanee_max: "", livello_antincendio: "",
+  codici_ateco: [],
+  rischio_ditta: "",
+  reparti_rischio_differenziato: false,
+  n_lavoratori_dichiarato: "",
+  e_scuola: false,
+  presenze_contemporanee_max: "",
+  livello_antincendio: "",
 };
 
 afterEach(cleanup);
 
 function mostra(form: FormSicurezza, onChange = vi.fn(), inForza: number | null = 4) {
-  render(<SezioneSicurezzaDitta form={form} onChange={onChange} soglie={SOGLIE} inForza={inForza} />);
+  render(
+    <SezioneSicurezzaDitta form={form} onChange={onChange} soglie={SOGLIE} inForza={inForza} />,
+  );
   return onChange;
 }
 
@@ -37,7 +52,8 @@ describe("sezione Sicurezza e rischio", () => {
     fireEvent.change(screen.getByLabelText(/Codici ATECO/), { target: { value: "853120" } });
     fireEvent.click(screen.getByRole("button", { name: "Aggiungi codice ATECO" }));
     expect(onChange).toHaveBeenCalledWith({
-      ...VUOTO, codici_ateco: [{ codice: "85.31.20", rischio: "medio", principale: true }],
+      ...VUOTO,
+      codici_ateco: [{ codice: "85.31.20", rischio: "medio", principale: true }],
     });
   });
 
@@ -58,10 +74,16 @@ describe("sezione Sicurezza e rischio", () => {
   it("togliendo il codice principale il successivo diventa principale", () => {
     const onChange = mostra({
       ...VUOTO,
-      codici_ateco: [{ codice: "85.31.20", principale: true }, { codice: "47.11", principale: false }],
+      codici_ateco: [
+        { codice: "85.31.20", principale: true },
+        { codice: "47.11", principale: false },
+      ],
     });
     fireEvent.click(screen.getByRole("button", { name: "Togli ATECO 85.31.20" }));
-    expect(onChange).toHaveBeenCalledWith({ ...VUOTO, codici_ateco: [{ codice: "47.11", principale: true }] });
+    expect(onChange).toHaveBeenCalledWith({
+      ...VUOTO,
+      codici_ateco: [{ codice: "47.11", principale: true }],
+    });
   });
 
   it("mostra RLS e Primo Soccorso dal numero dei lavoratori e quanti sono in forza nel programma", () => {

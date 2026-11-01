@@ -126,7 +126,8 @@ let importazioneInCorso: Promise<boolean> | null = null;
 export function importaDatiDalBrowserUnaVolta(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
   try {
-    if (localStorage.getItem(CHIAVE_IMPORTATO) || !esistonoDatiAziendaLocali()) return Promise.resolve(false);
+    if (localStorage.getItem(CHIAVE_IMPORTATO) || !esistonoDatiAziendaLocali())
+      return Promise.resolve(false);
   } catch {
     return Promise.resolve(false);
   }
@@ -147,4 +148,3 @@ export function importaDatiDalBrowserUnaVolta(): Promise<boolean> {
   }
   return importazioneInCorso;
 }
-

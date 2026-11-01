@@ -63,7 +63,9 @@ export function SezioneSicurezzaDitta({
   function aggiungiAteco() {
     const codice = normalizzaAteco(nuovoAteco);
     if (!codice) {
-      return void toast.error("Codice ATECO non valido", { description: "Esempio: 85.31.20 oppure 85.31" });
+      return void toast.error("Codice ATECO non valido", {
+        description: "Esempio: 85.31.20 oppure 85.31",
+      });
     }
     if (form.codici_ateco.some((c) => c.codice === codice)) {
       return void toast.error("Codice già inserito");
@@ -79,7 +81,8 @@ export function SezioneSicurezzaDitta({
 
   function togliAteco(codice: string) {
     const resto = form.codici_ateco.filter((c) => c.codice !== codice);
-    if (resto.length > 0 && !resto.some((c) => c.principale)) resto[0] = { ...resto[0]!, principale: true };
+    if (resto.length > 0 && !resto.some((c) => c.principale))
+      resto[0] = { ...resto[0]!, principale: true };
     onChange({ ...form, codici_ateco: resto });
   }
 
@@ -88,7 +91,9 @@ export function SezioneSicurezzaDitta({
   const rls = trovaSoglia(soglie, "rls", dichiarati);
   const soccorso = trovaSoglia(soglie, "primo_soccorso", dichiarati);
   const incendio = form.e_scuola ? trovaSoglia(soglie, "antincendio_presenze", presenze) : null;
-  const idoneita = form.e_scuola ? trovaSoglia(soglie, "idoneita_tecnica_presenze", presenze) : null;
+  const idoneita = form.e_scuola
+    ? trovaSoglia(soglie, "idoneita_tecnica_presenze", presenze)
+    : null;
   const rlsReale = trovaSoglia(soglie, "rls", inForza ?? null);
   const fasciaDiversa = rls && rlsReale && rls.id !== rlsReale.id;
 
@@ -97,8 +102,8 @@ export function SezioneSicurezzaDitta({
       <div>
         <h3 className="text-sm font-semibold">Sicurezza e rischio</h3>
         <p className="text-[11px] text-muted-foreground">
-          Servono a proporre i corsi giusti (rischio, RLS, Primo Soccorso, Antincendio). Sono indicazioni: per legge conta la
-          valutazione dei rischi (DVR).
+          Servono a proporre i corsi giusti (rischio, RLS, Primo Soccorso, Antincendio). Sono
+          indicazioni: per legge conta la valutazione dei rischi (DVR).
         </p>
       </div>
 
@@ -117,7 +122,12 @@ export function SezioneSicurezzaDitta({
               }
             }}
           />
-          <Button type="button" variant="outline" onClick={aggiungiAteco} aria-label="Aggiungi codice ATECO">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={aggiungiAteco}
+            aria-label="Aggiungi codice ATECO"
+          >
             <Plus className="size-4" /> Aggiungi
           </Button>
         </div>
@@ -130,7 +140,9 @@ export function SezioneSicurezzaDitta({
               >
                 <span className="font-mono">{c.codice}</span>
                 {c.principale && <span className="text-muted-foreground">principale</span>}
-                {c.rischio && <span className="text-muted-foreground">· suggerito {c.rischio}</span>}
+                {c.rischio && (
+                  <span className="text-muted-foreground">· suggerito {c.rischio}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => togliAteco(c.codice)}
@@ -190,7 +202,12 @@ export function SezioneSicurezzaDitta({
           />
           <p className="text-[11px] text-muted-foreground">
             In forza nel programma: <strong>{inForza ?? "—"}</strong>
-            {fasciaDiversa && <span className="text-amber-600"> · la fascia non coincide con quella dichiarata</span>}
+            {fasciaDiversa && (
+              <span className="text-amber-600">
+                {" "}
+                · la fascia non coincide con quella dichiarata
+              </span>
+            )}
           </p>
         </div>
         <div className="space-y-1 text-xs">
@@ -201,8 +218,11 @@ export function SezioneSicurezzaDitta({
           )}
           {soccorso && (
             <p>
-              <span className="text-muted-foreground">Primo Soccorso:</span> <strong>{soccorso.esito}</strong>
-              {soccorso.note && <span className="block text-[11px] text-muted-foreground">{soccorso.note}</span>}
+              <span className="text-muted-foreground">Primo Soccorso:</span>{" "}
+              <strong>{soccorso.esito}</strong>
+              {soccorso.note && (
+                <span className="block text-[11px] text-muted-foreground">{soccorso.note}</span>
+              )}
             </p>
           )}
         </div>
@@ -231,14 +251,19 @@ export function SezioneSicurezzaDitta({
               value={form.presenze_contemporanee_max}
               onChange={(e) => onChange({ ...form, presenze_contemporanee_max: e.target.value })}
             />
-            <p className="text-[11px] text-muted-foreground">Presenze contemporanee, non il totale degli iscritti.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Presenze contemporanee, non il totale degli iscritti.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="livelloAntincendio">Livello antincendio stabilito</Label>
             <Select
               value={form.livello_antincendio || NESSUNO}
               onValueChange={(v) =>
-                onChange({ ...form, livello_antincendio: v === NESSUNO ? "" : (v as "1" | "2" | "3") })
+                onChange({
+                  ...form,
+                  livello_antincendio: v === NESSUNO ? "" : (v as "1" | "2" | "3"),
+                })
               }
             >
               <SelectTrigger id="livelloAntincendio">
@@ -254,8 +279,13 @@ export function SezioneSicurezzaDitta({
             {incendio && (
               <p className="text-[11px] text-muted-foreground">
                 Dalle presenze: <strong>{incendio.esito}</strong>
-                {idoneita && <> · idoneità tecnica: <strong>{idoneita.esito}</strong></>}. Il livello lo conferma il
-                datore di lavoro.
+                {idoneita && (
+                  <>
+                    {" "}
+                    · idoneità tecnica: <strong>{idoneita.esito}</strong>
+                  </>
+                )}
+                . Il livello lo conferma il datore di lavoro.
               </p>
             )}
           </div>
