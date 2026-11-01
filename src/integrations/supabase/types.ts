@@ -351,6 +351,96 @@ export type Database = {
           },
         ]
       }
+      ditta: {
+        Row: {
+          cap: string | null
+          codice_fiscale: string | null
+          codici_ateco: Json
+          comune: string | null
+          created_at: string
+          datore_di_lavoro: string | null
+          e_scuola: boolean
+          email: string | null
+          email_mittente_resend: string | null
+          id: boolean
+          indirizzo: string | null
+          livello_antincendio: number | null
+          medico_competente: string | null
+          n_lavoratori_data_aggiornamento: string | null
+          n_lavoratori_dichiarato: number | null
+          partita_iva: string | null
+          pec: string | null
+          presenze_contemporanee_max: number | null
+          presenze_data_aggiornamento: string | null
+          provincia: string | null
+          ragione_sociale: string
+          referente: string | null
+          reparti_rischio_differenziato: boolean
+          rischio_ditta: string | null
+          rspp: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          cap?: string | null
+          codice_fiscale?: string | null
+          codici_ateco?: Json
+          comune?: string | null
+          created_at?: string
+          datore_di_lavoro?: string | null
+          e_scuola?: boolean
+          email?: string | null
+          email_mittente_resend?: string | null
+          id?: boolean
+          indirizzo?: string | null
+          livello_antincendio?: number | null
+          medico_competente?: string | null
+          n_lavoratori_data_aggiornamento?: string | null
+          n_lavoratori_dichiarato?: number | null
+          partita_iva?: string | null
+          pec?: string | null
+          presenze_contemporanee_max?: number | null
+          presenze_data_aggiornamento?: string | null
+          provincia?: string | null
+          ragione_sociale?: string
+          referente?: string | null
+          reparti_rischio_differenziato?: boolean
+          rischio_ditta?: string | null
+          rspp?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cap?: string | null
+          codice_fiscale?: string | null
+          codici_ateco?: Json
+          comune?: string | null
+          created_at?: string
+          datore_di_lavoro?: string | null
+          e_scuola?: boolean
+          email?: string | null
+          email_mittente_resend?: string | null
+          id?: boolean
+          indirizzo?: string | null
+          livello_antincendio?: number | null
+          medico_competente?: string | null
+          n_lavoratori_data_aggiornamento?: string | null
+          n_lavoratori_dichiarato?: number | null
+          partita_iva?: string | null
+          pec?: string | null
+          presenze_contemporanee_max?: number | null
+          presenze_data_aggiornamento?: string | null
+          provincia?: string | null
+          ragione_sociale?: string
+          referente?: string | null
+          reparti_rischio_differenziato?: boolean
+          rischio_ditta?: string | null
+          rspp?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documenti_attestati: {
         Row: {
           codice_fiscale: string
@@ -539,6 +629,7 @@ export type Database = {
           attivo: boolean
           created_at: string
           id: string
+          livello_rischio: string | null
           nome: string
           ordine: number
           richiede_classe_concorso: boolean
@@ -547,6 +638,7 @@ export type Database = {
           attivo?: boolean
           created_at?: string
           id?: string
+          livello_rischio?: string | null
           nome: string
           ordine?: number
           richiede_classe_concorso?: boolean
@@ -555,6 +647,7 @@ export type Database = {
           attivo?: boolean
           created_at?: string
           id?: string
+          livello_rischio?: string | null
           nome?: string
           ordine?: number
           richiede_classe_concorso?: boolean
@@ -590,6 +683,42 @@ export type Database = {
           macro_categoria?: string | null
           nome?: string
           obbligatorio_tutti?: boolean
+          ordine?: number
+        }
+        Relationships: []
+      }
+      soglie_ditta: {
+        Row: {
+          a: number | null
+          ambito: string
+          attiva: boolean
+          da: number
+          esito: string
+          etichetta: string
+          id: string
+          note: string | null
+          ordine: number
+        }
+        Insert: {
+          a?: number | null
+          ambito: string
+          attiva?: boolean
+          da: number
+          esito: string
+          etichetta: string
+          id?: string
+          note?: string | null
+          ordine?: number
+        }
+        Update: {
+          a?: number | null
+          ambito?: string
+          attiva?: boolean
+          da?: number
+          esito?: string
+          etichetta?: string
+          id?: string
+          note?: string | null
           ordine?: number
         }
         Relationships: []
@@ -640,6 +769,7 @@ export type Database = {
           created_at: string
           durata_validita_anni: number | null
           id: string
+          livello_rischio: string | null
           livello_specifico: string
           macro_categoria: string
           nome_corso: string
@@ -656,6 +786,7 @@ export type Database = {
           created_at?: string
           durata_validita_anni?: number | null
           id?: string
+          livello_rischio?: string | null
           livello_specifico: string
           macro_categoria: string
           nome_corso: string
@@ -672,6 +803,7 @@ export type Database = {
           created_at?: string
           durata_validita_anni?: number | null
           id?: string
+          livello_rischio?: string | null
           livello_specifico?: string
           macro_categoria?: string
           nome_corso?: string
