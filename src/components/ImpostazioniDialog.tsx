@@ -7,19 +7,20 @@
  *   rev 2 — 25/10/2026 10:15 — Aggiunte schede Ditta e Corsi.
  *   rev 3 — 26/10/2026 17:50 — Layout a schermo intero con createPortal e tasto Torna.
  *   rev 4 — 26/10/2026 17:58 — Chiusura Esc condizionata per non chiudere le impostazioni se è aperto un popup interno.
+ *   rev 5 — 01/11/2026 12:00 — Integrazione DittaTab con anagrafica database e parametri D.Lgs. 81/08.
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Settings, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DittaTab } from "@/features/impostazioni/DittaTab";
+import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
 import { RepartiTab } from "@/features/impostazioni/RepartiTab";
 import { InsegnamentoTab } from "@/features/impostazioni/InsegnamentoTab";
 import { CategorieTab } from "@/features/impostazioni/CategorieTab";
 import { RuoliTab } from "@/features/impostazioni/RuoliTab";
 import { ArchivioTab } from "@/features/impostazioni/ArchivioTab";
-import { DatiAziendaDialog } from "@/components/DatiAziendaDialog";
-import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
 
 export function ImpostazioniDialog() {
   const [open, setOpen] = useState(false);
@@ -89,11 +90,8 @@ export function ImpostazioniDialog() {
                     <TabsTrigger value="archivio">Archivio</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="ditta" className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Nome, email, indirizzo e mittente usati nelle comunicazioni.
-                    </p>
-                    <DatiAziendaDialog />
+                  <TabsContent value="ditta">
+                    <DittaTab />
                   </TabsContent>
 
                   <TabsContent value="corsi" className="space-y-4">
