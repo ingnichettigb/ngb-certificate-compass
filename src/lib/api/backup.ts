@@ -5,11 +5,14 @@
  * Revisioni:
  *   rev 1 — 20/10/2026 14:00 — Esportazione e importazione database JSON.
  *   rev 2 — 26/10/2026 17:30 — Naming 030ArchAttestati_AAMMGGhhmm_ e lettura selettiva backup.
+ *   rev 3 — 01/11/2026 12:35 — Salvataggio automatico diretto nella sottocartella "Backup DB" della cartella archivio.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
+import { getCartellaArchivio, leggiPercorsoTestuale } from "./cartella-locale";
 
 export const PREFISSO_BACKUP = "030ArchAttestati_";
+export const SOTTOCARTELLA_BACKUP_DB = "Backup DB";
 
 export interface InfoFileBackup {
   nome: string;
@@ -17,6 +20,16 @@ export interface InfoFileBackup {
   dimensioneKb: number;
   dataCreazione: Date;
   fileHandle?: FileSystemFileHandle;
+}
+
+export interface EsitoEsportazioneDb {
+  dump: {
+    dipendenti: unknown[];
+    attestati_caricati: unknown[];
+  };
+  nomeFile: string;
+  percorsoSalvataggio: string;
+  salvatoInCartellaLocale: boolean;
 }
 
 /** Genera il nome file: 030ArchAttestati_AAMMGGhhmm_archivio-attestati.json */
@@ -45,6 +58,23 @@ export function estraiDataDaNomeBackup(nomeFile: string): { data: string; dateOb
   return { data: "Data sconosciuta", dateObj: new Date(0) };
 }
 
+/** Restituisce l'handle della sottocartella "Backup DB" nella cartella archivio principale (creandola se non esiste). */
+export async function getCartellaBackupDb(creaSeManca = true): Promise<{
+  cartellaHandle: FileSystemDirectoryHandle;
+  nomePercorso: string;
+} | null> {
+  const root = await getCartellaArchivio(true);
+  if (!root) return null;
+  try {
+    const backupDir = await root.getDirectoryHandle(SOTTOCARTELLA_BACKUP_DB, { create: creaSeManca });
+    const percorso = await leggiPercorsoTestuale();
+    const nomePercorso = percorso ? `${percorso}\\${SOTTOCARTELLA_BACKUP_DB}` : `${root.name}/${SOTTOCARTELLA_BACKUP_DB}`;
+    return { cartellaHandle: backupDir, nomePercorso };
+  } catch {
+    return null;
+  }
+}
+
 /** Scansiona una cartella restituendo SOLO i file che iniziano per 030ArchAttestati_ e finiscono per .json. */
 export async function elencaBackupDaCartella(dirHandle: FileSystemDirectoryHandle): Promise<InfoFileBackup[]> {
   const risultati: InfoFileBackup[] = [];
@@ -66,23 +96,25 @@ export async function elencaBackupDaCartella(dirHandle: FileSystemDirectoryHandl
   return risultati.sort((a, b) => b.dataCreazione.getTime() - a.dataCreazione.getTime());
 }
 
-/** Esporta l'intero database in formato JSON salvato con il nome standard. */
-export async function esportaDb() {
+/** Esporta l'intero database in formato JSON, salvandolo direttamente nella sottocartella "Backup DB". */
+export async function esportaDb(): Promise<EsitoEsportazioneDb | null> {
   const [dipTutti, attTutti] = await Promise.all([
     leggiTutto(() => sb.from("dipendenti").select("*").order("id")),
     leggiTutto(() => sb.from("attestati_caricati").select("*").order("id")),
   ]);
-  const [tipi, rep, sot, cat, classi, mat] = await Promise.all([
+  const [tipi, rep, sot, cat, classi, mat, ditta, soglie] = await Promise.all([
     supabase.from("tipi_corso").select("*"),
     sb.from("reparti").select("*"),
     sb.from("sottoreparti").select("*"),
     sb.from("categorie_corso").select("*"),
     sb.from("classi_concorso").select("*"),
     sb.from("materie").select("*"),
+    sb.from("ditta").select("*"),
+    sb.from("soglie_ditta").select("*"),
   ]);
   const dump = {
     esportato_il: new Date().toISOString(),
-    versione: 3,
+    versione: 4,
     dipendenti: dipTutti ?? [],
     tipi_corso: tipi.data ?? [],
     attestati_caricati: attTutti ?? [],
@@ -91,10 +123,32 @@ export async function esportaDb() {
     categorie_corso: cat.data ?? [],
     classi_concorso: classi.data ?? [],
     materie: mat.data ?? [],
+    ditta: ditta.data ?? [],
+    soglie_ditta: soglie.data ?? [],
   };
   const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
   const nome = generaNomeFileBackup();
 
+  // 1. Prova salvataggio diretto nella sottocartella "Backup DB" della cartella archivio configurata
+  try {
+    const destinazione = await getCartellaBackupDb(true);
+    if (destinazione) {
+      const fileHandle = await destinazione.cartellaHandle.getFileHandle(nome, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return {
+        dump,
+        nomeFile: nome,
+        percorsoSalvataggio: destinazione.nomePercorso,
+        salvatoInCartellaLocale: true,
+      };
+    }
+  } catch {
+    // Prosegue con il fallback manuale
+  }
+
+  // 2. Fallback con showSaveFilePicker del browser
   const w = window as unknown as {
     showSaveFilePicker?: (o: unknown) => Promise<{
       createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }>;
@@ -109,18 +163,30 @@ export async function esportaDb() {
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
-      return dump;
+      return {
+        dump,
+        nomeFile: nome,
+        percorsoSalvataggio: "Cartella scelta manualmente",
+        salvatoInCartellaLocale: false,
+      };
     } catch (e) {
       if ((e as DOMException)?.name === "AbortError") return null;
     }
   }
+
+  // 3. Fallback classico download browser
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = nome;
   a.click();
   URL.revokeObjectURL(url);
-  return dump;
+  return {
+    dump,
+    nomeFile: nome,
+    percorsoSalvataggio: "Cartella Download",
+    salvatoInCartellaLocale: false,
+  };
 }
 
 /** Ripristina un backup JSON nel database previa verifica del prefisso 030ArchAttestati_. */
@@ -157,6 +223,12 @@ export async function importaDb(file: File) {
   }
   if (Array.isArray(dump.categorie_corso) && dump.categorie_corso.length) {
     await sb.from("categorie_corso").upsert(dump.categorie_corso, { onConflict: "macro_categoria" });
+  }
+  if (Array.isArray(dump.ditta) && dump.ditta.length) {
+    await sb.from("ditta").upsert(dump.ditta, { onConflict: "id" });
+  }
+  if (Array.isArray(dump.soglie_ditta) && dump.soglie_ditta.length) {
+    await sb.from("soglie_ditta").upsert(dump.soglie_ditta, { onConflict: "id" });
   }
   if (Array.isArray(dump.attestati_caricati)) {
     for (let i = 0; i < dump.attestati_caricati.length; i += 200) {
