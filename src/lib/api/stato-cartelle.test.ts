@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-30 20:45): Test dello stato cartelle (nessuna / da autorizzare / ok), della richiesta di permesso
  *     e degli esiti di rinomina e salvataggio locale, con cartelle simulate.
+ *   - Rev 2 (2026-11-01 20:45): IndexedDB finto con get/put/delete, necessari a leggere il percorso testuale della cartella.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
