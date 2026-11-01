@@ -45,6 +45,7 @@ vi.mock("@/lib/api/cartella-locale", async (importOriginal) => {
 });
 
 function installaIndexedDbFinto() {
+  const dati = new Map<string, unknown>();
   const finto = {
     open() {
       const req: { result?: unknown; onsuccess?: () => void; onerror?: () => void; onupgradeneeded?: () => void } = {};
@@ -54,6 +55,23 @@ function installaIndexedDbFinto() {
           objectStore: () => ({
             getAll() {
               const r: { result?: unknown; onsuccess?: () => void } = { result: extraSimulate };
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            get(chiave: string) {
+              const r: { result?: unknown; onsuccess?: () => void } = { result: dati.get(chiave) };
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            put(valore: unknown, chiave: string) {
+              dati.set(chiave, valore);
+              const r: { onsuccess?: () => void } = {};
+              queueMicrotask(() => r.onsuccess?.());
+              return r;
+            },
+            delete(chiave: string) {
+              dati.delete(chiave);
+              const r: { onsuccess?: () => void } = {};
               queueMicrotask(() => r.onsuccess?.());
               return r;
             },
