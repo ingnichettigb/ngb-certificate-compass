@@ -89,7 +89,7 @@ export function DialogSfogliaArchivio({ open, onOpenChange, cartellaSelezionataI
     setHaPermesso(ok);
     if (ok) {
       setLoading(true);
-      const trovati = await cercaFileRicorsivo(attiva.handle, "", "", [], 0, 6, 150);
+      const trovati = await cercaFileRicorsivo(cartellaAttiva.handle, "", "", [], 0, 6, 150);
       setFiles(trovati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime()));
       setLoading(false);
     }
