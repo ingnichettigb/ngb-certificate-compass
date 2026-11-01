@@ -11,15 +11,14 @@
  *   - Rev 6 (2026-10-29 13:25): Aggiunta duplicaFileNelPercorso (copia nella stessa cartella per «Sdoppia corso cumulativo»).
  *   - Rev 7 (2026-10-30 11:10): Apertura potenziata con fallback a ricerca ricorsiva per nome file ed esportazione apriFileLocale.
  *   - Rev 8 (2026-10-30 11:35): Ripristinati getUltimaCartella, setUltimaCartella e salvaInCartellaScelta.
- *   - Rev 9 (2026-10-30 19:30): apriDaPercorsoInTutte restituisce l'esito dettagliato (nessuna cartella, permesso,
- *     non trovato, bloccato); permesso in sola lettura; apertura solo del file con nome identico, file simili
- *     restituiti a parte; rilevamento blocco popup (apriFileConControllo).
- *   - Rev 10 (2026-10-30 20:30): Esiti con motivo per rinomina/copia (EsitoRinomina) e per il salvataggio locale
- *     (salvaInCartellaSceltaEsito); ricerca in sola lettura; evento di cambio cartelle.
- *   - Rev 11 (2026-10-30 21:00): recuperaFileDaPercorsoInTutte legge in sola lettura senza richiedere permessi (usata al caricamento).
+ *   - Rev 9 (2026-10-30 19:30): apriDaPercorsoInTutte restituisce l'esito dettagliato; apertura solo file identico; popup control.
+ *   - Rev 10 (2026-10-30 20:30): Esiti con motivo per rinomina/copia (EsitoRinomina) e salvataggio locale.
+ *   - Rev 11 (2026-10-30 21:00): recuperaFileDaPercorsoInTutte in sola lettura senza richiedere permessi.
+ *   - Rev 12 (2026-11-01 12:20): Aggiunta gestione percorsi completi per cartelle secondarie (aggiornaPercorsoCartella).
  */
 import {
   getCartellaArchivio,
+  leggiPercorsoTestuale,
   cercaFileRicorsivo,
   verificaPermessi,
   ottieniFileDaPercorso,
@@ -40,6 +39,7 @@ export type CartellaCollegata = {
   nome: string;
   /** Alias di nome (compatibilità) */
   name: string;
+  percorso?: string;
   principale?: boolean;
   handle: FileSystemDirectoryHandle;
   dataAggiunta: Date;
@@ -48,6 +48,7 @@ export type CartellaCollegata = {
 type RecordCartellaDb = {
   id: string;
   nome: string;
+  percorso?: string;
   handle: FileSystemDirectoryHandle;
   dataAggiunta: string;
 };
@@ -71,10 +72,12 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
 
   const base = await getCartellaArchivio(false);
   if (base) {
+    const percorsoBase = (await leggiPercorsoTestuale()) || undefined;
     lista.push({
       id: "principale",
       nome: base.name,
       name: base.name,
+      percorso: percorsoBase,
       principale: true,
       handle: base,
       dataAggiunta: new Date(0),
@@ -97,6 +100,7 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
         id: r.id,
         nome: r.nome || r.handle.name,
         name: r.nome || r.handle.name,
+        percorso: r.percorso,
         handle: r.handle,
         dataAggiunta: new Date(r.dataAggiunta),
       });
@@ -108,7 +112,11 @@ export async function elencoCartelle(): Promise<CartellaCollegata[]> {
   return lista;
 }
 
-export async function aggiungiCartella(handleIn?: FileSystemDirectoryHandle, nomePersonalizzato?: string): Promise<CartellaCollegata> {
+export async function aggiungiCartella(
+  handleIn?: FileSystemDirectoryHandle,
+  nomePersonalizzato?: string,
+  percorso?: string
+): Promise<CartellaCollegata> {
   const handle =
     handleIn ??
     (await (window as unknown as { showDirectoryPicker: (o?: object) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker({ mode: "readwrite" }));
@@ -117,6 +125,7 @@ export async function aggiungiCartella(handleIn?: FileSystemDirectoryHandle, nom
   const record: RecordCartellaDb = {
     id,
     nome: nomePersonalizzato?.trim() || handle.name,
+    percorso: percorso?.trim(),
     handle,
     dataAggiunta: new Date().toISOString(),
   };
@@ -133,9 +142,29 @@ export async function aggiungiCartella(handleIn?: FileSystemDirectoryHandle, nom
     id: record.id,
     nome: record.nome,
     name: record.nome,
+    percorso: record.percorso,
     handle: record.handle,
     dataAggiunta: new Date(record.dataAggiunta),
   };
+}
+
+export async function aggiornaPercorsoCartella(id: string, percorso: string): Promise<void> {
+  const db = await apriDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NOME, "readwrite");
+    const store = tx.objectStore(STORE_NOME);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const record = req.result as RecordCartellaDb | undefined;
+      if (record) {
+        record.percorso = percorso.trim();
+        store.put(record);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  notificaCartelleCambiate();
 }
 
 export async function rimuoviCartella(id: string): Promise<void> {
@@ -171,11 +200,8 @@ export type MotivoApertura = "ok" | "nessuna_cartella" | "permesso" | "non_trova
 export type EsitoApertura = {
   motivo: MotivoApertura;
   nomeFile: string;
-  /** Nomi delle cartelle in cui la ricerca è stata effettivamente eseguita. */
   cartelleControllate: string[];
-  /** Nomi delle cartelle per cui il browser non ha concesso l'accesso. */
   cartelleSenzaPermesso: string[];
-  /** File con nome simile (non identico): mai aperti automaticamente. */
   simili: FileTrovato[];
 };
 
@@ -187,7 +213,6 @@ function nomeConfrontabile(n: string): string {
 export async function apriFileConControllo(handle: FileSystemFileHandle): Promise<boolean> {
   const file = await handle.getFile();
   const url = URL.createObjectURL(file);
-  // Senza "noopener" window.open restituisce il riferimento: serve per rilevare il blocco popup.
   const w = window.open(url, "_blank");
   if (!w) {
     URL.revokeObjectURL(url);
@@ -202,10 +227,6 @@ export async function apriFileConControllo(handle: FileSystemFileHandle): Promis
   return true;
 }
 
-/**
- * Prova ad aprire un percorso relativo in ciascuna cartella collegata, con fallback a ricerca per nome file.
- * Apre solo il file con nome identico; eventuali file simili vengono restituiti in `simili`.
- */
 export async function apriDaPercorsoInTutte(percorso: string): Promise<EsitoApertura> {
   const percorsoNorm = percorso.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
   const nomeFile = percorsoNorm.split("/").pop()?.trim() || "";
@@ -220,7 +241,6 @@ export async function apriDaPercorsoInTutte(percorso: string): Promise<EsitoAper
   const cartelle = await elencoCartelle();
   if (cartelle.length === 0) return { ...esito, motivo: "nessuna_cartella" };
 
-  // Permessi richiesti subito (in sola lettura), così il prompt del browser parte dal clic dell'utente.
   const autorizzate: CartellaCollegata[] = [];
   for (const c of cartelle) {
     if (await verificaPermessi(c.handle, true, "read")) autorizzate.push(c);
@@ -249,7 +269,6 @@ export async function apriDaPercorsoInTutte(percorso: string): Promise<EsitoAper
   return esito;
 }
 
-/** Restituisce l'handle del file dato un percorso relativo (con gli stessi accorgimenti di ottieniFileDaPercorso). */
 async function trovaHandleDaPercorso(
   root: FileSystemDirectoryHandle,
   percorsoRelativo: string,
@@ -269,7 +288,6 @@ async function trovaHandleDaPercorso(
   }
 }
 
-/** Restituisce il File locale cercando il percorso o il nome file in tutte le cartelle. */
 export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<File | null> {
   const cartelle = await elencoCartelle();
   if (cartelle.length === 0) return null;
@@ -277,7 +295,6 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
   const percorsoNorm = percorso.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
   const nomeFile = percorsoNorm.split("/").pop()?.trim() || "";
 
-  // 1 & 2. Tentativo con percorso relativo esatto (e senza prefisso nome cartella)
   for (const c of cartelle) {
     if (!(await verificaPermessi(c.handle, false, "read"))) continue;
 
@@ -291,7 +308,6 @@ export async function recuperaFileDaPercorsoInTutte(percorso: string): Promise<F
     }
   }
 
-  // 3. Ricerca ricorsiva per nome file come recupero sicuro
   if (nomeFile) {
     for (const c of cartelle) {
       if (!(await verificaPermessi(c.handle, false, "read"))) continue;
@@ -315,15 +331,11 @@ export type MotivoRinomina = "nessuna_cartella" | "permesso" | "non_trovato" | "
 export type EsitoRinomina = {
   success: boolean;
   nuovoPercorso?: string;
-  /** Testo già pronto da mostrare all'utente. */
   errore?: string;
-  /** Causa dell'insuccesso (assente se success). */
   motivo?: MotivoRinomina;
-  /** Cartelle per cui il browser non ha concesso il permesso di scrittura. */
   cartelleSenzaPermesso?: string[];
 };
 
-/** Rinomina o copia un file nella cartella locale di origine. */
 export async function rinominaFileNelPercorso(
   percorsoVecchio: string,
   nuovoNomeFile: string,
@@ -332,14 +344,10 @@ export async function rinominaFileNelPercorso(
   try {
     const percorsoNorm = percorsoVecchio.replace(/\\/g, "/").replace(/^(\.\.\/|\.\/)+/, "").trim();
     const parti = percorsoNorm.split("/").filter(Boolean);
-    if (parti.length === 0) {
-      return { success: false, motivo: "percorso", errore: "Percorso non specificato" };
-    }
+    if (parti.length === 0) return { success: false, motivo: "percorso", errore: "Percorso non specificato" };
 
     const vecchioNome = parti[parti.length - 1];
-    if (!vecchioNome) {
-      return { success: false, motivo: "percorso", errore: "Nome file originario non valido" };
-    }
+    if (!vecchioNome) return { success: false, motivo: "percorso", errore: "Nome file originario non valido" };
 
     const cartelle = await elencoCartelle();
     if (cartelle.length === 0) {
@@ -384,12 +392,11 @@ export async function rinominaFileNelPercorso(
       try {
         fileOrigHandle = await dir.getFileHandle(vecchioNome);
       } catch {
-        continue; // il file non è in questa cartella
+        continue;
       }
 
       try {
         const fileOrig = await fileOrigHandle.getFile();
-
         const nuovoHandle = await dir.getFileHandle(nuovoNomeFile, { create: true });
         const writable = await nuovoHandle.createWritable();
         await writable.write(fileOrig);
@@ -397,9 +404,7 @@ export async function rinominaFileNelPercorso(
 
         if (!mantieniOriginale) {
           const dirQualsiasi = dir as unknown as { removeEntry?: (n: string) => Promise<void> };
-          if (dirQualsiasi.removeEntry) {
-            await dirQualsiasi.removeEntry(vecchioNome);
-          }
+          if (dirQualsiasi.removeEntry) await dirQualsiasi.removeEntry(vecchioNome);
         }
 
         const percorsoAggiornato = sottocartelle.length > 0
@@ -413,28 +418,20 @@ export async function rinominaFileNelPercorso(
     }
 
     if (erroreScrittura) {
-      return {
-        success: false,
-        motivo: "scrittura",
-        errore: `Il file è stato trovato ma la scrittura non è riuscita: ${erroreScrittura}`,
-      };
+      return { success: false, motivo: "scrittura", errore: `Scrittura non riuscita: ${erroreScrittura}` };
     }
     if (senzaPermesso.length > 0) {
-      const elenco = senzaPermesso.join(", ");
       return {
         success: false,
         motivo: "permesso",
         cartelleSenzaPermesso: senzaPermesso,
-        errore:
-          controllate.length === 0
-            ? `Permesso di scrittura negato per la cartella: ${elenco}. Autorizza e riprova.`
-            : `File non trovato nelle cartelle autorizzate e manca il permesso di scrittura per: ${elenco}. Autorizza e riprova.`,
+        errore: `Manca il permesso di scrittura per: ${senzaPermesso.join(", ")}. Autorizza e riprova.`,
       };
     }
     return {
       success: false,
       motivo: "non_trovato",
-      errore: `File «${vecchioNome}» non trovato nelle cartelle collegate (${controllate.join(", ")}).`,
+      errore: `File «${vecchioNome}» non trovato nelle cartelle collegate.`,
     };
   } catch (e) {
     return { success: false, motivo: "scrittura", errore: String(e) };
@@ -454,7 +451,6 @@ export type RisoluzioneDocumento = {
   isPdf: boolean;
   nomeFile: string;
   percorsoOriginale: string;
-  /** Alias compatibilità: "locale" | "storage" | "non_trovato" */
   sorgente?: "locale" | "storage" | "non_trovato";
 };
 
@@ -495,7 +491,7 @@ async function risolviInterno(
         };
       }
     } catch {
-      /* Continua con il fallback locale */
+      /* Continua con fallback locale */
     }
   }
 
@@ -543,7 +539,6 @@ export type EsitoSalvataggioLocale =
   | { esito: "nessuna_cartella" }
   | { esito: "permesso"; cartelle: string[] };
 
-/** Salva il file nella cartella scelta e dice esplicitamente perché, se non ci riesce. */
 export async function salvaInCartellaSceltaEsito(
   nomeCartella: string | null | undefined,
   file: File,
@@ -559,11 +554,6 @@ export async function salvaInCartellaSceltaEsito(
   return { esito: "ok", cartella: c.nome };
 }
 
-/**
- * Chiede subito il permesso di scrittura per la cartella di destinazione (stessa scelta di salvaInCartellaSceltaEsito).
- * Va chiamata da un clic, PRIMA di operazioni lunghe (es. il caricamento online): dopo qualche secondo il browser
- * non accetta più la richiesta e il salvataggio locale fallirebbe anche se l'utente avrebbe acconsentito.
- */
 export async function preautorizzaCartellaScelta(nomeCartella: string | null | undefined): Promise<boolean> {
   const tutte = await elencoCartelle();
   const c = tutte.find((x) => x.nome.toLowerCase() === (nomeCartella || "").toLowerCase()) ?? tutte[0];
@@ -571,7 +561,6 @@ export async function preautorizzaCartellaScelta(nomeCartella: string | null | u
   return verificaPermessi(c.handle, true);
 }
 
-/** Versione storica: restituisce il nome cartella oppure null se non è stato possibile salvare. */
 export async function salvaInCartellaScelta(
   nomeCartella: string | null | undefined,
   file: File,
