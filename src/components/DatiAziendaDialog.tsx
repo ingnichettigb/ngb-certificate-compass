@@ -1,10 +1,14 @@
 /*
  * File:      DatiAziendaDialog.tsx
  * Percorso:  src/components/DatiAziendaDialog.tsx
- * Dialog per la configurazione dei dati ditta/studio e firma Resend.
+ * Dialog per la configurazione dei dati ditta/studio, della firma Resend e dei dati di sicurezza (ATECO, rischio, lavoratori).
+ * Revisioni:
+ *   - Rev 2 (2026-11-01 12:00): I dati stanno nel database (tabella ditta) e non più nel browser; aggiunti anagrafica completa
+ *     (codice fiscale, partita IVA, PEC, datore di lavoro, RSPP, medico competente) e sezione «Sicurezza e rischio».
  */
 import { useState, useEffect } from "react";
-import { Building2, Save } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Building2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -17,26 +21,135 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDatiAzienda, DatiAzienda } from "@/lib/dati-azienda";
+import { CHIAVE_DITTA, salvaDitta, type Ditta, type DittaModifica } from "@/lib/api/ditta";
+import { useDitta, useLavoratoriInForza, useSoglieDitta } from "@/features/ditta/useDitta";
+import { SezioneSicurezzaDitta, type FormSicurezza } from "@/features/ditta/SezioneSicurezzaDitta";
+import type { CodiceAteco, LivelloRischio, Soglia } from "@/features/ditta/regole-ditta";
+
+type FormAnagrafica = {
+  ragione_sociale: string;
+  email: string;
+  referente: string;
+  telefono: string;
+  indirizzo: string;
+  cap: string;
+  comune: string;
+  provincia: string;
+  codice_fiscale: string;
+  partita_iva: string;
+  pec: string;
+  datore_di_lavoro: string;
+  rspp: string;
+  medico_competente: string;
+  email_mittente_resend: string;
+};
+
+type FormDitta = FormAnagrafica & FormSicurezza;
+
+const testo = (v: string | null | undefined) => v ?? "";
+const oppureNull = (v: string) => (v.trim() === "" ? null : v.trim());
+const numeroONull = (v: string) => (v.trim() === "" ? null : Number(v));
+
+function elencoAteco(json: unknown): CodiceAteco[] {
+  return Array.isArray(json) ? (json as CodiceAteco[]).filter((c) => c && typeof c.codice === "string") : [];
+}
+
+export function formDaDitta(d: Partial<Ditta> | null | undefined): FormDitta {
+  return {
+    ragione_sociale: testo(d?.ragione_sociale),
+    email: testo(d?.email),
+    referente: testo(d?.referente),
+    telefono: testo(d?.telefono),
+    indirizzo: testo(d?.indirizzo),
+    cap: testo(d?.cap),
+    comune: testo(d?.comune),
+    provincia: testo(d?.provincia),
+    codice_fiscale: testo(d?.codice_fiscale),
+    partita_iva: testo(d?.partita_iva),
+    pec: testo(d?.pec),
+    datore_di_lavoro: testo(d?.datore_di_lavoro),
+    rspp: testo(d?.rspp),
+    medico_competente: testo(d?.medico_competente),
+    email_mittente_resend: testo(d?.email_mittente_resend),
+    codici_ateco: elencoAteco(d?.codici_ateco),
+    rischio_ditta: (d?.rischio_ditta as LivelloRischio | null | undefined) ?? "",
+    reparti_rischio_differenziato: Boolean(d?.reparti_rischio_differenziato),
+    n_lavoratori_dichiarato: d?.n_lavoratori_dichiarato == null ? "" : String(d.n_lavoratori_dichiarato),
+    e_scuola: Boolean(d?.e_scuola),
+    presenze_contemporanee_max: d?.presenze_contemporanee_max == null ? "" : String(d.presenze_contemporanee_max),
+    livello_antincendio: d?.livello_antincendio == null ? "" : (String(d.livello_antincendio) as "1" | "2" | "3"),
+  };
+}
+
+/** Campi da scrivere: la data di aggiornamento di lavoratori e presenze si imposta solo se il numero è cambiato. */
+export function modificaDaForm(f: FormDitta, precedente: Partial<Ditta> | null | undefined, oggi: string): DittaModifica {
+  const lavoratori = numeroONull(f.n_lavoratori_dichiarato);
+  const presenze = numeroONull(f.presenze_contemporanee_max);
+  const m: DittaModifica = {
+    ragione_sociale: f.ragione_sociale.trim(),
+    email: oppureNull(f.email),
+    referente: oppureNull(f.referente),
+    telefono: oppureNull(f.telefono),
+    indirizzo: oppureNull(f.indirizzo),
+    cap: oppureNull(f.cap),
+    comune: oppureNull(f.comune),
+    provincia: oppureNull(f.provincia),
+    codice_fiscale: oppureNull(f.codice_fiscale),
+    partita_iva: oppureNull(f.partita_iva),
+    pec: oppureNull(f.pec),
+    datore_di_lavoro: oppureNull(f.datore_di_lavoro),
+    rspp: oppureNull(f.rspp),
+    medico_competente: oppureNull(f.medico_competente),
+    email_mittente_resend: oppureNull(f.email_mittente_resend),
+    codici_ateco: f.codici_ateco as unknown as NonNullable<DittaModifica["codici_ateco"]>,
+    rischio_ditta: f.rischio_ditta || null,
+    reparti_rischio_differenziato: f.reparti_rischio_differenziato,
+    n_lavoratori_dichiarato: lavoratori,
+    e_scuola: f.e_scuola,
+    presenze_contemporanee_max: presenze,
+    livello_antincendio: f.livello_antincendio ? Number(f.livello_antincendio) : null,
+  };
+  if (lavoratori !== (precedente?.n_lavoratori_dichiarato ?? null)) m.n_lavoratori_data_aggiornamento = lavoratori === null ? null : oggi;
+  if (presenze !== (precedente?.presenze_contemporanee_max ?? null)) m.presenze_data_aggiornamento = presenze === null ? null : oggi;
+  return m;
+}
 
 export function DatiAziendaDialog() {
   const [aperto, setAperto] = useState(false);
-  const [dati, setDati] = useDatiAzienda();
-  const [form, setForm] = useState<DatiAzienda>(dati);
+  const [inSalvataggio, setInSalvataggio] = useState(false);
+  const qc = useQueryClient();
+  const { data: ditta, isLoading } = useDitta();
+  const { data: soglie } = useSoglieDitta();
+  const { data: inForza } = useLavoratoriInForza();
+  const [form, setForm] = useState<FormDitta>(() => formDaDitta(ditta));
 
   useEffect(() => {
-    if (aperto) setForm(dati);
-  }, [aperto, dati]);
+    if (aperto) setForm(formDaDitta(ditta));
+  }, [aperto, ditta]);
 
-  function handleSalva(e: React.FormEvent) {
+  async function handleSalva(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.nomeAzienda.trim()) {
+    if (!form.ragione_sociale.trim()) {
       return void toast.error("Inserisci il nome dello studio o della ditta");
     }
-    setDati(form);
-    toast.success("Dati ditta / studio salvati con successo");
-    setAperto(false);
+    const oggi = new Date().toISOString().slice(0, 10);
+    setInSalvataggio(true);
+    try {
+      await salvaDitta(modificaDaForm(form, ditta, oggi));
+      await qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
+      toast.success("Dati ditta / studio salvati con successo");
+      setAperto(false);
+    } catch (err) {
+      toast.error("Dati ditta non salvati", { description: (err as Error).message });
+    } finally {
+      setInSalvataggio(false);
+    }
   }
+
+  const campo = (k: keyof FormAnagrafica) => ({
+    value: form[k],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value }),
+  });
 
   return (
     <Dialog open={aperto} onOpenChange={setAperto}>
@@ -46,7 +159,7 @@ export function DatiAziendaDialog() {
           <span>Dati ditta o studio</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="size-5 text-primary" />
@@ -54,127 +167,133 @@ export function DatiAziendaDialog() {
           </DialogTitle>
           <DialogDescription>
             Questi dati compariranno nelle email spedite tramite Resend e come mittente per le risposte dei destinatari.
+            Sono salvati nel database e quindi uguali su ogni computer.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSalva} className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="nomeAzienda">Nome ditta o studio *</Label>
-            <Input
-              id="nomeAzienda"
-              placeholder="Es. Studio Tecnico Nichetti Gian Battista"
-              value={form.nomeAzienda}
-              onChange={(e) => setForm({ ...form, nomeAzienda: e.target.value })}
-              required
-            />
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Caricamento dati ditta...
           </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        ) : (
+          <form onSubmit={handleSalva} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="emailAzienda">Email per risposte (Reply-To) *</Label>
+              <Label htmlFor="nomeAzienda">Nome ditta o studio *</Label>
               <Input
-                id="emailAzienda"
-                type="email"
-                placeholder="info@tuodominio.it"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                id="nomeAzienda"
+                placeholder="Es. Studio Tecnico Nichetti Gian Battista"
+                {...campo("ragione_sociale")}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="emailAzienda">Email per risposte (Reply-To) *</Label>
+                <Input id="emailAzienda" type="email" placeholder="info@tuodominio.it" {...campo("email")} />
+                <p className="text-[11px] text-muted-foreground">A questo indirizzo arriveranno le risposte dei destinatari.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="referente">Nome referente / operatore</Label>
+                <Input id="referente" placeholder="Es. Gian Battista Nichetti" {...campo("referente")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="telefono">Numero di telefono</Label>
+                <Input id="telefono" type="tel" placeholder="Es. 0374 123456" {...campo("telefono")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="via">Via e numero civico</Label>
+                <Input id="via" placeholder="Es. Via Roma, 10" {...campo("indirizzo")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cap">CAP</Label>
+                <Input id="cap" placeholder="Es. 26015" {...campo("cap")} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label htmlFor="comune">Località (Comune) e Prov.</Label>
+                <div className="flex gap-2">
+                  <Input id="comune" placeholder="Soresina" className="flex-1" {...campo("comune")} />
+                  <Input
+                    id="provincia"
+                    placeholder="CR"
+                    className="w-16 uppercase text-center"
+                    maxLength={2}
+                    value={form.provincia}
+                    onChange={(e) => setForm({ ...form, provincia: e.target.value.toUpperCase() })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="codiceFiscale">Codice fiscale</Label>
+                <Input id="codiceFiscale" className="font-mono uppercase" {...campo("codice_fiscale")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="partitaIva">Partita IVA</Label>
+                <Input id="partitaIva" className="font-mono" {...campo("partita_iva")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pec">PEC</Label>
+                <Input id="pec" type="email" {...campo("pec")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="datoreLavoro">Datore di lavoro</Label>
+                <Input id="datoreLavoro" {...campo("datore_di_lavoro")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rspp">RSPP</Label>
+                <Input id="rspp" {...campo("rspp")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="medicoCompetente">Medico competente</Label>
+                <Input id="medicoCompetente" {...campo("medico_competente")} />
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-3 bg-muted/30 space-y-2 text-xs">
+              <Label htmlFor="mittenteResend" className="font-semibold text-xs text-foreground">
+                Indirizzo di spedizione Resend (From)
+              </Label>
+              <Input
+                id="mittenteResend"
+                className="h-8 text-xs font-mono"
+                placeholder="onboarding@resend.dev oppure notifiche@tuodominio.it"
+                {...campo("email_mittente_resend")}
               />
               <p className="text-[11px] text-muted-foreground">
-                A questo indirizzo arriveranno le risposte dei destinatari.
+                Se hai verificato il tuo dominio su Resend inserisci il tuo indirizzo (es. <code>notifiche@iltuodominio.it</code>).
+                Altrimenti lascia <code>onboarding@resend.dev</code> per l'invio immediato.
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="referente">Nome referente / operatore</Label>
-              <Input
-                id="referente"
-                placeholder="Es. Gian Battista Nichetti"
-                value={form.referente}
-                onChange={(e) => setForm({ ...form, referente: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="telefono">Numero di telefono</Label>
-              <Input
-                id="telefono"
-                type="tel"
-                placeholder="Es. 0374 123456"
-                value={form.telefono}
-                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="via">Via e numero civico</Label>
-              <Input
-                id="via"
-                placeholder="Es. Via Roma, 10"
-                value={form.via}
-                onChange={(e) => setForm({ ...form, via: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cap">CAP</Label>
-              <Input
-                id="cap"
-                placeholder="Es. 26015"
-                value={form.cap}
-                onChange={(e) => setForm({ ...form, cap: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label htmlFor="comune">Località (Comune) e Prov.</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="comune"
-                  placeholder="Soresina"
-                  className="flex-1"
-                  value={form.comune}
-                  onChange={(e) => setForm({ ...form, comune: e.target.value })}
-                />
-                <Input
-                  id="provincia"
-                  placeholder="CR"
-                  className="w-16 uppercase text-center"
-                  maxLength={2}
-                  value={form.provincia}
-                  onChange={(e) => setForm({ ...form, provincia: e.target.value.toUpperCase() })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-3 bg-muted/30 space-y-2 text-xs">
-            <Label htmlFor="mittenteResend" className="font-semibold text-xs text-foreground">
-              Indirizzo di spedizione Resend (From)
-            </Label>
-            <Input
-              id="mittenteResend"
-              className="h-8 text-xs font-mono"
-              placeholder="onboarding@resend.dev oppure notifiche@tuodominio.it"
-              value={form.emailMittenteResend}
-              onChange={(e) => setForm({ ...form, emailMittenteResend: e.target.value })}
+            <SezioneSicurezzaDitta
+              form={form}
+              onChange={(f) => setForm({ ...form, ...f })}
+              soglie={(soglie ?? []) as Soglia[]}
+              inForza={inForza}
             />
-            <p className="text-[11px] text-muted-foreground">
-              Se hai verificato il tuo dominio su Resend inserisci il tuo indirizzo (es. <code>notifiche@iltuodominio.it</code>). Altrimenti lascia <code>onboarding@resend.dev</code> per l'invio immediato.
-            </p>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t">
-            <Button type="button" variant="ghost" onClick={() => setAperto(false)}>
-              Annulla
-            </Button>
-            <Button type="submit" className="gap-2">
-              <Save className="size-4" /> Salva dati
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button type="button" variant="ghost" onClick={() => setAperto(false)}>
+                Annulla
+              </Button>
+              <Button type="submit" className="gap-2" disabled={inSalvataggio}>
+                {inSalvataggio ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Salva dati
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

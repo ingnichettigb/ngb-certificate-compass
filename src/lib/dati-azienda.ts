@@ -2,6 +2,9 @@
  * File:      dati-azienda.ts
  * Percorso:  src/lib/dati-azienda.ts
  * Dati anagrafici ditta/studio per le firme e l'intestazione delle email con Resend.
+ * Revisioni:
+ *   - Rev 2 (2026-11-01 12:00): I dati ora stanno nel database (src/lib/api/ditta.ts). Questo file resta per il tipo DatiAzienda,
+ *     i valori predefiniti e la lettura dei dati vecchi salvati nel browser, che vengono importati nel database una volta sola.
  */
 import { useEffect, useState } from "react";
 
@@ -18,7 +21,7 @@ export interface DatiAzienda {
   emailMittenteResend: string;
 }
 
-const STORAGE_KEY = "archivio_attestati_dati_azienda_v1";
+export const STORAGE_KEY = "archivio_attestati_dati_azienda_v1";
 const EVENTO_CAMBIO = "archivio_attestati_dati_azienda_cambiati";
 
 export const DATI_AZIENDA_DEFAULT: DatiAzienda = {
@@ -32,6 +35,21 @@ export const DATI_AZIENDA_DEFAULT: DatiAzienda = {
   provincia: "CR",
   emailMittenteResend: "onboarding@resend.dev",
 };
+
+/** True se in questo browser esistono dati ditta salvati con la vecchia modalità. */
+export function esistonoDatiAziendaLocali(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** Legge i dati ditta salvati nel browser (vecchia modalità). */
+export function leggiDatiAziendaLocale(): DatiAzienda {
+  return leggiDatiAzienda();
+}
 
 export function leggiDatiAzienda(): DatiAzienda {
   if (typeof window === "undefined") return DATI_AZIENDA_DEFAULT;
