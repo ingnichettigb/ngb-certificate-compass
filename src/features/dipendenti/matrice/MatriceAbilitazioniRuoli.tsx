@@ -12,6 +12,8 @@
  *     larghezza base aumentata e ordinamento/export allineati.
  *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione: salvataggio obblighi con impostaRuoloDipendente,
  *     query attestati senza filtro, filtro cessati su stato_lavoratore.
+ *   - Rev 7 (2026-11-01 21:40): Filtro pillole per macro-gruppo corso (colonne) e selettore a 3 stati lavoratori
+ *     (Tutti / Solo assegnati / Senza incarico) integrando BarraFiltriGruppo.tsx.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -43,12 +45,13 @@ import {
   Square,
   Eye,
   EyeOff,
-  RotateCcw,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
+import { BarraFiltriGruppo, type FiltroStatoLavoratori } from "./BarraFiltriGruppo";
 
 interface Props {
   open: boolean;
@@ -74,6 +77,10 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   const [colonnaOrd, setColonnaOrd] = useState<string | null>("nominativo");
   const [direzioneOrd, setDirezioneOrd] = useState<TipoOrdinamento>("asc");
+
+  // Filtri macro-argomento e lavoratori
+  const [gruppoSelezionato, setGruppoSelezionato] = useState<string | null>(null);
+  const [filtroStatoLavoratori, setFiltroStatoLavoratori] = useState<FiltroStatoLavoratori>("tutti");
 
   const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
     try {
@@ -128,9 +135,25 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     return [...tipiCorso].sort((a, b) => (a.ordine ?? 999) - (b.ordine ?? 999));
   }, [tipiCorso]);
 
+  // Conteggio corsi per gruppo
+  const conteggiCorsiPerGruppo = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of corsiCatalogo) {
+      const g = assegnaGruppoArgomento(c);
+      counts[g.chiave] = (counts[g.chiave] || 0) + 1;
+    }
+    return counts;
+  }, [corsiCatalogo]);
+
+  // Corsi filtrati per gruppo argomento (colonne)
+  const corsiFiltratiPerGruppo = useMemo(() => {
+    if (!gruppoSelezionato) return corsiCatalogo;
+    return corsiCatalogo.filter((c) => assegnaGruppoArgomento(c).chiave === gruppoSelezionato);
+  }, [corsiCatalogo, gruppoSelezionato]);
+
   const corsiVisibili = useMemo(() => {
-    return corsiCatalogo.filter((c) => !corsiNascosti.includes(c.id));
-  }, [corsiCatalogo, corsiNascosti]);
+    return corsiFiltratiPerGruppo.filter((c) => !corsiNascosti.includes(c.id));
+  }, [corsiFiltratiPerGruppo, corsiNascosti]);
 
   const tuttiVisibili = corsiNascosti.length === 0;
 
@@ -196,6 +219,16 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     return set ? set.has(corso.id) : false;
   }
 
+  function haObbligoNelGruppo(dipendenteId: string, gruppoChiave: string): boolean {
+    const corsiDelGruppo = corsiCatalogo.filter((c) => assegnaGruppoArgomento(c).chiave === gruppoChiave);
+    return corsiDelGruppo.some((c) => haObbligoCorso(dipendenteId, c));
+  }
+
+  function handleCambiaGruppo(chiave: string | null) {
+    setGruppoSelezionato(chiave);
+    setFiltroStatoLavoratori("tutti"); // Predefinito: mostra tutti i lavoratori per poter assegnare
+  }
+
   async function handleToggleObbligo(dipendente: Dipendente, corso: TipoCorso) {
     let ruolo = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
     if (!ruolo) {
@@ -222,6 +255,24 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     }
   }
 
+  const conteggiLavoratori = useMemo(() => {
+    const attivi = dipendenti.filter((d) => d.stato_lavoratore !== "cessato");
+    if (!gruppoSelezionato) {
+      return { tutti: attivi.length, assegnati: 0, senza: 0 };
+    }
+    let assegnati = 0;
+    for (const d of attivi) {
+      if (haObbligoNelGruppo(d.id, gruppoSelezionato)) {
+        assegnati++;
+      }
+    }
+    return {
+      tutti: attivi.length,
+      assegnati,
+      senza: attivi.length - assegnati,
+    };
+  }, [dipendenti, gruppoSelezionato, corsiCatalogo, mappaRuoliPerNome, mappaAssegnazioni]);
+
   const larghezzaTotaleTabella = useMemo(() => {
     let tot =
       (larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo) +
@@ -246,10 +297,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
       if (!resizingRef.current) return;
       const delta = ev.clientX - resizingRef.current.startX;
       const nuova = Math.max(70, resizingRef.current.startWidth + delta);
-      setLarghezze((prev) => {
-        const aggiornate = { ...prev, [resizingRef.current!.colKey]: nuova };
-        return aggiornate;
-      });
+      setLarghezze((prev) => ({ ...prev, [resizingRef.current!.colKey]: nuova }));
     }
 
     function onMouseUp() {
@@ -292,6 +340,14 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   const listaElaborata = useMemo(() => {
     let res = dipendenti.filter((d) => d.stato_lavoratore !== "cessato");
 
+    // Filtro lavoratori in base allo stato nel gruppo selezionato (Soluzione 1)
+    if (gruppoSelezionato && filtroStatoLavoratori !== "tutti") {
+      res = res.filter((d) => {
+        const haIncarico = haObbligoNelGruppo(d.id, gruppoSelezionato);
+        return filtroStatoLavoratori === "solo_assegnati" ? haIncarico : !haIncarico;
+      });
+    }
+
     if (ricerca.trim()) {
       const q = ricerca.toLowerCase().trim();
       res = res.filter(
@@ -331,7 +387,17 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     }
 
     return res;
-  }, [dipendenti, ricerca, colonnaOrd, direzioneOrd, corsiCatalogo, mappaRuoliPerNome, mappaAssegnazioni]);
+  }, [
+    dipendenti,
+    ricerca,
+    colonnaOrd,
+    direzioneOrd,
+    gruppoSelezionato,
+    filtroStatoLavoratori,
+    corsiCatalogo,
+    mappaRuoliPerNome,
+    mappaAssegnazioni,
+  ]);
 
   function renderFreccia(colonna: string) {
     if (colonnaOrd !== colonna) return <ArrowUpDown className="size-3 text-muted-foreground/60 inline ml-1" />;
@@ -453,6 +519,17 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
           </Button>
         </div>
       </header>
+
+      {/* Barra filtri pillole per argomento e selettore lavoratori */}
+      <BarraFiltriGruppo
+        gruppoSelezionato={gruppoSelezionato}
+        onSelezionaGruppo={handleCambiaGruppo}
+        filtroStato={filtroStatoLavoratori}
+        onChangeFiltroStato={setFiltroStatoLavoratori}
+        conteggiCorsiPerGruppo={conteggiCorsiPerGruppo}
+        totaleCorsi={corsiCatalogo.length}
+        conteggiLavoratori={conteggiLavoratori}
+      />
 
       <main className="flex-1 overflow-auto bg-muted/20 p-4">
         <div className="rounded-xl border border-border bg-surface shadow-sm inline-block min-w-full">
