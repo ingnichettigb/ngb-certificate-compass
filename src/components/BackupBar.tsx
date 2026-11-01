@@ -9,6 +9,7 @@
  *   rev 4 — 26/10/2026 17:45 — Uniformazione stile bottoni verde tenue e bordo verde scuro elettrico.
  *   rev 5 — 30/10/2026 21:00 — Indicatore stato cartella locale accanto a Impostazioni generali.
  *   rev 6 — 31/10/2026 09:00 — Indicatore spostato in alto a destra nelle testate; aggiunta prop className.
+ *   rev 7 — 01/11/2026 12:35 — Notifica con percorso esplicito di salvataggio in "Backup DB".
  */
 import { useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
@@ -28,10 +29,10 @@ export function BackupBar({ onImported, className }: { onImported?: () => void; 
   async function handleExport() {
     setBusyExport(true);
     try {
-      const dump = await esportaDb();
-      if (dump) {
-        toast.success("Backup salvato", {
-          description: `${dump.dipendenti.length} dipendenti e ${dump.attestati_caricati.length} attestati esportati.`,
+      const esito = await esportaDb();
+      if (esito) {
+        toast.success("Backup salvato con successo", {
+          description: `Cartella: ${esito.percorsoSalvataggio} (${esito.dump.dipendenti.length} dipendenti, ${esito.dump.attestati_caricati.length} attestati).`,
         });
       }
     } catch (e) {
@@ -51,6 +52,7 @@ export function BackupBar({ onImported, className }: { onImported?: () => void; 
         onClick={handleExport}
         disabled={busyExport}
         className={STILE_BOTTONE}
+        title="Salva una copia completa del database nella sottocartella Backup DB"
       >
         {busyExport ? (
           <Loader2 className="size-4 animate-spin mr-1.5" />
@@ -65,6 +67,7 @@ export function BackupBar({ onImported, className }: { onImported?: () => void; 
         size="sm"
         onClick={() => setDialogImportAperto(true)}
         className={STILE_BOTTONE}
+        title="Ripristina il database da un backup JSON salvato in precedenza"
       >
         <Upload className="size-4 mr-1.5" />
         Carica DB da file
