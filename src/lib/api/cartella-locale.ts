@@ -8,15 +8,17 @@
  *   - Rev 3 (2026-10-25 08:45): Apertura diretta file PDF/immagini da handle in nuova scheda browser.
  *   - Rev 4 (2026-10-25 10:45): Ricerca ricorsiva per cognome/testo con filtro solo file PDF/immagini.
  *   - Rev 5 (2026-10-25 21:00): Funzione ottieniFileDaPercorso per apertura immediata senza riaprire il picker.
- *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso nome cartella radice.
+ *   - Rev 6 (2026-10-30 11:10): Supporto percorsi con backslash Windows e rimozione automatica prefisso radice.
  *   - Rev 7 (2026-10-30 11:35): Ripristinati alias canonical e supporto browser per compilazione produzione.
  *   - Rev 8 (2026-10-30 19:30): verificaPermessi accetta la modalità (read/readwrite); default invariato.
  *   - Rev 9 (2026-10-30 20:30): Evento «cartelle:cambiate» (notificaCartelleCambiate) per aggiornare gli indicatori.
+ *   - Rev 10 (2026-11-01 12:20): Salvataggio e lettura del percorso testuale esteso in IndexedDB.
  */
 
 const DB_NOME = "app_archivio_attestati";
 const STORE_NOME = "impostazioni";
 const CHIAVE_HANDLE = "cartella_archivio_handle";
+const CHIAVE_PERCORSO = "cartella_archivio_percorso_testo";
 
 let cacheHandle: FileSystemDirectoryHandle | null = null;
 
@@ -50,12 +52,42 @@ async function salvaHandleSuDb(handle: FileSystemDirectoryHandle): Promise<void>
   });
 }
 
+export async function salvaPercorsoTestuale(percorso: string): Promise<void> {
+  const db = await apriDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NOME, "readwrite");
+    const store = tx.objectStore(STORE_NOME);
+    store.put(percorso.trim(), CHIAVE_PERCORSO);
+    tx.oncomplete = () => {
+      notificaCartelleCambiate();
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function leggiPercorsoTestuale(): Promise<string | null> {
+  try {
+    const db = await apriDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NOME, "readonly");
+      const store = tx.objectStore(STORE_NOME);
+      const req = store.get(CHIAVE_PERCORSO);
+      req.onsuccess = () => resolve((req.result as string) || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function rimuoviHandleDaDb(): Promise<void> {
   const db = await apriDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NOME, "readwrite");
     const store = tx.objectStore(STORE_NOME);
     store.delete(CHIAVE_HANDLE);
+    store.delete(CHIAVE_PERCORSO);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -84,7 +116,7 @@ export function notificaCartelleCambiate(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENTO_CARTELLE_CAMBIATE));
 }
 
-/** Verifica se abbiamo i permessi di lettura sulla cartella, chiedendoli se necessario. */
+/** Verifica se abbiamo i permessi sulla cartella, chiedendoli se necessario. */
 export async function verificaPermessi(
   handle: FileSystemDirectoryHandle,
   richiediSeMancanti = true,
@@ -221,7 +253,7 @@ export async function cercaFileRicorsivo(
       if (!haEstensioneValida(entry.name)) continue;
 
       const nomeNorm = normalizzaTesto(entry.name);
-      const corrisponde = parole.every((p) => nomeNorm.includes(p));
+      const corrisponde = parole.length === 0 || parole.every((p) => nomeNorm.includes(p));
 
       if (corrisponde) {
         try {
