@@ -10,7 +10,7 @@ import { csvElencoAttestati, filtraAttestati } from "./elenco-csv";
 
 const corsi = [
   { id: "t1", codice: "SIC-GEN-04", nome_corso: "Generale", macro_categoria: "Sicurezza", ore_minime_legge: 4, codice_corso_aggiornamento: null },
-  { id: "t2", codice: "ANT-L1B-04", nome_corso: "Antincendio", macro_categoria: "Antincendio", ore_minime_legge: 4, codice_corso_aggiornamento: "ANT-L1A-02", ore_aggiornamento: 2, anni_aggiornamento: 5 },
+  { id: "t2", codice: "VFF-FOR1-4", nome_corso: "VVFF Livello 1 Base (FOR1)", macro_categoria: "Antincendio", ore_minime_legge: 4, codice_corso_aggiornamento: "VFF-FOR1A2", ore_aggiornamento: 2, anni_aggiornamento: 5 },
 ] as never[];
 const att = [
   { id: "a1", tipo_corso_id: "t1", data_corso: "2024-03-15", data_scadenza_calcolata: null, ore_dichiarate: null, url_foto_fronte: null, dipendenti: { cognome: "ROSSI", nome: "MARIO", codice_fiscale: "CF1", reparto: "ATA" } },
