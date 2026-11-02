@@ -4,9 +4,10 @@
  * Data creaz: 28/10/2026
  * Revisioni:
  *   rev 1 — 28/10/2026 17:40 — Barra di navigazione fissa superiore con le 4 sezioni chiave (TanStack Router).
+ *   rev 2 — 02/11/2026 11:10 — Aggiunta voce «Stampe & Report».
  */
 import { Link } from "@tanstack/react-router";
-import { Bot, CheckCircle2, Users, Calendar, Home } from "lucide-react";
+import { Bot, CheckCircle2, Users, Calendar, Home, Printer } from "lucide-react";
 
 const VOCI_NAV = [
   { to: "/" as const, label: "Home", Icona: Home },
@@ -14,6 +15,7 @@ const VOCI_NAV = [
   { to: "/hr" as const, label: "Validazione HR", Icona: CheckCircle2 },
   { to: "/dipendenti" as const, label: "Dipendenti", Icona: Users },
   { to: "/scadenze" as const, label: "Scadenze & Piano Corsi", Icona: Calendar },
+  { to: "/stampe" as const, label: "Stampe & Report", Icona: Printer },
 ];
 
 export function BarraNavigazioneFissa() {

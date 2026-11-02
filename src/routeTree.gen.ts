@@ -15,6 +15,7 @@ import { Route as DipendentiRouteImport } from './routes/dipendenti'
 import { Route as HrRouteImport } from './routes/hr'
 import { Route as OperatoreRouteImport } from './routes/operatore'
 import { Route as ScadenzeRouteImport } from './routes/scadenze'
+import { Route as StampeRouteImport } from './routes/stampe'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const ScadenzeRoute = ScadenzeRouteImport.update({
   path: '/scadenze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StampeRoute = StampeRouteImport.update({
+  id: '/stampe',
+  path: '/stampe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/hr': typeof HrRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
+  '/stampe': typeof StampeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/hr': typeof HrRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
+  '/stampe': typeof StampeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,27 @@ export interface FileRoutesById {
   '/hr': typeof HrRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
+  '/stampe': typeof StampeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/carica' | '/dipendenti' | '/hr' | '/operatore' | '/scadenze'
+    | '/'
+    | '/carica'
+    | '/dipendenti'
+    | '/hr'
+    | '/operatore'
+    | '/scadenze'
+    | '/stampe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/carica' | '/dipendenti' | '/hr' | '/operatore' | '/scadenze'
+  to:
+    | '/'
+    | '/carica'
+    | '/dipendenti'
+    | '/hr'
+    | '/operatore'
+    | '/scadenze'
+    | '/stampe'
   id:
     | '__root__'
     | '/'
@@ -86,6 +108,7 @@ export interface FileRouteTypes {
     | '/hr'
     | '/operatore'
     | '/scadenze'
+    | '/stampe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,6 +118,7 @@ export interface RootRouteChildren {
   HrRoute: typeof HrRoute
   OperatoreRoute: typeof OperatoreRoute
   ScadenzeRoute: typeof ScadenzeRoute
+  StampeRoute: typeof StampeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScadenzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stampe': {
+      id: '/stampe'
+      path: '/stampe'
+      fullPath: '/stampe'
+      preLoaderRoute: typeof StampeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -151,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   HrRoute: HrRoute,
   OperatoreRoute: OperatoreRoute,
   ScadenzeRoute: ScadenzeRoute,
+  StampeRoute: StampeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
