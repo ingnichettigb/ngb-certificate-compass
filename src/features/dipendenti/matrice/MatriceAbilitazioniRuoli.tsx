@@ -11,8 +11,8 @@
  *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione con impostaRuoloDipendente.
  *   - Rev 7 (2026-11-01 21:40): Filtro pillole per macro-gruppo corso e selettore a 3 stati lavoratori.
  *   - Rev 8 (2026-11-01 21:55): Navigazione alfabetica rapida: salto da tastiera e barre alfabetiche.
- *   - Rev 9 (2026-11-02 10:25): Assegnazione ruoli da matrice: risoluzione automatica ruolo-corso con mappatura-ruoli-corsi,
- *     colonna ruoli con badge sicurezza e sincronizzazione istantanea con dipendenti_ruoli.
+ *   - Rev 9 (2026-11-02 10:25): Assegnazione ruoli da matrice: risoluzione automatica ruolo-corso con mappatura-ruoli-corsi.
+ *   - Rev 10 (2026-11-02 10:48): Passaggio dipendenti={listaElaborata} alle barre alfabetiche per conteggio e protezione runtime.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -570,6 +570,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
       {/* Barra Alfabetica Orizzontale */}
       <BarraAlfabeticaOrizzontale
+        dipendenti={listaElaborata}
         letterePresenti={letterePresenti}
         onSelezionaLettera={saltaALettera}
       />
@@ -577,6 +578,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
       {/* Corpo Principale Tabella con Barra Alfabetica Verticale */}
       <main className="flex-1 relative flex overflow-hidden">
         <BarraAlfabeticaVerticale
+          dipendenti={listaElaborata}
           letterePresenti={letterePresenti}
           onSelezionaLettera={saltaALettera}
         />
