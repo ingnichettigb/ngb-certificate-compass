@@ -59,6 +59,24 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "sb",
     "from",
+    "dipendenti",
+    "["dipendenti"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "dipendenti",
+    "["id",{"count":"exact","head":true}]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "dipendenti",
+    "["stato_lavoratore","in_forza"]",
+  ],
+  [
+    "sb",
+    "from",
     "reparti",
     "["reparti"]",
   ],

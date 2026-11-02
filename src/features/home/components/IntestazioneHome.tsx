@@ -14,6 +14,7 @@ import { Link } from "@tanstack/react-router";
 import { Bot, Monitor, Smartphone } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
+import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { DialogEsportaAttestati } from "@/features/esporta-attestati/DialogEsportaAttestati";
 import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
 
@@ -36,7 +37,10 @@ export function IntestazioneHome() {
             </div>
           </div>
 
-          <IndicatoreCartella className="ml-auto max-w-[24rem] self-start" />
+          <div className="ml-auto flex max-w-[28rem] flex-col items-end gap-1 self-start">
+            <IndicatoreCartella />
+            <AvvisoDatiDitta />
+          </div>
           <BackupBar className="basis-full" />
         </div>
 

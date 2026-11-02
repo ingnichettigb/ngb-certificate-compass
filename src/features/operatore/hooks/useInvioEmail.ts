@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { leggiDatiAzienda } from "@/lib/dati-azienda";
+import { getDatiAzienda } from "@/lib/api/ditta";
 import { inviaEmailConResend } from "@/lib/email-resend.functions";
 import { costruisciBozzaEmail } from "../bozza-email";
 import type { CodaRiga, StatoModaleEmail } from "../types";
@@ -40,7 +40,7 @@ export function useInvioEmail(ricarica: () => unknown) {
       return void toast.error("Inserisci almeno un indirizzo email valido nel campo Destinatari");
     }
 
-    const datiAzienda = leggiDatiAzienda();
+    const datiAzienda = await getDatiAzienda();
     setInviandoEmail(true);
     const toastId = toast.loading(`Invio email a ${destinatariList.join(", ")}...`);
 
