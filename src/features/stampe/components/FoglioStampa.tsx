@@ -10,14 +10,14 @@ import type { DittaRecord } from "@/lib/api/ditta";
 
 type Props = {
   titolo: string;
-  sottotitolo?: string;
+  sottotitolo?: string | undefined;
   orizzontale: boolean;
   ditta: DittaRecord | undefined;
   mostraFirme: boolean;
   children: ReactNode;
 };
 
-export function IntestazioneDitta({ ditta, titolo, sottotitolo }: { ditta: DittaRecord | undefined; titolo: string; sottotitolo?: string }) {
+export function IntestazioneDitta({ ditta, titolo, sottotitolo }: { ditta: DittaRecord | undefined; titolo: string; sottotitolo?: string | undefined }) {
   const ind = [ditta?.indirizzo, [ditta?.cap, ditta?.comune].filter(Boolean).join(" "), ditta?.provincia && `(${ditta.provincia})`].filter(Boolean).join(" ");
   return (
     <header className="mb-4 border-b-2 border-foreground pb-2">
