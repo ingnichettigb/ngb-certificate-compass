@@ -6,16 +6,13 @@
  *   - Rev 1 (2026-10-28 20:35): Prima stesura matrice di sicurezza.
  *   - Rev 2 (2026-10-28 20:50): Ordinamento clic crescente/decrescente ed export CSV.
  *   - Rev 3 (2026-10-28 21:05): Tabella fixed con colgroup e logica fabbisogno formativo.
- *   - Rev 4 (2026-10-28 21:15): Colonne dinamiche lette dal DB (tipi_corso), wrap a capo del testo
- *     quando si stringe la colonna, spunta in alto a destra per nascondere e spunta master in cella A1.
- *   - Rev 5 (2026-10-30 20:25): Dicitura completa Funzione / Reparto (Docente - [Classe] - [Materia]),
- *     larghezza base aumentata e ordinamento/export allineati.
- *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione: salvataggio obblighi con impostaRuoloDipendente,
- *     query attestati senza filtro, filtro cessati su stato_lavoratore.
- *   - Rev 7 (2026-11-01 21:40): Filtro pillole per macro-gruppo corso (colonne) e selettore a 3 stati lavoratori
- *     (Tutti / Solo assegnati / Senza incarico) integrando BarraFiltriGruppo.tsx.
- *   - Rev 8 (2026-11-01 21:55): Navigazione alfabetica rapida: salto da tastiera (tasti A-Z), barre alfabetiche
- *     orizzontale e laterale verticale sempre in vista con scrollIntoView fluido.
+ *   - Rev 4 (2026-10-28 21:15): Colonne dinamiche lette dal DB (tipi_corso), wrap a capo del testo.
+ *   - Rev 5 (2026-10-30 20:25): Dicitura completa Funzione / Reparto (Docente - [Classe] - [Materia]).
+ *   - Rev 6 (2026-10-30 20:28): Ripristino compilazione con impostaRuoloDipendente.
+ *   - Rev 7 (2026-11-01 21:40): Filtro pillole per macro-gruppo corso e selettore a 3 stati lavoratori.
+ *   - Rev 8 (2026-11-01 21:55): Navigazione alfabetica rapida: salto da tastiera e barre alfabetiche.
+ *   - Rev 9 (2026-11-02 10:25): Assegnazione ruoli da matrice: risoluzione automatica ruolo-corso con mappatura-ruoli-corsi,
+ *     colonna ruoli con badge sicurezza e sincronizzazione istantanea con dipendenti_ruoli.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -29,7 +26,6 @@ import {
   impostaRuoloDipendente,
   type Dipendente,
   type TipoCorso,
-  type RuoloSicurezza,
   CHIAVE_RUOLI,
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
@@ -43,9 +39,7 @@ import {
   Check,
   CheckSquare,
   Square,
-  Eye,
   EyeOff,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +47,12 @@ import { toast } from "sonner";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { BarraFiltriGruppo, type FiltroStatoLavoratori } from "./BarraFiltriGruppo";
 import { BarraAlfabeticaOrizzontale, BarraAlfabeticaVerticale } from "./BarraAlfabeticaMatrice";
+import {
+  trovaRuoloPerCorso,
+  trovaRuoloPerChiaveGruppo,
+  isCorsoObbligatorioPerDipendente,
+  ruoliSicurezzaAssegnati,
+} from "./mappatura-ruoli-corsi";
 
 interface Props {
   open: boolean;
@@ -67,36 +67,39 @@ const CHIAVE_NASCOSTI = "matrice_sicurezza_corsi_nascosti_v2";
 const LARGHEZZE_FISSE_BASE = {
   nominativo: 220,
   funzione: 240,
-  ruolo: 130,
+  ruolo: 160,
   corso: 120,
 };
 
 export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   const queryClient = useQueryClient();
   const [ricerca, setRicerca] = useState("");
-  const [rigaSelezionata, setRigaSelezionata] = useState<string | null>(null);
-  const [letteraCorrente, setLetteraCorrente] = useState<string | null>(null);
-
-  const [colonnaOrd, setColonnaOrd] = useState<string | null>("nominativo");
+  const [colonnaOrd, setColonnaOrd] = useState<string>("nominativo");
   const [direzioneOrd, setDirezioneOrd] = useState<TipoOrdinamento>("asc");
+  const [rigaSelezionata, setRigaSelezionata] = useState<string | null>(null);
 
-  // Filtri macro-argomento e lavoratori
+  // Filtro macro-gruppo corso (colonne) e selettore a 3 stati (righe lavoratori)
   const [gruppoSelezionato, setGruppoSelezionato] = useState<string | null>(null);
   const [filtroStatoLavoratori, setFiltroStatoLavoratori] = useState<FiltroStatoLavoratori>("tutti");
 
+  // Riferimento al contenitore per lo scorrimento
+  const contenitoreTabellaRef = useRef<HTMLDivElement>(null);
+
+  // Persistenza larghezze colonne
   const [larghezze, setLarghezze] = useState<Record<string, number>>(() => {
     try {
-      const salvate = localStorage.getItem(CHIAVE_LARGHEZZE);
-      return salvate ? JSON.parse(salvate) : {};
+      const saved = localStorage.getItem(CHIAVE_LARGHEZZE);
+      return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
     }
   });
 
+  // Persistenza colonne nascoste (id dei corsi)
   const [corsiNascosti, setCorsiNascosti] = useState<string[]>(() => {
     try {
-      const salvati = localStorage.getItem(CHIAVE_NASCOSTI);
-      return salvati ? JSON.parse(salvati) : [];
+      const saved = localStorage.getItem(CHIAVE_NASCOSTI);
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -181,14 +184,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     });
   }
 
-  const mappaRuoliPerNome = useMemo(() => {
-    const map = new Map<string, RuoloSicurezza>();
-    for (const r of ruoli) {
-      map.set(r.nome.toLowerCase().trim(), r);
-    }
-    return map;
-  }, [ruoli]);
-
   const mappaAssegnazioni = useMemo(() => {
     const set = new Set<string>();
     for (const a of assegnazioni) {
@@ -211,9 +206,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   }, [attestati]);
 
   function haObbligoCorso(dipendenteId: string, corso: TipoCorso): boolean {
-    const ruoloCorrispondente = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
-    if (!ruoloCorrispondente) return false;
-    return mappaAssegnazioni.has(`${dipendenteId}_${ruoloCorrispondente.id}`);
+    return isCorsoObbligatorioPerDipendente(dipendenteId, corso, ruoli, mappaAssegnazioni);
   }
 
   function haAttestatoCorso(dipendenteId: string, corso: TipoCorso): boolean {
@@ -222,6 +215,10 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   }
 
   function haObbligoNelGruppo(dipendenteId: string, gruppoChiave: string): boolean {
+    const ruoloDelGruppo = trovaRuoloPerChiaveGruppo(gruppoChiave, ruoli);
+    if (ruoloDelGruppo && (ruoloDelGruppo.obbligatorio_tutti || mappaAssegnazioni.has(`${dipendenteId}_${ruoloDelGruppo.id}`))) {
+      return true;
+    }
     const corsiDelGruppo = corsiCatalogo.filter((c) => assegnaGruppoArgomento(c).chiave === gruppoChiave);
     return corsiDelGruppo.some((c) => haObbligoCorso(dipendenteId, c));
   }
@@ -232,7 +229,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   }
 
   async function handleToggleObbligo(dipendente: Dipendente, corso: TipoCorso) {
-    const ruolo = mappaRuoliPerNome.get(corso.nome_corso.toLowerCase().trim());
+    const ruolo = trovaRuoloPerCorso(corso, ruoli);
     if (!ruolo) {
       toast.error(`Nessun ruolo di sicurezza censito per "${corso.nome_corso}"`);
       return;
@@ -249,8 +246,8 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
       ]);
       toast.success(
         nuovoStato
-          ? `Obbligo "${corso.nome_corso}" assegnato a ${dipendente.cognome}`
-          : `Obbligo rimosso per ${dipendente.cognome}`,
+          ? `Ruolo "${ruolo.nome}" assegnato a ${dipendente.cognome} ${dipendente.nome}`
+          : `Ruolo "${ruolo.nome}" rimosso per ${dipendente.cognome} ${dipendente.nome}`,
       );
     } catch (e) {
       toast.error("Errore salvataggio", { description: (e as Error).message });
@@ -273,7 +270,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
       assegnati,
       senza: attivi.length - assegnati,
     };
-  }, [dipendenti, gruppoSelezionato, corsiCatalogo, mappaRuoliPerNome, mappaAssegnazioni]);
+  }, [dipendenti, gruppoSelezionato, corsiCatalogo, ruoli, mappaAssegnazioni]);
 
   const larghezzaTotaleTabella = useMemo(() => {
     let tot =
@@ -288,7 +285,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   function iniziaResize(colKey: string, currentWidth: number, e: React.MouseEvent) {
     e.preventDefault();
-    e.stopPropagation();
     resizingRef.current = {
       colKey,
       startX: e.clientX,
@@ -297,18 +293,16 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
     function onMouseMove(ev: MouseEvent) {
       if (!resizingRef.current) return;
-      const delta = ev.clientX - resizingRef.current.startX;
-      const nuova = Math.max(70, resizingRef.current.startWidth + delta);
-      setLarghezze((prev) => ({ ...prev, [resizingRef.current!.colKey]: nuova }));
+      const diff = ev.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(70, resizingRef.current.startWidth + diff);
+      setLarghezze((prev) => {
+        const next = { ...prev, [resizingRef.current!.colKey]: newWidth };
+        localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(next));
+        return next;
+      });
     }
 
     function onMouseUp() {
-      if (resizingRef.current) {
-        setLarghezze((prev) => {
-          localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(prev));
-          return prev;
-        });
-      }
       resizingRef.current = null;
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -320,23 +314,33 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   function resetLarghezza(colKey: string) {
     setLarghezze((prev) => {
-      const copia = { ...prev };
-      delete copia[colKey];
-      localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(copia));
-      return copia;
+      const next = { ...prev };
+      delete next[colKey];
+      localStorage.setItem(CHIAVE_LARGHEZZE, JSON.stringify(next));
+      return next;
     });
   }
 
-  function handleOrdina(colonna: string) {
-    if (colonnaOrd !== colonna) {
-      setColonnaOrd(colonna);
-      setDirezioneOrd("asc");
-    } else if (direzioneOrd === "asc") {
-      setDirezioneOrd("desc");
+  function handleOrdina(colKey: string) {
+    if (colonnaOrd === colKey) {
+      if (direzioneOrd === "asc") setDirezioneOrd("desc");
+      else if (direzioneOrd === "desc") setDirezioneOrd("none");
+      else setDirezioneOrd("asc");
     } else {
-      setColonnaOrd(null);
-      setDirezioneOrd("none");
+      setColonnaOrd(colKey);
+      setDirezioneOrd("asc");
     }
+  }
+
+  function renderFreccia(colKey: string) {
+    if (colonnaOrd !== colKey || direzioneOrd === "none") {
+      return <ArrowUpDown className="size-3 text-muted-foreground/40 ml-1 inline" />;
+    }
+    return direzioneOrd === "asc" ? (
+      <ArrowUp className="size-3 text-primary ml-1 inline" />
+    ) : (
+      <ArrowDown className="size-3 text-primary ml-1 inline" />
+    );
   }
 
   const listaElaborata = useMemo(() => {
@@ -374,7 +378,9 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
           const fnB = [b.reparto, b.sottoreparto, b.classe_concorso, b.materia].filter(Boolean).join(" - ").toLowerCase();
           comp = fnA.localeCompare(fnB);
         } else if (colonnaOrd === "ruolo") {
-          comp = (a.classe_concorso || "Lavoratore").localeCompare(b.classe_concorso || "Lavoratore");
+          const rA = ruoliSicurezzaAssegnati(a.id, ruoli, mappaAssegnazioni).map((r) => r.nome).join(", ");
+          const rB = ruoliSicurezzaAssegnati(b.id, ruoli, mappaAssegnazioni).map((r) => r.nome).join(", ");
+          comp = (rA || a.classe_concorso || "Lavoratore").localeCompare(rB || b.classe_concorso || "Lavoratore");
         } else {
           const c = corsiCatalogo.find((x) => x.id === colonnaOrd);
           if (c) {
@@ -396,63 +402,58 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     gruppoSelezionato,
     filtroStatoLavoratori,
     corsiCatalogo,
-    mappaRuoliPerNome,
+    ruoli,
     mappaAssegnazioni,
   ]);
 
-  /**
-   * Esegue lo scorrimento automatico alla prima riga che inizia con la lettera indicata
-   */
-  function saltaALettera(lettera: string) {
-    const letUpper = lettera.toUpperCase();
-    const trovato = listaElaborata.find((d) =>
-      (d.cognome || "").trim().toUpperCase().startsWith(letUpper),
-    );
-
-    if (!trovato) {
-      toast.info(`Nessun lavoratore trovato con l'iniziale "${letUpper}"`, { duration: 1500 });
-      return;
+  // Set di lettere presenti per abilitare i pulsanti delle barre alfabetiche
+  const letterePresenti = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of listaElaborata) {
+      const iniziale = (d.cognome || "").trim().charAt(0).toUpperCase();
+      if (iniziale >= "A" && iniziale <= "Z") {
+        set.add(iniziale);
+      }
     }
+    return set;
+  }, [listaElaborata]);
 
-    setLetteraCorrente(letUpper);
-    setRigaSelezionata(trovato.id);
+  // Funzione per scorrere al primo lavoratore con la lettera selezionata
+  function saltaALettera(lettera: string) {
+    const target = listaElaborata.find((d) => (d.cognome || "").trim().toUpperCase().startsWith(lettera));
+    if (!target) return;
 
-    const elem = document.getElementById(`riga-dipendente-${trovato.id}`);
+    setRigaSelezionata(target.id);
+    const elem = document.getElementById(`riga-dipendente-${target.id}`);
     if (elem) {
       elem.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
 
-  function renderFreccia(colonna: string) {
-    if (colonnaOrd !== colonna) return <ArrowUpDown className="size-3 text-muted-foreground/60 inline ml-1" />;
-    if (direzioneOrd === "asc") return <ArrowUp className="size-3 text-primary inline ml-1 font-bold" />;
-    return <ArrowDown className="size-3 text-primary inline ml-1 font-bold" />;
-  }
-
-  function esportaCsv() {
+  function handleEsportaCsv() {
     const sep = ";";
     const intestazioni = [
-      "Cognome e Nome",
+      "Nominativo",
       "Codice Fiscale",
       "Funzione / Reparto",
-      "Ruolo Aziendale",
-      ...corsiVisibili.map((c) => `${c.codice ? `[${c.codice}] ` : ""}${c.nome_corso}`),
+      "Ruolo di Sicurezza",
+      ...corsiVisibili.map((c) => `"${(c.codice ? `[${c.codice}] ` : "") + c.nome_corso}"`),
     ];
 
     const righe = listaElaborata.map((d) => {
       const fn = [d.reparto, d.sottoreparto, d.classe_concorso, d.materia].filter(Boolean).join(" - ") || "";
+      const ruoliTxt = ruoliSicurezzaAssegnati(d.id, ruoli, mappaAssegnazioni).map((r) => r.nome).join("; ") || (d.classe_concorso || "Lavoratore");
       const corsiVal = corsiVisibili.map((c) => {
         const ob = haObbligoCorso(d.id, c);
-        const at = haAttestatoCorso(d.id, c);
-        if (ob && at) return "OBBLIGATORIO (REGOLARE)";
-        if (ob && !at) return "OBBLIGATORIO (DA FORMARE)";
-        return "NON PREVISTO";
+        const fatto = haAttestatoCorso(d.id, c);
+        if (!ob) return '"Non previsto"';
+        return fatto ? '"In regola"' : '"Da svolgere"';
       });
       return [
         `"${d.cognome || ""} ${d.nome || ""}"`,
         `"${d.codice_fiscale || ""}"`,
         `"${fn.replace(/"/g, '""')}"`,
-        `"${(d.classe_concorso || "Lavoratore").replace(/"/g, '""')}"`,
+        `"${ruoliTxt.replace(/"/g, '""')}"`,
         ...corsiVal,
       ].join(sep);
     });
@@ -470,7 +471,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     toast.success("Esportazione completata");
   }
 
-  // Listener per tasto ESC e salto rapido da tastiera con lettere A-Z
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -479,7 +479,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
         return;
       }
 
-      // Non intercettare se l'utente sta scrivendo in un campo di testo
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -493,7 +492,6 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
       if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-      // Se viene premuta una singola lettera A-Z
       if (/^[a-zA-Z]$/.test(e.key)) {
         e.preventDefault();
         saltaALettera(e.key.toUpperCase());
@@ -510,66 +508,56 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[120] flex h-screen w-screen flex-col bg-background text-foreground animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex flex-col bg-background animate-in fade-in-0 duration-150"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3.5 shadow-sm shrink-0">
+      {/* Intestazione */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-semibold px-4"
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="size-4 mr-2" /> Torna
+            <ArrowLeft className="size-4" /> Torna a Dipendenti
           </Button>
-
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600/15 text-emerald-700 dark:text-emerald-400">
-              <Users className="size-5" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight flex items-center gap-2">
-                Piano Fabbisogno Formativo e Ruoli
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {listaElaborata.length} di {dipendenti.length} lavoratori · {corsiVisibili.length} corsi visualizzati
-              </p>
-            </div>
+          <div className="h-4 w-px bg-border hidden sm:block" />
+          <div>
+            <h1 className="text-base font-bold text-foreground leading-tight">
+              Piano Fabbisogno Formativo e Ruoli
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {listaElaborata.length} lavoratori attivi • Clicca sulle caselle per assegnare o togliere il ruolo
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
+              type="search"
+              placeholder="Cerca per nominativo, CF, reparto..."
               value={ricerca}
               onChange={(e) => setRicerca(e.target.value)}
-              placeholder="Cerca lavoratore..."
-              className="pl-8 h-9 text-xs"
+              className="pl-8 h-8 text-xs"
             />
           </div>
 
           <Button
+            type="button"
             variant="outline"
             size="sm"
-            onClick={toggleNascondiTutti}
-            className="h-9 border-2 border-primary/40 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground text-xs"
-            title={tuttiVisibili ? "Nascondi tutte le colonne dei corsi" : "Mostra tutte le colonne dei corsi"}
+            onClick={handleEsportaCsv}
+            className="h-8 gap-1.5 text-xs border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
           >
-            {tuttiVisibili ? <EyeOff className="size-3.5 mr-1.5" /> : <Eye className="size-3.5 mr-1.5" />}
-            {tuttiVisibili ? "Nascondi corsi" : "Mostra tutti i corsi"}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={esportaCsv}
-            className="h-9 border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground text-xs font-semibold"
-          >
-            <Download className="size-3.5 mr-1.5" /> Esporta CSV
+            <Download className="size-3.5" /> Esporta CSV
           </Button>
         </div>
       </header>
 
-      {/* Barra filtri pillole per argomento e selettore lavoratori */}
+      {/* Barra Filtri Macro-Gruppi Corsi e Selettore Lavoratori */}
       <BarraFiltriGruppo
         gruppoSelezionato={gruppoSelezionato}
         onSelezionaGruppo={handleCambiaGruppo}
@@ -580,22 +568,20 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
         conteggiLavoratori={conteggiLavoratori}
       />
 
-      {/* Barra alfabetica orizzontale sempre visibile */}
+      {/* Barra Alfabetica Orizzontale */}
       <BarraAlfabeticaOrizzontale
-        dipendenti={listaElaborata}
-        letteraAttiva={letteraCorrente}
+        letterePresenti={letterePresenti}
         onSelezionaLettera={saltaALettera}
       />
 
-      {/* Barra alfabetica laterale verticale sempre visibile ancorata sul bordo destro */}
-      <BarraAlfabeticaVerticale
-        dipendenti={listaElaborata}
-        letteraAttiva={letteraCorrente}
-        onSelezionaLettera={saltaALettera}
-      />
+      {/* Corpo Principale Tabella con Barra Alfabetica Verticale */}
+      <main className="flex-1 relative flex overflow-hidden">
+        <BarraAlfabeticaVerticale
+          letterePresenti={letterePresenti}
+          onSelezionaLettera={saltaALettera}
+        />
 
-      <main className="flex-1 overflow-auto bg-muted/20 p-4">
-        <div className="rounded-xl border border-border bg-surface shadow-sm inline-block min-w-full">
+        <div ref={contenitoreTabellaRef} className="flex-1 overflow-auto bg-background">
           <table
             className="border-collapse text-left text-xs"
             style={{ tableLayout: "fixed", width: `${larghezzaTotaleTabella}px` }}
@@ -611,7 +597,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
             <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur border-b border-border shadow-sm">
               <tr className="divide-x divide-border">
-                {/* Colonna Nominativo con pulsante A1 master */}
+                {/* Colonna Nominativo con master checkbox */}
                 <th
                   className="sticky left-0 z-30 bg-muted/95 px-3 py-2.5 font-bold text-foreground select-none relative group"
                   style={{ width: `${larghezze["nominativo"] || LARGHEZZE_FISSE_BASE.nominativo}px` }}
@@ -734,7 +720,8 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                 listaElaborata.map((dip) => {
                   const isAttiva = rigaSelezionata === dip.id;
                   const funzione = [dip.reparto, dip.sottoreparto, dip.classe_concorso, dip.materia].filter(Boolean).join(" - ") || "—";
-                  const ruoloAziendale = dip.classe_concorso || "Lavoratore";
+                  const ruoliDelDip = ruoliSicurezzaAssegnati(dip.id, ruoli, mappaAssegnazioni);
+                  const ruoliSpecifici = ruoliDelDip.filter((r) => !r.obbligatorio_tutti && r.nome.toLowerCase() !== "lavoratore");
 
                   return (
                     <tr
@@ -766,14 +753,29 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                       </td>
 
                       <td className="px-3 py-2.5 text-xs">
-                        <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full">
-                          {ruoloAziendale}
-                        </span>
+                        {ruoliSpecifici.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-full">
+                            {ruoliSpecifici.map((r) => (
+                              <span
+                                key={r.id}
+                                className="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[11px] font-medium truncate"
+                                title={r.nome}
+                              >
+                                {r.nome}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full text-muted-foreground">
+                            {dip.classe_concorso || "Lavoratore"}
+                          </span>
+                        )}
                       </td>
 
                       {corsiVisibili.map((c) => {
                         const obbligatorio = haObbligoCorso(dip.id, c);
                         const fatto = haAttestatoCorso(dip.id, c);
+                        const ruoloCollegato = trovaRuoloPerCorso(c, ruoli);
 
                         return (
                           <td
@@ -783,7 +785,11 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                               handleToggleObbligo(dip, c);
                             }}
                             className="px-2 py-2 text-center select-none hover:bg-primary/10 transition-colors"
-                            title={`Clicca per cambiare obbligo: ${c.nome_corso}`}
+                            title={
+                              ruoloCollegato
+                                ? `${obbligatorio ? "Revoca" : "Assegna"} ruolo "${ruoloCollegato.nome}" a ${dip.cognome}`
+                                : `Corso: ${c.nome_corso}`
+                            }
                           >
                             <div className="flex items-center justify-center">
                               <button
