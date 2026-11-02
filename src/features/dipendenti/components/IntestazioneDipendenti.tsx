@@ -12,6 +12,7 @@ import { ArrowLeft, Table, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
+import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
 
 export function IntestazioneDipendenti({ totale }: { totale: number }) {
@@ -21,7 +22,10 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
     <>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <IndicatoreCartella className="-mb-2 basis-full" />
+          <div className="-mb-2 flex basis-full flex-col items-end gap-1">
+            <IndicatoreCartella />
+            <AvvisoDatiDitta />
+          </div>
           <div className="flex items-center gap-3">
             <Link to="/" aria-label="Torna alla home">
               <ArrowLeft className="size-5 text-muted-foreground" />

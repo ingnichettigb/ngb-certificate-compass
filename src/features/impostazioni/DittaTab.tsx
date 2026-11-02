@@ -4,6 +4,7 @@
  * Data creaz: 01/11/2026
  * Revisioni:
  *   rev 1 — 01/11/2026 12:00 — Scheda Ditta con anagrafica, figure sicurezza, ATECO, rischio e presenze.
+ *   rev 2 — 01/11/2026 14:00 — Mostra i lavoratori in forza nel programma accanto al numero dichiarato.
  *   rev 2 — 01/11/2026 12:15 — Evidenziazione gialla e avviso rosso se il dato inserito differisce dal D.Lgs. 81/08.
  */
 import {
@@ -22,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDittaTab } from "./ditta/useDittaTab";
+import { useLavoratoriInForza } from "@/features/ditta/useDitta";
 import { calcolaSoglia } from "@/lib/api/ditta";
 
 export function DittaTab() {
@@ -37,6 +39,7 @@ export function DittaTab() {
     rimuoviAteco,
     handleSubmit,
   } = useDittaTab();
+  const { data: lavoratoriInForza } = useLavoratoriInForza();
 
   if (isLoading || !form) {
     return (
@@ -375,6 +378,9 @@ export function DittaTab() {
                   updateCampo("n_lavoratori_dichiarato", e.target.value === "" ? null : Number(e.target.value))
                 }
               />
+              <p className="text-[11px] text-muted-foreground">
+                In forza nel programma: <strong>{lavoratoriInForza ?? "—"}</strong>
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="n_lavoratori_data">Data agg. lavoratori</Label>

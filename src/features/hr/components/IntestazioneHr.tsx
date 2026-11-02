@@ -13,6 +13,7 @@ import { ArrowLeft, ShieldCheck, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
+import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "@/features/dipendenti/matrice/MatriceAbilitazioniRuoli";
 
 export function IntestazioneHr({ onImported }: { onImported: () => void }) {
@@ -22,7 +23,10 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
     <>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <IndicatoreCartella className="-mb-2 basis-full" />
+          <div className="-mb-2 flex basis-full flex-col items-end gap-1">
+            <IndicatoreCartella />
+            <AvvisoDatiDitta />
+          </div>
           <div className="flex items-center gap-3">
             <Link to="/" aria-label="Torna alla home">
               <ArrowLeft className="size-5 text-muted-foreground" />

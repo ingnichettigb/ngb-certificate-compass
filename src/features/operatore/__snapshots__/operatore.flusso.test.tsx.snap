@@ -1111,6 +1111,30 @@ exports[`Postazione Operatore: percorso d'uso completo > registra tutto quello c
     "["created_at",{"ascending":false}]",
   ],
   [
+    "sb",
+    "from",
+    "ditta",
+    "["ditta"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "ditta",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.eq",
+    "ditta",
+    "["id",true]",
+  ],
+  [
+    "sb",
+    "from.select.eq.maybeSingle",
+    "ditta",
+    "[]",
+  ],
+  [
     "toast.loading",
     "Invio email a a@x.it, b@x.it...",
     "",

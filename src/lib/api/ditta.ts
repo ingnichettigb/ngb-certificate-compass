@@ -4,9 +4,22 @@
  * Data creaz: 01/11/2026
  * Revisioni:
  *   rev 1 — 01/11/2026 12:00 — Modulo API database per anagrafica ditta e soglie di sicurezza D.Lgs. 81/08.
+ *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise; conteggio lavoratori in forza; dati per le email letti dal database;
+ *                              importazione una tantum dei dati ditta salvati nel browser.
  */
 import { sb } from "./client";
-import { salvaDatiAzienda, DatiAzienda } from "../dati-azienda";
+import {
+  DATI_AZIENDA_DEFAULT,
+  esistonoDatiAziendaLocali,
+  leggiDatiAziendaLocale,
+  salvaDatiAzienda,
+  DatiAzienda,
+} from "../dati-azienda";
+
+/** Chiavi TanStack Query: scheda Ditta e avvisi in testata DEVONO usare queste, per aggiornarsi insieme. */
+export const CHIAVE_DITTA = ["ditta_anagrafica"] as const;
+export const CHIAVE_SOGLIE_DITTA = ["soglie_ditta"] as const;
+export const CHIAVE_LAVORATORI_IN_FORZA = ["lavoratori-in-forza"] as const;
 
 export type CodiceAteco = {
   codice: string;
@@ -163,4 +176,109 @@ export function calcolaSoglia(
   return (
     ambitoSoglie.find((s) => valore >= s.da && (s.a === null || valore <= s.a)) ?? null
   );
+}
+
+/** Numero di lavoratori «in forza» nel programma (esclusi i cessati). */
+export async function contaLavoratoriInForza(): Promise<number> {
+  const { count, error } = await sb
+    .from("dipendenti")
+    .select("id", { count: "exact", head: true })
+    .eq("stato_lavoratore", "in_forza");
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Dal database al formato usato dalle email (firma e mittente). */
+export function dittaADatiAzienda(d: Partial<DittaRecord> | null | undefined): DatiAzienda {
+  const base = DATI_AZIENDA_DEFAULT;
+  return {
+    nomeAzienda: d?.ragione_sociale || base.nomeAzienda,
+    referente: d?.referente ?? base.referente,
+    email: d?.email ?? base.email,
+    telefono: d?.telefono ?? base.telefono,
+    via: d?.indirizzo ?? base.via,
+    cap: d?.cap ?? base.cap,
+    comune: d?.comune ?? base.comune,
+    provincia: d?.provincia ?? base.provincia,
+    emailMittenteResend: d?.email_mittente_resend || base.emailMittenteResend,
+  };
+}
+
+/** Dati per le email letti dal database; se non raggiungibile ripiega su quelli salvati nel browser. */
+export async function getDatiAzienda(): Promise<DatiAzienda> {
+  try {
+    return dittaADatiAzienda(await getDitta());
+  } catch {
+    return leggiDatiAziendaLocale();
+  }
+}
+
+/** Valori predefiniti: un campo del database uguale a questi (o vuoto) conta come «mai personalizzato». */
+const PREDEFINITI_DB: Partial<Record<keyof DittaRecord, string>> = {
+  ragione_sociale: DITTA_DEFAULT.ragione_sociale,
+  cap: DITTA_DEFAULT.cap ?? "",
+  comune: DITTA_DEFAULT.comune ?? "",
+  provincia: DITTA_DEFAULT.provincia ?? "",
+  referente: DITTA_DEFAULT.referente ?? "",
+  email_mittente_resend: DITTA_DEFAULT.email_mittente_resend ?? "",
+};
+
+const CORRISPONDENZE: [keyof DatiAzienda, keyof DittaRecord][] = [
+  ["nomeAzienda", "ragione_sociale"],
+  ["email", "email"],
+  ["referente", "referente"],
+  ["telefono", "telefono"],
+  ["via", "indirizzo"],
+  ["cap", "cap"],
+  ["comune", "comune"],
+  ["provincia", "provincia"],
+  ["emailMittenteResend", "email_mittente_resend"],
+];
+
+/**
+ * Cosa copiare dal browser al database: solo i campi del browser compilati dove nel database c'è ancora il valore
+ * predefinito o niente. Non sovrascrive mai un dato già personalizzato nel database.
+ */
+export function calcolaImportazione(locale: DatiAzienda, db: Partial<DittaRecord> | null): Partial<DittaRecord> {
+  const patch: Record<string, string> = {};
+  for (const [chiaveLocale, chiaveDb] of CORRISPONDENZE) {
+    const valoreLocale = String(locale[chiaveLocale] ?? "").trim();
+    if (!valoreLocale) continue;
+    const valoreDb = String(db?.[chiaveDb] ?? "").trim();
+    const nonPersonalizzato = valoreDb === "" || valoreDb === PREDEFINITI_DB[chiaveDb];
+    if (nonPersonalizzato && valoreLocale !== valoreDb) patch[chiaveDb] = valoreLocale;
+  }
+  return patch as Partial<DittaRecord>;
+}
+
+const CHIAVE_IMPORTATO = "archivio_attestati_dati_azienda_importati_v1";
+let importazioneInCorso: Promise<boolean> | null = null;
+
+/**
+ * Importa nel database i dati ditta salvati in questo browser con la vecchia modalità, una volta sola.
+ * Restituisce true se ha scritto qualcosa. Se il database non risponde non segna l'importazione come fatta.
+ */
+export function importaDatiDalBrowserUnaVolta(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  try {
+    if (localStorage.getItem(CHIAVE_IMPORTATO) || !esistonoDatiAziendaLocali()) return Promise.resolve(false);
+  } catch {
+    return Promise.resolve(false);
+  }
+  if (!importazioneInCorso) {
+    importazioneInCorso = (async () => {
+      try {
+        const patch = calcolaImportazione(leggiDatiAziendaLocale(), await getDitta());
+        const daScrivere = Object.keys(patch).length > 0;
+        if (daScrivere) await salvaDitta(patch);
+        localStorage.setItem(CHIAVE_IMPORTATO, new Date().toISOString());
+        return daScrivere;
+      } catch {
+        return false;
+      } finally {
+        importazioneInCorso = null;
+      }
+    })();
+  }
+  return importazioneInCorso;
 }
