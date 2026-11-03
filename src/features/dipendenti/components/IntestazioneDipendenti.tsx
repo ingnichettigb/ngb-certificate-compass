@@ -5,18 +5,21 @@
  * Revisioni:
  *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
+ *   - Rev 5 (2026-11-03 14:30): Bottone «Importa elenco Word/Excel».
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Table, Users } from "lucide-react";
+import { ArrowLeft, FileUp, Table, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
+import { DialogImportaElenco } from "../import-elenco/DialogImportaElenco";
 
 export function IntestazioneDipendenti({ totale }: { totale: number }) {
   const [apriMatrice, setApriMatrice] = useState(false);
+  const [apriImport, setApriImport] = useState(false);
 
   return (
     <>
@@ -49,6 +52,9 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
             >
               <Table className="size-4 text-emerald-600" /> Matrice Abilitazioni e Ruoli
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setApriImport(true)} className="gap-1.5">
+              <FileUp className="size-4" /> Importa elenco Word/Excel
+            </Button>
             <BackupBar />
           </div>
         </div>
@@ -56,6 +62,7 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
 
       {/* Matrice a tutto schermo */}
       <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
+      <DialogImportaElenco open={apriImport} onClose={() => setApriImport(false)} />
     </>
   );
 }
