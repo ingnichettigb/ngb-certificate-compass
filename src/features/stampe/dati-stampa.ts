@@ -4,24 +4,29 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Filtri e calcolo righe per le stampe (registro, gruppi, scadenze, schede, reparti).
+ *   rev 2 — 03/11/2026 20:25 — Aggiunti filtri dinamici ruolo, categoria, materia e finestra scadenze 9 mesi (270 gg).
  */
 import type { Attestato } from "@/lib/api";
+import type { AssegnazioneRuolo } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 
 export type Modello = "registro" | "gruppo" | "scadenze" | "scheda" | "reparto";
-export type Finestra = "tutti" | "scaduti" | "90" | "180" | "365";
+export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
 export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza";
 
 export const TUTTI = "__tutti__";
 
 export type FiltriStampa = {
   modello: Modello;
-  gruppo: string; // chiave gruppo argomento o TUTTI
-  reparto: string; // nome reparto o TUTTI
-  dipendenteId: string; // id o TUTTI
+  gruppo: string;       // chiave gruppo argomento o TUTTI
+  reparto: string;      // nome reparto o TUTTI
+  ruoloId: string;      // id del ruolo di sicurezza o TUTTI
+  categoria: string;    // sottoreparto / profilo ATA o TUTTI
+  materia: string;      // materia docente o TUTTI
+  dipendenteId: string; // id lavoratore o TUTTI
   finestra: Finestra;
   includiCessati: boolean;
-  soloUltimo: boolean; // solo l'attestato più recente per lavoratore+corso
+  soloUltimo: boolean;  // solo l'attestato più recente per lavoratore+corso
   mostraCf: boolean;
   mostraFirme: boolean;
 };
@@ -30,6 +35,9 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   modello: "registro",
   gruppo: TUTTI,
   reparto: TUTTI,
+  ruoloId: TUTTI,
+  categoria: TUTTI,
+  materia: TUTTI,
   dipendenteId: TUTTI,
   finestra: "tutti",
   includiCessati: false,
@@ -45,6 +53,8 @@ export type RigaStampa = {
   nome: string;
   cf: string;
   reparto: string;
+  sottoreparto: string;
+  materia: string;
   corso: string;
   codice: string;
   gruppo: string;
@@ -75,7 +85,12 @@ function nellaFinestra(r: RigaStampa, f: Finestra): boolean {
 }
 
 /** Converte gli attestati approvati in righe filtrate e ordinate per cognome, nome, data corso. */
-export function calcolaRighe(attestati: Attestato[], filtri: FiltriStampa, oggi = new Date()): RigaStampa[] {
+export function calcolaRighe(
+  attestati: Attestato[],
+  filtri: FiltriStampa,
+  oggi = new Date(),
+  assegnazioni: AssegnazioneRuolo[] = [],
+): RigaStampa[] {
   let righe: RigaStampa[] = attestati
     .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
     .map((a) => {
@@ -90,6 +105,8 @@ export function calcolaRighe(attestati: Attestato[], filtri: FiltriStampa, oggi 
         nome: d.nome ?? "",
         cf: d.codice_fiscale ?? "",
         reparto: d.reparto ?? "—",
+        sottoreparto: d.sottoreparto ?? "",
+        materia: d.materia ?? "",
         corso: tc?.nome_corso ?? "—",
         codice: tc?.codice ?? "",
         gruppo: g.chiave,
@@ -107,7 +124,17 @@ export function calcolaRighe(attestati: Attestato[], filtri: FiltriStampa, oggi 
 
   if (filtri.gruppo !== TUTTI) righe = righe.filter((r) => r.gruppo === filtri.gruppo);
   if (filtri.reparto !== TUTTI) righe = righe.filter((r) => r.reparto === filtri.reparto);
+  if (filtri.categoria !== TUTTI) righe = righe.filter((r) => r.sottoreparto === filtri.categoria);
+  if (filtri.materia !== TUTTI) righe = righe.filter((r) => r.materia === filtri.materia);
   if (filtri.dipendenteId !== TUTTI) righe = righe.filter((r) => r.dipendenteId === filtri.dipendenteId);
+
+  // Filtro ruolo: include solo i dipendenti che hanno il ruolo assegnato
+  if (filtri.ruoloId !== TUTTI) {
+    const aventiRuolo = new Set(
+      assegnazioni.filter((a) => a.ruolo_id === filtri.ruoloId).map((a) => a.dipendente_id),
+    );
+    righe = righe.filter((r) => aventiRuolo.has(r.dipendenteId));
+  }
 
   if (filtri.soloUltimo) {
     const ultimo = new Map<string, RigaStampa>();
@@ -130,7 +157,6 @@ export function calcolaRighe(attestati: Attestato[], filtri: FiltriStampa, oggi 
   );
 }
 
-/** Raggruppa le righe per una chiave mantenendo l'ordine. */
 export function raggruppa<T>(righe: T[], chiave: (r: T) => string): [string, T[]][] {
   const m = new Map<string, T[]>();
   for (const r of righe) {
