@@ -3,72 +3,56 @@
  * Percorso:  src/features/stampe/esporta-file.ts
  * Data creaz: 03/11/2026
  * Revisioni:
- *   rev 1 — 03/11/2026 20:35 — Esportazione Excel e CSV su foglio unico con prefisso e colonne dinamiche.
+ *   rev 1 — 03/11/2026 20:50 — Esportazione Excel (foglio unico) e CSV con le sole colonne visibili in anteprima.
  */
-import * as XLSX from "xlsx";
+import { cella, INTESTAZIONI, type Colonna, type RigaStampa } from "./dati-stampa";
 
-/** Timestamp standard AAMMGGhhmm per i nomi file */
+/** Timestamp standard AAMMGGhhmm per i nomi file. */
 export function timestampArchivio(d = new Date()): string {
-  const aa = String(d.getFullYear()).slice(-2);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const gg = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${aa}${mm}${gg}${hh}${min}`;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${String(d.getFullYear()).slice(-2)}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
 }
 
-export type ColonnaEsportabile<T> = {
-  id: string;
-  titolo: string;
-  valore: (r: T) => string;
-};
-
-/** Esporta i dati in un file Excel (.xlsx) a foglio unico con le sole colonne visibili */
-export function scaricaExcel<T>(
-  nomeBase: string,
-  righe: T[],
-  colonne: ColonnaEsportabile<T>[],
-) {
-  const matrice = [
-    colonne.map((c) => c.titolo),
-    ...righe.map((r) => colonne.map((c) => c.valore(r))),
-  ];
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(matrice);
-
-  // Larghezza automatica colonne
-  ws["!cols"] = colonne.map((c, i) => {
-    const maxLen = Math.max(
-      c.titolo.length,
-      ...righe.map((r) => c.valore(r).length),
-    );
-    return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
-  });
-
-  XLSX.utils.book_append_sheet(wb, ws, "Dati");
-  const nomeFile = `030ArchAttestati_${timestampArchivio()}_${nomeBase}.xlsx`;
-  XLSX.writeFile(wb, nomeFile);
+export function nomeFileEsportazione(nomeBase: string, estensione: "xlsx" | "csv", d = new Date()): string {
+  return `030ArchAttestati_${timestampArchivio(d)}_${nomeBase}.${estensione}`;
 }
 
-/** Esporta i dati in un file CSV standard con le sole colonne visibili */
-export function scaricaCsv<T>(
-  nomeBase: string,
-  righe: T[],
-  colonne: ColonnaEsportabile<T>[],
-) {
-  const righeCsv = [
-    colonne.map((c) => `"${c.titolo.replace(/"/g, '""')}"`).join(";"),
-    ...righe.map((r) =>
-      colonne.map((c) => `"${c.valore(r).replace(/"/g, '""')}"`).join(";"),
-    ),
-  ];
+/** Matrice intestazioni + righe con i soli valori delle colonne indicate. */
+export function matriceDati(righe: RigaStampa[], colonne: Colonna[]): string[][] {
+  return [colonne.map((c) => INTESTAZIONI[c]), ...righe.map((r) => colonne.map((c) => cella(r, c)))];
+}
 
-  const blob = new Blob(["\uFEFF" + righeCsv.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+/** Testo CSV con separatore «;» (Excel italiano) e campi tra virgolette. */
+export function testoCsv(righe: RigaStampa[], colonne: Colonna[]): string {
+  return matriceDati(righe, colonne)
+    .map((riga) => riga.map((v) => `"${v.replace(/"/g, '""')}"`).join(";"))
+    .join("\r\n");
+}
+
+function scarica(blob: Blob, nome: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `030ArchAttestati_${timestampArchivio()}_${nomeBase}.csv`;
+  a.download = nome;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function scaricaCsv(nomeBase: string, righe: RigaStampa[], colonne: Colonna[]) {
+  const blob = new Blob(["\uFEFF" + testoCsv(righe, colonne)], { type: "text/csv;charset=utf-8" });
+  scarica(blob, nomeFileEsportazione(nomeBase, "csv"));
+}
+
+export async function scaricaExcel(nomeBase: string, righe: RigaStampa[], colonne: Colonna[]) {
+  const XLSX = await import("xlsx");
+  const matrice = matriceDati(righe, colonne);
+  const ws = XLSX.utils.aoa_to_sheet(matrice);
+  ws["!cols"] = colonne.map((_, i) => ({
+    wch: Math.min(Math.max(...matrice.map((r) => (r[i] ?? "").length), 8) + 2, 50),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Dati");
+  XLSX.writeFile(wb, nomeFileEsportazione(nomeBase, "xlsx"));
 }
