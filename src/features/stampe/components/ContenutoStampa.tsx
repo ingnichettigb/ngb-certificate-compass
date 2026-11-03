@@ -4,14 +4,22 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Corpo dei 5 modelli: registro, gruppi, scadenze, schede individuali, reparti.
+ *   rev 2 — 03/11/2026 20:50 — Colonne decise dall'anteprima (rimovibili) e modello «Elenco lavoratori in servizio».
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, raggruppa, type FiltriStampa, type RigaStampa } from "../dati-stampa";
+import { dataIt, raggruppa, type Colonna, type FiltriStampa, type RigaStampa } from "../dati-stampa";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
-import { TabellaStampa, type Colonna } from "./TabellaStampa";
+import { TabellaStampa } from "./TabellaStampa";
 
-type Props = { filtri: FiltriStampa; righe: RigaStampa[]; dipendenti: Dipendente[]; ditta: DittaRecord | undefined };
+type Props = {
+  filtri: FiltriStampa;
+  righe: RigaStampa[];
+  colonne: Colonna[];
+  onRimuoviColonna: (c: Colonna) => void;
+  dipendenti: Dipendente[];
+  ditta: DittaRecord | undefined;
+};
 
 function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
@@ -22,23 +30,24 @@ function Sezione({ titolo, children }: { titolo: string; children: React.ReactNo
   );
 }
 
-export function ContenutoStampa({ filtri, righe, dipendenti, ditta }: Props) {
+export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, dipendenti, ditta }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">Nessun dato con i filtri scelti.</p>;
-  const cf: Colonna[] = filtri.mostraCf ? ["cf"] : [];
+  const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
+    <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} />
+  );
 
   switch (filtri.modello) {
     case "registro":
-      return <TabellaStampa righe={righe} colonne={["lavoratore", ...cf, "reparto", "corso", "ore", "numero", "data", "scadenza", "stato"]} />;
-    case "scadenze": {
-      const ord = [...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? ""));
-      return <TabellaStampa righe={ord} colonne={["scadenza", "stato", "lavoratore", ...cf, "reparto", "corso", "data"]} />;
-    }
+    case "lavoratori":
+      return tab(righe);
+    case "scadenze":
+      return tab([...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
     case "gruppo":
       return (
         <>
           {raggruppa(righe, (r) => r.gruppoTitolo).map(([g, rr]) => (
             <Sezione key={g} titolo={`${g} – ${new Set(rr.map((r) => r.dipendenteId)).size} lavoratori`}>
-              <TabellaStampa righe={rr} colonne={["lavoratore", ...cf, "reparto", "corso", "ore", "data", "scadenza", "stato"]} />
+              {tab(rr)}
             </Sezione>
           ))}
         </>
@@ -48,7 +57,7 @@ export function ContenutoStampa({ filtri, righe, dipendenti, ditta }: Props) {
         <>
           {raggruppa([...righe].sort((a, b) => a.reparto.localeCompare(b.reparto, "it")), (r) => r.reparto).map(([rep, rr]) => (
             <Sezione key={rep} titolo={`Reparto: ${rep}`}>
-              <TabellaStampa righe={rr} colonne={["lavoratore", ...cf, "corso", "ore", "data", "scadenza", "stato"]} />
+              {tab(rr)}
             </Sezione>
           ))}
         </>
@@ -69,7 +78,7 @@ export function ContenutoStampa({ filtri, righe, dipendenti, ditta }: Props) {
                   <p><b>Assunzione:</b> {dataIt(d?.data_assunzione)}</p>
                   <p><b>Stato:</b> {d?.stato_lavoratore === "cessato" ? `Cessato il ${dataIt(d.data_cessazione)}` : "In forza"}</p>
                 </div>
-                <TabellaStampa righe={rr} colonne={["corso", "ore", "numero", "data", "scadenza", "stato"]} />
+                {tab(rr)}
                 {filtri.mostraFirme && <Firme ditta={ditta} lavoratore />}
               </div>
             );
