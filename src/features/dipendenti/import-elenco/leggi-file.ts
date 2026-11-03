@@ -17,7 +17,7 @@ export function tabellaInRighe(tabella: string[][]): RigaGrezza[] {
   const intest = pulita.findIndex((r) => r.some((c) => /codice\s*fiscale|^c\.?f\.?$/i.test(c)));
   let iCf = -1, iNom = -1, iFun = -1;
   if (intest >= 0) {
-    const h = pulita[intest];
+    const h = pulita[intest] ?? [];
     iCf = h.findIndex((c) => /codice\s*fiscale|^c\.?f\.?$/i.test(c));
     iNom = h.findIndex((c) => /nome|nominativo/i.test(c) && !/fiscale/i.test(c));
     iFun = h.findIndex((c) => /funzione|reparto|ruolo|classe/i.test(c));
@@ -48,7 +48,9 @@ async function leggiFoglio(file: File): Promise<string[][]> {
   const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const righe: string[][] = [];
   for (const nome of wb.SheetNames) {
-    const r = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[nome], { header: 1, raw: false, defval: "" });
+    const ws = wb.Sheets[nome];
+    if (!ws) continue;
+    const r = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: "" });
     righe.push(...r.map((x) => x.map(String)));
   }
   return righe;

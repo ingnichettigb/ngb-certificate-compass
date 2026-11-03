@@ -53,7 +53,7 @@ export function separaNominativo(n: string): { cognome: string; nome: string } {
       nome: parti.filter((p) => !maiuscole.includes(p)).join(" "),
     };
   }
-  return { cognome: parti[0], nome: parti.slice(1).join(" ") };
+  return { cognome: parti[0] ?? "", nome: parti.slice(1).join(" ") };
 }
 
 const ATA: { re: RegExp; sotto: string }[] = [
@@ -73,8 +73,8 @@ export function trovaClasse(testo: string, codici: string[]): { classe: string; 
   }
   const m = t.match(/^\s*([A-Z]{1,2})\s*-?\s*(\d{1,3}|[A-Z]{2})\b/);
   if (!m) return null;
-  const lettere = m[1];
-  const corpo = m[2];
+  const lettere = m[1] ?? "";
+  const corpo = m[2] ?? "";
   const varianti = new Set<string>([lettere + corpo]);
   if (/^\d+$/.test(corpo)) {
     const n = String(Number(corpo));
