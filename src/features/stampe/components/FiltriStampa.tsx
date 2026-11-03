@@ -4,6 +4,7 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Pannello scelta modello e filtri di stampa.
+ *   rev 2 — 03/11/2026 20:25 — Aggiunti filtri dinamici ruolo, categoria, materia e opzione 9 mesi.
  */
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,14 +17,40 @@ type Props = {
   filtri: Filtri;
   onChange: (f: Filtri) => void;
   reparti: string[];
+  ruoli: Array<{ id: string; nome: string }>;
+  categorie: string[];
+  materie: string[];
   dipendenti: Dipendente[];
   conteggio: number;
 };
 
 const sel = "w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm";
 
-export function FiltriStampa({ filtri, onChange, reparti, dipendenti, conteggio }: Props) {
+export function FiltriStampa({
+  filtri,
+  onChange,
+  reparti,
+  ruoli,
+  categorie,
+  materie,
+  dipendenti,
+  conteggio,
+}: Props) {
   const set = <K extends keyof Filtri>(k: K, v: Filtri[K]) => onChange({ ...filtri, [k]: v });
+
+  const handleCambioReparto = (nuovoReparto: string) => {
+    // Reset dinamico di categoria e materia se non pertinenti al nuovo reparto
+    onChange({
+      ...filtri,
+      reparto: nuovoReparto,
+      categoria: nuovoReparto === "Docente" ? TUTTI : filtri.categoria,
+      materia: nuovoReparto === "ATA" ? TUTTI : filtri.materia,
+    });
+  };
+
+  const mostraCategorie = filtri.reparto !== "Docente" && categorie.length > 0;
+  const mostraMaterie = filtri.reparto !== "ATA" && materie.length > 0;
+
   return (
     <aside className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm print:hidden">
       <div>
@@ -54,11 +81,42 @@ export function FiltriStampa({ filtri, onChange, reparti, dipendenti, conteggio 
 
       <label className="block space-y-1">
         <span className="font-medium">Reparto</span>
-        <select className={sel} value={filtri.reparto} onChange={(e) => set("reparto", e.target.value)}>
+        <select className={sel} value={filtri.reparto} onChange={(e) => handleCambioReparto(e.target.value)}>
           <option value={TUTTI}>Tutti i reparti</option>
           {reparti.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </label>
+
+      {/* Ruolo di sicurezza (mostra solo quelli presenti con assegnazioni) */}
+      <label className="block space-y-1">
+        <span className="font-medium">Ruolo di sicurezza</span>
+        <select className={sel} value={filtri.ruoloId} onChange={(e) => set("ruoloId", e.target.value)}>
+          <option value={TUTTI}>Tutti i ruoli</option>
+          {ruoli.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+        </select>
+      </label>
+
+      {/* Categoria / Profilo ATA (dinamico) */}
+      {mostraCategorie && (
+        <label className="block space-y-1">
+          <span className="font-medium">Categoria / Profilo ATA</span>
+          <select className={sel} value={filtri.categoria} onChange={(e) => set("categoria", e.target.value)}>
+            <option value={TUTTI}>Tutte le categorie</option>
+            {categorie.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+      )}
+
+      {/* Materia Docente (dinamico) */}
+      {mostraMaterie && (
+        <label className="block space-y-1">
+          <span className="font-medium">Materia</span>
+          <select className={sel} value={filtri.materia} onChange={(e) => set("materia", e.target.value)}>
+            <option value={TUTTI}>Tutte le materie</option>
+            {materie.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </label>
+      )}
 
       <label className="block space-y-1">
         <span className="font-medium">Lavoratore</span>
@@ -75,6 +133,7 @@ export function FiltriStampa({ filtri, onChange, reparti, dipendenti, conteggio 
           <option value="scaduti">Solo scaduti</option>
           <option value="90">Scaduti + entro 90 giorni</option>
           <option value="180">Scaduti + entro 6 mesi</option>
+          <option value="270">Scaduti + entro 9 mesi</option>
           <option value="365">Scaduti + entro 1 anno</option>
         </select>
       </label>
