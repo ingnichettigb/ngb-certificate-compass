@@ -49,7 +49,7 @@ export function SelezioneReparto({
   const profili = reparto
     ? sottoreparti.filter((s) => s.reparto_id === reparto.id && s.attivo)
     : [];
-  const valoreProfilo = (s: { codice: string | null; nome: string }) => s.codice || s.nome;
+  const valoreProfilo = (s: { codice: string | null; nome: string }) => s.nome;
   const profiloCorrente = (corrente.sottoreparto ?? "").trim();
   const classeCorrente = (corrente.classe_concorso ?? "").trim().toUpperCase();
   const classiAttive = classi.filter((c) => c.attivo || c.codice === classeCorrente);
