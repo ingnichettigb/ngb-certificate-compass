@@ -609,7 +609,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                       onClick={() => handleOrdina("nominativo")}
                       className="cursor-pointer hover:text-primary transition-colors flex items-center"
                     >
-                      COGNOME E NOME {renderFreccia("nominativo")}
+                      N° · COGNOME E NOME {renderFreccia("nominativo")}
                     </span>
 
                     <button
@@ -719,7 +719,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                   </td>
                 </tr>
               ) : (
-                listaElaborata.map((dip) => {
+                listaElaborata.map((dip, n) => {
                   const isAttiva = rigaSelezionata === dip.id;
                   const funzione = [dip.reparto, dip.sottoreparto, dip.classe_concorso, dip.materia].filter(Boolean).join(" - ") || "—";
                   const ruoliDelDip = ruoliSicurezzaAssegnati(dip.id, ruoli, mappaAssegnazioni);
@@ -743,6 +743,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                         }`}
                       >
                         <div className="truncate">
+                          <span className="mr-1.5 inline-block min-w-[1.75rem] text-right font-mono text-[11px] font-normal text-muted-foreground">{n + 1}.</span>
                           {dip.cognome} {dip.nome}
                         </div>
                         <div className="font-mono text-[11px] text-muted-foreground">{dip.codice_fiscale}</div>
