@@ -12,6 +12,7 @@ import { IconaAzione } from "./IconaAzione";
 
 export function RigaCoda({
   r,
+  numero,
   selezionata,
   archiviando,
   inviandoEmail,
@@ -25,6 +26,7 @@ export function RigaCoda({
   onCancella,
 }: {
   r: CodaRiga;
+  numero?: number;
   selezionata: boolean;
   archiviando: boolean;
   inviandoEmail: boolean;
@@ -42,6 +44,7 @@ export function RigaCoda({
           <td className="p-2">
             <Checkbox checked={selezionata} onCheckedChange={() => onToggle()} />
           </td>
+          <td className="p-2 text-center font-mono text-xs text-muted-foreground">{numero}</td>
           <td className="p-2">
             <div className="font-medium">{r.cognome} {r.nome}</div>
             <div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div>

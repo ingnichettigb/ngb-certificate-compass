@@ -67,9 +67,9 @@ export function CodaLavoro({
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0 max-h-[65vh] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-muted text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="p-2">
                   <Checkbox
@@ -77,6 +77,7 @@ export function CodaLavoro({
                     onCheckedChange={(v) => onSelezionaTutti(Boolean(v))}
                   />
                 </th>
+                <th className="p-2 w-10 text-center">N°</th>
                 <th className="p-2">Lavoratore</th>
                 <th className="p-2">Corso</th>
                 <th className="p-2">Data</th>
@@ -88,14 +89,15 @@ export function CodaLavoro({
             <tbody>
               {righeCoda.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
                     Nessuna valutazione in coda
                   </td>
                 </tr>
               )}
-              {righeCoda.map((r) => (
+              {righeCoda.map((r, i) => (
                 <RigaCoda
                   key={r.id}
+                  numero={i + 1}
                   r={r}
                   selezionata={selezionati.has(r.id)}
                   archiviando={archiviando}

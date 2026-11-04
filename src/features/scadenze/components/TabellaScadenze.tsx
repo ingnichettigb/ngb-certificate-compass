@@ -24,6 +24,7 @@ export function TabellaScadenze({
       <table className="w-full min-w-[850px] text-sm">
         <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
           <tr>
+            <th className="w-12 px-3 py-2 text-center">N°</th>
             <IntestazioneOrdinabile colonna="dipendente" titolo="Dipendente" colonnaAttiva={sortCol} direzione={sortDir} onOrdina={onOrdina} />
             <IntestazioneOrdinabile colonna="codice_fiscale" titolo="Codice fiscale" colonnaAttiva={sortCol} direzione={sortDir} onOrdina={onOrdina} />
             <IntestazioneOrdinabile colonna="reparto" titolo="Reparto" colonnaAttiva={sortCol} direzione={sortDir} onOrdina={onOrdina} />
@@ -33,13 +34,13 @@ export function TabellaScadenze({
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {righe.map((a) => (
-            <RigaScadenza key={a.id} a={a} />
+          {righe.map((a, i) => (
+            <RigaScadenza key={a.id} a={a} numero={i + 1} />
           ))}
           {!righe.length && (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-3 py-12 text-center text-muted-foreground"
               >
                 Nessun attestato in questa vista
