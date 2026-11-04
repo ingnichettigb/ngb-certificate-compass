@@ -2,6 +2,7 @@
  * File:      RigaCoda.tsx
  * Percorso:  src/features/operatore/components/RigaCoda.tsx
  * Una riga della coda di lavoro: dati del lavoratore, stato e azioni.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Archive, Copy, Download, Edit3, Mail, Trash2, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

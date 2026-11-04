@@ -2,6 +2,7 @@
  * File:      TabellaReparti.tsx
  * Percorso:  src/components/tabella-reparti/TabellaReparti.tsx
  * Tabella dei reparti in modifica diretta (contenuto della finestra "Tabella reparti").
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Loader2 } from "lucide-react";
 import {

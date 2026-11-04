@@ -2,6 +2,7 @@
  * File:      CodaLavoro.tsx
  * Percorso:  src/features/operatore/components/CodaLavoro.tsx
  * Tabella della coda di lavoro con le azioni sui selezionati.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Archive, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";

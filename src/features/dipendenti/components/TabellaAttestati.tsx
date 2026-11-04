@@ -14,6 +14,7 @@
  *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
  *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, non trovato, bloccato).
  *   - Rev 12 (2026-10-30 20:30): Toast condivisi (avvisi-cartella) al posto di quelli locali.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";

@@ -6,6 +6,7 @@
  *   rev 1 — 28/10/2026 17:40 — Vista Piano Corsi aggregata Reparto x Corso con accordion nominativo ed export.
  *   rev 2 — 28/10/2026 21:50 — Corretto il tipo in ingresso: usa Attestato reale (campi dipendenti/tipi_corso)
  *                              invece del tipo inesistente RigaScadenza; stato scadenza calcolato qui.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState } from "react";
 import { Building2, ChevronDown, ChevronUp, Download, GraduationCap, Users } from "lucide-react";

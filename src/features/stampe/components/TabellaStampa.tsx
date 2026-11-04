@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Tabella righe attestati per i modelli di stampa.
  *   rev 2 — 03/11/2026 20:50 — Pulsante ✕ su ogni intestazione per togliere la colonna (non stampato).
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { X } from "lucide-react";
 import { cella, INTESTAZIONI, type Colonna, type RigaStampa } from "../dati-stampa";

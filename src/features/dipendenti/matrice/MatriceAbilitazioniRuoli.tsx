@@ -13,6 +13,7 @@
  *   - Rev 8 (2026-11-01 21:55): Navigazione alfabetica rapida: salto da tastiera e barre alfabetiche.
  *   - Rev 9 (2026-11-02 10:25): Assegnazione ruoli da matrice: risoluzione automatica ruolo-corso con mappatura-ruoli-corsi.
  *   - Rev 10 (2026-11-02 10:48): Passaggio dipendenti={listaElaborata} alle barre alfabetiche per conteggio e protezione runtime.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";

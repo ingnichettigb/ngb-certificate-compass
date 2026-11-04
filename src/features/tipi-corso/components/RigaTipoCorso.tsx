@@ -5,6 +5,7 @@
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Sfondo per argomento e blocco dei corsi standard del programma.
  * - Rev 4: 2026-10-31 13:40 - Corsi standard modificabili (solo eliminazione bloccata).
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

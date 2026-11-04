@@ -2,6 +2,7 @@
  * File:      RigaScadenza.tsx
  * Percorso:  src/features/scadenze/components/RigaScadenza.tsx
  * Una riga della tabella scadenze.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { formatData, scaduto, type Attestato } from "@/lib/api";
 

@@ -2,6 +2,7 @@
  * File:      TabellaScadenze.tsx
  * Percorso:  src/features/scadenze/components/TabellaScadenze.tsx
  * Tabella delle scadenze con intestazioni ordinabili.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { type ColonnaSort, type DirezioneSort } from "../types";
 import { RigaScadenza } from "./RigaScadenza";

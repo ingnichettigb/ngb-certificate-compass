@@ -7,6 +7,7 @@
  * profili ATA e nuovi ingressi. Non cancella nulla e non crea classi nuove.
  * Revisioni:
  *   rev 1 — 03/11/2026 14:30 — Prima stesura.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

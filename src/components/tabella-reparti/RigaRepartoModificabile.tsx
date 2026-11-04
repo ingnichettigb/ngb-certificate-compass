@@ -2,6 +2,7 @@
  * File:      RigaRepartoModificabile.tsx
  * Percorso:  src/components/tabella-reparti/RigaRepartoModificabile.tsx
  * Riga della tabella reparti: ogni cella si modifica sul posto e si salva da sola.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

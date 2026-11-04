@@ -4,6 +4,7 @@
  * Tabella completa dei tipi di corso: intestazioni, righe, aggiunta e note.
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
