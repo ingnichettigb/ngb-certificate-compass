@@ -5,7 +5,7 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Tabella righe attestati per i modelli di stampa.
  *   rev 2 — 03/11/2026 20:50 — Pulsante ✕ su ogni intestazione per togliere la colonna (non stampato).
- * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ *   rev 3 — 04/11/2026 10:20 — Intestazione fissa sticky con sfondo opaco per scorrimento record.
  */
 import { X } from "lucide-react";
 import { cella, INTESTAZIONI, type Colonna, type RigaStampa } from "../dati-stampa";
@@ -19,11 +19,16 @@ type Props = {
 export function TabellaStampa({ righe, colonne, onRimuoviColonna }: Props) {
   return (
     <table className="w-full border-collapse text-[11px]">
-      <thead className="table-header-group">
+      <thead className="table-header-group sticky top-0 z-10 bg-background print:static">
         <tr>
-          <th className="w-8 border border-foreground/60 bg-muted px-1.5 py-1 text-center font-semibold">N°</th>
+          <th className="sticky top-0 z-10 w-8 border border-foreground/60 bg-muted px-1.5 py-1 text-center font-semibold print:static">
+            N°
+          </th>
           {colonne.map((c) => (
-            <th key={c} className="border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold">
+            <th
+              key={c}
+              className="sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static"
+            >
               <div className="flex items-center justify-between gap-1">
                 <span>{INTESTAZIONI[c]}</span>
                 {onRimuoviColonna && colonne.length > 1 && (
