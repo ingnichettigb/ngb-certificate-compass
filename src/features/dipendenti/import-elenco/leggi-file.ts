@@ -6,6 +6,7 @@
  * le righe Nominativo / Codice fiscale / Funzione. Nessun invio a server esterni.
  * Revisioni:
  *   rev 1 — 03/11/2026 14:30 — Prima stesura.
+ *   rev 2 — 04/11/2026 11:00 — Esclusione colonne luogo/comune/nascita dal campo funzione.
  */
 import type { RigaGrezza } from "./analisi-elenco";
 
@@ -16,20 +17,40 @@ export function tabellaInRighe(tabella: string[][]): RigaGrezza[] {
   const pulita = tabella.map((r) => r.map((c) => String(c ?? "").replace(/\u00a0/g, " ").trim()));
   const intest = pulita.findIndex((r) => r.some((c) => /codice\s*fiscale|^c\.?f\.?$/i.test(c)));
   let iCf = -1, iNom = -1, iFun = -1;
+
   if (intest >= 0) {
     const h = pulita[intest] ?? [];
     iCf = h.findIndex((c) => /codice\s*fiscale|^c\.?f\.?$/i.test(c));
     iNom = h.findIndex((c) => /nome|nominativo/i.test(c) && !/fiscale/i.test(c));
-    iFun = h.findIndex((c) => /funzione|reparto|ruolo|classe/i.test(c));
+    iFun = h.findIndex(
+      (c) =>
+        /funzione|reparto|ruolo|classe|mansione|profilo/i.test(c) &&
+        !/luogo|nascita|comune|residenza|provincia/i.test(c),
+    );
   }
+
   const dati = intest >= 0 ? pulita.slice(intest + 1) : pulita;
   const out: RigaGrezza[] = [];
+
   for (const r of dati) {
     const cfIdx = iCf >= 0 ? iCf : r.findIndex((c) => CF_RE.test(c));
     if (cfIdx < 0 || !r[cfIdx]) continue;
     const nomIdx = iNom >= 0 ? iNom : cfIdx === 0 ? 1 : 0;
-    const funIdx = iFun >= 0 ? iFun : cfIdx + 1;
-    out.push({ nominativo: r[nomIdx] ?? "", cf: r[cfIdx], funzione: r[funIdx] ?? "" });
+    let funIdx = iFun >= 0 ? iFun : cfIdx + 1;
+
+    // Se l'intestazione della colonna era un luogo di nascita o residenza, non usarla come funzione
+    if (intest >= 0 && iFun < 0 && funIdx < (pulita[intest]?.length ?? 0)) {
+      const intestCol = pulita[intest]?.[funIdx] ?? "";
+      if (/luogo|nascita|comune|residenza|prov/i.test(intestCol)) {
+        funIdx = -1;
+      }
+    }
+
+    out.push({
+      nominativo: r[nomIdx] ?? "",
+      cf: r[cfIdx],
+      funzione: funIdx >= 0 ? (r[funIdx] ?? "") : "",
+    });
   }
   return out;
 }
