@@ -175,13 +175,14 @@ export function TabellaAttestati({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {righe.map((r) => {
+            {righe.map((r, idx) => {
               if (r.isAttestato && r.attestato) {
                 const a = r.attestato;
                 const haFile = Boolean(a.url_foto_fronte);
 
                 return (
                   <tr key={a.id} className={doppioni.has(a.id) ? "bg-warning/20 hover:bg-warning/30" : "hover:bg-muted/40"}>
+                    <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium">
                       {doppioni.has(a.id) && (
                         <span className="mr-1.5 rounded border border-warning bg-warning/30 px-1.5 py-0.5 text-[10px] font-semibold" title="Stesso corso e stessa data registrati più volte: verifica e cancella la copia superflua">
@@ -297,6 +298,7 @@ export function TabellaAttestati({
                 const i = r.integrazione;
                 return (
                   <tr key={r.id} className="hover:bg-muted/40">
+                    <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium">Integrazione DVR — {i.descrizione}</td>
                     <td className="px-3 py-2">{formatData(i.data_richiesta)}</td>
                     <td className="px-3 py-2 text-muted-foreground">—</td>
