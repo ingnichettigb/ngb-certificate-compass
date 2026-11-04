@@ -2,6 +2,7 @@
  * File:      RigaCoda.tsx
  * Percorso:  src/features/operatore/components/RigaCoda.tsx
  * Una riga della coda di lavoro: dati del lavoratore, stato e azioni.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Archive, Copy, Download, Edit3, Mail, Trash2, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { IconaAzione } from "./IconaAzione";
 
 export function RigaCoda({
   r,
+  numero,
   selezionata,
   archiviando,
   inviandoEmail,
@@ -25,6 +27,7 @@ export function RigaCoda({
   onCancella,
 }: {
   r: CodaRiga;
+  numero?: number;
   selezionata: boolean;
   archiviando: boolean;
   inviandoEmail: boolean;
@@ -42,6 +45,7 @@ export function RigaCoda({
           <td className="p-2">
             <Checkbox checked={selezionata} onCheckedChange={() => onToggle()} />
           </td>
+          <td className="p-2 text-center font-mono text-xs text-muted-foreground">{numero}</td>
           <td className="p-2">
             <div className="font-medium">{r.cognome} {r.nome}</div>
             <div className="font-mono text-xs text-muted-foreground">{r.codice_fiscale}</div>

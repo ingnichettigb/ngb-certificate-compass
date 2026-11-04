@@ -14,6 +14,7 @@
  *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
  *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, non trovato, bloccato).
  *   - Rev 12 (2026-10-30 20:30): Toast condivisi (avvisi-cartella) al posto di quelli locali.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -166,6 +167,7 @@ export function TabellaAttestati({
         <table className="w-full min-w-[660px] text-sm">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
             <tr>
+              <th className="w-12 px-3 py-2 text-center">N°</th>
               <IntestazioneOrdinabile colonna="corso" titolo="Corso" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="data" titolo="Data" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="scadenza" titolo="Scadenza" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
@@ -174,13 +176,14 @@ export function TabellaAttestati({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {righe.map((r) => {
+            {righe.map((r, idx) => {
               if (r.isAttestato && r.attestato) {
                 const a = r.attestato;
                 const haFile = Boolean(a.url_foto_fronte);
 
                 return (
                   <tr key={a.id} className={doppioni.has(a.id) ? "bg-warning/20 hover:bg-warning/30" : "hover:bg-muted/40"}>
+                    <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium">
                       {doppioni.has(a.id) && (
                         <span className="mr-1.5 rounded border border-warning bg-warning/30 px-1.5 py-0.5 text-[10px] font-semibold" title="Stesso corso e stessa data registrati più volte: verifica e cancella la copia superflua">
@@ -296,6 +299,7 @@ export function TabellaAttestati({
                 const i = r.integrazione;
                 return (
                   <tr key={r.id} className="hover:bg-muted/40">
+                    <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium">Integrazione DVR — {i.descrizione}</td>
                     <td className="px-3 py-2">{formatData(i.data_richiesta)}</td>
                     <td className="px-3 py-2 text-muted-foreground">—</td>

@@ -7,6 +7,7 @@
  * profili ATA e nuovi ingressi. Non cancella nulla e non crea classi nuove.
  * Revisioni:
  *   rev 1 — 03/11/2026 14:30 — Prima stesura.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -143,13 +144,14 @@ export function DialogImportaElenco({ open, onClose }: { open: boolean; onClose:
         </div>
 
         {proposte.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="max-h-[55vh] overflow-auto rounded-lg border border-border">
             <p className="px-3 py-2 text-xs text-muted-foreground">
               {nomeFile}: {proposte.length} righe, {proposte.filter((p) => !p.dipendenteId).length} nuovi ingressi
             </p>
             <table className="w-full text-sm">
-              <thead className="bg-muted text-left">
+              <thead className="sticky top-0 z-10 bg-muted text-left">
                 <tr>
+                  <th className="p-2 w-10 text-center">N°</th>
                   <th className="p-2" />
                   <th className="p-2">Nominativo</th>
                   <th className="p-2">Codice fiscale</th>
@@ -158,8 +160,9 @@ export function DialogImportaElenco({ open, onClose }: { open: boolean; onClose:
                 </tr>
               </thead>
               <tbody>
-                {proposte.map((p) => (
+                {proposte.map((p, n) => (
                   <tr key={p.cf} className={`border-t border-border ${p.dipendenteId ? "" : "bg-amber-500/10"}`}>
+                    <td className="p-2 text-center font-mono text-xs text-muted-foreground">{n + 1}</td>
                     <td className="p-2">
                       <Checkbox
                         checked={!!spunte[p.cf]}

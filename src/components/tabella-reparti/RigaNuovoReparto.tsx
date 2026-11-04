@@ -2,6 +2,7 @@
  * File:      RigaNuovoReparto.tsx
  * Percorso:  src/components/tabella-reparti/RigaNuovoReparto.tsx
  * Ultima riga della tabella reparti: nome e ordine del reparto da inserire.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ interface Props {
 export function RigaNuovoReparto({ nome, ordine, onNome, onOrdine, onInserisci, occupato }: Props) {
   return (
     <TableRow>
+      <TableCell />
       <TableCell className="p-1.5">
         <Input
           value={nome}

@@ -5,6 +5,7 @@
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Sfondo per argomento e blocco dei corsi standard del programma.
  * - Rev 4: 2026-10-31 13:40 - Corsi standard modificabili (solo eliminazione bloccata).
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { assegnaGruppoArgomento, isCorsoProtetto } from "../tipi-raggruppamento"
 
 export function RigaTipoCorso({
   c,
+  numero,
   indice,
   totale,
   occupata,
@@ -31,6 +33,7 @@ export function RigaTipoCorso({
   onRilascia,
 }: {
   c: TipoCorso;
+  numero?: number;
   indice: number;
   totale: number;
   occupata: boolean;
@@ -63,6 +66,7 @@ export function RigaTipoCorso({
         onRilascia();
       }}
     >
+      <TableCell className="p-1.5 text-center font-mono text-xs text-muted-foreground">{numero}</TableCell>
       <TableCell className="p-1.5">
         <div className="flex items-center gap-0.5">
           <button

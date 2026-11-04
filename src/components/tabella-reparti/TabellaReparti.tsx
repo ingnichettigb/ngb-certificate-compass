@@ -2,6 +2,7 @@
  * File:      TabellaReparti.tsx
  * Percorso:  src/components/tabella-reparti/TabellaReparti.tsx
  * Tabella dei reparti in modifica diretta (contenuto della finestra "Tabella reparti").
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { Loader2 } from "lucide-react";
 import {
@@ -38,10 +39,11 @@ export function TabellaReparti() {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-auto rounded-lg border border-border">
+      <div className="max-h-[60vh] overflow-auto rounded-lg border border-border [&>div]:overflow-visible">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
+              <TableHead className="w-10 text-center">N°</TableHead>
               <TableHead className="min-w-[160px]">Nome</TableHead>
               <TableHead className="w-20">Ordine</TableHead>
               <TableHead className="w-28 text-center">Nel modulo</TableHead>
@@ -50,9 +52,10 @@ export function TabellaReparti() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {t.reparti.map((r) => (
+            {t.reparti.map((r, n) => (
               <RigaRepartoModificabile
                 key={r.id}
+                numero={n + 1}
                 reparto={r}
                 occupato={t.busy === r.id}
                 onSalva={(campo, valore) => t.salvaCampo(r, campo, valore)}
@@ -61,7 +64,7 @@ export function TabellaReparti() {
             ))}
             {!t.reparti.length && (
               <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
                   Nessun reparto in tabella.
                 </TableCell>
               </TableRow>

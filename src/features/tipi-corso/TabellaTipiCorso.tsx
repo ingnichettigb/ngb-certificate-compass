@@ -4,6 +4,7 @@
  * Tabella completa dei tipi di corso: intestazioni, righe, aggiunta e note.
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
+ * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
@@ -126,6 +127,7 @@ export function TabellaTipiCorso() {
         <Table className="min-w-[900px]">
           <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
+              <TableHead className="w-10 text-center">N°</TableHead>
               <TableHead className="w-8" />
               {intest("codice", "Codice", "w-32 min-w-[118px]")}
               {intest("nome_corso", "Corso", "min-w-[220px]")}
@@ -139,11 +141,12 @@ export function TabellaTipiCorso() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {righe.map((c) => {
+            {righe.map((c, n) => {
               const i = corsi.findIndex((x) => x.id === c.id);
               return (
               <RigaTipoCorso
                 key={c.id}
+                numero={n + 1}
                 c={c}
                 indice={i}
                 totale={corsi.length}
@@ -162,7 +165,7 @@ export function TabellaTipiCorso() {
             })}
             {!corsi.length && (
               <TableRow>
-                <TableCell colSpan={10} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={11} className="py-6 text-center text-sm text-muted-foreground">
                   Nessun corso in tabella.
                 </TableCell>
               </TableRow>
