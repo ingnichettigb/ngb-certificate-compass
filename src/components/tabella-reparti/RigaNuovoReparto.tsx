@@ -20,6 +20,7 @@ interface Props {
 export function RigaNuovoReparto({ nome, ordine, onNome, onOrdine, onInserisci, occupato }: Props) {
   return (
     <TableRow>
+      <TableCell />
       <TableCell className="p-1.5">
         <Input
           value={nome}

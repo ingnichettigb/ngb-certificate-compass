@@ -136,11 +136,11 @@ export function VistaPianoCorsi({ righe }: Props) {
           Nessun corso con fabbisogno formativo urgente da pianificare per il filtro selezionato.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground">
+        <div className="max-h-[calc(100vh-260px)] overflow-auto rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]">
+          <table className="w-full min-w-[850px] text-left text-sm">
+            <thead className="sticky top-0 z-10 border-b border-border bg-muted text-xs font-semibold text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">Reparto</th>
+                <th className="px-4 py-3">N° · Reparto</th>
                 <th className="px-4 py-3">Corso Formativo</th>
                 <th className="px-4 py-3 text-center">🔴 Scaduti</th>
                 <th className="px-4 py-3 text-center">🟡 In Scadenza (90gg)</th>
@@ -149,7 +149,7 @@ export function VistaPianoCorsi({ righe }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtrati.map((g) => {
+              {filtrati.map((g, n) => {
                 const k = `${g.reparto}|||${g.corso}`;
                 const aperta = chiaveEspansa === k;
                 return (
@@ -157,6 +157,7 @@ export function VistaPianoCorsi({ righe }: Props) {
                     <td colSpan={6} className="p-0">
                       <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/20">
                         <div className="flex items-center gap-2 font-medium">
+                          <span className="w-6 text-right font-mono text-xs text-muted-foreground">{n + 1}</span>
                           <Building2 className="size-4 text-muted-foreground" />
                           <span>{g.reparto}</span>
                         </div>

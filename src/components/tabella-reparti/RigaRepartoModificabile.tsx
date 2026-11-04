@@ -12,14 +12,16 @@ import type { Reparto } from "@/lib/api";
 
 interface Props {
   reparto: Reparto;
+  numero?: number;
   occupato: boolean;
   onSalva: <K extends keyof Reparto>(campo: K, valore: Reparto[K]) => void;
   onRimuovi: () => void;
 }
 
-export function RigaRepartoModificabile({ reparto: r, occupato, onSalva, onRimuovi }: Props) {
+export function RigaRepartoModificabile({ reparto: r, numero, occupato, onSalva, onRimuovi }: Props) {
   return (
     <TableRow className={occupato ? "opacity-60" : ""}>
+      <TableCell className="p-1.5 text-center font-mono text-xs text-muted-foreground">{numero}</TableCell>
       <TableCell className="p-1.5">
         <Input
           defaultValue={r.nome}

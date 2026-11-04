@@ -17,6 +17,7 @@ import { assegnaGruppoArgomento, isCorsoProtetto } from "../tipi-raggruppamento"
 
 export function RigaTipoCorso({
   c,
+  numero,
   indice,
   totale,
   occupata,
@@ -31,6 +32,7 @@ export function RigaTipoCorso({
   onRilascia,
 }: {
   c: TipoCorso;
+  numero?: number;
   indice: number;
   totale: number;
   occupata: boolean;
@@ -63,6 +65,7 @@ export function RigaTipoCorso({
         onRilascia();
       }}
     >
+      <TableCell className="p-1.5 text-center font-mono text-xs text-muted-foreground">{numero}</TableCell>
       <TableCell className="p-1.5">
         <div className="flex items-center gap-0.5">
           <button
