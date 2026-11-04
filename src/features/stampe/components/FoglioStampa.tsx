@@ -4,6 +4,7 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Foglio A4 con intestazione ditta, regole di pagina e firme.
+ *   rev 2 — 04/11/2026 10:20 — Contenitore anteprima ad altezza fissa con scorrimento verticale e barra orizzontale fissa.
  */
 import type { ReactNode } from "react";
 import type { DittaRecord } from "@/lib/api/ditta";
@@ -56,7 +57,7 @@ export function Firme({ ditta, lavoratore }: { ditta: DittaRecord | undefined; l
 
 export function FoglioStampa({ titolo, sottotitolo, orizzontale, ditta, mostraFirme, children }: Props) {
   return (
-    <div className="overflow-auto rounded-lg border border-border bg-muted/40 p-4 print:overflow-visible print:border-0 print:bg-transparent print:p-0">
+    <div className="max-h-[calc(100vh-140px)] min-h-[360px] overflow-auto rounded-lg border border-border bg-muted/40 p-4 print:max-h-none print:min-h-0 print:overflow-visible print:border-0 print:bg-transparent print:p-0">
       <style>{`@media print { @page { size: A4 ${orizzontale ? "landscape" : "portrait"}; margin: 12mm; } }`}</style>
       <div
         className="foglio-stampa mx-auto bg-background p-8 text-foreground shadow-md print:w-auto print:p-0 print:shadow-none"
