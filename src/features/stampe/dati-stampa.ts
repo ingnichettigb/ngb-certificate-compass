@@ -6,6 +6,7 @@
  *   rev 1 — 02/11/2026 11:10 — Filtri e calcolo righe per le stampe (registro, gruppi, scadenze, schede, reparti).
  *   rev 2 — 03/11/2026 20:50 — Filtri ruolo/categoria/materia, scadenza 9 mesi, modello «Elenco lavoratori in servizio»,
  *                              colonne predefinite per modello (rimovibili in anteprima).
+ *   rev 3 — 04/11/2026 10:20 — Spazio firme disattivato di default (mostraFirme: false).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -46,7 +47,7 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   finestra: "tutti",
   includiCessati: false,
   soloUltimo: true,
-  mostraFirme: true,
+  mostraFirme: false,
 };
 
 export type RigaStampa = {
