@@ -3,15 +3,25 @@
  * Percorso:  src/features/dipendenti/import-elenco/analisi-elenco.ts
  * Creato:    03/11/2026
  * Analizza le righe di un elenco Word/Excel (Nominativo, CF, Funzione) e propone
- * per ciascun codice fiscale: cessazione, classe di concorso (Docente), profilo ATA,
- * nuovo ingresso. Logica pura, senza accesso al database.
+ * per ciascun codice fiscale: cessazione, profilo ATA, classe di concorso (Docente),
+ * o nuovo ingresso. Logica pura, senza accesso al database.
  * Revisioni:
  *   rev 1 — 03/11/2026 14:30 — Prima stesura.
+ *   rev 2 — 04/11/2026 10:55 — Catalogo profili ATA (CS, AA, AT, DSGA), tipo predefinito ATA/Docente e rimozione falsi positivi per città.
  */
 
 export type RigaGrezza = { nominativo: string; cf: string; funzione: string };
 
 export type TipoProposta = "cessazione" | "docente" | "ata" | "da_verificare";
+
+export const PROFILI_ATA = [
+  { codice: "CS", nome: "Collaboratore scolastico" },
+  { codice: "AA", nome: "Assistente amministrativo" },
+  { codice: "AT", nome: "Assistente tecnico" },
+  { codice: "DSGA", nome: "Direttore dei servizi generali e amministrativi" },
+] as const;
+
+export type ProfiloAta = (typeof PROFILI_ATA)[number]["nome"];
 
 export type Proposta = {
   riga: RigaGrezza;
@@ -56,12 +66,19 @@ export function separaNominativo(n: string): { cognome: string; nome: string } {
   return { cognome: parti[0] ?? "", nome: parti.slice(1).join(" ") };
 }
 
-const ATA: { re: RegExp; sotto: string }[] = [
+const REGEX_ATA: { re: RegExp; sotto: ProfiloAta }[] = [
   { re: /\bD\.?S\.?G\.?A\.?\b|DIRETTORE\s+(DEI\s+)?SERVIZI/, sotto: "Direttore dei servizi generali e amministrativi" },
   { re: /COLL(\.|ABORATORE)?\s*SCOL|\bC\.?S\.?\b/, sotto: "Collaboratore scolastico" },
   { re: /ASS(\.|ISTENTE)?\s*AMM|\bA\.?A\.?\b/, sotto: "Assistente amministrativo" },
   { re: /ASS(\.|ISTENTE)?\s*TEC|\bA\.?T\.?\b/, sotto: "Assistente tecnico" },
 ];
+
+/** Riconosce la dicitura di profilo ATA dal testo, oppure restituisce null. */
+export function trovaProfiloAta(testo: string): ProfiloAta | null {
+  const t = testo.toUpperCase();
+  const trovato = REGEX_ATA.find((a) => a.re.test(t));
+  return trovato ? trovato.sotto : null;
+}
 
 /** Cerca nel testo un codice classe esistente, senza mai crearne di nuovi. */
 export function trovaClasse(testo: string, codici: string[]): { classe: string; resto: string } | null {
@@ -95,40 +112,72 @@ export function analizzaRighe(
   righe: RigaGrezza[],
   esistenti: { id: string; codice_fiscale: string }[],
   codiciClasse: string[],
+  tipoPredefinito: "ata" | "docente" | null = null,
+  profiloAtaDefault: ProfiloAta = "Collaboratore scolastico",
 ): Proposta[] {
   const perCf = new Map(esistenti.map((d) => [normalizzaCf(d.codice_fiscale), d.id]));
   const out: Proposta[] = [];
+
   for (const riga of righe) {
     const cf = normalizzaCf(riga.cf);
     if (!cf) continue;
     const { cognome, nome } = separaNominativo(riga.nominativo);
     const funzione = riga.funzione.replace(/\u00a0/g, " ").trim();
     const F = funzione.toUpperCase();
+
     const base: Proposta = {
-      riga, cf, cognome, nome, tipo: "da_verificare",
+      riga,
+      cf,
+      cognome,
+      nome,
+      tipo: "da_verificare",
       dipendenteId: perCf.get(cf) ?? null,
-      classe: null, materia: null, sottorepartoAta: null, nota: "",
+      classe: null,
+      materia: null,
+      sottorepartoAta: null,
+      nota: "",
     };
-    if (!cfValido(cf)) base.nota = "Codice fiscale non valido";
+
+    if (!cfValido(cf)) {
+      base.nota = "Codice fiscale non valido";
+    }
+
     if (/NON\s+PI[UÙ]\s+IN\s+SERVIZIO|CESSAT/.test(F)) {
       base.tipo = "cessazione";
+    } else if (tipoPredefinito === "ata") {
+      base.tipo = "ata";
+      const riconosciuto = trovaProfiloAta(funzione);
+      base.sottorepartoAta = riconosciuto || profiloAtaDefault;
+    } else if (tipoPredefinito === "docente") {
+      base.tipo = "docente";
+      const cl = trovaClasse(funzione, codiciClasse);
+      if (cl) {
+        base.classe = cl.classe;
+        base.materia = cl.resto || null;
+      } else if (funzione) {
+        base.nota = `Classe "${funzione}" non trovata: sceglila a mano`;
+      }
     } else if (funzione) {
-      const ata = ATA.find((a) => a.re.test(F));
+      const ata = trovaProfiloAta(funzione);
       const cl = ata ? null : trovaClasse(funzione, codiciClasse);
       if (ata) {
         base.tipo = "ata";
-        base.sottorepartoAta = ata.sotto;
+        base.sottorepartoAta = ata;
       } else if (cl) {
         base.tipo = "docente";
         base.classe = cl.classe;
         base.materia = cl.resto || null;
       } else {
-        base.nota ||= `Classe "${funzione}" non presente nel catalogo: sceglila a mano`;
+        base.tipo = "ata";
+        base.sottorepartoAta = profiloAtaDefault;
       }
     } else {
-      base.nota ||= "Funzione vuota";
+      base.tipo = "ata";
+      base.sottorepartoAta = profiloAtaDefault;
     }
+
     out.push(base);
   }
+
   return out;
 }
