@@ -2,9 +2,16 @@
  * File:      DialogCaricamento.tsx
  * Percorso:  src/features/documenti/DialogCaricamento.tsx
  * Finestra «Aggiungi attestato PDF»: campi, trascinamento del file, anteprima e conferma.
+ *
+ * Revisioni:
+ *   - Rev 1 (2026-10-20 10:00): Creazione dialog caricamento attestato PDF.
+ *   - Rev 2 (2026-10-30 20:30): Salvataggio locale e gestione permessi cartelle.
+ *   - Rev 3 (2026-11-04 08:00): Selezione corsi dal catalogo completo (inclusi Privacy e Covid),
+ *            badge colorati per argomento, codice standard e ricalcolo automatico della scadenza.
  */
 import { SceltaCartellaSalvataggio } from "./SceltaCartellaSalvataggio";
 import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TIPI_ATTESTATO_PDF, type Dipendente } from "@/lib/api";
+import { getTipiCorso, type TipoCorso, type Dipendente } from "@/lib/api";
+import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { useCaricamentoAttestato } from "./hooks/useCaricamentoAttestato";
 import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
 import { useStatoCartelle } from "@/features/cartelle/useStatoCartelle";
@@ -60,6 +68,34 @@ export function DialogCaricamento({
   } = useCaricamentoAttestato({ dipendente, open, onOpenChange, onDone });
   const { stato: statoCartelle, aggiorna: aggiornaStatoCartelle } = useStatoCartelle();
 
+  const { data: corsi = [], isLoading: isLoadingCorsi } = useQuery({
+    queryKey: ["tipi_corso"],
+    queryFn: getTipiCorso,
+  });
+
+  function ricalcolaScadenza(nomeCorso: string, dataRif: string) {
+    const c = corsi.find((x) => x.nome_corso === nomeCorso);
+    if (!c || !dataRif || !c.durata_validita_anni) return;
+    const d = new Date(dataRif);
+    if (isNaN(d.getTime())) return;
+    d.setFullYear(d.getFullYear() + c.durata_validita_anni);
+    setScadenza(d.toISOString().slice(0, 10));
+  }
+
+  function cambiaTipo(nuovoTipo: string) {
+    setTipo(nuovoTipo);
+    if (dataCorso && nuovoTipo !== "Altro") {
+      ricalcolaScadenza(nuovoTipo, dataCorso);
+    }
+  }
+
+  function cambiaDataCorso(nuovaData: string) {
+    setDataCorso(nuovaData);
+    if (nuovaData && tipo && tipo !== "Altro") {
+      ricalcolaScadenza(tipo, nuovaData);
+    }
+  }
+
   async function autorizzaCartelleLocali() {
     await autorizzaCartelle("readwrite");
     await aggiornaStatoCartelle();
@@ -74,6 +110,8 @@ export function DialogCaricamento({
     await aggiornaStatoCartelle();
   }
 
+  const corsoSelezionato = corsi.find((c) => c.nome_corso === tipo);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-2xl">
@@ -86,32 +124,71 @@ export function DialogCaricamento({
 
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label>Tipo di attestato</Label>
-              <Select value={tipo} onValueChange={setTipo}>
+              <Select value={tipo} onValueChange={cambiaTipo}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleziona…" />
+                  <SelectValue placeholder="Seleziona corso dal catalogo…">
+                    {corsoSelezionato ? (
+                      <span className="flex items-center gap-2 truncate">
+                        {corsoSelezionato.codice && (
+                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-primary">
+                            {corsoSelezionato.codice}
+                          </span>
+                        )}
+                        <span className="truncate font-medium">{corsoSelezionato.nome_corso}</span>
+                      </span>
+                    ) : tipo === "Altro" ? (
+                      <span className="font-medium">Altro (specifica sotto)</span>
+                    ) : null}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
-                  {TIPI_ATTESTATO_PDF.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-80 w-[min(92vw,560px)]">
+                  {isLoadingCorsi ? (
+                    <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" /> Caricamento corsi…
+                    </div>
+                  ) : (
+                    <>
+                      {corsi.map((c: TipoCorso) => {
+                        const gruppo = assegnaGruppoArgomento(c);
+                        return (
+                          <SelectItem key={c.id} value={c.nome_corso} className="cursor-pointer py-2">
+                            <div className="flex items-center gap-2">
+                              {c.codice && (
+                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-primary">
+                                  {c.codice}
+                                </span>
+                              )}
+                              <span className="font-medium text-foreground">{c.nome_corso}</span>
+                              <span className={`ml-auto rounded px-1.5 py-0.5 text-xs font-medium ${gruppo.coloreSfondo} ${gruppo.coloreTesto}`}>
+                                {gruppo.titolo}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                      <SelectItem value="Altro" className="cursor-pointer border-t border-border py-2 font-semibold">
+                        Altro (corso fuori catalogo)
+                      </SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1.5">
               <Label>Data rilascio / emanazione</Label>
               <Input
                 type="date"
                 value={dataCorso}
-                onChange={(e) => setDataCorso(e.target.value)}
+                onChange={(e) => cambiaDataCorso(e.target.value)}
               />
               <span className="text-[11px] text-muted-foreground">
                 Anno/mese usati per il nome del file
               </span>
             </div>
+
             <div className="space-y-1.5">
               <Label>Data di scadenza</Label>
               <Input
@@ -120,16 +197,19 @@ export function DialogCaricamento({
                 onChange={(e) => setScadenza(e.target.value)}
               />
               <span className="text-[11px] text-muted-foreground">
-                Per il calcolo dei rinnovi
+                {corsoSelezionato?.durata_validita_anni
+                  ? `Calcolata automaticamente (${corsoSelezionato.durata_validita_anni} anni)`
+                  : "Per il calcolo dei rinnovi"}
               </span>
             </div>
+
             {tipo === "Altro" && (
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Specifica il tipo</Label>
                 <Input
                   value={altro}
                   onChange={(e) => setAltro(e.target.value)}
-                  placeholder="Es. Lavori in quota"
+                  placeholder="Es. Lavori in quota, Carrello elevatore, ecc."
                 />
               </div>
             )}
