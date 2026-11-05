@@ -2,6 +2,8 @@
  * File:      dipendenti.ts
  * Percorso:  src/lib/api/dipendenti.ts
  * Anagrafica dipendenti.
+ * Revisioni:
+ *   - Rev 2 — 05/11/2026 17:50 — aggiornaAnagraficaDipendente (modifica per ID, allineamento CF).
  */
 import { leggiTutto, sb } from "./client";
 import { registraClasseEMateria } from "./insegnamento";
@@ -88,6 +90,45 @@ export async function aggiornaInsegnamentoDipendente(
 
 export async function getDipendenti(): Promise<Dipendente[]> {
   return leggiTutto<Dipendente>(() => sb.from("dipendenti").select("*").order("cognome").order("id"));
+}
+
+/**
+ * Modifica l'anagrafica di un lavoratore esistente tramite ID (rev 05/11/2026 17:50).
+ * Se cambia il CF, gli attestati seguono via ON UPDATE CASCADE; i documenti PDF vengono allineati.
+ */
+export async function aggiornaAnagraficaDipendente(
+  id: string,
+  d: Omit<Dipendente, "id">,
+  vecchioCF: string,
+): Promise<void> {
+  const nuovoCF = d.codice_fiscale.trim().toUpperCase();
+  const payload = {
+    cognome: d.cognome.trim(),
+    nome: d.nome.trim(),
+    codice_fiscale: nuovoCF,
+    email: d.email?.trim() || null,
+    reparto: d.reparto || null,
+    codice_ateco: d.codice_ateco?.trim() || null,
+    luogo_nascita: d.luogo_nascita?.trim() || null,
+    data_nascita: d.data_nascita || null,
+    tipo_contratto: d.tipo_contratto,
+    data_assunzione: d.data_assunzione || null,
+    data_fine_contratto: d.data_fine_contratto || null,
+    data_cessazione: d.data_cessazione || null,
+    note_contratto: d.note_contratto?.trim() || null,
+  };
+  const { error } = await sb.from("dipendenti").update(payload).eq("id", id);
+  if (error) {
+    if (error.code === "23505") throw new Error("Esiste già un lavoratore con lo stesso codice fiscale.");
+    throw error;
+  }
+  if (vecchioCF.trim().toUpperCase() !== nuovoCF) {
+    const { error: e2 } = await sb
+      .from("documenti_attestati")
+      .update({ codice_fiscale: nuovoCF })
+      .eq("dipendente_id", id);
+    if (e2) throw e2;
+  }
 }
 
 export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipendente> {

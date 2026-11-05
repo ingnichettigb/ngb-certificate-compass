@@ -9,6 +9,7 @@
  *   rev 4 — 28/10/2026 10:00 — Aggiunto riquadro Contratto.
  *   rev 5 — 28/10/2026 21:45 — Integrato SelettoreCorsiDipendente con menu a tendina, spunte
  *            e bottoni attivi sincronizzati con la tabella generale.
+ *   rev 6 — 05/11/2026 17:50 — Prop onModifica per «Modifica anagrafica».
  */
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,7 +45,9 @@ export function SchedaDipendente({
   onCambiaReparto,
   onSpuntaRuolo,
   onSegnaCompletata,
+  onModifica,
 }: {
+  onModifica?: () => void;
   corrente: Dipendente;
   attestati: Attestato[];
   integrazioni: IntegrazioneDvr[];
@@ -74,7 +77,7 @@ export function SchedaDipendente({
 
   return (
     <div className="space-y-4">
-      <AnagraficaDipendente corrente={corrente} />
+      <AnagraficaDipendente corrente={corrente} onModifica={onModifica} />
       <SelezioneReparto corrente={corrente} repartiAttivi={repartiAttivi} onCambia={onCambiaReparto} />
       <BloccoContratto corrente={corrente} />
 
