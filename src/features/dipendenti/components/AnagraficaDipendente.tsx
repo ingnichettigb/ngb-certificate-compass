@@ -15,7 +15,7 @@ export function AnagraficaDipendente({
   onModifica,
 }: {
   corrente: Dipendente;
-  onModifica?: () => void;
+  onModifica?: (() => void) | undefined;
 }) {
   const esito = analizzaCodiceFiscale(corrente.codice_fiscale);
   return (

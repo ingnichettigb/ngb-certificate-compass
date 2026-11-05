@@ -47,7 +47,7 @@ export function SchedaDipendente({
   onSegnaCompletata,
   onModifica,
 }: {
-  onModifica?: () => void;
+  onModifica?: (() => void) | undefined;
   corrente: Dipendente;
   attestati: Attestato[];
   integrazioni: IntegrazioneDvr[];

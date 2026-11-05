@@ -26,7 +26,7 @@ function valorePari(c: string): number {
 export function calcolaCarattereControllo(primi15: string): string {
   const s = primi15.toUpperCase();
   let somma = 0;
-  for (let i = 0; i < 15; i++) somma += i % 2 === 0 ? (DISPARI[s[i]] ?? 0) : valorePari(s[i]);
+  for (let i = 0; i < 15; i++) somma += i % 2 === 0 ? (DISPARI[s.charAt(i)] ?? 0) : valorePari(s.charAt(i));
   return String.fromCharCode(65 + (somma % 26));
 }
 
@@ -34,7 +34,7 @@ export function calcolaCarattereControllo(primi15: string): string {
 export function normalizzaOmocodia(cf: string): string {
   const a = cf.split("");
   for (const p of POS_NUMERICHE) {
-    const k = OMOCODIA.indexOf(a[p]);
+    const k = OMOCODIA.indexOf(a[p] ?? "");
     if (k >= 0) a[p] = String(k);
   }
   return a.join("");
@@ -53,7 +53,7 @@ export function analizzaCodiceFiscale(input: string): EsitoCF {
   if (!/^[A-Z]{6}$/.test(cf.slice(0, 6))) problemi.push("I primi 6 caratteri devono essere lettere");
   const n = normalizzaOmocodia(cf);
   if (!/^\d{2}$/.test(n.slice(6, 8))) problemi.push("Anno di nascita non valido");
-  if (!MESI.includes(cf[8])) problemi.push("Mese non valido (lettere ammesse: A-E, H, L, M, P, R-T)");
+  if (!MESI.includes(cf.charAt(8))) problemi.push("Mese non valido (lettere ammesse: A-E, H, L, M, P, R-T)");
   const g = Number(n.slice(9, 11));
   if (!/^\d{2}$/.test(n.slice(9, 11)) || !((g >= 1 && g <= 31) || (g >= 41 && g <= 71)))
     problemi.push("Giorno/sesso non valido (01-31 maschi, 41-71 femmine)");
@@ -61,6 +61,6 @@ export function analizzaCodiceFiscale(input: string): EsitoCF {
   if (!/^[A-Z]\d{3}$/.test(luogo) || !CODICI_BELFIORE.has(luogo))
     problemi.push(`Codice comune/Stato "${luogo}" non riconosciuto`);
   const atteso = calcolaCarattereControllo(cf.slice(0, 15));
-  if (atteso !== cf[15]) problemi.push(`Carattere di controllo errato: atteso "${atteso}", trovato "${cf[15]}"`);
+  if (atteso !== cf.charAt(15)) problemi.push(`Carattere di controllo errato: atteso "${atteso}", trovato "${cf.charAt(15)}"`);
   return { valido: problemi.length === 0, problemi };
 }
