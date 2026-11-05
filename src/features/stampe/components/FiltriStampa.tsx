@@ -5,12 +5,13 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Pannello scelta modello e filtri di stampa.
  *   rev 2 — 03/11/2026 20:50 — Filtri dinamici ruolo/categoria/materia, scadenza 9 mesi; stampa spostata in alto a destra.
+ *   rev 3 — 05/11/2026 18:30 — Pulsante «Nuovi arrivati dell'anno» sopra i tipi di documento, con scelta anno scolastico/solare.
  */
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { Dipendente } from "@/lib/api";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
-import { TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra } from "../dati-stampa";
+import { dataIt, TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra, type PeriodoArrivi } from "../dati-stampa";
 
 type Props = {
   filtri: Filtri;
@@ -21,13 +22,15 @@ type Props = {
   materie: string[];
   dipendenti: Dipendente[];
   conteggio: number;
+  infoArrivi: { inizio: string | null; senzaData: number };
 };
 
 const sel = "w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm";
 
-export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, materie, dipendenti, conteggio }: Props) {
+export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, materie, dipendenti, conteggio, infoArrivi }: Props) {
   const set = <K extends keyof Filtri>(k: K, v: Filtri[K]) => onChange({ ...filtri, [k]: v });
   const anagrafica = filtri.modello === "lavoratori";
+  const arrivi = filtri.arrivi !== "no";
   const mostraCategorie = filtri.reparto !== "Docente" && categorie.length > 0;
   const mostraMaterie = filtri.reparto !== "ATA" && materie.length > 0;
 
@@ -41,6 +44,38 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, mate
 
   return (
     <aside className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm print:hidden">
+      <div className="space-y-1.5">
+        <p className="mb-2 font-semibold">Selezione</p>
+        <Button
+          size="sm"
+          type="button"
+          variant={arrivi ? "default" : "outline"}
+          aria-pressed={arrivi}
+          className="w-full justify-start"
+          onClick={() => set("arrivi", arrivi ? "no" : "scolastico")}
+        >
+          Nuovi arrivati dell'anno
+        </Button>
+        {arrivi && (
+          <>
+            <select
+              className={sel}
+              aria-label="Periodo dei nuovi arrivati"
+              value={filtri.arrivi}
+              onChange={(e) => set("arrivi", e.target.value as PeriodoArrivi)}
+            >
+              <option value="scolastico">Anno scolastico (dal 1 settembre)</option>
+              <option value="solare">Anno solare (dal 1 gennaio)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Assunti dal {dataIt(infoArrivi.inizio)}.
+              {infoArrivi.senzaData > 0 && ` ${infoArrivi.senzaData} lavoratori senza data di assunzione non sono inclusi.`}
+              {!anagrafica && " Per nascita e corsi Sì/No scegli «Elenco lavoratori in servizio»."}
+            </p>
+          </>
+        )}
+      </div>
+
       <div>
         <p className="mb-2 font-semibold">Tipo di documento</p>
         <div className="flex flex-col gap-1.5">

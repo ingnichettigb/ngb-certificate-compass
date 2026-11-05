@@ -5,10 +5,11 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Test filtri stampe.
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
+ *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
-import { calcolaRighe, calcolaRigheLavoratori, FILTRI_INIZIALI } from "./dati-stampa";
+import { calcolaRighe, calcolaRigheLavoratori, cella, colonneDi, FILTRI_INIZIALI, inizioPeriodoArrivi, nuoviArrivati } from "./dati-stampa";
 import { nomeFileEsportazione, testoCsv } from "./esporta-file";
 
 const oggi = new Date("2026-11-02T10:00:00");
@@ -74,5 +75,55 @@ describe("esportazione", () => {
   });
   it("nome file con prefisso e timestamp AAMMGGhhmm", () => {
     expect(nomeFileEsportazione("elenco", "xlsx", new Date(2026, 10, 3, 20, 5))).toBe("030ArchAttestati_2611032005_elenco.xlsx");
+  });
+});
+
+describe("nuovi arrivati dell'anno", () => {
+  const adesso = new Date("2026-11-05T10:00:00");
+  const elenco = [
+    dip("1", "Nuovo", { data_assunzione: "2026-09-10" }),
+    dip("2", "Vecchio", { data_assunzione: "2020-09-01" }),
+    dip("3", "SenzaData"),
+    dip("4", "Gennaio", { data_assunzione: "2026-02-01" }),
+    dip("5", "Cessato", { data_assunzione: "2026-10-01", stato_lavoratore: "cessato" }),
+  ];
+  it("anno scolastico: dal 1 settembre, esclusi cessati, conta chi non ha la data", () => {
+    const r = nuoviArrivati(elenco, "scolastico", adesso);
+    expect([...r.ids!]).toEqual(["1"]);
+    expect(r.inizio).toBe("2026-09-01");
+    expect(r.senzaData).toBe(1);
+  });
+  it("anno scolastico a gennaio parte dal settembre precedente", () => {
+    expect(inizioPeriodoArrivi("scolastico", new Date("2027-01-15T10:00:00"))).toBe("2026-09-01");
+  });
+  it("anno solare: dal 1 gennaio", () => {
+    expect([...nuoviArrivati(elenco, "solare", adesso).ids!].sort()).toEqual(["1", "4"]);
+  });
+  it("selezione spenta: nessun limite", () => {
+    expect(nuoviArrivati(elenco, "no", adesso).ids).toBeNull();
+  });
+  it("limita anche le righe degli attestati", () => {
+    const r = calcolaRighe([att("a", "1", "SIC-GEN-04", "2026-09-20", null), att("b", "2", "SIC-GEN-04", "2024-01-01", null)], FILTRI_INIZIALI, adesso, [], new Set(["1"]));
+    expect(r.map((x) => x.id)).toEqual(["a"]);
+  });
+  it("colonne dedicate solo per elenco lavoratori con selezione attiva", () => {
+    expect(colonneDi("lavoratori", "scolastico")).toContain("nascita");
+    expect(colonneDi("lavoratori", "no")).not.toContain("nascita");
+    expect(colonneDi("registro", "scolastico")).not.toContain("nascita");
+  });
+  it("nascita e corsi: Sì con data, Scaduto, No", () => {
+    const d = dip("1", "Nuovo", { luogo_nascita: "Milano", data_nascita: "1990-03-12", data_assunzione: "2026-09-10" });
+    const attestati = [
+      att("a", "1", "SIC-GEN-04", "2026-09-20", null),
+      att("b", "1", "VFF-FOR1-4", "2020-01-10", "2025-01-10"),
+      att("c", "1", "PSO-GAB-16", "2026-10-02", "2029-10-02"),
+    ];
+    const [r] = calcolaRigheLavoratori([d], { ...FILTRI_INIZIALI, modello: "lavoratori" }, [], [], attestati, null, adesso);
+    expect(cella(r!, "nascita")).toBe("Milano, 12/03/1990");
+    expect(cella(r!, "corsoBase")).toBe("Sì – 20/09/2026");
+    expect(cella(r!, "corsoSpecifico")).toBe("No");
+    expect(cella(r!, "preposto")).toBe("No");
+    expect(cella(r!, "antincendio")).toBe("Scaduto – 10/01/2020");
+    expect(cella(r!, "primoSoccorso")).toBe("Sì – 02/10/2026");
   });
 });
