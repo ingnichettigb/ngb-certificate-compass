@@ -9,6 +9,8 @@
  *   rev 3 — 04/11/2026 10:20 — Spazio firme disattivato di default (mostraFirme: false).
  *   rev 4 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno» (anno scolastico o solare) e colonne nascita,
  *                              corso base, specifico, preposto, antincendio, primo soccorso.
+ *   rev 5 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta» (campi mancanti per lavoratore), colonne «Cosa manca»,
+ *                              fine contratto e cessazione, titolo stampa dinamico, passaggio automatico all'elenco lavoratori.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -24,6 +26,7 @@ export type VoceFormazione = "corsoBase" | "corsoSpecifico" | "preposto" | "anti
 
 export type Colonna =
   | "lavoratore" | "cf" | "reparto" | "mansione" | "ruoli" | "assunzione" | "nascita"
+  | "mancano" | "fineContratto" | "cessazione"
   | VoceFormazione
   | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato";
 
@@ -45,6 +48,8 @@ export type FiltriStampa = {
   soloUltimo: boolean; // solo l'attestato più recente per lavoratore+corso
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
+  incompleta: boolean; // selezione «Anagrafica incompleta»
+  modelloPrima: Modello | null; // modello da ripristinare quando si spengono le selezioni
 };
 
 export const FILTRI_INIZIALI: FiltriStampa = {
@@ -60,6 +65,8 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   soloUltimo: true,
   mostraFirme: false,
   arrivi: "no",
+  incompleta: false,
+  modelloPrima: null,
 };
 
 export type RigaStampa = {
@@ -78,6 +85,10 @@ export type RigaStampa = {
   dataNascita: string | null;
   /** Testo già pronto per le voci fatte; le voci assenti valgono «No». */
   formazione: Partial<Record<VoceFormazione, string>>;
+  /** Campi anagrafici assenti (solo per l'anagrafica incompleta; vuoto = completa). */
+  mancanti: CampoAnagrafica[];
+  fineContratto: string | null;
+  cessazione: string | null;
   corso: string;
   codice: string;
   gruppo: string;
@@ -102,11 +113,118 @@ export const COLONNE_PREDEFINITE: Record<Modello, Colonna[]> = {
 
 /** Colonne dell'elenco lavoratori quando è attiva la selezione «Nuovi arrivati». */
 export const COLONNE_NUOVI_ARRIVATI: Colonna[] = [
-  "lavoratore", "cf", "nascita", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso",
+  "lavoratore", "cf", "nascita", "assunzione", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso",
 ];
 
-export function colonneDi(modello: Modello, arrivi: PeriodoArrivi): Colonna[] {
-  return modello === "lavoratori" && arrivi !== "no" ? COLONNE_NUOVI_ARRIVATI : COLONNE_PREDEFINITE[modello];
+/** Campi anagrafici controllati dalla selezione «Anagrafica incompleta». */
+export type CampoAnagrafica =
+  | "cognome" | "nome" | "codice_fiscale" | "luogo_nascita" | "data_nascita" | "reparto" | "data_assunzione"
+  | "sottoreparto" | "classe_concorso" | "materia" | "data_fine_contratto" | "data_cessazione";
+
+export const ETICHETTA_CAMPO: Record<CampoAnagrafica, string> = {
+  cognome: "cognome", nome: "nome", codice_fiscale: "codice fiscale", luogo_nascita: "luogo di nascita",
+  data_nascita: "data di nascita", reparto: "reparto", data_assunzione: "data di assunzione",
+  sottoreparto: "profilo ATA", classe_concorso: "classe di concorso", materia: "materia",
+  data_fine_contratto: "data fine contratto", data_cessazione: "data di cessazione",
+};
+
+/** In quale colonna compare ogni campo mancante. */
+const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
+  cognome: "lavoratore", nome: "lavoratore", codice_fiscale: "cf", luogo_nascita: "nascita", data_nascita: "nascita",
+  reparto: "reparto", data_assunzione: "assunzione", sottoreparto: "mansione", classe_concorso: "mansione",
+  materia: "mansione", data_fine_contratto: "fineContratto", data_cessazione: "cessazione",
+};
+
+/** Colonne aggiunte da sole, in quest'ordine, se almeno un lavoratore mostrato ha quel dato mancante. */
+const COLONNE_SE_MANCANTI: Colonna[] = ["nascita", "assunzione", "mansione", "fineContratto", "cessazione"];
+
+const vuoto = (v: string | null | undefined) => !v || !v.trim();
+
+/**
+ * Dati che mancano nell'anagrafica. Alcuni campi sono dovuti solo in certi casi:
+ * profilo per ATA, classe e materia per Docente, fine contratto solo a tempo determinato,
+ * cessazione solo per i cessati. L'email non è controllata.
+ */
+export function campiMancanti(d: Partial<Dipendente>): CampoAnagrafica[] {
+  const m: CampoAnagrafica[] = [];
+  const sempre: [CampoAnagrafica, string | null | undefined][] = [
+    ["cognome", d.cognome], ["nome", d.nome], ["codice_fiscale", d.codice_fiscale], ["luogo_nascita", d.luogo_nascita],
+    ["data_nascita", d.data_nascita], ["reparto", d.reparto], ["data_assunzione", d.data_assunzione],
+  ];
+  for (const [c, v] of sempre) if (vuoto(v)) m.push(c);
+  const reparto = (d.reparto ?? "").trim().toLowerCase();
+  if (reparto === "ata" && vuoto(d.sottoreparto)) m.push("sottoreparto");
+  if (reparto === "docente") {
+    if (vuoto(d.classe_concorso)) m.push("classe_concorso");
+    if (vuoto(d.materia)) m.push("materia");
+  }
+  if (d.tipo_contratto === "determinato" && vuoto(d.data_fine_contratto)) m.push("data_fine_contratto");
+  if (d.stato_lavoratore === "cessato" && vuoto(d.data_cessazione)) m.push("data_cessazione");
+  return m;
+}
+
+/** Colonne da mostrare: dipendono dal modello, dalle selezioni attive e (per l'incompleta) dai dati mancanti. */
+export function colonnePerVista(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta">, righe: RigaStampa[] = []): Colonna[] {
+  if (f.modello !== "lavoratori") return COLONNE_PREDEFINITE[f.modello];
+  if (f.incompleta) {
+    const base: Colonna[] = ["lavoratore", "cf", "reparto", "mancano"];
+    const extra = COLONNE_SE_MANCANTI.filter((c) => righe.some((r) => r.mancanti.some((m) => COLONNA_DEL_CAMPO[m] === c)));
+    return [...base, ...extra];
+  }
+  return f.arrivi !== "no" ? COLONNE_NUOVI_ARRIVATI : COLONNE_PREDEFINITE.lavoratori;
+}
+
+/** La cella è rossa «MANCA» se in quella colonna c'è almeno un campo mancante. */
+export function cellaMancante(r: RigaStampa, c: Colonna): boolean {
+  return r.mancanti.some((m) => COLONNA_DEL_CAMPO[m] === c);
+}
+
+/** Accende o spegne una selezione; la prima accensione porta all'elenco lavoratori, l'ultimo spegnimento torna al modello di prima. */
+export function conSelezione(f: FiltriStampa, cambia: Partial<Pick<FiltriStampa, "arrivi" | "incompleta">>): FiltriStampa {
+  const n = { ...f, ...cambia };
+  const prima = f.arrivi !== "no" || f.incompleta;
+  const dopo = n.arrivi !== "no" || n.incompleta;
+  if (!prima && dopo) return { ...n, modelloPrima: f.modello, modello: "lavoratori" };
+  if (prima && !dopo) {
+    const torna = f.modello === "lavoratori" && f.modelloPrima ? f.modelloPrima : f.modello;
+    return { ...n, modello: torna, modelloPrima: null };
+  }
+  return n;
+}
+
+/** Testo del periodo: «anno scolastico 2026/27» oppure «anno 2026». */
+export function etichettaPeriodo(periodo: PeriodoArrivi, oggi = new Date()): string {
+  const inizio = inizioPeriodoArrivi(periodo, oggi);
+  if (!inizio) return "";
+  const y = Number(inizio.slice(0, 4));
+  return periodo === "scolastico" ? `anno scolastico ${y}/${String(y + 1).slice(2)}` : `anno ${y}`;
+}
+
+/** Titolo della stampa: descrive la selezione scelta. */
+export function titoloStampa(f: FiltriStampa, oggi = new Date()): string {
+  const base = TITOLI_MODELLO[f.modello];
+  const arrivi = f.arrivi !== "no";
+  if (f.modello === "lavoratori") {
+    if (arrivi && f.incompleta) return `Nuovi arrivati con anagrafica incompleta – ${etichettaPeriodo(f.arrivi, oggi)}`;
+    if (arrivi) return `Elenco nuovi arrivati – ${etichettaPeriodo(f.arrivi, oggi)}`;
+    if (f.incompleta) return "Lavoratori con anagrafica incompleta";
+    return base;
+  }
+  return base + (arrivi ? " – nuovi arrivati" : "") + (f.incompleta ? " – anagrafica incompleta" : "");
+}
+
+/** Messaggio mostrato quando non ci sono righe: spiega il perché se dipende dalle selezioni. */
+export function messaggioVuoto(f: Pick<FiltriStampa, "arrivi" | "incompleta">, inizio: string | null, senzaData: number): string | undefined {
+  const arrivi = f.arrivi !== "no";
+  if (arrivi && f.incompleta) return "Nessun nuovo arrivato ha l'anagrafica incompleta con i filtri scelti.";
+  if (f.incompleta) return "Tutte le anagrafiche sono complete con i filtri scelti.";
+  if (arrivi) {
+    const base = `Nessun lavoratore con data di assunzione dal ${dataIt(inizio)}.`;
+    return senzaData > 0
+      ? `${base} ${senzaData} lavoratori non hanno la data di assunzione: usa «Anagrafica incompleta» per trovarli.`
+      : base;
+  }
+  return undefined;
 }
 
 /** Primo giorno del periodo scelto (AAAA-MM-GG): 1 settembre dell'anno scolastico in corso, oppure 1 gennaio. */
@@ -234,6 +352,9 @@ export function calcolaRighe(
         luogoNascita: d.luogo_nascita ?? "",
         dataNascita: d.data_nascita ?? null,
         formazione: {},
+        mancanti: campiMancanti(d),
+        fineContratto: d.data_fine_contratto ?? null,
+        cessazione: d.data_cessazione ?? null,
         corso: tc?.nome_corso ?? "—",
         codice: tc?.codice ?? "",
         gruppo: g.chiave,
@@ -248,6 +369,7 @@ export function calcolaRighe(
     });
 
   if (soloDipendenti) righe = righe.filter((r) => soloDipendenti.has(r.dipendenteId));
+  if (filtri.incompleta) righe = righe.filter((r) => r.mancanti.length > 0);
   if (filtri.gruppo !== TUTTI) righe = righe.filter((r) => r.gruppo === filtri.gruppo);
   if (filtri.reparto !== TUTTI) righe = righe.filter((r) => r.reparto === filtri.reparto);
   if (filtri.categoria !== TUTTI) righe = righe.filter((r) => r.sottoreparto === filtri.categoria);
@@ -285,6 +407,7 @@ export function calcolaRigheLavoratori(
 ): RigaStampa[] {
   let elenco = dipendenti.filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato");
   if (soloDipendenti) elenco = elenco.filter((d) => soloDipendenti.has(d.id));
+  if (filtri.incompleta) elenco = elenco.filter((d) => campiMancanti(d).length > 0);
   if (filtri.reparto !== TUTTI) elenco = elenco.filter((d) => d.reparto === filtri.reparto);
   if (filtri.categoria !== TUTTI) elenco = elenco.filter((d) => d.sottoreparto === filtri.categoria);
   if (filtri.materia !== TUTTI) elenco = elenco.filter((d) => d.materia === filtri.materia);
@@ -320,6 +443,9 @@ export function calcolaRigheLavoratori(
       luogoNascita: d.luogo_nascita ?? "",
       dataNascita: d.data_nascita ?? null,
       formazione: formazione.get(d.id) ?? {},
+      mancanti: campiMancanti(d),
+      fineContratto: d.data_fine_contratto ?? null,
+      cessazione: d.data_cessazione ?? null,
       corso: "",
       codice: "",
       gruppo: "",
@@ -371,13 +497,18 @@ export const INTESTAZIONI: Record<Colonna, string> = {
   lavoratore: "Lavoratore", cf: "Codice fiscale", reparto: "Reparto", mansione: "Mansione / Materia",
   ruoli: "Ruoli sicurezza", assunzione: "Data assunzione", nascita: "Luogo e data di nascita",
   corsoBase: "Corso base", corsoSpecifico: "Corso specifico", preposto: "Preposto", antincendio: "Antincendio",
-  primoSoccorso: "Primo soccorso", corso: "Corso", ore: "Ore",
+  primoSoccorso: "Primo soccorso", mancano: "Cosa manca",
+  fineContratto: "Fine contratto", cessazione: "Data cessazione", corso: "Corso", ore: "Ore",
   numero: "N. attestato", data: "Data corso", scadenza: "Scadenza", stato: "Stato",
 };
 
 /** Testo della cella: usato sia dall'anteprima sia dalle esportazioni (stesso contenuto). */
 export function cella(r: RigaStampa, c: Colonna): string {
+  if (r.mancanti.length && cellaMancante(r, c)) return cellaConMancanti(r, c);
   switch (c) {
+    case "mancano": return testoMancanti(r);
+    case "fineContratto": return dataIt(r.fineContratto);
+    case "cessazione": return dataIt(r.cessazione);
     case "lavoratore": return `${r.cognome} ${r.nome}`;
     case "cf": return r.cf;
     case "reparto": return r.reparto;
@@ -397,4 +528,27 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "scadenza": return dataIt(r.scadenza);
     case "stato": return ETICHETTA_STATO[r.stato];
   }
+}
+
+/** Testo della cella quando in quella colonna manca qualcosa (es. «MANCA data di nascita»). */
+function cellaConMancanti(r: RigaStampa, c: Colonna): string {
+  const manca = (campo: CampoAnagrafica) => r.mancanti.includes(campo);
+  switch (c) {
+    case "lavoratore": return `${manca("cognome") ? "MANCA cognome" : r.cognome} ${manca("nome") ? "MANCA nome" : r.nome}`;
+    case "nascita":
+      return [
+        manca("luogo_nascita") ? "MANCA luogo" : r.luogoNascita,
+        manca("data_nascita") ? "MANCA data" : dataIt(r.dataNascita),
+      ].join(", ");
+    case "mansione":
+      return [r.mansione, ...(["sottoreparto", "classe_concorso", "materia"] as const).filter(manca).map((m) => `MANCA ${ETICHETTA_CAMPO[m]}`)]
+        .filter(Boolean).join(" · ");
+    default: return "MANCA";
+  }
+}
+
+/** Elenco a parole dei dati mancanti: «Data di nascita, Materia». */
+export function testoMancanti(r: RigaStampa): string {
+  const t = r.mancanti.map((m) => ETICHETTA_CAMPO[m]).join(", ");
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "—";
 }

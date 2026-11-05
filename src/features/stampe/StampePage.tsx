@@ -6,6 +6,7 @@
  *   rev 1 — 02/11/2026 11:10 — Pagina Stampe & Report: filtri a sinistra, anteprima A4 a destra, stampa/PDF.
  *   rev 2 — 03/11/2026 20:50 — Filtri dinamici da dati reali, elenco lavoratori, colonne rimovibili, esportazione PDF/Excel/CSV.
  *   rev 3 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno»: limita tutte le stampe ai lavoratori assunti nel periodo.
+ *   rev 4 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta», striscia «Filtri attivi», titolo dinamico, messaggi di elenco vuoto.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +18,7 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonneDi, dataIt, FILTRI_INIZIALI, nuoviArrivati, TITOLI_MODELLO, TUTTI,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, messaggioVuoto, nuoviArrivati, titoloStampa, TUTTI,
   type Colonna, type FiltriStampa as Filtri,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
@@ -39,8 +40,9 @@ export function StampePage() {
   const assQ = useQuery({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI, queryFn: getAssegnazioniRuoli });
 
   const conArrivi = filtri.arrivi !== "no";
-  // Cambiando tipo di documento o accendendo/spegnendo i nuovi arrivati si riparte dalle colonne predefinite.
-  useEffect(() => setTolte([]), [filtri.modello, conArrivi]);
+  const vista = `${filtri.modello}|${conArrivi}|${filtri.incompleta}`;
+  // Cambiando tipo di documento o selezione si riparte dalle colonne predefinite.
+  useEffect(() => setTolte([]), [vista]);
 
   const tutti = dip.data ?? [];
   const assegnazioni = assQ.data ?? [];
@@ -74,15 +76,16 @@ export function StampePage() {
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, arrivi.ids],
   );
 
-  const colonne = colonneDi(filtri.modello, filtri.arrivi).filter((c) => !tolte.includes(c));
+  const colonne = colonnePerVista(filtri, righe).filter((c) => !tolte.includes(c));
   // Nella scheda individuale il nome è nell'intestazione: nei file esportati serve come colonna.
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne] : colonne;
-  const nomeBase = (TITOLI_MODELLO[filtri.modello] + (conArrivi ? " nuovi arrivati" : ""))
-    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const titolo = titoloStampa(filtri);
+  const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
   const parti = [
-    conArrivi && `Nuovi arrivati dal ${dataIt(arrivi.inizio)}`,
+    conArrivi && `Assunti dal ${dataIt(arrivi.inizio)}`,
+    filtri.incompleta && "Solo anagrafiche incomplete",
     filtri.modello !== "lavoratori" && filtri.gruppo !== TUTTI && GRUPPI_ARGOMENTO.find((g) => g.chiave === filtri.gruppo)?.titolo,
     filtri.reparto !== TUTTI && `Reparto ${filtri.reparto}`,
     nomeRuolo && `Ruolo: ${nomeRuolo}`,
@@ -94,6 +97,8 @@ export function StampePage() {
     filtri.includiCessati && "Inclusi cessati",
   ].filter(Boolean);
   const orizzontale = filtri.modello !== "scheda";
+  const unita = filtri.modello === "lavoratori" ? "lavoratori" : "righe";
+  const sottotitolo = [...parti, `${righe.length} ${unita}`].join(" · ");
   const caricamento = att.isLoading || dip.isLoading;
 
   async function excel() {
@@ -138,9 +143,12 @@ export function StampePage() {
               onCsv={() => scaricaCsv(nomeBase, righe, colonneFile)}
               disabilitato={!righe.length}
             />
+            <div className="mb-2 rounded-md border border-emerald-700/40 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-950 print:hidden dark:bg-emerald-950/30 dark:text-emerald-100">
+              <b>Filtri attivi:</b> {parti.length ? parti.join(" · ") : "nessuno"} — <b>{righe.length} {unita}</b>
+            </div>
             <FoglioStampa
-              titolo={TITOLI_MODELLO[filtri.modello]}
-              sottotitolo={parti.length ? parti.join(" · ") : undefined}
+              titolo={titolo}
+              sottotitolo={sottotitolo}
               orizzontale={orizzontale}
               ditta={ditta.data}
               mostraFirme={filtri.mostraFirme && filtri.modello !== "scheda"}
@@ -152,6 +160,7 @@ export function StampePage() {
                 onRimuoviColonna={(c) => setTolte((t) => [...t, c])}
                 dipendenti={tutti}
                 ditta={ditta.data}
+                messaggioVuoto={messaggioVuoto(filtri, arrivi.inizio, arrivi.senzaData)}
               />
             </FoglioStampa>
           </div>

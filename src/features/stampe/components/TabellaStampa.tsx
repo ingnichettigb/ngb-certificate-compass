@@ -6,9 +6,10 @@
  *   rev 1 — 02/11/2026 11:10 — Tabella righe attestati per i modelli di stampa.
  *   rev 2 — 03/11/2026 20:50 — Pulsante ✕ su ogni intestazione per togliere la colonna (non stampato).
  *   rev 3 — 04/11/2026 10:20 — Intestazione fissa sticky con sfondo opaco per scorrimento record.
+ *   rev 4 — 05/11/2026 19:50 — Celle con dato anagrafico mancante in rosso grassetto (anche in stampa).
  */
 import { X } from "lucide-react";
-import { cella, INTESTAZIONI, type Colonna, type RigaStampa } from "../dati-stampa";
+import { cella, cellaMancante, INTESTAZIONI, type Colonna, type RigaStampa } from "../dati-stampa";
 
 type Props = {
   righe: RigaStampa[];
@@ -54,7 +55,7 @@ export function TabellaStampa({ righe, colonne, onRimuoviColonna }: Props) {
             {colonne.map((c) => (
               <td
                 key={c}
-                className={`border border-foreground/40 px-1.5 py-0.5 ${c === "stato" && r.stato === "scaduto" ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""}`}
+                className={`border border-foreground/40 px-1.5 py-0.5 ${c === "stato" && r.stato === "scaduto" ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""}`}
               >
                 {cella(r, c)}
               </td>

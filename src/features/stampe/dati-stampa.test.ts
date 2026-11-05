@@ -6,10 +6,14 @@
  *   rev 1 — 02/11/2026 11:10 — Test filtri stampe.
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
  *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
+ *   rev 4 — 05/11/2026 19:50 — Test anagrafica incompleta, colonne dinamiche, titolo, messaggi vuoti, passaggio automatico modello.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
-import { calcolaRighe, calcolaRigheLavoratori, cella, colonneDi, FILTRI_INIZIALI, inizioPeriodoArrivi, nuoviArrivati } from "./dati-stampa";
+import {
+  calcolaRighe, calcolaRigheLavoratori, campiMancanti, cella, colonnePerVista, conSelezione, FILTRI_INIZIALI,
+  inizioPeriodoArrivi, messaggioVuoto, nuoviArrivati, titoloStampa,
+} from "./dati-stampa";
 import { nomeFileEsportazione, testoCsv } from "./esporta-file";
 
 const oggi = new Date("2026-11-02T10:00:00");
@@ -107,9 +111,11 @@ describe("nuovi arrivati dell'anno", () => {
     expect(r.map((x) => x.id)).toEqual(["a"]);
   });
   it("colonne dedicate solo per elenco lavoratori con selezione attiva", () => {
-    expect(colonneDi("lavoratori", "scolastico")).toContain("nascita");
-    expect(colonneDi("lavoratori", "no")).not.toContain("nascita");
-    expect(colonneDi("registro", "scolastico")).not.toContain("nascita");
+    const base = { ...FILTRI_INIZIALI, modello: "lavoratori" as const };
+    expect(colonnePerVista({ ...base, arrivi: "scolastico" })).toContain("nascita");
+    expect(colonnePerVista({ ...base, arrivi: "scolastico" })).toContain("assunzione");
+    expect(colonnePerVista(base)).not.toContain("nascita");
+    expect(colonnePerVista({ ...base, modello: "registro", arrivi: "scolastico" })).not.toContain("nascita");
   });
   it("nascita e corsi: Sì con data, Scaduto, No", () => {
     const d = dip("1", "Nuovo", { luogo_nascita: "Milano", data_nascita: "1990-03-12", data_assunzione: "2026-09-10" });
@@ -125,5 +131,72 @@ describe("nuovi arrivati dell'anno", () => {
     expect(cella(r!, "preposto")).toBe("No");
     expect(cella(r!, "antincendio")).toBe("Scaduto – 10/01/2020");
     expect(cella(r!, "primoSoccorso")).toBe("Sì – 02/10/2026");
+  });
+});
+
+const completo = (id: string, extra: Partial<Dipendente> = {}) =>
+  dip(id, `C${id}`, { nome: "Nome", luogo_nascita: "Milano", data_nascita: "1980-01-01", data_assunzione: "2020-09-01", tipo_contratto: "indeterminato", ...extra });
+
+describe("anagrafica incompleta", () => {
+  it("un ATA completo, a tempo indeterminato e senza email non manca di nulla", () => {
+    expect(campiMancanti(completo("1"))).toEqual([]);
+  });
+  it("segnala i campi sempre dovuti", () => {
+    expect(campiMancanti(completo("1", { nome: "", data_assunzione: null, data_nascita: null }))).toEqual(["nome", "data_nascita", "data_assunzione"]);
+  });
+  it("profilo solo per ATA; classe e materia solo per Docente", () => {
+    expect(campiMancanti(completo("1", { sottoreparto: null }))).toEqual(["sottoreparto"]);
+    expect(campiMancanti(completo("2", { reparto: "Docente", sottoreparto: null, classe_concorso: null, materia: null }))).toEqual(["classe_concorso", "materia"]);
+  });
+  it("fine contratto solo a tempo determinato, cessazione solo per i cessati", () => {
+    expect(campiMancanti(completo("1", { tipo_contratto: "determinato" }))).toEqual(["data_fine_contratto"]);
+    expect(campiMancanti(completo("2", { stato_lavoratore: "cessato" }))).toEqual(["data_cessazione"]);
+  });
+  it("l'elenco mostra solo gli incompleti, con colonna «Cosa manca» e solo le colonne dei dati mancanti", () => {
+    const elenco = [completo("1"), completo("2", { data_nascita: null }), completo("3", { data_assunzione: null })];
+    const f = { ...FILTRI_INIZIALI, modello: "lavoratori" as const, incompleta: true };
+    const r = calcolaRigheLavoratori(elenco, f);
+    expect(r.map((x) => x.cognome)).toEqual(["C2", "C3"]);
+    const col = colonnePerVista(f, r);
+    expect(col).toEqual(["lavoratore", "cf", "reparto", "mancano", "nascita", "assunzione"]);
+    expect(cella(r[0]!, "mancano")).toBe("Data di nascita");
+    expect(cella(r[0]!, "nascita")).toBe("Milano, MANCA data");
+    expect(cella(r[1]!, "assunzione")).toBe("MANCA");
+  });
+  it("il filtro vale anche per i modelli basati sugli attestati", () => {
+    const a1 = att("a", "1", "SIC-GEN-04", "2026-01-01", null);
+    const a2 = att("b", "2", "SIC-GEN-04", "2026-01-01", null);
+    a1.dipendenti = { ...(a1.dipendenti as Dipendente), ...completo("1") };
+    const r = calcolaRighe([a1, a2], { ...FILTRI_INIZIALI, incompleta: true }, oggi);
+    expect(r.map((x) => x.id)).toEqual(["b"]);
+  });
+});
+
+describe("selezioni: modello, titolo, messaggi", () => {
+  it("accendendo la prima selezione passa all'elenco lavoratori e spegnendo l'ultima torna al modello di prima", () => {
+    const acceso = conSelezione({ ...FILTRI_INIZIALI, modello: "registro" }, { arrivi: "scolastico" });
+    expect(acceso.modello).toBe("lavoratori");
+    const due = conSelezione(acceso, { incompleta: true });
+    expect(due.modello).toBe("lavoratori");
+    const uno = conSelezione(due, { arrivi: "no" });
+    expect(uno.modello).toBe("lavoratori");
+    expect(conSelezione(uno, { incompleta: false }).modello).toBe("registro");
+  });
+  it("se hai cambiato modello a mano, spegnere non lo cambia", () => {
+    const acceso = conSelezione(FILTRI_INIZIALI, { incompleta: true });
+    expect(conSelezione({ ...acceso, modello: "scadenze" }, { incompleta: false }).modello).toBe("scadenze");
+  });
+  it("titoli dinamici", () => {
+    const l = { ...FILTRI_INIZIALI, modello: "lavoratori" as const };
+    const adesso = new Date("2026-11-05T10:00:00");
+    expect(titoloStampa({ ...l, arrivi: "scolastico" }, adesso)).toBe("Elenco nuovi arrivati – anno scolastico 2026/27");
+    expect(titoloStampa({ ...l, arrivi: "solare" }, adesso)).toBe("Elenco nuovi arrivati – anno 2026");
+    expect(titoloStampa({ ...l, incompleta: true }, adesso)).toBe("Lavoratori con anagrafica incompleta");
+    expect(titoloStampa({ ...FILTRI_INIZIALI, arrivi: "scolastico" }, adesso)).toBe("Registro integrale della formazione – nuovi arrivati");
+  });
+  it("messaggi di elenco vuoto", () => {
+    expect(messaggioVuoto({ arrivi: "scolastico", incompleta: false }, "2026-09-01", 14)).toContain("14 lavoratori non hanno la data di assunzione");
+    expect(messaggioVuoto({ arrivi: "no", incompleta: true }, null, 0)).toBe("Tutte le anagrafiche sono complete con i filtri scelti.");
+    expect(messaggioVuoto({ arrivi: "no", incompleta: false }, null, 0)).toBeUndefined();
   });
 });

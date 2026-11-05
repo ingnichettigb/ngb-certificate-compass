@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Corpo dei 5 modelli: registro, gruppi, scadenze, schede individuali, reparti.
  *   rev 2 — 03/11/2026 20:50 — Colonne decise dall'anteprima (rimovibili) e modello «Elenco lavoratori in servizio».
+ *   rev 3 — 05/11/2026 19:50 — Messaggio di elenco vuoto personalizzato e legenda (Sì/Scaduto/No, MANCA) sotto l'elenco lavoratori.
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
@@ -19,7 +20,23 @@ type Props = {
   onRimuoviColonna: (c: Colonna) => void;
   dipendenti: Dipendente[];
   ditta: DittaRecord | undefined;
+  /** Spiegazione mostrata quando non ci sono righe (se dipende dalle selezioni attive). */
+  messaggioVuoto?: string | undefined;
 };
+
+const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso"];
+
+function Legenda({ colonne }: { colonne: Colonna[] }) {
+  const corsi = colonne.some((c) => VOCI_CORSO.includes(c));
+  const manca = colonne.includes("mancano");
+  if (!corsi && !manca) return null;
+  return (
+    <div className="mt-3 space-y-0.5 text-[10px]" style={{ breakInside: "avoid" }}>
+      {corsi && <p><b>Legenda corsi:</b> «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.</p>}
+      {manca && <p><b>Anagrafica:</b> «MANCA» in rosso = dato assente nell'anagrafica del lavoratore.</p>}
+    </div>
+  );
+}
 
 function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
@@ -30,16 +47,22 @@ function Sezione({ titolo, children }: { titolo: string; children: React.ReactNo
   );
 }
 
-export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, dipendenti, ditta }: Props) {
-  if (!righe.length) return <p className="py-10 text-center text-sm">Nessun dato con i filtri scelti.</p>;
+export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, dipendenti, ditta, messaggioVuoto }: Props) {
+  if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
     <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} />
   );
 
   switch (filtri.modello) {
     case "registro":
-    case "lavoratori":
       return tab(righe);
+    case "lavoratori":
+      return (
+        <>
+          {tab(righe)}
+          <Legenda colonne={colonne} />
+        </>
+      );
     case "scadenze":
       return tab([...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
     case "gruppo":

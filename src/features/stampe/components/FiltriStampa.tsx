@@ -6,12 +6,14 @@
  *   rev 1 — 02/11/2026 11:10 — Pannello scelta modello e filtri di stampa.
  *   rev 2 — 03/11/2026 20:50 — Filtri dinamici ruolo/categoria/materia, scadenza 9 mesi; stampa spostata in alto a destra.
  *   rev 3 — 05/11/2026 18:30 — Pulsante «Nuovi arrivati dell'anno» sopra i tipi di documento, con scelta anno scolastico/solare.
+ *   rev 4 — 05/11/2026 19:50 — Pulsanti attivi in verde scuro, nuovo pulsante «Anagrafica incompleta», passaggio automatico
+ *                              all'elenco lavoratori quando si accende una selezione.
  */
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { Dipendente } from "@/lib/api";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
-import { dataIt, TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra, type PeriodoArrivi } from "../dati-stampa";
+import { conSelezione, dataIt, TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra, type PeriodoArrivi } from "../dati-stampa";
 
 type Props = {
   filtri: Filtri;
@@ -26,6 +28,24 @@ type Props = {
 };
 
 const sel = "w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm";
+
+/** Pulsante a scelta: quando è attivo diventa verde scuro con testo bianco. */
+const ATTIVO = "border-emerald-950 bg-emerald-800 text-white shadow-md hover:border-emerald-950 hover:bg-emerald-900 hover:text-white active:bg-emerald-950 dark:bg-emerald-700";
+
+function PulsanteScelta({ attivo, onClick, children }: { attivo: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <Button
+      size="sm"
+      type="button"
+      variant={attivo ? "default" : "outline"}
+      aria-pressed={attivo}
+      className={`w-full justify-start ${attivo ? ATTIVO : ""}`}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+}
 
 export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, materie, dipendenti, conteggio, infoArrivi }: Props) {
   const set = <K extends keyof Filtri>(k: K, v: Filtri[K]) => onChange({ ...filtri, [k]: v });
@@ -46,16 +66,9 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, mate
     <aside className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm print:hidden">
       <div className="space-y-1.5">
         <p className="mb-2 font-semibold">Selezione</p>
-        <Button
-          size="sm"
-          type="button"
-          variant={arrivi ? "default" : "outline"}
-          aria-pressed={arrivi}
-          className="w-full justify-start"
-          onClick={() => set("arrivi", arrivi ? "no" : "scolastico")}
-        >
+        <PulsanteScelta attivo={arrivi} onClick={() => onChange(conSelezione(filtri, { arrivi: arrivi ? "no" : "scolastico" }))}>
           Nuovi arrivati dell'anno
-        </Button>
+        </PulsanteScelta>
         {arrivi && (
           <>
             <select
@@ -70,9 +83,16 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, mate
             <p className="text-xs text-muted-foreground">
               Assunti dal {dataIt(infoArrivi.inizio)}.
               {infoArrivi.senzaData > 0 && ` ${infoArrivi.senzaData} lavoratori senza data di assunzione non sono inclusi.`}
-              {!anagrafica && " Per nascita e corsi Sì/No scegli «Elenco lavoratori in servizio»."}
             </p>
           </>
+        )}
+        <PulsanteScelta attivo={filtri.incompleta} onClick={() => onChange(conSelezione(filtri, { incompleta: !filtri.incompleta }))}>
+          Anagrafica incompleta
+        </PulsanteScelta>
+        {filtri.incompleta && (
+          <p className="text-xs text-muted-foreground">
+            Lavoratori a cui manca almeno un dato (l'email non conta). Compaiono le colonne dei dati mancanti.
+          </p>
         )}
       </div>
 
@@ -80,16 +100,9 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, mate
         <p className="mb-2 font-semibold">Tipo di documento</p>
         <div className="flex flex-col gap-1.5">
           {(Object.keys(TITOLI_MODELLO) as Modello[]).map((m) => (
-            <Button
-              key={m}
-              size="sm"
-              type="button"
-              variant={filtri.modello === m ? "default" : "outline"}
-              className="justify-start"
-              onClick={() => set("modello", m)}
-            >
+            <PulsanteScelta key={m} attivo={filtri.modello === m} onClick={() => set("modello", m)}>
               {TITOLI_MODELLO[m]}
-            </Button>
+            </PulsanteScelta>
           ))}
         </div>
       </div>
