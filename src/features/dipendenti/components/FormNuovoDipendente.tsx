@@ -4,6 +4,7 @@
  * Modulo «Nuovo dipendente».
  * Revisioni:
  *   rev 2 — 28/10/2026 10:00 — Campi contrattuali (tipo, assunzione, scadenza libera, note).
+ *   rev 3 — 05/11/2026 17:50 — Modalità «modifica» e avviso codice fiscale da verificare.
  */
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,10 @@ import {
 import { type Dipendente } from "@/lib/api";
 import { Campo } from "./Campo";
 import { CampiContratto } from "@/features/contratti/CampiContratto";
+import { analizzaCodiceFiscale } from "../codice-fiscale/controllo-cf";
 
 export function FormNuovoDipendente({
+  modo = "nuovo",
   form,
   setForm,
   repartiAttivi,
@@ -27,6 +30,7 @@ export function FormNuovoDipendente({
   onSalva,
   onAnnulla,
 }: {
+  modo?: "nuovo" | "modifica";
   form: Omit<Dipendente, "id">;
   setForm: (f: Omit<Dipendente, "id"> | null) => void;
   repartiAttivi: string[];
@@ -34,9 +38,10 @@ export function FormNuovoDipendente({
   onSalva: () => void;
   onAnnulla: () => void;
 }) {
+  const esitoCF = analizzaCodiceFiscale(form.codice_fiscale);
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Nuovo dipendente</h2>
+      <h2 className="text-lg font-semibold">{modo === "modifica" ? "Modifica anagrafica" : "Nuovo dipendente"}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo
           label="Cognome"
@@ -48,11 +53,18 @@ export function FormNuovoDipendente({
           value={form.nome}
           onChange={(v) => setForm({ ...form, nome: v })}
         />
-        <Campo
-          label="Codice fiscale"
-          value={form.codice_fiscale}
-          onChange={(v) => setForm({ ...form, codice_fiscale: v.toUpperCase() })}
-        />
+        <div className="space-y-1">
+          <Campo
+            label="Codice fiscale"
+            value={form.codice_fiscale}
+            onChange={(v) => setForm({ ...form, codice_fiscale: v.toUpperCase() })}
+          />
+          {!esitoCF.valido && (
+            <p className="text-xs font-medium text-destructive">
+              ⚠ Codice fiscale da verificare: {esitoCF.problemi.join("; ")}
+            </p>
+          )}
+        </div>
         <Campo
           label="Email"
           value={form.email ?? ""}
@@ -104,7 +116,7 @@ export function FormNuovoDipendente({
       <CampiContratto valori={form} onChange={(v) => setForm({ ...form, ...v })} />
       <div className="flex gap-2">
         <Button onClick={onSalva} disabled={saving}>
-          {saving && <Loader2 className="size-4 animate-spin" />} Salva
+          {saving && <Loader2 className="size-4 animate-spin" />} {modo === "modifica" ? "Salva modifiche" : "Salva"}
         </Button>
         <Button variant="outline" onClick={onAnnulla}>
           Annulla
