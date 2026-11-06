@@ -2,13 +2,15 @@
  * @file DocumentiAttestati.tsx
  * @path src/features/documenti/DocumentiAttestati.tsx
  * @created 2024-05-10
- * @revision 2026-10-28 20:20 - rev 3 - Utilizzo di Button unificato per aggancio e aggiunta attestati
- * @description Elenco degli attestati PDF di un dipendente, con apertura, eliminazione e caricamento.
+ * @revision 2024-05-10 10:00 - rev 1 - Creazione elenco attestati PDF dipendente.
+ * @revision 2026-10-28 20:20 - rev 3 - Utilizzo di Button unificato per aggancio e aggiunta attestati.
+ * @revision 2026-11-06 17:15 - rev 4 - Unico pulsante "Aggiungi attestato" che avvia la ricerca con validazione HR immediata.
+ * @description Elenco degli attestati PDF di un dipendente, con apertura, eliminazione e caricamento con validatore.
  */
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Paperclip, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import {
   eliminaDocumento,
   getDocumenti,
@@ -18,8 +20,7 @@ import {
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { RigaDocumento } from "./RigaDocumento";
-import { DialogCaricamento } from "./DialogCaricamento";
-import { SchermoAgganciaAllegato } from "@/features/dipendenti/aggancia-allegato/SchermoAgganciaAllegato";
+import { DialogAggiungiAttestatoConValidazione } from "@/features/dipendenti/components/DialogAggiungiAttestatoConValidazione";
 import { pubblicaDipendente, registraComando } from "./barra-azioni";
 
 export function DocumentiAttestati({
@@ -30,22 +31,25 @@ export function DocumentiAttestati({
   bottoniInBarra?: boolean;
 }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [aggancia, setAggancia] = useState(false);
+  const [openModalitaAggiungi, setOpenModalitaAggiungi] = useState(false);
 
   const { data: documenti = [], isLoading } = useQuery({
     queryKey: ["documenti", dipendente.id],
     queryFn: () => getDocumenti(dipendente.id),
   });
 
-  // La barra fissa del Cruscotto HR comanda da qui: pubblica il dipendente aperto
-  // e registra le azioni dei due bottoni.
+  // Pubblicazione per eventuale barra esterna del cruscotto HR
   useEffect(() => {
     pubblicaDipendente(dipendente);
   }, [dipendente]);
   useEffect(() => () => pubblicaDipendente(null), []);
-  useEffect(() => registraComando("caricamento", () => setOpen(true)), []);
-  useEffect(() => registraComando("aggancio", () => setAggancia(true)), []);
+  useEffect(() => registraComando("caricamento", () => setOpenModalitaAggiungi(true)), []);
+  useEffect(() => registraComando("aggancio", () => setOpenModalitaAggiungi(true)), []);
+
+  function aggiornaTutto() {
+    qc.invalidateQueries({ queryKey: ["documenti", dipendente.id] });
+    qc.invalidateQueries({ queryKey: ["attestati"] });
+  }
 
   async function apri(doc: DocumentoAttestato) {
     try {
@@ -61,7 +65,7 @@ export function DocumentiAttestati({
     try {
       await eliminaDocumento(doc);
       toast.success("Attestato eliminato");
-      qc.invalidateQueries({ queryKey: ["documenti", dipendente.id] });
+      aggiornaTutto();
     } catch (e) {
       toast.error("Eliminazione non riuscita", { description: (e as Error).message });
     }
@@ -72,21 +76,17 @@ export function DocumentiAttestati({
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold">Attestati (PDF)</h3>
         {!bottoniInBarra ? (
-          <div className="flex flex-col items-end gap-1.5">
-            <Button type="button" onClick={() => setAggancia(true)}>
-              <Paperclip className="size-4" /> Aggancia attestato come allegato
-            </Button>
-            <Button type="button" onClick={() => setOpen(true)}>
-              <Plus className="size-4" /> Aggiungi attestato
-            </Button>
-          </div>
+          <Button type="button" onClick={() => setOpenModalitaAggiungi(true)}>
+            <Plus className="size-4" /> Aggiungi attestato
+          </Button>
         ) : null}
       </div>
-      <SchermoAgganciaAllegato
-        open={aggancia}
-        onChiudi={() => setAggancia(false)}
+
+      <DialogAggiungiAttestatoConValidazione
+        open={openModalitaAggiungi}
         dipendente={dipendente}
-        onAgganciato={() => qc.invalidateQueries({ queryKey: ["documenti", dipendente.id] })}
+        onChiudi={() => setOpenModalitaAggiungi(false)}
+        onCompletato={aggiornaTutto}
       />
 
       {isLoading ? (
@@ -104,13 +104,6 @@ export function DocumentiAttestati({
           Nessun PDF caricato per questo dipendente
         </p>
       )}
-
-      <DialogCaricamento
-        dipendente={dipendente}
-        open={open}
-        onOpenChange={setOpen}
-        onDone={() => qc.invalidateQueries({ queryKey: ["documenti", dipendente.id] })}
-      />
     </div>
   );
 }
