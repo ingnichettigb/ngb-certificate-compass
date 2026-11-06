@@ -4,12 +4,13 @@
  * Test delle funzioni pure dei filtri della pagina Scadenze.
  * - Rev (2026-11-06 16:00): Adeguato alle righe raggruppate (RigaScadenzaDati) e al motore dei cicli;
  *   aggiunti test su raggruppamento, decadenza e regola Preposti.
+ * - Rev (2026-11-06 18:30): Test del filtro «Solo incarichi attualmente assegnati».
  */
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
-import type { Attestato } from "@/lib/api";
+import type { AssegnazioneRuolo, Attestato, RuoloSicurezza } from "@/lib/api";
 import { elencoCorsi, elencoReparti, filtraScadenze } from "./filtri";
 import { TUTTI, type Vista } from "./types";
 
@@ -169,5 +170,45 @@ describe("filtraScadenze: reparto, corso, ricerca e ordinamento", () => {
     const copia = [...dati];
     filtraScadenze({ ...base, attestati: dati, sortCol: "dipendente", sortDir: "desc" });
     expect(dati).toEqual(copia);
+  });
+});
+
+describe("filtraScadenze: solo incarichi attualmente assegnati", () => {
+  const ruolo = (id: string, nome: string, obbligatorio_tutti = false): RuoloSicurezza => ({
+    id,
+    nome,
+    descrizione: null,
+    macro_categoria: nome,
+    obbligatorio_tutti,
+    attivo: true,
+    ordine: 1,
+  });
+  const catalogo = [ruolo("r-prep", "Preposto"), ruolo("r-lav", "Lavoratore", true)];
+  // d1 = ex Preposto (nessuna assegnazione), d2 = Preposto attuale, d3 = Lavoratore (obbligatorio per tutti)
+  const dati = [
+    att("1", "Quanzo", "ATA", "Preposto", "2021-01-01", 2),
+    att("2", "Rossi", "ATA", "Preposto", "2021-01-01", 2),
+    att("3", "Bianchi", "ATA", "Lavoratore", "2021-01-01", 5),
+  ];
+  const assegnazioni: AssegnazioneRuolo[] = [{ id: "a1", dipendente_id: "d2", ruolo_id: "r-prep" }];
+  const f = (extra: Partial<Parameters<typeof filtraScadenze>[0]>) =>
+    filtraScadenze({ ...base, attestati: dati, ruoliCatalogo: catalogo, assegnazioni, ...extra }).map((r) => r.attestato.id);
+
+  it("attiva: nasconde il Preposto non più assegnato, mantiene assegnato e obbligatori per tutti", () => {
+    expect(f({ soloIncarichiAssegnati: true }).sort()).toEqual(["2", "3"]);
+  });
+  it("attiva di default", () => {
+    expect(f({}).sort()).toEqual(["2", "3"]);
+  });
+  it("disattivata: mostra l'intero parco attestati storici", () => {
+    expect(f({ soloIncarichiAssegnati: false }).sort()).toEqual(["1", "2", "3"]);
+  });
+  it("catalogo ruoli vuoto: nessun filtro (comportamento precedente)", () => {
+    expect(f({ ruoliCatalogo: [] }).sort()).toEqual(["1", "2", "3"]);
+  });
+  it("corso senza ruolo riconosciuto: la riga resta visibile", () => {
+    const altri = [att("4", "Verdi", "ATA", "Corso generico", "2021-01-01", 5)];
+    const ids = filtraScadenze({ ...base, attestati: altri, ruoliCatalogo: catalogo, assegnazioni: [] }).map((r) => r.attestato.id);
+    expect(ids).toEqual(["4"]);
   });
 });

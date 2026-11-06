@@ -5,8 +5,16 @@
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Funzioni pure per elenchi, filtri e ordinamento.
  * - Rev 2 (2026-11-06 12:00): Righe raggruppate per lavoratore + corso; filtri per decadenza, ore parziali e giorni alla scadenza.
+ * - Rev 3 (2026-11-06 18:30): Filtro per soli incarichi attualmente assegnati (esclude corsi di ruoli non più ricoperti).
  */
-import { repartoLeggibile, type Attestato } from "@/lib/api";
+import {
+  repartoLeggibile,
+  type AssegnazioneRuolo,
+  type Attestato,
+  type RuoloSicurezza,
+  type TipoCorso,
+} from "@/lib/api";
+import { trovaRuoloPerCorso } from "@/features/dipendenti/matrice/mappatura-ruoli-corsi";
 import { costruisciRighe } from "./raggruppa";
 import {
   TUTTI,
@@ -81,7 +89,7 @@ const ORDINE_STATO: Record<StatoConformita, number> = {
   senza_scadenza: 5,
 };
 
-/** Righe (lavoratore + corso) che rispettano vista, corso, reparto e ricerca, ordinate per colonna. */
+/** Righe (lavoratore + corso) che rispettano vista, corso, reparto, incarico e ricerca, ordinate per colonna. */
 export function filtraScadenze({
   attestati,
   vista,
@@ -91,6 +99,9 @@ export function filtraScadenze({
   sortCol,
   sortDir,
   oggi,
+  soloIncarichiAssegnati = true,
+  ruoliCatalogo = [],
+  assegnazioni = [],
 }: {
   attestati: Attestato[];
   vista: Vista;
@@ -100,8 +111,17 @@ export function filtraScadenze({
   sortCol: ColonnaSort;
   sortDir: DirezioneSort;
   oggi: Date;
+  soloIncarichiAssegnati?: boolean;
+  ruoliCatalogo?: RuoloSicurezza[];
+  assegnazioni?: AssegnazioneRuolo[];
 }): RigaScadenzaDati[] {
   const righe = costruisciRighe(attestati, oggi);
+
+  // Insieme "dipendente_ruolo" per il controllo rapido delle assegnazioni attuali
+  const mappaAssegnati = new Set<string>();
+  for (const a of assegnazioni) {
+    mappaAssegnati.add(`${a.dipendente_id}_${a.ruolo_id}`);
+  }
 
   const filtrate = righe.filter((r) => {
     const rep = (r.attestato.dipendenti?.reparto ?? "").trim().toLowerCase();
@@ -113,6 +133,17 @@ export function filtraScadenze({
         (a) => (a.tipi_corso?.nome_corso ?? "").trim().toLowerCase() === c,
       );
       if (!trovato) return false;
+    }
+
+    // Incarichi attualmente assegnati: un corso legato a un ruolo specifico (non obbligatorio per tutti)
+    // è mostrato solo se il dipendente ha quel ruolo in dipendenti_ruoli. Senza ruolo riconosciuto: riga visibile.
+    if (soloIncarichiAssegnati && ruoliCatalogo.length > 0) {
+      const dipId = r.attestato.dipendente_id;
+      const tc = r.attestato.tipi_corso as TipoCorso | null | undefined;
+      if (dipId && tc) {
+        const ruolo = trovaRuoloPerCorso(tc, ruoliCatalogo);
+        if (ruolo && !ruolo.obbligatorio_tutti && !mappaAssegnati.has(`${dipId}_${ruolo.id}`)) return false;
+      }
     }
 
     return corrispondeVista(r.ciclo, vista);

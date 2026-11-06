@@ -1,9 +1,12 @@
 /*
  * File:      FiltriScadenze.tsx
  * Percorso:  src/features/scadenze/components/FiltriScadenze.tsx
- * Menù a tendina per periodo, corso e reparto e ricerca per testo.
+ * Menù a tendina per periodo, corso e reparto, ricerca per testo e spunta incarichi.
+ * Revisioni:
+ * - Rev 2 (2026-11-06 18:30): Aggiunta spunta «Solo incarichi attualmente assegnati» (attiva di default).
  */
-import { CalendarClock, Search } from "lucide-react";
+import { CalendarClock, Search, ShieldCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -25,6 +28,8 @@ export function FiltriScadenze({
   reparti,
   q,
   setQ,
+  soloIncarichiAssegnati,
+  setSoloIncarichiAssegnati,
 }: {
   vista: Vista;
   setVista: (v: Vista) => void;
@@ -36,6 +41,8 @@ export function FiltriScadenze({
   reparti: string[];
   q: string;
   setQ: (v: string) => void;
+  soloIncarichiAssegnati: boolean;
+  setSoloIncarichiAssegnati: (v: boolean) => void;
 }) {
   return (
   <div className="flex flex-wrap items-center gap-3">
@@ -110,6 +117,16 @@ export function FiltriScadenze({
         className="pl-9"
       />
     </div>
+
+    {/* Filtro incarichi attualmente assegnati */}
+    <label className="flex cursor-pointer select-none items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/70">
+      <Checkbox
+        checked={soloIncarichiAssegnati}
+        onCheckedChange={(v) => setSoloIncarichiAssegnati(Boolean(v))}
+      />
+      <ShieldCheck className="size-4 text-primary" />
+      <span>Solo incarichi attualmente assegnati</span>
+    </label>
   </div>
   );
 }

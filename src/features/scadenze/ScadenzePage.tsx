@@ -2,6 +2,8 @@
  * File:      ScadenzePage.tsx
  * Percorso:  src/features/scadenze/ScadenzePage.tsx
  * Pagina Scadenze attestati: compone filtri e tabella con la logica dell'hook.
+ * Revisioni:
+ * - Rev 2 (2026-11-06 18:30): Connessione del filtro «Solo incarichi attualmente assegnati».
  */
 import { Loader2 } from "lucide-react";
 import { IntestazioneScadenze } from "./components/IntestazioneScadenze";
@@ -26,6 +28,8 @@ export function ScadenzePage() {
     corsi,
     righe,
     cambiaOrdinamento,
+    soloIncarichiAssegnati,
+    setSoloIncarichiAssegnati,
   } = useScadenze();
 
   return (
@@ -44,6 +48,8 @@ export function ScadenzePage() {
           reparti={reparti}
           q={q}
           setQ={setQ}
+          soloIncarichiAssegnati={soloIncarichiAssegnati}
+          setSoloIncarichiAssegnati={setSoloIncarichiAssegnati}
         />
 
         {isLoading ? (
