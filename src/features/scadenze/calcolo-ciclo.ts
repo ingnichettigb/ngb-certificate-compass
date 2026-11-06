@@ -5,6 +5,8 @@
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Motore puro: ciclo rigido ancorato al Base, somma ore, decadenza, sanatoria tardiva.
  * - Rev 2 (2026-11-06 14:00): Restituisce cicli ed eventi classificati per la linea temporale.
+ * - Rev 3 (2026-11-06 16:00): Guardia su dataCorso mancante/non valida (record storici); parametro dataTaglio
+ *   (regime transitorio Preposti: la scadenza non può essere anteriore al taglio).
  *
  * Regole implementate (vedi MODIFICHE_SCADENZE.md):
  * 1. Ancora = data dell'ultimo Corso Base (se nessun attestato è Base, il più vecchio).
@@ -16,6 +18,8 @@
  * 5. Decadenza: se dall'ultima evidenza (Base o aggiornamento che ha completato il monte ore)
  *    sono passati più di decadenzaAnni, gli aggiornamenti successivi non contano: serve un nuovo Base.
  * 6. Le ore in eccesso non si riportano al ciclo successivo.
+ * 7. Taglio (facoltativo): se la scadenza calcolata cade prima della data di taglio, diventa la data di taglio
+ *    (es. Preposti: periodicità biennale con termine unico al 19/05/2026 per le formazioni pregresse).
  */
 import type {
   CicloVisuale,
@@ -50,6 +54,8 @@ export interface ParametriCiclo {
   decadenzaAnni?: number | null;
   giorniPreavviso?: number;
   consentiSanatoriaTardiva?: boolean;
+  /** Data (YYYY-MM-DD) prima della quale la scadenza non può cadere (regime transitorio); null = nessun taglio. */
+  dataTaglio?: string | null;
   oggi?: Date;
 }
 
@@ -104,12 +110,15 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     decadenzaAnni = DECADENZA_PREDEFINITA_ANNI,
     giorniPreavviso = 90,
     consentiSanatoriaTardiva = true,
+    dataTaglio = null,
   } = p;
   const oggi = oggiIso(p.oggi);
   const N = Math.round(p.durataCicloAnni);
 
+  // Record storici senza data (o con data illeggibile) non possono entrare nel calcolo: si scartano.
   const ordinati = p.attestati
-    .map((a) => ({ ...a, dataCorso: a.dataCorso.slice(0, 10) }))
+    .map((a) => ({ ...a, dataCorso: (a.dataCorso ?? "").slice(0, 10) }))
+    .filter((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.dataCorso))
     .sort(
       (a, b) => a.dataCorso.localeCompare(b.dataCorso) || String(a.id).localeCompare(String(b.id)),
     );
@@ -130,6 +139,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       aggiornamentiIgnorati: 0,
       durataCicloAnni: N >= 1 ? N : 0,
       dataValutazione: oggi,
+      dataTaglio: null,
+      scadenzaPortataAlTaglio: false,
       cicli: [],
       eventi: [],
     };
@@ -137,12 +148,12 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
 
   // 1. Ancora: ultimo Corso Base (altrimenti il più vecchio attestato).
   const basi = ordinati.filter((a) => a.eBase);
-  const ancora = basi.length > 0 ? basi[basi.length - 1] : ordinati[0];
+  const ancora = (basi.length > 0 ? basi[basi.length - 1] : ordinati[0])!;
   const dataAncora = ancora.dataCorso;
 
   // Corso senza scadenza.
   if (!(N >= 1)) {
-    const ultimo = ordinati[ordinati.length - 1].dataCorso;
+    const ultimo = ordinati[ordinati.length - 1]!.dataCorso;
     return {
       dataAncora,
       scadenzaEffettiva: null,
@@ -157,6 +168,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       aggiornamentiIgnorati: 0,
       durataCicloAnni: 0,
       dataValutazione: oggi,
+      dataTaglio: null,
+      scadenzaPortataAlTaglio: false,
       cicli: [],
       eventi: [],
     };
@@ -224,7 +237,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     }
   }
 
-  const scadenzaEffettiva = fineCiclo(copertoFino + 1);
+  // 7. Taglio: la scadenza non può precedere la data di taglio (regime transitorio).
+  const scadenzaRigida = fineCiclo(copertoFino + 1);
+  const scadenzaPortataAlTaglio = dataTaglio !== null && scadenzaRigida < dataTaglio;
+  const scadenzaEffettiva = scadenzaPortataAlTaglio ? (dataTaglio as string) : scadenzaRigida;
   const giorniAllaScadenza = giorniTra(oggi, scadenzaEffettiva);
   const decaduto = decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni);
 
@@ -286,6 +302,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     aggiornamentiIgnorati: ignorati,
     durataCicloAnni: N,
     dataValutazione: oggi,
+    dataTaglio,
+    scadenzaPortataAlTaglio,
     cicli,
     eventi,
   };

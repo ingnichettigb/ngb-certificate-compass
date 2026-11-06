@@ -6,6 +6,8 @@
  * - Rev 1 (2026-11-06 14:00): Linea temporale per cicli. Disegna solo ciò che calcola il motore (cicli ed eventi),
  *   senza ricalcolare ore o scadenze.
  *
+ * - Rev 2 (2026-11-06 16:00): Indicatore del taglio (Preposti 19/05/2026) con nota sul termine transitorio.
+ *
  * Colori per ciclo: verde = completato, arancione = da completare, rosso = scaduto,
  * nero = non ancora attivo, bordeaux = decaduto.
  */
@@ -101,8 +103,8 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
     const { cicli } = ciclo;
     if (cicli.length === 0 || !ciclo.dataAncora) return null;
 
-    const inizio = cicli[0].inizio;
-    const fine = cicli[cicli.length - 1].fine;
+    const inizio = cicli[0]!.inizio;
+    const fine = cicli[cicli.length - 1]!.fine;
     const span = Math.max(1, giorniTra(inizio, fine));
     const pct = (data: string) => (giorniTra(inizio, data) / span) * 100;
 
@@ -120,7 +122,7 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
       .map((e) => ({ ev: e, p: pct(e.data) }))
       .sort((a, b) => a.p - b.p);
     const livelli = assegnaLivelli(visibili.map((v) => v.p));
-    const eventi = visibili.map((v, i) => ({ ...v, livello: livelli[i] }));
+    const eventi = visibili.map((v, i) => ({ ...v, livello: livelli[i] ?? 0 }));
     const livelloMax = eventi.reduce((m, e) => Math.max(m, e.livello), 0);
 
     const oggi = ciclo.dataValutazione;
@@ -138,6 +140,11 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
       altezzaSopra: 6 + livelloMax * ALTEZZA_LIVELLO + 54,
       oggi,
       pctOggi: oggi >= inizio && oggi <= fine ? pct(oggi) : null,
+      taglio: ciclo.dataTaglio,
+      pctTaglio:
+        ciclo.dataTaglio && ciclo.dataTaglio >= inizio && ciclo.dataTaglio <= fine
+          ? pct(ciclo.dataTaglio)
+          : null,
       confini,
     };
   }, [ciclo]);
@@ -158,6 +165,9 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
             Ciclo di {ciclo.durataCicloAnni} anni
             {ciclo.oreRichieste > 0
               ? ` · ${ciclo.oreRichieste} ore di aggiornamento per ciclo`
+              : ""}
+            {ciclo.scadenzaPortataAlTaglio && ciclo.dataTaglio
+              ? ` · scadenza portata al ${formatData(ciclo.dataTaglio)} (regime transitorio)`
               : ""}
           </div>
 
@@ -222,6 +232,13 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
                 style={{ left: `${p}%` }}
               />
             ))}
+            {dati.pctTaglio !== null && (
+              <div
+                title={`Taglio ${formatData(dati.taglio)}`}
+                className="absolute -bottom-2 -top-2 z-10 w-0 -translate-x-1/2 border-l-2 border-dashed border-sky-600"
+                style={{ left: `${dati.pctTaglio}%` }}
+              />
+            )}
             {dati.pctOggi !== null && (
               <div
                 className="absolute -bottom-1.5 -top-1.5 z-10 w-0.5 -translate-x-1/2 bg-foreground"
@@ -243,8 +260,17 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
             ))}
           </div>
 
-          {/* 4. Indicatore Oggi */}
+          {/* 4. Indicatore Oggi e Taglio */}
           <div className="relative h-5 w-full">
+            {dati.pctTaglio !== null && (
+              <span
+                title={`Taglio ${formatData(dati.taglio)}`}
+                className="absolute top-0.5 -translate-x-1/2 whitespace-nowrap rounded border border-sky-600 bg-sky-600/10 px-1 py-px text-[9px] font-bold text-sky-700 dark:text-sky-300"
+                style={{ left: `${dati.pctTaglio}%` }}
+              >
+                Taglio {formatData(dati.taglio)}
+              </span>
+            )}
             {dati.pctOggi !== null && (
               <span
                 title={`Oggi (${formatData(dati.oggi)})`}
@@ -287,6 +313,12 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
               <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground/60" />
               non contato
             </span>
+            {ciclo.dataTaglio && (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-3 w-0 border-l-2 border-dashed border-sky-600" />
+                taglio {formatData(ciclo.dataTaglio)}
+              </span>
+            )}
           </div>
         </div>
       </div>

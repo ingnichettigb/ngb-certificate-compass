@@ -6,6 +6,7 @@
  * - Rev 1 (2026-10-15 10:00): Struttura base tipi per la pagina Scadenze.
  * - Rev 2 (2026-11-06 12:00): Stati di conformità ciclo, decadenza, monte ore frazionato e riga raggruppata.
  * - Rev 3 (2026-11-06 14:00): Cicli ed eventi già calcolati dal motore per la linea temporale.
+ * - Rev 4 (2026-11-06 16:00): dataTaglio e scadenzaPortataAlTaglio (regime transitorio Preposti).
  */
 import type { Attestato } from "@/lib/api";
 
@@ -72,6 +73,10 @@ export interface PosizioneCiclo {
   durataCicloAnni: number;
   /** Data usata per la valutazione (YYYY-MM-DD): è anche la posizione di "Oggi" nel grafico. */
   dataValutazione: string;
+  /** Data di taglio applicata (es. 19/05/2026 per i Preposti); null se non prevista. */
+  dataTaglio: string | null;
+  /** true se la scadenza mostrata è stata portata alla data di taglio (la fine ciclo rigida era anteriore). */
+  scadenzaPortataAlTaglio: boolean;
   /** Cicli da disegnare: dal primo al ciclo di oggi, più il successivo non ancora attivo. */
   cicli: CicloVisuale[];
   /** Base e aggiornamenti classificati dal motore (contati, parziali, completi, ignorati). */

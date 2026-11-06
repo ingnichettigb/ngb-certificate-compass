@@ -7,6 +7,7 @@
  * - Rev 2 (2026-11-04 08:40): Colonna N° progressiva e layout fisso.
  * - Rev 3 (2026-11-06 12:00): Riga per lavoratore + corso con ciclo già calcolato; badge di conformità e ore parziali.
  * - Rev 4 (2026-11-06 14:00): Pulsante per espandere/comprimere la linea temporale del ciclo (LineaCicloFormativo).
+ * - Rev 5 (2026-11-06 16:00): Nota «termine transitorio» quando la scadenza è portata alla data di taglio (Preposti).
  */
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -65,6 +66,11 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
         <td className="px-3 py-2">{formatData(a.data_corso)}</td>
         <td className={`px-3 py-2 font-mono ${scaduta ? "text-destructive" : ""}`}>
           {ciclo.scadenzaEffettiva ? formatData(ciclo.scadenzaEffettiva) : "Non scade"}
+          {ciclo.scadenzaPortataAlTaglio && (
+            <div className="font-sans text-xs font-normal text-muted-foreground">
+              termine transitorio
+            </div>
+          )}
         </td>
         <td className="px-3 py-2">
           <BadgeStatoConformita

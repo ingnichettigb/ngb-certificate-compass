@@ -322,3 +322,54 @@ describe("cicli ed eventi per la linea temporale", () => {
     expect(r.eventi).toEqual([]);
   });
 });
+
+describe("data di taglio (regime transitorio Preposti) e record storici", () => {
+  const prep = (attestati: AttestatoCiclo[], oggi: Date) =>
+    calcola(attestati, oggi, {
+      durataCicloAnni: 2,
+      oreRichiesteAggiornamento: 6,
+      dataTaglio: "2026-05-19",
+    });
+
+  it("fine ciclo anteriore al taglio: la scadenza diventa il 19/05/2026", () => {
+    const r = prep([base("2022-03-10")], giorno(2026, 1, 15));
+    expect(r.scadenzaEffettiva).toBe("2026-05-19");
+    expect(r.scadenzaPortataAlTaglio).toBe(true);
+    expect(r.stato).toBe("valido");
+  });
+
+  it("dopo il taglio senza aggiornamento risulta scaduto", () => {
+    const r = prep([base("2022-03-10")], giorno(2026, 11, 6));
+    expect(r.scadenzaEffettiva).toBe("2026-05-19");
+    expect(r.stato).toBe("scaduto_sanabile");
+  });
+
+  it("aggiornamento fatto in tempo: cicli biennali rigidi dall'ancora", () => {
+    const r = prep([base("2022-03-10"), agg("2026-02-01", 6)], giorno(2026, 11, 6));
+    // Il 01/02/2026 cade nel ciclo 2 (10/03/2024 → 10/03/2026): lo copre, la scadenza è la fine del ciclo 3.
+    expect(r.scadenzaEffettiva).toBe("2028-03-10");
+    expect(r.scadenzaPortataAlTaglio).toBe(false);
+    expect(r.stato).toBe("valido");
+  });
+
+  it("senza dataTaglio il comportamento non cambia", () => {
+    const r = calcola([base("2022-03-10")], giorno(2026, 11, 6), { durataCicloAnni: 2 });
+    expect(r.scadenzaEffettiva).toBe("2024-03-10");
+    expect(r.dataTaglio).toBeNull();
+    expect(r.scadenzaPortataAlTaglio).toBe(false);
+  });
+
+  it("attestato con data mancante o non valida viene scartato senza errori", () => {
+    const rotto = { id: "x", dataCorso: undefined as unknown as string, ore: 4, eBase: false };
+    const vuoto = { id: "y", dataCorso: "", ore: 4, eBase: false };
+    const r = calcola([base("2022-03-10"), rotto, vuoto], giorno(2026, 11, 6));
+    expect(r.scadenzaEffettiva).toBe("2027-03-10");
+  });
+
+  it("solo attestati senza data: richiede il Corso Base, nessun errore", () => {
+    const rotto = { id: "x", dataCorso: "", ore: 4, eBase: false };
+    const r = calcola([rotto], giorno(2026, 11, 6));
+    expect(r.stato).toBe("decaduto");
+    expect(r.richiedeNuovoCorsoBase).toBe(true);
+  });
+});

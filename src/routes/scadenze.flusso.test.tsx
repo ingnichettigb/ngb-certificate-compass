@@ -3,6 +3,8 @@
  * Registra, per ogni scelta dell'utente (periodo, corso, reparto, ricerca, ordinamento),
  * l'elenco di righe mostrato e lo confronta con lo snapshot.
  * La data «di oggi» è bloccata al 20/10/2026 per avere risultati stabili.
+ * - Rev (2026-11-06 16:00): Dati adeguati al motore dei cicli (durata e ore nel tipo di corso: la scadenza è calcolata,
+ *   non più letta da data_scadenza_calcolata); aggiunto l'ordinamento per «Stato». Snapshot rigenerato.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +16,17 @@ const { dati } = vi.hoisted(() => {
     id, codice_fiscale: cf, dipendente_id: "d-" + id, tipo_corso_id: "t-" + id, data_corso: dataCorso, data_scadenza_calcolata: scad,
     ore_dichiarate: 8, stato_validazione: "Approvato", created_at: "2026-01-01",
     dipendenti: { cognome, nome, reparto, codice_fiscale: cf },
-    tipi_corso: corso ? { nome_corso: corso, macro_categoria: "X", livello_specifico: "Base" } : null,
+    // La durata del ciclo (anni) è ricavata dalla vecchia scadenza di comodo: dataCorso → scad.
+    tipi_corso: corso
+      ? {
+          nome_corso: corso,
+          macro_categoria: "X",
+          livello_specifico: "Base",
+          durata_validita_anni: dataCorso && scad ? Number(scad.slice(0, 4)) - Number(dataCorso.slice(0, 4)) : null,
+          ore_aggiornamento: 6,
+          ore_minime_legge: 6,
+        }
+      : null,
   });
   return {
     dati: {
@@ -28,7 +40,7 @@ const { dati } = vi.hoisted(() => {
           att("6", "BRUNI", "SARA", "BRNSRA80A41H501X", "Studente", "primo SOCCORSO", "2022-09-01", "2027-09-01"),
           att("7", "VIOLA", "TINA", "VLITNA80A41H501X", "45123", "Antincendio rischio basso", "2025-05-05", "2030-01-01"),
           att("8", "ARANCI", "UGO", "RNCGUO80A01H501U", null, null, null, "2026-10-20"),
-          att("9", "SENZA", "SCADENZA", "SNZSCD80A01H501U", "ATA", "Preposto", "2025-01-01", null),
+          att("9", "SENZA", "SCADENZA", "SNZSCD80A01H501U", "ATA", "Corso permanente", "2025-01-01", null),
         ],
       },
     },
@@ -116,7 +128,7 @@ describe("Scadenze: percorso d'uso completo", () => {
       foto("ricerca «" + t + "»");
     }
 
-    for (const col of ["Dipendente", "Dipendente", "Codice fiscale", "Reparto", "Reparto", "Corso", "Data corso", "Data corso", "Scadenza", "Scadenza"]) {
+    for (const col of ["Dipendente", "Dipendente", "Codice fiscale", "Reparto", "Reparto", "Corso", "Data corso", "Data corso", "Scadenza", "Scadenza", "Stato", "Stato"]) {
       await clic(screen.getByTitle("Ordina per " + col));
       foto("ordinato per " + col);
     }

@@ -10,9 +10,10 @@
  *   rev 4 — 28/10/2026 09:30 — Rinomina accessi: «Modulo auto invio attestato» e «Inserimento attestati».
  *   rev 5 — 31/10/2026 09:00 — Stato cartella locale in alto a destra; backup su riga propria.
  *   rev 6 — 02/11/2026 11:10 — Aggiunto accesso «Stampe & Report».
+ *   rev 7 — 06/11/2026 16:00 — Aggiunto accesso «Scadenze & Piano Corsi».
  */
 import { Link } from "@tanstack/react-router";
-import { Bot, Monitor, Printer, Smartphone } from "lucide-react";
+import { Bot, CalendarClock, Monitor, Printer, Smartphone } from "lucide-react";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
@@ -50,6 +51,7 @@ export function IntestazioneHome() {
             { to: "/hr" as const, label: "Cruscotto risorse umane", Icona: Monitor },
             { to: "/carica" as const, label: "Modulo auto invio attestato", Icona: Smartphone },
             { to: "/operatore" as const, label: "Inserimento attestati", Icona: Bot },
+            { to: "/scadenze" as const, label: "Scadenze & Piano Corsi", Icona: CalendarClock },
             { to: "/stampe" as const, label: "Stampe & Report", Icona: Printer },
           ].map(({ to, label, Icona }) => (
             <Link

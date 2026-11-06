@@ -208,6 +208,8 @@ exports[`Home: contatori, schede e link > registra tutto quello che la pagina mo
       "/hr «Cruscotto risorse umane»",
       "/carica «Modulo auto invio attestato»",
       "/operatore «Inserimento attestati»",
+      "/scadenze «Scadenze & Piano Corsi»",
+      "/stampe «Stampe & Report»",
       "/dipendenti «Dipendenti4»",
       "/hr «Attestati9»",
       "/hr «In attesa di validazione3»",
@@ -220,7 +222,7 @@ exports[`Home: contatori, schede e link > registra tutto quello che la pagina mo
       "/scadenze «Scaduti»",
       "/operatore «Apri inserimento»",
     ],
-    "Archivio Attestati SicurezzaNichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008Numero dei lavoratori non dichiarato Impostazioni generaliSalva DB su cartellaCarica DB da fileCruscotto risorse umaneModulo auto invio attestatoInserimento attestati Esporta dati in ExcelDipendenti4Attestati9In attesa di validazione3In scadenza (6 mesi)5Scaduti2Senza PDF9Apri il moduloModulo auto invio attestatoIl lavoratore compila i propri dati, sceglie il corso e allega la foto dell'attestato direttamente dal telefono.http://localhost:3000/caricaCopia linkApri cruscottoCruscotto risorse umaneElenco degli attestati caricati: visualizza l'immagine, correggi i dati letti dal documento e valida o respingi l'attestato.Elenco dipendentiScadutiApri inserimentoInserimento attestatiCarica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza artificiale, archivia i documenti e compila i registri.Lettura automatica con AIEstrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.",
+    "Archivio Attestati SicurezzaNichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008Numero dei lavoratori non dichiarato Impostazioni generaliSalva DB su cartellaCarica DB da fileCruscotto risorse umaneModulo auto invio attestatoInserimento attestatiScadenze & Piano CorsiStampe & Report Esporta dati in ExcelDipendenti4Attestati9In attesa di validazione3In scadenza (6 mesi)5Scaduti2Senza PDF9Apri il moduloModulo auto invio attestatoIl lavoratore compila i propri dati, sceglie il corso e allega la foto dell'attestato direttamente dal telefono.http://localhost:3000/caricaCopia linkApri cruscottoCruscotto risorse umaneElenco degli attestati caricati: visualizza l'immagine, correggi i dati letti dal documento e valida o respingi l'attestato.Elenco dipendentiScadutiApri inserimentoInserimento attestatiCarica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza artificiale, archivia i documenti e compila i registri.Lettura automatica con AIEstrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.",
   ],
   [
     "clipboard.writeText",

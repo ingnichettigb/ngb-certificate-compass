@@ -76,3 +76,29 @@ git push -u origin feature/scadenze-cicli
 ```
 
 Nessun force-push né rebase: come richiesto da `AGENTS.md`, la storia già pubblicata resta intatta.
+
+---
+
+## Aggiornamento 2026-11-06 (16:00): correzione crash «This page didn't load»
+
+Causa: `TabellaScadenze.tsx` passava ancora `a={a}` a `RigaScadenza`, che ora riceve `riga={r}` (riga raggruppata con ciclo già calcolato). La nota sopra, secondo cui `TabellaScadenze.tsx` andava bene com'era, non corrispondeva al file presente nel repository.
+
+| File | Stato | Cosa cambia |
+|---|---|---|
+| `src/features/scadenze/components/TabellaScadenze.tsx` | modificato | `righe: RigaScadenzaDati[]`, `riga={r}`, `key={r.chiave}`, colonna ordinabile «Stato», `colSpan={8}` |
+| `src/features/scadenze/calcolo-ciclo.ts` | modificato | guardia su `dataCorso` mancante o non valida (record scartato); parametro `dataTaglio` |
+| `src/features/scadenze/raggruppa.ts` | modificato | regola Preposti (ciclo 2 anni, taglio 19/05/2026); protezione su `data_corso` nulla |
+| `src/features/scadenze/types.ts` | modificato | `dataTaglio`, `scadenzaPortataAlTaglio` |
+| `src/features/scadenze/components/RigaScadenza.tsx` | modificato | nota «termine transitorio» sotto la scadenza |
+| `src/features/scadenze/components/LineaCicloFormativo.tsx` | modificato | linea tratteggiata e etichetta «Taglio 19/05/2026», voce in legenda |
+| `src/features/home/components/IntestazioneHome.tsx` | modificato | pulsante «Scadenze & Piano Corsi» |
+| `src/features/scadenze/calcolo-ciclo.test.ts` | modificato | +6 test (taglio, date mancanti) |
+| `src/features/scadenze/filtri.test.ts` | modificato | riscritto per le righe raggruppate (era rimasto al vecchio formato) |
+| `src/routes/scadenze.flusso.test.tsx` | modificato | dati adeguati al motore, ordinamento «Stato» |
+| `src/routes/__snapshots__/scadenze.flusso.test.tsx.snap` | rigenerato | |
+| `src/routes/__snapshots__/index.flusso.test.tsx.snap` | rigenerato | aggiunge i pulsanti Scadenze e Stampe |
+
+Nessun file nuovo.
+
+### Regola Preposti
+Ciclo biennale ancorato al Corso Base; se la fine ciclo cade prima del 19/05/2026, la scadenza mostrata è il 19/05/2026 (regime transitorio dell'Accordo Stato-Regioni 17/04/2025). Vale per ogni corso riconosciuto come Preposto (macro-categoria, codice `PRP-` o nome). Le ore di aggiornamento sono quelle del tipo di corso, altrimenti 6.
