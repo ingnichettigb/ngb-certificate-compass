@@ -15,6 +15,9 @@
  *                              e qui riesportata: nessun cambio di comportamento.
  *   rev 7 — 06/11/2026 — Ordinamento per colonna (A→Z / Z→A) e «Univoco» (una riga per lavoratore, scadenza più urgente).
  *   rev 8 — 06/11/2026 18:00 — Preposti: data e stato da motore dei cicli (regime transitorio 19/05/2026).
+ *   rev 9 — 06/11/2026 — Selezione «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico (minimi richiesti),
+ *                        con colonne Corso base / Corso specifico (data dove c'è, «No» dove manca).
+ *                        Scelta tra «Nessuno dei due» e «Manca almeno uno dei due».
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -43,6 +46,9 @@ export type Colonna =
 /** «no» = selezione spenta; scolastico = dal 1 settembre; solare = dal 1 gennaio. */
 export type PeriodoArrivi = "no" | "scolastico" | "solare";
 
+/** «Senza attestati»: nessuno = né Corso base né Corso specifico; almeno = manca almeno uno dei due. */
+export type ModoSenza = "nessuno" | "almeno";
+
 export const TUTTI = "__tutti__";
 
 export type FiltriStampa = {
@@ -59,6 +65,8 @@ export type FiltriStampa = {
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
   incompleta: boolean; // selezione «Anagrafica incompleta»
+  senzaAttestati: boolean; // selezione «Senza attestati»
+  senzaModo: ModoSenza; // «nessuno» dei due minimi oppure manca «almeno» uno dei due
   modelloPrima: Modello | null; // modello da ripristinare quando si spengono le selezioni
 };
 
@@ -76,6 +84,8 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   mostraFirme: false,
   arrivi: "no",
   incompleta: false,
+  senzaAttestati: false,
+  senzaModo: "almeno",
   modelloPrima: null,
 };
 
@@ -126,6 +136,11 @@ export const COLONNE_NUOVI_ARRIVATI: Colonna[] = [
   "lavoratore", "cf", "nascita", "assunzione", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso",
 ];
 
+/** Colonne dell'elenco lavoratori con la selezione «Senza attestati» (senza «Nuovi arrivati»). */
+export const COLONNE_SENZA_ATTESTATI: Colonna[] = [
+  "lavoratore", "cf", "reparto", "mansione", "assunzione", "corsoBase", "corsoSpecifico",
+];
+
 /** In quale colonna compare ogni campo mancante. */
 const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
   cognome: "lavoratore", nome: "lavoratore", codice_fiscale: "cf", luogo_nascita: "nascita", data_nascita: "nascita",
@@ -137,13 +152,14 @@ const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
 const COLONNE_SE_MANCANTI: Colonna[] = ["nascita", "assunzione", "mansione", "fineContratto", "cessazione"];
 
 /** Colonne da mostrare: dipendono dal modello, dalle selezioni attive e (per l'incompleta) dai dati mancanti. */
-export function colonnePerVista(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta">, righe: RigaStampa[] = []): Colonna[] {
+export function colonnePerVista(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta"> & { senzaAttestati?: boolean }, righe: RigaStampa[] = []): Colonna[] {
   if (f.modello !== "lavoratori") return COLONNE_PREDEFINITE[f.modello];
   if (f.incompleta) {
     const base: Colonna[] = ["lavoratore", "cf", "reparto", "mancano"];
     const extra = COLONNE_SE_MANCANTI.filter((c) => righe.some((r) => r.mancanti.some((m) => COLONNA_DEL_CAMPO[m] === c)));
-    return [...base, ...extra];
+    return [...base, ...extra, ...(f.senzaAttestati ? (["corsoBase", "corsoSpecifico"] as Colonna[]) : [])];
   }
+  if (f.senzaAttestati) return f.arrivi !== "no" ? COLONNE_NUOVI_ARRIVATI : COLONNE_SENZA_ATTESTATI;
   return f.arrivi !== "no" ? COLONNE_NUOVI_ARRIVATI : COLONNE_PREDEFINITE.lavoratori;
 }
 
@@ -153,10 +169,10 @@ export function cellaMancante(r: RigaStampa, c: Colonna): boolean {
 }
 
 /** Accende o spegne una selezione; la prima accensione porta all'elenco lavoratori, l'ultimo spegnimento torna al modello di prima. */
-export function conSelezione(f: FiltriStampa, cambia: Partial<Pick<FiltriStampa, "arrivi" | "incompleta">>): FiltriStampa {
+export function conSelezione(f: FiltriStampa, cambia: Partial<Pick<FiltriStampa, "arrivi" | "incompleta" | "senzaAttestati">>): FiltriStampa {
   const n = { ...f, ...cambia };
-  const prima = f.arrivi !== "no" || f.incompleta;
-  const dopo = n.arrivi !== "no" || n.incompleta;
+  const prima = f.arrivi !== "no" || f.incompleta || f.senzaAttestati;
+  const dopo = n.arrivi !== "no" || n.incompleta || n.senzaAttestati;
   if (!prima && dopo) return { ...n, modelloPrima: f.modello, modello: "lavoratori" };
   if (prima && !dopo) {
     const torna = f.modello === "lavoratori" && f.modelloPrima ? f.modelloPrima : f.modello;
@@ -178,17 +194,31 @@ export function titoloStampa(f: FiltriStampa, oggi = new Date()): string {
   const base = TITOLI_MODELLO[f.modello];
   const arrivi = f.arrivi !== "no";
   if (f.modello === "lavoratori") {
+    if (f.senzaAttestati) {
+      return `Lavoratori senza attestati minimi (${f.senzaModo === "nessuno" ? "né base né specifico" : "manca almeno uno"})`
+        + (arrivi ? ` – nuovi arrivati ${etichettaPeriodo(f.arrivi, oggi)}` : "")
+        + (f.incompleta ? " – anagrafica incompleta" : "");
+    }
     if (arrivi && f.incompleta) return `Nuovi arrivati con anagrafica incompleta – ${etichettaPeriodo(f.arrivi, oggi)}`;
     if (arrivi) return `Elenco nuovi arrivati – ${etichettaPeriodo(f.arrivi, oggi)}`;
     if (f.incompleta) return "Lavoratori con anagrafica incompleta";
     return base;
   }
-  return base + (arrivi ? " – nuovi arrivati" : "") + (f.incompleta ? " – anagrafica incompleta" : "");
+  return base + (arrivi ? " – nuovi arrivati" : "") + (f.incompleta ? " – anagrafica incompleta" : "") + (f.senzaAttestati ? " – senza attestati minimi" : "");
 }
 
 /** Messaggio mostrato quando non ci sono righe: spiega il perché se dipende dalle selezioni. */
-export function messaggioVuoto(f: Pick<FiltriStampa, "arrivi" | "incompleta">, inizio: string | null, senzaData: number): string | undefined {
+export function messaggioVuoto(f: Pick<FiltriStampa, "arrivi" | "incompleta"> & { senzaAttestati?: boolean; senzaModo?: ModoSenza }, inizio: string | null, senzaData: number): string | undefined {
   const arrivi = f.arrivi !== "no";
+  if (f.senzaAttestati) {
+    const nessuno = f.senzaModo === "nessuno";
+    if (arrivi) return nessuno
+      ? "Nessun nuovo arrivato è privo sia del Corso base sia del Corso specifico con i filtri scelti."
+      : "Nessun nuovo arrivato ha Corso base o Corso specifico mancante con i filtri scelti.";
+    return nessuno
+      ? "Nessun lavoratore è privo sia del Corso base sia del Corso specifico con i filtri scelti."
+      : "Tutti i lavoratori hanno Corso base e Corso specifico con i filtri scelti.";
+  }
   if (arrivi && f.incompleta) return "Nessun nuovo arrivato ha l'anagrafica incompleta con i filtri scelti.";
   if (f.incompleta) return "Tutte le anagrafiche sono complete con i filtri scelti.";
   if (arrivi) {
@@ -260,6 +290,30 @@ function formazionePerLavoratore(attestatiGrezzi: Attestato[], oggi: Date): Map<
     out.set(dip, voci);
   }
   return out;
+}
+
+/**
+ * Lavoratori senza i minimi richiesti (Corso base, Corso specifico; conta solo l'attestato approvato).
+ * Modo «almeno»: ne manca almeno uno dei due. Modo «nessuno»: mancano tutti e due.
+ * Un corso scaduto conta come presente («Scaduto – data»).
+ */
+export function lavoratoriSenzaMinimi(dipendenti: Pick<Dipendente, "id">[], attestati: Attestato[], oggi = new Date(), modo: ModoSenza = "almeno"): Set<string> {
+  const formazione = formazionePerLavoratore(attestati, oggi);
+  return new Set(
+    dipendenti
+      .filter((d) => {
+        const v = formazione.get(d.id);
+        return modo === "nessuno" ? !v?.corsoBase && !v?.corsoSpecifico : !v?.corsoBase || !v?.corsoSpecifico;
+      })
+      .map((d) => d.id),
+  );
+}
+
+/** Intersezione di due insiemi di id; null = nessun vincolo. */
+export function intersezioneId(a: Set<string> | null, b: Set<string> | null): Set<string> | null {
+  if (!a) return b;
+  if (!b) return a;
+  return new Set([...a].filter((id) => b.has(id)));
 }
 
 const GIORNO = 86_400_000;

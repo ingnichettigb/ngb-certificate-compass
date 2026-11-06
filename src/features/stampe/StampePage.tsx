@@ -8,6 +8,7 @@
  *   rev 3 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno»: limita tutte le stampe ai lavoratori assunti nel periodo.
  *   rev 4 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta», striscia «Filtri attivi», titolo dinamico, messaggi di elenco vuoto.
  *   rev 5 — 06/11/2026 — Ordinamento A→Z / Z→A dalle intestazioni e pulsante «Univoco»; stampa ed esportazioni seguono la stessa vista.
+ *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +20,7 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, messaggioVuoto, nuoviArrivati, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
@@ -43,7 +44,7 @@ export function StampePage() {
   const assQ = useQuery({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI, queryFn: getAssegnazioniRuoli });
 
   const conArrivi = filtri.arrivi !== "no";
-  const vista = `${filtri.modello}|${conArrivi}|${filtri.incompleta}`;
+  const vista = `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
   // Cambiando tipo di documento o selezione si riparte dalle colonne predefinite.
   useEffect(() => { setTolte([]); setOrdine(null); }, [vista]);
 
@@ -72,11 +73,18 @@ export function StampePage() {
 
   const arrivi = useMemo(() => nuoviArrivati(tutti, filtri.arrivi, new Date()), [tutti, filtri.arrivi]);
 
+  // «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico; si somma ai nuovi arrivati.
+  const senzaMinimi = useMemo(
+    () => (filtri.senzaAttestati ? lavoratoriSenzaMinimi(tutti, att.data ?? [], new Date(), filtri.senzaModo) : null),
+    [filtri.senzaAttestati, filtri.senzaModo, tutti, att.data],
+  );
+  const soloIds = useMemo(() => intersezioneId(arrivi.ids, senzaMinimi), [arrivi.ids, senzaMinimi]);
+
   const righeCalcolate = useMemo(
     () => filtri.modello === "lavoratori"
-      ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], arrivi.ids)
-      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, arrivi.ids),
-    [att.data, tutti, filtri, assegnazioni, ruoliQ.data, arrivi.ids],
+      ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
+      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds),
+    [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
   );
 
   // «Univoco» non ha senso dove c'è già un lavoratore per riga (elenco lavoratori) o per sezione (schede).
@@ -100,6 +108,7 @@ export function StampePage() {
   const parti = [
     conArrivi && `Assunti dal ${dataIt(arrivi.inizio)}`,
     filtri.incompleta && "Solo anagrafiche incomplete",
+    filtri.senzaAttestati && (filtri.senzaModo === "nessuno" ? "Senza Corso base né Corso specifico" : "Manca Corso base o Corso specifico"),
     filtri.modello !== "lavoratori" && filtri.gruppo !== TUTTI && GRUPPI_ARGOMENTO.find((g) => g.chiave === filtri.gruppo)?.titolo,
     filtri.reparto !== TUTTI && `Reparto ${filtri.reparto}`,
     nomeRuolo && `Ruolo: ${nomeRuolo}`,

@@ -8,12 +8,13 @@
  *   rev 3 — 05/11/2026 18:30 — Pulsante «Nuovi arrivati dell'anno» sopra i tipi di documento, con scelta anno scolastico/solare.
  *   rev 4 — 05/11/2026 19:50 — Pulsanti attivi in verde scuro, nuovo pulsante «Anagrafica incompleta», passaggio automatico
  *                              all'elenco lavoratori quando si accende una selezione.
+ *   rev 5 — 06/11/2026 — Nuovo pulsante «Senza attestati» con scelta «Nessuno dei due» / «Manca almeno uno dei due».
  */
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { Dipendente } from "@/lib/api";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
-import { conSelezione, dataIt, TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra, type PeriodoArrivi } from "../dati-stampa";
+import { conSelezione, dataIt, TITOLI_MODELLO, TUTTI, type FiltriStampa as Filtri, type Modello, type Finestra, type PeriodoArrivi, type ModoSenza } from "../dati-stampa";
 
 type Props = {
   filtri: Filtri;
@@ -93,6 +94,25 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, mate
           <p className="text-xs text-muted-foreground">
             Lavoratori a cui manca almeno un dato (l'email non conta). Compaiono le colonne dei dati mancanti.
           </p>
+        )}
+        <PulsanteScelta attivo={filtri.senzaAttestati} onClick={() => onChange(conSelezione(filtri, { senzaAttestati: !filtri.senzaAttestati }))}>
+          Senza attestati
+        </PulsanteScelta>
+        {filtri.senzaAttestati && (
+          <>
+            <select
+              className={sel}
+              aria-label="Quali lavoratori senza attestati"
+              value={filtri.senzaModo}
+              onChange={(e) => set("senzaModo", e.target.value as ModoSenza)}
+            >
+              <option value="almeno">Manca almeno uno dei due (base o specifico)</option>
+              <option value="nessuno">Nessuno dei due (né base né specifico)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Minimi richiesti: Corso base e Corso specifico. Nelle due colonne compare la data se c'è, «No» se manca.
+            </p>
+          </>
         )}
       </div>
 

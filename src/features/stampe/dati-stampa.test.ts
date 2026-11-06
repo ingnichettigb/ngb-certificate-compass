@@ -7,12 +7,13 @@
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
  *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
  *   rev 4 — 05/11/2026 19:50 — Test anagrafica incompleta, colonne dinamiche, titolo, messaggi vuoti, passaggio automatico modello.
+ *   rev 5 — 06/11/2026 — Test selezione «Senza attestati» (modalità «almeno uno» e «nessuno dei due»).
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
 import {
   calcolaRighe, calcolaRigheLavoratori, campiMancanti, cella, colonnePerVista, conSelezione, FILTRI_INIZIALI,
-  inizioPeriodoArrivi, messaggioVuoto, nuoviArrivati, titoloStampa,
+  inizioPeriodoArrivi, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, titoloStampa,
 } from "./dati-stampa";
 import { nomeFileEsportazione, testoCsv } from "./esporta-file";
 
@@ -198,5 +199,71 @@ describe("selezioni: modello, titolo, messaggi", () => {
     expect(messaggioVuoto({ arrivi: "scolastico", incompleta: false }, "2026-09-01", 14)).toContain("14 lavoratori non hanno la data di assunzione");
     expect(messaggioVuoto({ arrivi: "no", incompleta: true }, null, 0)).toBe("Tutte le anagrafiche sono complete con i filtri scelti.");
     expect(messaggioVuoto({ arrivi: "no", incompleta: false }, null, 0)).toBeUndefined();
+  });
+});
+
+describe("senza attestati (nessuno dei due / manca almeno uno)", () => {
+  const dd = [dip("1", "Rossi"), dip("2", "Bianchi"), dip("3", "Verdi"), dip("4", "Neri")];
+  const atts = [
+    att("a", "1", "SIC-GEN-04", "2024-01-10", null),
+    att("b", "1", "SIC-SPE-04", "2024-02-10", null), // Rossi: ha entrambi
+    att("c", "2", "SIC-GEN-04", "2024-01-10", null), // Bianchi: solo base
+    att("d", "3", "SIC-SPE-08", "2024-03-05", null), // Verdi: solo specifico
+    att("e", "1", "SIC-GEN-04", "2024-01-10", null, { stato_validazione: "In attesa" }),
+  ];
+  const f = { ...FILTRI_INIZIALI, modello: "lavoratori" as const, senzaAttestati: true };
+
+  it("elenca chi non ha entrambi i minimi", () => {
+    const ids = lavoratoriSenzaMinimi(dd, atts, oggi);
+    expect([...ids].sort()).toEqual(["2", "3", "4"]);
+  });
+  it("modalità «nessuno»: solo chi non ha né base né specifico", () => {
+    const ids = lavoratoriSenzaMinimi(dd, atts, oggi, "nessuno");
+    expect([...ids]).toEqual(["4"]);
+    const r = calcolaRigheLavoratori(dd, { ...f, senzaModo: "nessuno" }, [], [], atts, ids, oggi);
+    expect(r.map((x) => x.cognome)).toEqual(["Neri"]);
+    expect(cella(r[0]!, "corsoBase")).toBe("No");
+    expect(cella(r[0]!, "corsoSpecifico")).toBe("No");
+  });
+  it("gli attestati non approvati non contano", () => {
+    const ids = lavoratoriSenzaMinimi([dip("1", "Rossi")], [att("x", "1", "SIC-GEN-04", "2024-01-10", null, { stato_validazione: "In attesa" })], oggi);
+    expect(ids.has("1")).toBe(true);
+  });
+  it("un corso scaduto conta come presente", () => {
+    const ids = lavoratoriSenzaMinimi([dip("1", "Rossi")], [att("a", "1", "SIC-GEN-04", "2015-01-10", "2020-01-10"), att("b", "1", "SIC-SPE-04", "2015-01-10", "2020-01-10")], oggi);
+    expect(ids.size).toBe(0);
+  });
+  it("mostra la data dove c'è e «No» dove manca", () => {
+    const ids = lavoratoriSenzaMinimi(dd, atts, oggi);
+    const r = calcolaRigheLavoratori(dd, f, [], [], atts, ids, oggi);
+    expect(r.map((x) => x.cognome)).toEqual(["Bianchi", "Neri", "Verdi"]);
+    expect(cella(r[0]!, "corsoBase")).toBe("Sì – 10/01/2024");
+    expect(cella(r[0]!, "corsoSpecifico")).toBe("No");
+    expect(cella(r[1]!, "corsoBase")).toBe("No");
+    expect(cella(r[1]!, "corsoSpecifico")).toBe("No");
+    expect(cella(r[2]!, "corsoBase")).toBe("No");
+    expect(cella(r[2]!, "corsoSpecifico")).toBe("Sì – 05/03/2024");
+  });
+  it("esclude i cessati salvo richiesta", () => {
+    const cess = [...dd, dip("5", "Gialli", { stato_lavoratore: "cessato" })];
+    const ids = lavoratoriSenzaMinimi(cess, atts, oggi);
+    expect(calcolaRigheLavoratori(cess, f, [], [], atts, ids, oggi).map((x) => x.cognome)).not.toContain("Gialli");
+    expect(calcolaRigheLavoratori(cess, { ...f, includiCessati: true }, [], [], atts, ids, oggi).map((x) => x.cognome)).toContain("Gialli");
+  });
+  it("si combina con i nuovi arrivati (intersezione)", () => {
+    expect([...intersezioneId(new Set(["1", "2"]), new Set(["2", "3"]))!]).toEqual(["2"]);
+    expect(intersezioneId(null, new Set(["2"]))!.size).toBe(1);
+    expect(intersezioneId(null, null)).toBeNull();
+  });
+  it("colonne, titolo, messaggio e passaggio automatico al modello", () => {
+    expect(colonnePerVista(f)).toEqual(["lavoratore", "cf", "reparto", "mansione", "assunzione", "corsoBase", "corsoSpecifico"]);
+    expect(titoloStampa(f, new Date("2026-11-06T10:00:00"))).toBe("Lavoratori senza attestati minimi (manca almeno uno)");
+    expect(titoloStampa({ ...f, senzaModo: "nessuno" }, new Date("2026-11-06T10:00:00"))).toBe("Lavoratori senza attestati minimi (né base né specifico)");
+    expect(titoloStampa({ ...f, arrivi: "scolastico" }, new Date("2026-11-06T10:00:00"))).toBe("Lavoratori senza attestati minimi (manca almeno uno) – nuovi arrivati anno scolastico 2026/27");
+    expect(messaggioVuoto({ arrivi: "no", incompleta: false, senzaAttestati: true }, null, 0)).toContain("Tutti i lavoratori hanno");
+    expect(messaggioVuoto({ arrivi: "no", incompleta: false, senzaAttestati: true, senzaModo: "nessuno" }, null, 0)).toContain("privo sia del Corso base sia del Corso specifico");
+    const acceso = conSelezione({ ...FILTRI_INIZIALI, modello: "registro" }, { senzaAttestati: true });
+    expect(acceso.modello).toBe("lavoratori");
+    expect(conSelezione(acceso, { senzaAttestati: false }).modello).toBe("registro");
   });
 });
