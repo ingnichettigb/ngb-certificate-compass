@@ -7,17 +7,25 @@
  *   rev 2 — 03/11/2026 20:50 — Pulsante ✕ su ogni intestazione per togliere la colonna (non stampato).
  *   rev 3 — 04/11/2026 10:20 — Intestazione fissa sticky con sfondo opaco per scorrimento record.
  *   rev 4 — 05/11/2026 19:50 — Celle con dato anagrafico mancante in rosso grassetto (anche in stampa).
+ *   rev 5 — 06/11/2026 — Clic sull'intestazione per ordinare A→Z / Z→A / nessuno (frecce non stampate).
  */
-import { X } from "lucide-react";
-import { cella, cellaMancante, INTESTAZIONI, type Colonna, type RigaStampa } from "../dati-stampa";
+import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
+import {
+  cella, cellaMancante, INTESTAZIONI, ordinaRighe,
+  type Colonna, type OrdineColonna, type RigaStampa,
+} from "../dati-stampa";
 
 type Props = {
   righe: RigaStampa[];
   colonne: Colonna[];
   onRimuoviColonna?: ((c: Colonna) => void) | undefined;
+  /** Ordinamento attivo (se c'è) e gestore del clic sull'intestazione. */
+  ordine?: OrdineColonna | null | undefined;
+  onOrdina?: ((c: Colonna) => void) | undefined;
 };
 
-export function TabellaStampa({ righe, colonne, onRimuoviColonna }: Props) {
+export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina }: Props) {
+  const righe = ordinaRighe(righeIn, ordine);
   return (
     <table className="w-full border-collapse text-[11px]">
       <thead className="table-header-group sticky top-0 z-10 bg-background print:static">
@@ -28,10 +36,35 @@ export function TabellaStampa({ righe, colonne, onRimuoviColonna }: Props) {
           {colonne.map((c) => (
             <th
               key={c}
+              aria-sort={ordine?.colonna === c ? (ordine.direzione === "asc" ? "ascending" : "descending") : undefined}
               className="sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static"
             >
               <div className="flex items-center justify-between gap-1">
-                <span>{INTESTAZIONI[c]}</span>
+                {onOrdina ? (
+                  <button
+                    type="button"
+                    onClick={() => onOrdina(c)}
+                    title={
+                      ordine?.colonna === c
+                        ? ordine.direzione === "asc"
+                          ? `Ordinata dalla A alla Z: clic per Z→A`
+                          : `Ordinata dalla Z alla A: clic per togliere l'ordine`
+                        : `Ordina «${INTESTAZIONI[c]}» dalla A alla Z`
+                    }
+                    className="flex items-center gap-1 text-left font-semibold hover:text-primary print:pointer-events-none"
+                  >
+                    <span>{INTESTAZIONI[c]}</span>
+                    <span className="print:hidden">
+                      {ordine?.colonna === c ? (
+                        ordine.direzione === "asc" ? <ArrowUp className="size-3 text-primary" /> : <ArrowDown className="size-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="size-3 opacity-40" />
+                      )}
+                    </span>
+                  </button>
+                ) : (
+                  <span>{INTESTAZIONI[c]}</span>
+                )}
                 {onRimuoviColonna && colonne.length > 1 && (
                   <button
                     type="button"

@@ -7,6 +7,7 @@
  *   rev 2 — 03/11/2026 20:50 — Filtri dinamici da dati reali, elenco lavoratori, colonne rimovibili, esportazione PDF/Excel/CSV.
  *   rev 3 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno»: limita tutte le stampe ai lavoratori assunti nel periodo.
  *   rev 4 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta», striscia «Filtri attivi», titolo dinamico, messaggi di elenco vuoto.
+ *   rev 5 — 06/11/2026 — Ordinamento A→Z / Z→A dalle intestazioni e pulsante «Univoco»; stampa ed esportazioni seguono la stessa vista.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,8 +19,8 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, messaggioVuoto, nuoviArrivati, titoloStampa, TUTTI,
-  type Colonna, type FiltriStampa as Filtri,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, messaggioVuoto, nuoviArrivati, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
+  type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
 import { FiltriStampa } from "./components/FiltriStampa";
@@ -33,6 +34,8 @@ const distinti = (v: (string | null | undefined)[]) =>
 export function StampePage() {
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_INIZIALI);
   const [tolte, setTolte] = useState<Colonna[]>([]);
+  const [ordine, setOrdine] = useState<OrdineColonna | null>(null);
+  const [univoco, setUnivoco] = useState(false);
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
   const dip = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti });
   const ditta = useQuery({ queryKey: ["ditta"], queryFn: getDitta });
@@ -42,7 +45,7 @@ export function StampePage() {
   const conArrivi = filtri.arrivi !== "no";
   const vista = `${filtri.modello}|${conArrivi}|${filtri.incompleta}`;
   // Cambiando tipo di documento o selezione si riparte dalle colonne predefinite.
-  useEffect(() => setTolte([]), [vista]);
+  useEffect(() => { setTolte([]); setOrdine(null); }, [vista]);
 
   const tutti = dip.data ?? [];
   const assegnazioni = assQ.data ?? [];
@@ -69,14 +72,25 @@ export function StampePage() {
 
   const arrivi = useMemo(() => nuoviArrivati(tutti, filtri.arrivi, new Date()), [tutti, filtri.arrivi]);
 
-  const righe = useMemo(
+  const righeCalcolate = useMemo(
     () => filtri.modello === "lavoratori"
       ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], arrivi.ids)
       : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, arrivi.ids),
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, arrivi.ids],
   );
 
+  // «Univoco» non ha senso dove c'è già un lavoratore per riga (elenco lavoratori) o per sezione (schede).
+  const univocoNonApplicabile = filtri.modello === "lavoratori" || filtri.modello === "scheda";
+  const univocoAttivo = univoco && !univocoNonApplicabile;
+  const righe = useMemo(
+    () => (univocoAttivo ? unicoPerLavoratore(righeCalcolate) : righeCalcolate),
+    [righeCalcolate, univocoAttivo],
+  );
+
   const colonne = colonnePerVista(filtri, righe).filter((c) => !tolte.includes(c));
+  // L'ordine vale solo se la colonna è ancora visibile.
+  const ordineAttivo = ordine && colonne.includes(ordine.colonna) ? ordine : null;
+  const righeFile = useMemo(() => ordinaRighe(righe, ordineAttivo), [righe, ordineAttivo]);
   // Nella scheda individuale il nome è nell'intestazione: nei file esportati serve come colonna.
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne] : colonne;
   const titolo = titoloStampa(filtri);
@@ -95,15 +109,16 @@ export function StampePage() {
     filtri.modello !== "lavoratori" && filtri.finestra === "270" && "Scadenza entro 9 mesi",
     filtri.modello !== "lavoratori" && ["90", "180", "365"].includes(filtri.finestra) && `Scadenza entro ${filtri.finestra} giorni`,
     filtri.includiCessati && "Inclusi cessati",
+    univocoAttivo && "Univoco: un lavoratore per riga (scadenza più urgente)",
   ].filter(Boolean);
   const orizzontale = filtri.modello !== "scheda";
-  const unita = filtri.modello === "lavoratori" ? "lavoratori" : "righe";
+  const unita = filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
   const sottotitolo = [...parti, `${righe.length} ${unita}`].join(" · ");
   const caricamento = att.isLoading || dip.isLoading;
 
   async function excel() {
     try {
-      await scaricaExcel(nomeBase, righe, colonneFile);
+      await scaricaExcel(nomeBase, righeFile, colonneFile);
     } catch (e) {
       toast.error(`Esportazione Excel non riuscita: ${(e as Error).message}`);
     }
@@ -140,7 +155,10 @@ export function StampePage() {
               onRipristina={() => setTolte([])}
               onPdf={() => window.print()}
               onExcel={excel}
-              onCsv={() => scaricaCsv(nomeBase, righe, colonneFile)}
+              onCsv={() => scaricaCsv(nomeBase, righeFile, colonneFile)}
+              univoco={univocoAttivo}
+              onUnivoco={() => setUnivoco((u) => !u)}
+              univocoNonApplicabile={univocoNonApplicabile}
               disabilitato={!righe.length}
             />
             <div className="mb-2 rounded-md border border-emerald-700/40 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-950 print:hidden dark:bg-emerald-950/30 dark:text-emerald-100">
@@ -158,6 +176,8 @@ export function StampePage() {
                 righe={righe}
                 colonne={colonne}
                 onRimuoviColonna={(c) => setTolte((t) => [...t, c])}
+                ordine={ordineAttivo}
+                onOrdina={(c) => setOrdine((o) => prossimoOrdine(o, c))}
                 dipendenti={tutti}
                 ditta={ditta.data}
                 messaggioVuoto={messaggioVuoto(filtri, arrivi.inizio, arrivi.senzaData)}

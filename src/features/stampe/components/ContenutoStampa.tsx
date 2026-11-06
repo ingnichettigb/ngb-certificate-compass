@@ -6,10 +6,11 @@
  *   rev 1 — 02/11/2026 11:10 — Corpo dei 5 modelli: registro, gruppi, scadenze, schede individuali, reparti.
  *   rev 2 — 03/11/2026 20:50 — Colonne decise dall'anteprima (rimovibili) e modello «Elenco lavoratori in servizio».
  *   rev 3 — 05/11/2026 19:50 — Messaggio di elenco vuoto personalizzato e legenda (Sì/Scaduto/No, MANCA) sotto l'elenco lavoratori.
+ *   rev 4 — 06/11/2026 — Ordinamento per colonna: vale dentro ogni sezione; con un ordine scelto lo scadenzario non si riordina da solo.
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, raggruppa, type Colonna, type FiltriStampa, type RigaStampa } from "../dati-stampa";
+import { dataIt, raggruppa, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "../dati-stampa";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
 import { TabellaStampa } from "./TabellaStampa";
 
@@ -18,6 +19,9 @@ type Props = {
   righe: RigaStampa[];
   colonne: Colonna[];
   onRimuoviColonna: (c: Colonna) => void;
+  /** Ordinamento scelto dall'utente sulle intestazioni (null = ordine predefinito del documento). */
+  ordine?: OrdineColonna | null;
+  onOrdina?: (c: Colonna) => void;
   dipendenti: Dipendente[];
   ditta: DittaRecord | undefined;
   /** Spiegazione mostrata quando non ci sono righe (se dipende dalle selezioni attive). */
@@ -47,10 +51,10 @@ function Sezione({ titolo, children }: { titolo: string; children: React.ReactNo
   );
 }
 
-export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, dipendenti, ditta, messaggioVuoto }: Props) {
+export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
-    <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} />
+    <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} ordine={ordine} onOrdina={onOrdina} />
   );
 
   switch (filtri.modello) {
@@ -64,7 +68,7 @@ export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, dipe
         </>
       );
     case "scadenze":
-      return tab([...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
+      return tab(ordine ? righe : [...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
     case "gruppo":
       return (
         <>
