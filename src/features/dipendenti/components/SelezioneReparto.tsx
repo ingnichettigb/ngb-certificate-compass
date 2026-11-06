@@ -9,9 +9,12 @@
  *   rev 2 — 04/11/2026 07:45 — Aggiunti profilo/sottocategoria del reparto e classe di concorso
  *            modificabili, scelti solo tra i valori già censiti.
  *   rev 3 — 06/11/2026 06:53 UTC — Nomi accessibili distinti per reparto, profilo e classe.
+ *   rev 4 — 06/11/2026 — Per i Docenti compare anche il campo «Materia» (prima era solo in «Modifica anagrafica»):
+ *            vuoto = bordo giallo, come per i dati mancanti; si salva uscendo dal campo o con Invio.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -56,7 +59,23 @@ export function SelezioneReparto({
   const classeCorrente = (corrente.classe_concorso ?? "").trim().toUpperCase();
   const classiAttive = classi.filter((c) => c.attivo || c.codice === classeCorrente);
 
+  const eDocente = nomeReparto.toLowerCase() === "docente";
+  const materiaCorrente = (corrente.materia ?? "").trim();
+
   const ricarica = () => qc.invalidateQueries({ queryKey: ["dipendenti"] });
+
+  const cambiaMateria = async (testo: string) => {
+    const nuova = testo.trim();
+    if (nuova === materiaCorrente) return;
+    try {
+      await aggiornaInsegnamentoDipendente(corrente.id, corrente.classe_concorso ?? null, nuova || null);
+      toast.success("Materia aggiornata");
+      ricarica();
+      qc.invalidateQueries({ queryKey: ["materie"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
 
   const cambiaProfilo = async (v: string) => {
     try {
@@ -146,6 +165,23 @@ export function SelezioneReparto({
           ))}
         </SelectContent>
       </Select>
+
+      {eDocente && (
+        <>
+          <Label className="text-sm">Materia</Label>
+          <Input
+            key={`${corrente.id}|${materiaCorrente}`}
+            aria-label="Materia dipendente"
+            className={`w-[220px] bg-surface ${materiaCorrente ? "" : "border-amber-500 bg-amber-500/10"}`}
+            defaultValue={materiaCorrente}
+            placeholder="Materia insegnata"
+            onBlur={(e) => cambiaMateria(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
