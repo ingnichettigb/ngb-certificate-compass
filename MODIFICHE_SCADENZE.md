@@ -1,4 +1,4 @@
-# Scadenze: ciclo rigido, decadenza, somma ore e sanatoria tardiva
+# Scadenze: ciclo rigido, decadenza, somma ore, sanatoria tardiva e linea temporale
 
 Data: 2026-11-06
 
@@ -6,12 +6,13 @@ Data: 2026-11-06
 
 | File | Stato |
 |---|---|
-| `src/features/scadenze/types.ts` | sostituisce (nuovi campi e tipo `RigaScadenzaDati`) |
-| `src/features/scadenze/calcolo-ciclo.ts` | nuovo (motore puro, senza dipendenze dall'app) |
+| `src/features/scadenze/types.ts` | sostituisce (campi, `RigaScadenzaDati`, `CicloVisuale`, `EventoCiclo`) |
+| `src/features/scadenze/calcolo-ciclo.ts` | nuovo (motore puro; restituisce anche cicli ed eventi classificati) |
 | `src/features/scadenze/raggruppa.ts` | nuovo (una riga per lavoratore + corso) |
 | `src/features/scadenze/filtri.ts` | sostituisce |
-| `src/features/scadenze/components/RigaScadenza.tsx` | sostituisce |
-| `src/features/scadenze/calcolo-ciclo.test.ts` | nuovo (22 test vitest) |
+| `src/features/scadenze/components/RigaScadenza.tsx` | sostituisce (pulsante per aprire la linea temporale) |
+| `src/features/scadenze/components/LineaCicloFormativo.tsx` | nuovo |
+| `src/features/scadenze/calcolo-ciclo.test.ts` | nuovo (34 test vitest) |
 
 ## Regole
 
@@ -24,6 +25,24 @@ Data: 2026-11-06
 7. **Ore in eccesso**: non si riportano al ciclo successivo.
 8. **Ore mancanti**: se `ore_dichiarate` è vuoto si usano le ore minime di legge del corso, ma la riga mostra "Ore da verificare".
 9. Attestati respinti, con data futura o precedenti al Base corrente non contano.
+
+## Linea temporale (colori per ciclo)
+
+Il grafico disegna solo ciò che calcola il motore (`ciclo.cicli`, `ciclo.eventi`), quindi non può contraddire la tabella.
+
+| Colore | Significato |
+|---|---|
+| Verde | ciclo completato (somma ore raggiunta, anche con ore in più o con sanatoria tardiva) |
+| Arancione | ciclo in corso, da completare (mostra X/Y ore sul ciclo che definisce la scadenza, anche a 0 ore) |
+| Rosso | scadenza passata e ciclo non completato |
+| Nero | ciclo successivo, non ancora attivo |
+| Bordeaux | decaduto (dopo la data di decadenza; non si mostra il ciclo successivo) |
+
+- Pallini: verde = Corso Base o aggiornamento che completa il monte ore; arancione = parziale; vuoto = non contato (decaduto, ore in eccesso, data futura, tardivo non ammesso). Ogni pallino è sulla data reale.
+- Tacche annuali senza testo; sotto, Partenza e Fine ciclo n con le date; indicatore "Oggi" e legenda.
+- Etichette ravvicinate si dispongono su tre livelli; la linea scorre in orizzontale su schermi stretti.
+- `TabellaScadenze.tsx` non è incluso: la versione che hai già (con `righe`, `key={r.chiave}` e `colSpan={8}`) va bene com'è.
+- Serve `lucide-react` (icona del pulsante), già presente nei progetti Lovable.
 
 ## Parametri per tipo di corso
 

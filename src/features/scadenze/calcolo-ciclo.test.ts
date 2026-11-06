@@ -13,7 +13,12 @@ import {
   type AttestatoCiclo,
 } from "./calcolo-ciclo";
 
-const base = (data: string, id = "base"): AttestatoCiclo => ({ id, dataCorso: data, ore: 12, eBase: true });
+const base = (data: string, id = "base"): AttestatoCiclo => ({
+  id,
+  dataCorso: data,
+  ore: 12,
+  eBase: true,
+});
 const agg = (data: string, ore: number | null, id = data): AttestatoCiclo => ({
   id,
   dataCorso: data,
@@ -193,12 +198,127 @@ describe("date", () => {
   it("i cicli sono calcolati dall'ancora, senza errore cumulato", () => {
     const r = calcola([base("2020-02-29")], giorno(2031, 1, 1));
     expect(r.scadenzaEffettiva).toBe("2025-02-28");
-    const r2 = calcola([base("2020-02-29"), agg("2024-06-01", 6), agg("2029-06-01", 6)], giorno(2030, 1, 1));
+    const r2 = calcola(
+      [base("2020-02-29"), agg("2024-06-01", 6), agg("2029-06-01", 6)],
+      giorno(2030, 1, 1),
+    );
     expect(r2.scadenzaEffettiva).toBe("2035-02-28");
   });
 
   it("anniCompleti", () => {
     expect(anniCompleti("2018-09-15", "2026-09-14")).toBe(7);
     expect(anniCompleti("2018-09-15", "2026-09-15")).toBe(8);
+  });
+});
+
+describe("cicli ed eventi per la linea temporale", () => {
+  const stati = (r: ReturnType<typeof calcola>) => r.cicli.map((c) => c.stato);
+  const tipi = (r: ReturnType<typeof calcola>) => r.eventi.map((e) => e.tipo);
+
+  it("prima tranche: ciclo 1 da completare (4/6) e ciclo 2 non attivo", () => {
+    const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2022, 6, 1));
+    expect(stati(r)).toEqual(["da_completare", "futuro"]);
+    expect(r.cicli[0].oreAccumulate).toBe(4);
+    expect(r.cicli[0].attivo).toBe(true);
+    expect(tipi(r)).toEqual(["base", "parziale"]);
+  });
+
+  it("somma raggiunta: ciclo 1 verde e ciclo successivo nero", () => {
+    const r = calcola(
+      [base("2018-09-15"), agg("2022-05-10", 4), agg("2023-01-20", 2)],
+      giorno(2023, 2, 1),
+    );
+    expect(stati(r)).toEqual(["completato", "futuro"]);
+    expect(tipi(r)).toEqual(["base", "parziale", "completo"]);
+    expect(r.cicli[1].inizio).toBe("2023-09-15");
+    expect(r.cicli[1].fine).toBe("2028-09-15");
+  });
+
+  it("anche più ore del necessario rendono il ciclo verde", () => {
+    const r = calcola([base("2018-09-15"), agg("2020-03-01", 10)], giorno(2021, 1, 1));
+    expect(stati(r)).toEqual(["completato", "futuro"]);
+  });
+
+  it("nel ciclo successivo arancione (0/6), poi il ciclo dopo nero", () => {
+    const r = calcola(
+      [base("2018-09-15"), agg("2022-05-10", 4), agg("2023-01-20", 2)],
+      giorno(2026, 11, 6),
+    );
+    expect(stati(r)).toEqual(["completato", "da_completare", "futuro"]);
+    expect(r.cicli[1].attivo).toBe(true);
+    expect(r.cicli[1].oreAccumulate).toBe(0);
+    expect(r.cicli[2].inizio).toBe("2028-09-15");
+  });
+
+  it("ciclo scaduto senza aggiornamenti: rosso, poi arancione e nero", () => {
+    const r = calcola([base("2018-09-15")], giorno(2026, 11, 6));
+    expect(stati(r)).toEqual(["scaduto", "da_completare", "futuro"]);
+    expect(r.cicli[0].attivo).toBe(true);
+    expect(r.cicli[1].attivo).toBe(false);
+  });
+
+  it("rosso con ore parziali: il ciclo scaduto mostra le ore già fatte", () => {
+    const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2024, 6, 1));
+    expect(stati(r)).toEqual(["scaduto", "da_completare", "futuro"]);
+    expect(r.cicli[0].oreAccumulate).toBe(4);
+  });
+
+  it("sanatoria tardiva: da rosso a verde, il ciclo dopo è nero", () => {
+    const r = calcola([base("2018-09-15"), agg("2024-01-10", 6)], giorno(2026, 11, 6));
+    expect(stati(r)).toEqual(["completato", "completato", "futuro"]);
+    expect(r.cicli[2].inizio).toBe("2028-09-15");
+    expect(r.cicli[2].attivo).toBe(true);
+  });
+
+  it("secondo ciclo: un aggiornamento parziale non è 'completo' per le ore del ciclo precedente", () => {
+    const r = calcola(
+      [base("2018-09-15"), agg("2019-01-10", 6), agg("2024-05-01", 4)],
+      giorno(2024, 6, 1),
+    );
+    expect(tipi(r)).toEqual(["base", "completo", "parziale"]);
+    expect(stati(r)).toEqual(["completato", "da_completare", "futuro"]);
+    expect(r.cicli[1].oreAccumulate).toBe(4);
+  });
+
+  it("aggiornamenti non contati sono eventi 'ignorato' con il motivo", () => {
+    const inEccesso = calcola(
+      [base("2018-09-15"), agg("2019-01-10", 6), agg("2020-01-10", 6)],
+      giorno(2021, 1, 1),
+    );
+    expect(inEccesso.eventi[2]).toMatchObject({ tipo: "ignorato", motivo: "in_eccesso" });
+
+    const futuro = calcola([base("2018-09-15"), agg("2030-01-01", 6)], giorno(2026, 11, 6));
+    expect(futuro.eventi[1]).toMatchObject({ tipo: "ignorato", motivo: "futuro" });
+
+    const tardivo = calcola([base("2018-09-15"), agg("2024-01-10", 6)], giorno(2026, 11, 6), {
+      consentiSanatoriaTardiva: false,
+    });
+    expect(tardivo.eventi[1]).toMatchObject({ tipo: "ignorato", motivo: "tardivo_non_ammesso" });
+  });
+
+  it("decadenza: i cicli dopo la data di decadenza sono bordeaux e non c'è ciclo futuro", () => {
+    const r = calcola([base("2010-09-15"), agg("2021-03-01", 6)], giorno(2026, 11, 6));
+    expect(stati(r)).toEqual(["scaduto", "scaduto", "decaduto", "decaduto"]);
+    expect(r.eventi[1]).toMatchObject({ tipo: "ignorato", motivo: "decaduto" });
+  });
+
+  it("espone durata, data di valutazione e continuità tra i cicli", () => {
+    const r = calcola([base("2020-02-29")], giorno(2031, 1, 1));
+    expect(r.durataCicloAnni).toBe(5);
+    expect(r.dataValutazione).toBe("2031-01-01");
+    for (let i = 1; i < r.cicli.length; i++) {
+      expect(r.cicli[i].inizio).toBe(r.cicli[i - 1].fine);
+    }
+  });
+
+  it("corso senza scadenza: nessuna linea", () => {
+    const r = valutaCicloFormativo({
+      attestati: [base("2020-01-10")],
+      durataCicloAnni: 0,
+      oreRichiesteAggiornamento: 0,
+      oggi: giorno(2026, 11, 6),
+    });
+    expect(r.cicli).toEqual([]);
+    expect(r.eventi).toEqual([]);
   });
 });

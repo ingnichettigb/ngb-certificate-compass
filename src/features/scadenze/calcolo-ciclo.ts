@@ -4,6 +4,7 @@
  * Data creazione: 2026-11-06
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Motore puro: ciclo rigido ancorato al Base, somma ore, decadenza, sanatoria tardiva.
+ * - Rev 2 (2026-11-06 14:00): Restituisce cicli ed eventi classificati per la linea temporale.
  *
  * Regole implementate (vedi MODIFICHE_SCADENZE.md):
  * 1. Ancora = data dell'ultimo Corso Base (se nessun attestato è Base, il più vecchio).
@@ -16,7 +17,14 @@
  *    sono passati più di decadenzaAnni, gli aggiornamenti successivi non contano: serve un nuovo Base.
  * 6. Le ore in eccesso non si riportano al ciclo successivo.
  */
-import type { PosizioneCiclo, StatoConformita } from "./types";
+import type {
+  CicloVisuale,
+  EventoCiclo,
+  MotivoIgnorato,
+  PosizioneCiclo,
+  StatoCiclo,
+  StatoConformita,
+} from "./types";
 
 export const DECADENZA_PREDEFINITA_ANNI = 10;
 
@@ -102,7 +110,9 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
 
   const ordinati = p.attestati
     .map((a) => ({ ...a, dataCorso: a.dataCorso.slice(0, 10) }))
-    .sort((a, b) => a.dataCorso.localeCompare(b.dataCorso) || String(a.id).localeCompare(String(b.id)));
+    .sort(
+      (a, b) => a.dataCorso.localeCompare(b.dataCorso) || String(a.id).localeCompare(String(b.id)),
+    );
 
   // Nessuna evidenza formativa: occorre il Corso Base.
   if (ordinati.length === 0) {
@@ -118,6 +128,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       dataUltimaEvidenza: null,
       oreDaVerificare: false,
       aggiornamentiIgnorati: 0,
+      durataCicloAnni: N >= 1 ? N : 0,
+      dataValutazione: oggi,
+      cicli: [],
+      eventi: [],
     };
   }
 
@@ -141,6 +155,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       dataUltimaEvidenza: ultimo,
       oreDaVerificare: false,
       aggiornamentiIgnorati: 0,
+      durataCicloAnni: 0,
+      dataValutazione: oggi,
+      cicli: [],
+      eventi: [],
     };
   }
 
@@ -159,32 +177,45 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
   let nPool = 0;
   let ignorati = 0;
   let oreDaVerificare = false;
+  const eventi: EventoCiclo[] = [
+    { id: ancora.id, data: dataAncora, ore: ancora.ore, tipo: "base" },
+  ];
 
   // 3-6. Aggiornamenti in ordine cronologico.
   for (const u of ordinati) {
     if (u === ancora || u.eBase) continue;
     if (u.dataCorso < dataAncora) continue; // precedente al Base corrente: irrilevante
-    if (u.dataCorso > oggi) {
+    const ignora = (motivo: MotivoIgnorato) => {
       ignorati++;
+      eventi.push({ id: u.id, data: u.dataCorso, ore: u.ore, tipo: "ignorato", motivo });
+    };
+    if (u.dataCorso > oggi) {
+      ignora("futuro");
       continue;
     }
     if (decadenzaAnni !== null && u.dataCorso > aggiungiAnni(ultimaEvidenza, decadenzaAnni)) {
-      ignorati++; // l'abilitazione era già decaduta
+      ignora("decaduto"); // l'abilitazione era già decaduta
       continue;
     }
     const k = cicloDi(u.dataCorso);
     if (k <= copertoFino) {
-      ignorati++; // ciclo già coperto: ore in eccesso, non si riportano
+      ignora("in_eccesso"); // ciclo già coperto: ore in eccesso, non si riportano
       continue;
     }
     if (k > copertoFino + 1 && !consentiSanatoriaTardiva) {
-      ignorati++; // tardivo e sanatoria non ammessa
+      ignora("tardivo_non_ammesso");
       continue;
     }
     if (u.ore === null || u.oreStimate) oreDaVerificare = true;
     pool += u.ore ?? 0;
     nPool++;
     const completo = soglia === null ? nPool > 0 : pool >= soglia;
+    eventi.push({
+      id: u.id,
+      data: u.dataCorso,
+      ore: u.ore,
+      tipo: completo ? "completo" : "parziale",
+    });
     if (completo) {
       copertoFino = k;
       ultimaEvidenza = u.dataCorso;
@@ -195,8 +226,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
 
   const scadenzaEffettiva = fineCiclo(copertoFino + 1);
   const giorniAllaScadenza = giorniTra(oggi, scadenzaEffettiva);
-  const decaduto =
-    decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni);
+  const decaduto = decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni);
 
   let stato: StatoConformita;
   if (decaduto) stato = "decaduto";
@@ -204,6 +234,43 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
   else if (pool > 0) stato = "incompleto_ore";
   else if (giorniAllaScadenza <= giorniPreavviso) stato = "in_scadenza";
   else stato = "valido";
+
+  // Cicli per la linea temporale: dal primo al ciclo di oggi, più il successivo non attivo.
+  const dataDecadenza = decadenzaAnni !== null ? aggiungiAnni(ultimaEvidenza, decadenzaAnni) : null;
+  const kMax = Math.max(cicloDi(oggi), copertoFino);
+  const cicli: CicloVisuale[] = [];
+  for (let k = 1; k <= kMax; k++) {
+    const inizio = k === 1 ? dataAncora : fineCiclo(k - 1);
+    const fine = fineCiclo(k);
+    const attivo = k === copertoFino + 1;
+    let statoCiclo: StatoCiclo;
+    if (k <= copertoFino) statoCiclo = "completato";
+    else if (decaduto && dataDecadenza !== null && fine > dataDecadenza) statoCiclo = "decaduto";
+    else if (inizio > oggi) statoCiclo = "futuro";
+    else if (fine < oggi) statoCiclo = "scaduto";
+    else statoCiclo = "da_completare";
+    cicli.push({
+      indice: k,
+      inizio,
+      fine,
+      stato: statoCiclo,
+      oreAccumulate: attivo ? pool : 0,
+      oreRichieste: oreRichiesteAggiornamento,
+      attivo,
+    });
+  }
+  if (!decaduto) {
+    const k = kMax + 1;
+    cicli.push({
+      indice: k,
+      inizio: fineCiclo(k - 1),
+      fine: fineCiclo(k),
+      stato: "futuro",
+      oreAccumulate: 0,
+      oreRichieste: oreRichiesteAggiornamento,
+      attivo: k === copertoFino + 1,
+    });
+  }
 
   return {
     dataAncora,
@@ -217,5 +284,9 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     dataUltimaEvidenza: ultimaEvidenza,
     oreDaVerificare,
     aggiornamentiIgnorati: ignorati,
+    durataCicloAnni: N,
+    dataValutazione: oggi,
+    cicli,
+    eventi,
   };
 }

@@ -5,6 +5,7 @@
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Struttura base tipi per la pagina Scadenze.
  * - Rev 2 (2026-11-06 12:00): Stati di conformità ciclo, decadenza, monte ore frazionato e riga raggruppata.
+ * - Rev 3 (2026-11-06 14:00): Cicli ed eventi già calcolati dal motore per la linea temporale.
  */
 import type { Attestato } from "@/lib/api";
 
@@ -18,12 +19,36 @@ export type Vista =
   | "Tutti con scadenza";
 
 export type StatoConformita =
-  | "valido"
-  | "in_scadenza"
-  | "scaduto_sanabile"
-  | "decaduto"
-  | "incompleto_ore"
-  | "senza_scadenza";
+  "valido" | "in_scadenza" | "scaduto_sanabile" | "decaduto" | "incompleto_ore" | "senza_scadenza";
+
+/** Stato di un singolo ciclo nella linea temporale. */
+export type StatoCiclo = "completato" | "da_completare" | "scaduto" | "futuro" | "decaduto";
+
+export type TipoEvento = "base" | "parziale" | "completo" | "ignorato";
+
+export type MotivoIgnorato = "decaduto" | "in_eccesso" | "futuro" | "tardivo_non_ammesso";
+
+export interface CicloVisuale {
+  /** Numero del ciclo, da 1. */
+  indice: number;
+  inizio: string;
+  fine: string;
+  stato: StatoCiclo;
+  /** Ore accumulate: valorizzate solo sul ciclo che definisce la scadenza (attivo). */
+  oreAccumulate: number;
+  oreRichieste: number;
+  /** true per il primo ciclo non ancora coperto, quello che definisce la scadenza. */
+  attivo: boolean;
+}
+
+export interface EventoCiclo {
+  id: string | number;
+  data: string;
+  ore: number | null;
+  tipo: TipoEvento;
+  /** Solo per tipo = "ignorato". */
+  motivo?: MotivoIgnorato;
+}
 
 export interface PosizioneCiclo {
   /** Data del Corso Base che ancora i cicli. */
@@ -43,6 +68,14 @@ export interface PosizioneCiclo {
   oreDaVerificare: boolean;
   /** Aggiornamenti non contati (decaduti, in eccesso, futuri o tardivi non ammessi). */
   aggiornamentiIgnorati: number;
+  /** Durata del ciclo in anni (0 = senza scadenza). */
+  durataCicloAnni: number;
+  /** Data usata per la valutazione (YYYY-MM-DD): è anche la posizione di "Oggi" nel grafico. */
+  dataValutazione: string;
+  /** Cicli da disegnare: dal primo al ciclo di oggi, più il successivo non ancora attivo. */
+  cicli: CicloVisuale[];
+  /** Base e aggiornamenti classificati dal motore (contati, parziali, completi, ignorati). */
+  eventi: EventoCiclo[];
 }
 
 /** Una riga della tabella: un lavoratore + un corso (o macro-categoria), non un singolo attestato. */
@@ -55,13 +88,7 @@ export interface RigaScadenzaDati {
 }
 
 export type ColonnaSort =
-  | "dipendente"
-  | "codice_fiscale"
-  | "reparto"
-  | "corso"
-  | "data_corso"
-  | "scadenza"
-  | "stato";
+  "dipendente" | "codice_fiscale" | "reparto" | "corso" | "data_corso" | "scadenza" | "stato";
 
 export type { DirezioneSort } from "@/components/IntestazioneOrdinabile";
 
