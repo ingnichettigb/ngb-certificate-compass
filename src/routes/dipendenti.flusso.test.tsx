@@ -1,4 +1,10 @@
 /*
+ * File: dipendenti.flusso.test.tsx
+ * Percorso: src/routes/dipendenti.flusso.test.tsx
+ * Data creazione: non registrata nel file originale.
+ * Revisioni:
+ *   rev 1 — data e ora originali non registrate — Test del percorso Dipendenti.
+ *   rev 2 — 06/11/2026 06:53 UTC — Scelta reparto per nome, non per posizione dei menu.
  * Test di flusso della pagina Dipendenti.
  * Registra chiamate al database, notifiche e contenuto della pagina durante un percorso d'uso
  * (ricerca, filtri, scheda, ruoli, DVR, ordinamento, cambio reparto, nuovo dipendente)
@@ -85,8 +91,11 @@ const lista = () => [...document.querySelectorAll("ul.divide-y > li")].map((li) 
 const righeTabella = () => [...document.querySelectorAll("table tbody tr")].map((tr) => tr.textContent?.replace(/\s+/g, " ").trim());
 const pagina = (etichetta: string) => registro.push(["pagina", etichetta, document.body.textContent?.replace(/\s+/g, " ")]);
 
-async function scegli(indiceCombo: number, opzione: string) {
-  const trigger = screen.getAllByRole("combobox")[indiceCombo]!;
+async function scegli(selettore: number | string, opzione: string) {
+  const trigger = typeof selettore === "string"
+    ? screen.getByRole("combobox", { name: selettore })
+    : screen.getAllByRole("combobox")[selettore];
+  if (!trigger) throw new Error(`Selettore non trovato: ${selettore}`);
   fireEvent.keyDown(trigger, { key: "Enter" });
   await attendi();
   fireEvent.keyDown(screen.getByRole("option", { name: opzione }), { key: "Enter" });
@@ -154,9 +163,10 @@ describe("Dipendenti: percorso d'uso completo", () => {
     await clic(screen.getByText("Segna completata"));
 
     // cambio reparto del dipendente selezionato
-    const comboScheda = screen.getAllByRole("combobox").length - 1;
-    await scegli(comboScheda, "ATA");
-    await scegli(comboScheda, "Nessun reparto");
+    await scegli("Reparto dipendente", "ATA");
+    expect(registro).toContainEqual(["sb", "from.update", "dipendenti", JSON.stringify([{ reparto: "ATA", sottoreparto: null }])]);
+    await scegli("Reparto dipendente", "Nessun reparto");
+    expect(registro).toContainEqual(["sb", "from.update", "dipendenti", JSON.stringify([{ reparto: null, sottoreparto: null }])]);
 
     // altra scheda (BIANCHI, scaduto) e scheda senza dati (NERI)
     await clic(screen.getByText("BIANCHI ANNA").closest("button")!);
@@ -176,7 +186,7 @@ describe("Dipendenti: percorso d'uso completo", () => {
     fireEvent.change(campo("Codice ATECO"), { target: { value: "85.20" } });
     fireEvent.change(campo("Luogo di nascita"), { target: { value: "Soresina" } });
     fireEvent.change(campo("Data di nascita"), { target: { value: "1980-01-01" } });
-    await scegli(screen.getAllByRole("combobox").length - 1, "Docente");
+    await scegli("Reparto nel modulo anagrafica", "Docente");
     pagina("form compilato");
     await clic(screen.getByText("Salva"));
     pagina("dopo salvataggio");
