@@ -18,6 +18,9 @@
  *   rev 9 — 06/11/2026 — Selezione «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico (minimi richiesti),
  *                        con colonne Corso base / Corso specifico (data dove c'è, «No» dove manca).
  *                        Scelta tra «Nessuno dei due» e «Manca almeno uno dei due».
+ *   rev 11 — 06/11/2026 — Colonne Preposto / Antincendio / Primo soccorso / Defibrillatore legate al ruolo di sicurezza assegnato:
+ *                         ruolo + attestato = data, ruolo senza attestato = «No», nessun ruolo e nessun attestato = «NA»;
+ *                         attestato senza ruolo = data in neretto (vedi attestatoSenzaRuolo).
  *   rev 10 — 06/11/2026 — Colonna «Mansione / Classe di concorso»: ATA = mansione (profilo), Docenti = classe di concorso (senza materia).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -36,7 +39,11 @@ export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
 export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza";
 
 /** Voci di formazione mostrate come Sì/No nell'elenco lavoratori. */
-export type VoceFormazione = "corsoBase" | "corsoSpecifico" | "preposto" | "antincendio" | "primoSoccorso";
+export type VoceFormazione = "corsoBase" | "corsoSpecifico" | "preposto" | "antincendio" | "primoSoccorso" | "defibrillatore";
+
+/** Voci legate a un ruolo di sicurezza (le altre due, Corso base e specifico, valgono per tutti). */
+export type VoceRuolo = "preposto" | "antincendio" | "primoSoccorso" | "defibrillatore";
+export const VOCI_CON_RUOLO: readonly VoceRuolo[] = ["preposto", "antincendio", "primoSoccorso", "defibrillatore"];
 
 export type Colonna =
   | "lavoratore" | "cf" | "reparto" | "mansione" | "ruoli" | "assunzione" | "nascita"
@@ -104,8 +111,10 @@ export type RigaStampa = {
   assunzione: string | null;
   luogoNascita: string;
   dataNascita: string | null;
-  /** Testo già pronto per le voci fatte; le voci assenti valgono «No». */
+  /** Testo già pronto per le voci fatte; le voci assenti valgono «No» (o «NA» se il ruolo non è assegnato). */
   formazione: Partial<Record<VoceFormazione, string>>;
+  /** Voci per cui il lavoratore ha il ruolo di sicurezza assegnato (solo elenco lavoratori). */
+  ruoliVoci?: VoceRuolo[];
   /** Campi anagrafici assenti (solo per l'anagrafica incompleta; vuoto = completa). */
   mancanti: CampoAnagrafica[];
   fineContratto: string | null;
@@ -134,7 +143,7 @@ export const COLONNE_PREDEFINITE: Record<Modello, Colonna[]> = {
 
 /** Colonne dell'elenco lavoratori quando è attiva la selezione «Nuovi arrivati». */
 export const COLONNE_NUOVI_ARRIVATI: Colonna[] = [
-  "lavoratore", "cf", "nascita", "assunzione", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso",
+  "lavoratore", "cf", "nascita", "assunzione", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore",
 ];
 
 /** Colonne dell'elenco lavoratori con la selezione «Senza attestati» (senza «Nuovi arrivati»). */
@@ -264,8 +273,20 @@ export function voceFormazione(tc: Pick<TipoCorso, "codice" | "nome_corso" | "ma
     case "preposti": return "preposto";
     case "antincendio": return "antincendio";
     case "primo-soccorso": return "primoSoccorso";
+    case "defibrillatore": return "defibrillatore";
     default: return null;
   }
+}
+
+/** A quale voce corrisponde un ruolo di sicurezza (stesse parole usate da trovaRuoloPerCorso); null = nessuna delle quattro. */
+export function voceDelRuolo(r: Pick<RuoloSicurezza, "nome" | "macro_categoria">): VoceRuolo | null {
+  const nome = (r.nome ?? "").toLowerCase().trim();
+  const macro = (r.macro_categoria ?? "").toLowerCase().trim();
+  if (macro.includes("defibrillatore") || nome.includes("defibrillatore") || nome.includes("blsd")) return "defibrillatore";
+  if (nome === "preposto" || macro.includes("preposto")) return "preposto";
+  if (macro.includes("antincendio") || nome.includes("antincendio")) return "antincendio";
+  if (macro.includes("primo soccorso") || nome.includes("primo soccorso")) return "primoSoccorso";
+  return null;
 }
 
 /** Per ogni lavoratore, per ogni voce: «Sì – data corso» (o «Scaduto – data corso») dell'attestato approvato più recente. */
@@ -462,6 +483,15 @@ export function calcolaRigheLavoratori(
 
   const formazione = formazionePerLavoratore(attestati, oggi);
 
+  // Voci per cui ogni lavoratore ha il ruolo assegnato (solo ruoli attivi).
+  const vocePerRuolo = new Map(ruoli.filter((r) => r.attivo).map((r) => [r.id, voceDelRuolo(r)]));
+  const vociPer = new Map<string, Set<VoceRuolo>>();
+  for (const a of assegnazioni) {
+    const v = vocePerRuolo.get(a.ruolo_id);
+    if (!v) continue;
+    (vociPer.get(a.dipendente_id) ?? vociPer.set(a.dipendente_id, new Set()).get(a.dipendente_id)!).add(v);
+  }
+
   return elenco
     .map((d): RigaStampa => ({
       id: d.id,
@@ -478,6 +508,7 @@ export function calcolaRigheLavoratori(
       luogoNascita: d.luogo_nascita ?? "",
       dataNascita: d.data_nascita ?? null,
       formazione: formazione.get(d.id) ?? {},
+      ruoliVoci: [...(vociPer.get(d.id) ?? [])],
       mancanti: campiMancanti(d),
       fineContratto: d.data_fine_contratto ?? null,
       cessazione: d.data_cessazione ?? null,
@@ -532,7 +563,7 @@ export const INTESTAZIONI: Record<Colonna, string> = {
   lavoratore: "Lavoratore", cf: "Codice fiscale", reparto: "Reparto", mansione: "Mansione / Classe di concorso",
   ruoli: "Ruoli sicurezza", assunzione: "Data assunzione", nascita: "Luogo e data di nascita",
   corsoBase: "Corso base", corsoSpecifico: "Corso specifico", preposto: "Preposto", antincendio: "Antincendio",
-  primoSoccorso: "Primo soccorso", mancano: "Cosa manca",
+  primoSoccorso: "Primo soccorso", defibrillatore: "Defibrillatore", mancano: "Cosa manca",
   fineContratto: "Fine contratto", cessazione: "Data cessazione", corso: "Corso", ore: "Ore",
   numero: "N. attestato", data: "Data corso", scadenza: "Scadenza", stato: "Stato",
 };
@@ -552,10 +583,11 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "assunzione": return dataIt(r.assunzione);
     case "nascita": return [r.luogoNascita, r.dataNascita ? dataIt(r.dataNascita) : ""].filter(Boolean).join(", ") || "—";
     case "corsoBase":
-    case "corsoSpecifico":
+    case "corsoSpecifico": return r.formazione[c] ?? "No";
     case "preposto":
     case "antincendio":
-    case "primoSoccorso": return r.formazione[c] ?? "No";
+    case "primoSoccorso":
+    case "defibrillatore": return r.formazione[c] ?? (r.ruoliVoci?.includes(c) ? "No" : "NA");
     case "corso": return r.codice ? `${r.codice} – ${r.corso}` : r.corso;
     case "ore": return r.ore != null ? String(r.ore) : "—";
     case "numero": return r.numero || "—";
@@ -563,6 +595,11 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "scadenza": return dataIt(r.scadenza);
     case "stato": return ETICHETTA_STATO[r.stato];
   }
+}
+
+/** Ha l'attestato ma non il ruolo di sicurezza assegnato: la cella va in neretto (anche in stampa). */
+export function attestatoSenzaRuolo(r: RigaStampa, c: Colonna): boolean {
+  return (VOCI_CON_RUOLO as readonly Colonna[]).includes(c) && Boolean(r.formazione[c as VoceRuolo]) && !r.ruoliVoci?.includes(c as VoceRuolo);
 }
 
 /** Testo della cella quando in quella colonna manca qualcosa (es. «MANCA data di nascita»). */

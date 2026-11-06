@@ -7,6 +7,7 @@
  *   rev 2 — 03/11/2026 20:50 — Colonne decise dall'anteprima (rimovibili) e modello «Elenco lavoratori in servizio».
  *   rev 3 — 05/11/2026 19:50 — Messaggio di elenco vuoto personalizzato e legenda (Sì/Scaduto/No, MANCA) sotto l'elenco lavoratori.
  *   rev 4 — 06/11/2026 — Ordinamento per colonna: vale dentro ogni sezione; con un ordine scelto lo scadenzario non si riordina da solo.
+ *   rev 5 — 06/11/2026 — Legenda di «NA», «No» e neretto per le colonne legate al ruolo (Preposto, Antincendio, Primo soccorso, Defibrillatore).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
@@ -28,15 +29,18 @@ type Props = {
   messaggioVuoto?: string | undefined;
 };
 
-const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso"];
+const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
+const VOCI_RUOLO: Colonna[] = ["preposto", "antincendio", "primoSoccorso", "defibrillatore"];
 
 function Legenda({ colonne }: { colonne: Colonna[] }) {
   const corsi = colonne.some((c) => VOCI_CORSO.includes(c));
+  const conRuolo = colonne.some((c) => VOCI_RUOLO.includes(c));
   const manca = colonne.includes("mancano");
   if (!corsi && !manca) return null;
   return (
     <div className="mt-3 space-y-0.5 text-[10px]" style={{ breakInside: "avoid" }}>
       {corsi && <p><b>Legenda corsi:</b> «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.</p>}
+      {conRuolo && <p><b>Preposto, Antincendio, Primo soccorso, Defibrillatore:</b> «NA» = ruolo di sicurezza non assegnato al lavoratore; «No» = ruolo assegnato ma attestato mancante; <b>in neretto</b> = ha l'attestato ma non il ruolo assegnato.</p>}
       {manca && <p><b>Anagrafica:</b> «MANCA» in rosso = dato assente nell'anagrafica del lavoratore.</p>}
     </div>
   );

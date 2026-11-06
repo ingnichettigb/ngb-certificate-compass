@@ -8,10 +8,11 @@
  *   rev 3 — 04/11/2026 10:20 — Intestazione fissa sticky con sfondo opaco per scorrimento record.
  *   rev 4 — 05/11/2026 19:50 — Celle con dato anagrafico mancante in rosso grassetto (anche in stampa).
  *   rev 5 — 06/11/2026 — Clic sull'intestazione per ordinare A→Z / Z→A / nessuno (frecce non stampate).
+ *   rev 6 — 06/11/2026 — Neretto (anche in stampa) per l'attestato presente senza il ruolo di sicurezza assegnato.
  */
 import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import {
-  cella, cellaMancante, INTESTAZIONI, ordinaRighe,
+  attestatoSenzaRuolo, cella, cellaMancante, INTESTAZIONI, ordinaRighe,
   type Colonna, type OrdineColonna, type RigaStampa,
 } from "../dati-stampa";
 
@@ -88,7 +89,7 @@ export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordin
             {colonne.map((c) => (
               <td
                 key={c}
-                className={`border border-foreground/40 px-1.5 py-0.5 ${c === "stato" && r.stato === "scaduto" ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""}`}
+                className={`border border-foreground/40 px-1.5 py-0.5 ${c === "stato" && r.stato === "scaduto" ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""} ${attestatoSenzaRuolo(r, c) ? "font-bold" : ""}`}
               >
                 {cella(r, c)}
               </td>

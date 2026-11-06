@@ -7,13 +7,14 @@
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
  *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
  *   rev 4 — 05/11/2026 19:50 — Test anagrafica incompleta, colonne dinamiche, titolo, messaggi vuoti, passaggio automatico modello.
+ *   rev 6 — 06/11/2026 — Test colonne legate al ruolo (NA / No / data), defibrillatore e neretto.
  *   rev 5 — 06/11/2026 — Test selezione «Senza attestati» (modalità «almeno uno» e «nessuno dei due»); mansione/classe di concorso e materia non richiesta.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
 import {
-  calcolaRighe, calcolaRigheLavoratori, campiMancanti, cella, colonnePerVista, conSelezione, FILTRI_INIZIALI,
-  inizioPeriodoArrivi, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, titoloStampa,
+  attestatoSenzaRuolo, calcolaRighe, calcolaRigheLavoratori, campiMancanti, cella, colonnePerVista, conSelezione, FILTRI_INIZIALI,
+  inizioPeriodoArrivi, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, titoloStampa, voceDelRuolo,
 } from "./dati-stampa";
 import { nomeFileEsportazione, testoCsv } from "./esporta-file";
 
@@ -133,7 +134,7 @@ describe("nuovi arrivati dell'anno", () => {
     expect(cella(r!, "nascita")).toBe("Milano, 12/03/1990");
     expect(cella(r!, "corsoBase")).toBe("Sì – 20/09/2026");
     expect(cella(r!, "corsoSpecifico")).toBe("No");
-    expect(cella(r!, "preposto")).toBe("No");
+    expect(cella(r!, "preposto")).toBe("NA"); // nessun ruolo di preposto assegnato e nessun attestato
     expect(cella(r!, "antincendio")).toBe("Scaduto – 10/01/2020");
     expect(cella(r!, "primoSoccorso")).toBe("Sì – 02/10/2026");
   });
@@ -270,5 +271,61 @@ describe("senza attestati (nessuno dei due / manca almeno uno)", () => {
     const acceso = conSelezione({ ...FILTRI_INIZIALI, modello: "registro" }, { senzaAttestati: true });
     expect(acceso.modello).toBe("lavoratori");
     expect(conSelezione(acceso, { senzaAttestati: false }).modello).toBe("registro");
+  });
+});
+
+describe("colonne legate al ruolo di sicurezza", () => {
+  const ruolo = (id: string, nome: string, macro: string | null) => ({ id, nome, descrizione: null, macro_categoria: macro, obbligatorio_tutti: false, attivo: true, ordine: 0 });
+  const ruoli = [
+    ruolo("r1", "Preposto", "Preposto"), ruolo("r2", "Addetto Primo Soccorso", "Primo Soccorso"),
+    ruolo("r3", "Addetto Antincendio", "Antincendio"), ruolo("r4", "Addetto BLSD / Defibrillatore", "Defibrillatore"),
+    ruolo("r5", "Lavoratore", "Sicurezza Lavoratori"),
+  ];
+  const ass = (d: string, r: string) => ({ id: `${d}${r}`, dipendente_id: d, ruolo_id: r });
+  const dd = [dip("1", "Rossi"), dip("2", "Bianchi"), dip("3", "Verdi")];
+  // Rossi: ruoli preposto e BLSD; ha l'attestato preposto ma non quello BLSD. Bianchi: nessun ruolo, ha antincendio e BLSD. Verdi: nessun ruolo, nessun attestato.
+  const assegnazioni = [ass("1", "r1"), ass("1", "r4"), ass("1", "r5")];
+  const atts = [
+    att("a", "1", "PRP-BAS-12", "2026-05-20", null),
+    att("b", "2", "VFF-FOR1-4", "2024-03-10", null),
+    att("c", "2", "BLS-BAS-05", "2025-04-02", null),
+  ];
+  const r = calcolaRigheLavoratori(dd, { ...FILTRI_INIZIALI, modello: "lavoratori" }, assegnazioni, ruoli, atts, null, oggi);
+  const riga = (cognome: string) => r.find((x) => x.cognome === cognome)!;
+
+  it("riconosce i quattro ruoli (BLSD non è primo soccorso)", () => {
+    expect(ruoli.map(voceDelRuolo)).toEqual(["preposto", "primoSoccorso", "antincendio", "defibrillatore", null]);
+  });
+  it("ruolo + attestato = data; ruolo senza attestato = No; nessun ruolo e nessun attestato = NA", () => {
+    expect(cella(riga("Rossi"), "preposto")).toBe("Sì – 20/05/2026");
+    expect(cella(riga("Rossi"), "defibrillatore")).toBe("No");
+    expect(cella(riga("Rossi"), "antincendio")).toBe("NA");
+    expect(cella(riga("Rossi"), "primoSoccorso")).toBe("NA");
+    expect(cella(riga("Verdi"), "preposto")).toBe("NA");
+    expect(cella(riga("Verdi"), "defibrillatore")).toBe("NA");
+  });
+  it("attestato senza ruolo: si vede la data e la cella è in neretto", () => {
+    expect(cella(riga("Bianchi"), "antincendio")).toBe("Sì – 10/03/2024");
+    expect(cella(riga("Bianchi"), "defibrillatore")).toBe("Sì – 02/04/2025");
+    expect(attestatoSenzaRuolo(riga("Bianchi"), "antincendio")).toBe(true);
+    expect(attestatoSenzaRuolo(riga("Bianchi"), "defibrillatore")).toBe(true);
+  });
+  it("niente neretto se c'è il ruolo, se manca l'attestato o per le colonne senza ruolo", () => {
+    expect(attestatoSenzaRuolo(riga("Rossi"), "preposto")).toBe(false);
+    expect(attestatoSenzaRuolo(riga("Rossi"), "defibrillatore")).toBe(false);
+    expect(attestatoSenzaRuolo(riga("Verdi"), "preposto")).toBe(false);
+    expect(attestatoSenzaRuolo(riga("Rossi"), "corsoBase")).toBe(false);
+  });
+  it("Corso base e specifico restano Sì/No per tutti", () => {
+    expect(cella(riga("Verdi"), "corsoBase")).toBe("No");
+    expect(cella(riga("Verdi"), "corsoSpecifico")).toBe("No");
+  });
+  it("un ruolo disattivato non conta", () => {
+    const spento = ruoli.map((x) => (x.id === "r1" ? { ...x, attivo: false } : x));
+    const rr = calcolaRigheLavoratori(dd, { ...FILTRI_INIZIALI, modello: "lavoratori" }, assegnazioni, spento, atts, null, oggi);
+    expect(attestatoSenzaRuolo(rr.find((x) => x.cognome === "Rossi")!, "preposto")).toBe(true);
+  });
+  it("la colonna Defibrillatore compare nell'elenco dei nuovi arrivati", () => {
+    expect(colonnePerVista({ modello: "lavoratori", arrivi: "scolastico", incompleta: false })).toContain("defibrillatore");
   });
 });
