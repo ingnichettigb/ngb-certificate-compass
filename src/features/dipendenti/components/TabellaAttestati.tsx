@@ -4,17 +4,14 @@
  * Data creazione: 2026-10-24
  * Revisioni:
  *   - Rev 1 (2026-10-24 16:30): Intestazioni ordinabili e scrollbar orizzontale sticky.
- *   - Rev 2 (2026-10-25 08:52): Colonna Documento con apertura e aggancio da cartella locale.
- *   - Rev 3 (2026-10-25 11:00): Integrazione con ricerca flessibile per cognome e refresh automatico.
- *   - Rev 4 (2026-10-25 20:30): Azioni complete: Sostituisci, Scollega file, Modifica dati e Cancella attestato.
- *   - Rev 5 (2026-10-25 21:05): Tooltip con nome file originale e apertura immediata con un clic.
- *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato accanto alla matita.
+ *   - Rev 6 (2026-10-25 21:20): Inserimento esplicito dell'icona Occhio per visualizzare l'allegato.
  *   - Rev 7 (2026-10-29 21:50): Tasto Vedi allineato alla ricerca intelligente del Cruscotto HR.
- *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data) e numero attestato.
- *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle, apertura percorso relativo e ripiego Blob URL.
- *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, non trovato, bloccato).
+ *   - Rev 8 (2026-10-30 10:35): Sfondo arancione per i doppioni (stesso corso e stessa data).
+ *   - Rev 10 (2026-10-30 11:10): Apertura PDF robusta con autorizzazione cartelle e percorso relativo.
+ *   - Rev 11 (2026-10-30 19:30): Messaggi d'errore distinti per «Vedi» (nessuna cartella, permesso, ecc.).
  *   - Rev 12 (2026-10-30 20:30): Toast condivisi (avvisi-cartella) al posto di quelli locali.
- * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ *   - Rev 13 (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ *   - Rev 14 (2026-11-06 18:37): Nuova colonna ordinabile "Ore" posizionata dopo "Scadenza".
  */
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
@@ -100,7 +97,6 @@ export function TabellaAttestati({
         return;
       }
 
-      // non_trovato: messaggio dettagliato
       const dove = esito.cartelleControllate.join(", ");
       const primoSimile = esito.simili[0];
       if (primoSimile) {
@@ -164,13 +160,14 @@ export function TabellaAttestati({
       <h3 className="text-sm font-semibold">Tutti gli attestati</h3>
 
       <div className="max-h-[380px] overflow-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[660px] text-sm">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
             <tr>
               <th className="w-12 px-3 py-2 text-center">N°</th>
               <IntestazioneOrdinabile colonna="corso" titolo="Corso" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="data" titolo="Data" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="scadenza" titolo="Scadenza" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
+              <IntestazioneOrdinabile colonna="ore" titolo="Ore" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <IntestazioneOrdinabile colonna="stato" titolo="Stato" colonnaAttiva={colonna} direzione={direzione} onOrdina={onOrdina} />
               <th className="px-3 py-2 text-right">Documento e Azioni</th>
             </tr>
@@ -209,6 +206,9 @@ export function TabellaAttestati({
                       {a.data_scadenza_calcolata
                         ? formatData(a.data_scadenza_calcolata)
                         : "senza scadenza"}
+                    </td>
+                    <td className="px-3 py-2 text-center font-mono text-xs">
+                      {a.ore_dichiarate != null ? `${a.ore_dichiarate} h` : "—"}
                     </td>
                     <td className="px-3 py-2">
                       <span
@@ -303,6 +303,7 @@ export function TabellaAttestati({
                     <td className="px-3 py-2 font-medium">Integrazione DVR — {i.descrizione}</td>
                     <td className="px-3 py-2">{formatData(i.data_richiesta)}</td>
                     <td className="px-3 py-2 text-muted-foreground">—</td>
+                    <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">—</td>
                     <td className="px-3 py-2">
                       <span
                         className={`rounded-full border px-2 py-0.5 text-xs ${
