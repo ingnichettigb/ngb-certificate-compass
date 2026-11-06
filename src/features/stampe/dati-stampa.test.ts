@@ -7,7 +7,7 @@
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
  *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
  *   rev 4 — 05/11/2026 19:50 — Test anagrafica incompleta, colonne dinamiche, titolo, messaggi vuoti, passaggio automatico modello.
- *   rev 5 — 06/11/2026 — Test selezione «Senza attestati» (modalità «almeno uno» e «nessuno dei due»).
+ *   rev 5 — 06/11/2026 — Test selezione «Senza attestati» (modalità «almeno uno» e «nessuno dei due»); mansione/classe di concorso e materia non richiesta.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -67,9 +67,13 @@ describe("elenco lavoratori in servizio", () => {
     const r = calcolaRigheLavoratori(elenco, { ...FILTRI_INIZIALI, modello: "lavoratori" });
     expect(r.map((x) => x.cognome)).toEqual(["Rossi", "Verdi"]);
   });
-  it("mansione: profilo ATA o classe – materia", () => {
+  it("mansione: profilo per gli ATA, classe di concorso per i Docenti", () => {
     const r = calcolaRigheLavoratori(elenco, { ...FILTRI_INIZIALI, modello: "lavoratori" });
-    expect(r.map((x) => x.mansione)).toEqual(["A027 – Matematica", "Collaboratore scolastico"]);
+    expect(r.map((x) => x.mansione)).toEqual(["A027", "Collaboratore scolastico"]);
+  });
+  it("un Docente con profilo (SEC2) mostra comunque la classe di concorso", () => {
+    const d = dip("9", "Grillo", { reparto: "Docente", sottoreparto: "SEC2", classe_concorso: "A027", materia: null });
+    expect(calcolaRigheLavoratori([d], { ...FILTRI_INIZIALI, modello: "lavoratori" })[0]!.mansione).toBe("A027");
   });
 });
 
@@ -145,9 +149,10 @@ describe("anagrafica incompleta", () => {
   it("segnala i campi sempre dovuti", () => {
     expect(campiMancanti(completo("1", { nome: "", data_assunzione: null, data_nascita: null }))).toEqual(["nome", "data_nascita", "data_assunzione"]);
   });
-  it("profilo solo per ATA; classe e materia solo per Docente", () => {
+  it("profilo solo per ATA; classe di concorso solo per Docente (la materia non è richiesta)", () => {
     expect(campiMancanti(completo("1", { sottoreparto: null }))).toEqual(["sottoreparto"]);
-    expect(campiMancanti(completo("2", { reparto: "Docente", sottoreparto: null, classe_concorso: null, materia: null }))).toEqual(["classe_concorso", "materia"]);
+    expect(campiMancanti(completo("2", { reparto: "Docente", sottoreparto: null, classe_concorso: null, materia: null }))).toEqual(["classe_concorso"]);
+    expect(campiMancanti(completo("3", { reparto: "Docente", sottoreparto: null, classe_concorso: "A027", materia: null }))).toEqual([]);
   });
   it("fine contratto solo a tempo determinato, cessazione solo per i cessati", () => {
     expect(campiMancanti(completo("1", { tipo_contratto: "determinato" }))).toEqual(["data_fine_contratto"]);

@@ -4,6 +4,7 @@
  * Creato:    05/11/2026
  * Revisioni:
  *   rev 1 — 05/11/2026 21:30 — Prima stesura.
+ *   rev 2 — 06/11/2026 — La materia non è più richiesta ai Docenti: i test usano la classe di concorso.
  */
 import { describe, expect, it } from "vitest";
 import type { Dipendente } from "@/lib/api";
@@ -34,13 +35,13 @@ describe("anno scolastico", () => {
 describe("coda «Da completare»", () => {
   it("un nuovo con dati mancanti è in coda", () => {
     expect(inCodaDaCompletare({ ...completo, tipo_contratto: "determinato", data_fine_contratto: null }, oggi)).toBe(true);
-    expect(inCodaDaCompletare({ ...completo, materia: null }, oggi)).toBe(true);
+    expect(inCodaDaCompletare({ ...completo, classe_concorso: null }, oggi)).toBe(true);
   });
   it("un nuovo con l'anagrafica completa non è in coda", () => {
     expect(inCodaDaCompletare(completo, oggi)).toBe(false);
   });
   it("un lavoratore vecchio incompleto NON è in coda (lo trovi in «Anagrafica incompleta» delle Stampe)", () => {
-    expect(inCodaDaCompletare({ ...completo, data_assunzione: "2019-09-01", materia: null }, oggi)).toBe(false);
+    expect(inCodaDaCompletare({ ...completo, data_assunzione: "2019-09-01", classe_concorso: null }, oggi)).toBe(false);
   });
   it("un riabilitato (in forza con data di cessazione) è in coda anche se completo", () => {
     const tornato = { ...completo, data_assunzione: "2026-09-01", data_cessazione: "2026-08-31" };
@@ -51,6 +52,6 @@ describe("coda «Da completare»", () => {
     expect(inCodaDaCompletare({ ...completo, data_cessazione: null }, oggi)).toBe(false);
   });
   it("un cessato non è mai in coda", () => {
-    expect(inCodaDaCompletare({ ...completo, stato_lavoratore: "cessato", data_cessazione: "2026-08-31", materia: null }, oggi)).toBe(false);
+    expect(inCodaDaCompletare({ ...completo, stato_lavoratore: "cessato", data_cessazione: "2026-08-31", classe_concorso: null }, oggi)).toBe(false);
   });
 });

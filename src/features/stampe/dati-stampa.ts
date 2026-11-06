@@ -18,6 +18,7 @@
  *   rev 9 — 06/11/2026 — Selezione «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico (minimi richiesti),
  *                        con colonne Corso base / Corso specifico (data dove c'è, «No» dove manca).
  *                        Scelta tra «Nessuno dei due» e «Manca almeno uno dei due».
+ *   rev 10 — 06/11/2026 — Colonna «Mansione / Classe di concorso»: ATA = mansione (profilo), Docenti = classe di concorso (senza materia).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -335,10 +336,11 @@ function nellaFinestra(r: RigaStampa, f: Finestra): boolean {
 
 type DipMinimo = Pick<Dipendente, "reparto" | "sottoreparto" | "classe_concorso" | "materia">;
 
-/** Mansione leggibile: profilo ATA oppure classe di concorso – materia per i docenti. */
+/** Mansione leggibile: classe di concorso per i Docenti (il loro «profilo» SEC1/SEC2 non conta), profilo per gli ATA e gli altri. */
 export function mansioneDi(d: DipMinimo): string {
-  if (d.sottoreparto) return d.sottoreparto;
-  return [d.classe_concorso, d.materia].filter(Boolean).join(" – ");
+  const classe = (d.classe_concorso ?? "").trim();
+  if ((d.reparto ?? "").trim().toLowerCase() === "docente") return classe;
+  return (d.sottoreparto ?? "").trim() || classe;
 }
 
 function ordina(a: RigaStampa, b: RigaStampa) {
@@ -527,7 +529,7 @@ export const TITOLI_MODELLO: Record<Modello, string> = {
 };
 
 export const INTESTAZIONI: Record<Colonna, string> = {
-  lavoratore: "Lavoratore", cf: "Codice fiscale", reparto: "Reparto", mansione: "Mansione / Materia",
+  lavoratore: "Lavoratore", cf: "Codice fiscale", reparto: "Reparto", mansione: "Mansione / Classe di concorso",
   ruoli: "Ruoli sicurezza", assunzione: "Data assunzione", nascita: "Luogo e data di nascita",
   corsoBase: "Corso base", corsoSpecifico: "Corso specifico", preposto: "Preposto", antincendio: "Antincendio",
   primoSoccorso: "Primo soccorso", mancano: "Cosa manca",
