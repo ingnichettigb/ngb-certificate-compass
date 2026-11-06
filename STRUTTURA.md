@@ -36,7 +36,7 @@ Costruita con Lovable: TanStack Start (React 19), Supabase, Tailwind 4, vitest. 
 | `/operatore` | `operatore` | Postazione operatore: coda di lavoro, lettura AI, archiviazione, email. |
 
 Altre funzioni usate da più pagine: `ai` (provider di intelligenza artificiale), `documenti` (attestati archiviati e caricamento),
-`impostazioni` (reparti, ruoli, categorie, insegnamento), `tipi-corso` (tabella dei tipi di corso ed export Excel).
+`impostazioni` (reparti, ruoli, categorie, insegnamento), `tipi-corso` (tabella dei tipi di corso ed export Excel), `da-completare` (coda «Da completare»: nuovi importati e cessati riabilitati completati uno alla volta; regola e finestra).
 
 ## Componenti condivisi (`src/components/`)
 

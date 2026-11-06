@@ -7,11 +7,13 @@
  *            stanno nella barra fissa in alto, non nella scheda.
  *   rev 3 — 28/10/2026 10:00 — Filtro stato contrattuale (In forza/In scadenza/Cessati/Tutti).
  *   rev 4 — 05/11/2026 17:50 — Modifica anagrafica per ID con conferma (speciale se cambia il CF).
+ *   rev 5 — 06/11/2026 08:20 — Finestra «Da completare» (uno alla volta) apribile dal pulsante dell'elenco e dall'esito dell'importazione;
+ *            la modifica anagrafica registra classe e materia nel catalogo quando cambiano.
  */
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { aggiornaAnagraficaDipendente, type Dipendente } from "@/lib/api";
+import { aggiornaAnagraficaDipendente, registraClasseEMateria, type Dipendente } from "@/lib/api";
 import { TUTTI, VUOTO } from "./types";
 import { calcolaRepartiFiltro, filtraDipendenti } from "./filtri";
 import { IntestazioneDipendenti } from "./components/IntestazioneDipendenti";
@@ -23,6 +25,7 @@ import { useDatiDipendenti } from "./hooks/useDatiDipendenti";
 import { useOrdinamentoAttestati } from "./hooks/useOrdinamentoAttestati";
 import { useAzioniDipendente } from "./hooks/useAzioniDipendente";
 import { SelettoreStato } from "@/features/contratti/SelettoreStato";
+import { DialogDaCompletare } from "@/features/da-completare/DialogDaCompletare";
 import { filtraPerStato, type FiltroStato } from "@/features/contratti/contratto";
 
 export function DipendentiPage({
@@ -37,6 +40,7 @@ export function DipendentiPage({
   const [filtroStato, setFiltroStato] = useState<FiltroStato>("in_forza");
   const [modifica, setModifica] = useState(false);
   const [savingMod, setSavingMod] = useState(false);
+  const [codaAperta, setCodaAperta] = useState(false);
   const qc = useQueryClient();
 
   const { repartiElenco, dipendenti, isLoading, attestati, ruoliCatalogo, assegnazioni, integrazioni } =
@@ -81,6 +85,9 @@ export function DipendentiPage({
     setSavingMod(true);
     try {
       await aggiornaAnagraficaDipendente(corrente.id, form, corrente.codice_fiscale);
+      if ((form.classe_concorso ?? "") !== (corrente.classe_concorso ?? "") || (form.materia ?? "") !== (corrente.materia ?? "")) {
+        await registraClasseEMateria(form.classe_concorso, form.materia);
+      }
       toast.success("Anagrafica aggiornata");
       setForm(null);
       setModifica(false);
@@ -96,7 +103,9 @@ export function DipendentiPage({
 
   return (
     <main className="min-h-screen bg-background">
-      {!senzaIntestazione && <IntestazioneDipendenti totale={dipendenti.length} />}
+      {!senzaIntestazione && (
+        <IntestazioneDipendenti totale={dipendenti.length} onCompletaUnoAUno={() => setCodaAperta(true)} />
+      )}
 
       <section className="mx-auto grid max-w-[1400px] gap-6 px-5 py-6 lg:grid-cols-[1fr_1.2fr]">
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
@@ -114,7 +123,13 @@ export function DipendentiPage({
               setForm({ ...VUOTO });
             }}
           />
-          <SelettoreStato valore={filtroStato} onCambia={setFiltroStato} dipendenti={dipendenti} attestati={attestati} />
+          <SelettoreStato
+            valore={filtroStato}
+            onCambia={setFiltroStato}
+            dipendenti={dipendenti}
+            attestati={attestati}
+            onCompletaUnoAUno={() => setCodaAperta(true)}
+          />
           <ListaDipendenti isLoading={isLoading} filtrati={filtrati} attestati={attestati} sel={sel} setSel={setSel} />
         </div>
 
@@ -155,6 +170,13 @@ export function DipendentiPage({
           )}
         </div>
       </section>
+
+      <DialogDaCompletare
+        open={codaAperta}
+        onClose={() => setCodaAperta(false)}
+        dipendenti={dipendenti}
+        repartiAttivi={repartiAttivi}
+      />
     </main>
   );
 }

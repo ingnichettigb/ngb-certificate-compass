@@ -270,7 +270,7 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
     "sb",
     "from.upsert",
     "dipendenti",
-    "[{"codice_fiscale":"RSSMRA80A01H501U","cognome":"Rossi","nome":"Mario","email":"mario@x.it","reparto":"Docente","sottoreparto":null,"classe_concorso":"A-26","materia":"Matematica","luogo_nascita":"Soresina","data_nascita":"1980-01-01"},{"onConflict":"codice_fiscale"}]",
+    "[{"codice_fiscale":"RSSMRA80A01H501U","cognome":"ROSSI","nome":"MARIO","email":"mario@x.it","reparto":"Docente","sottoreparto":null,"classe_concorso":"A-26","materia":"Matematica","luogo_nascita":"SORESINA","data_nascita":"1980-01-01"},{"onConflict":"codice_fiscale"}]",
   ],
   [
     "sb",

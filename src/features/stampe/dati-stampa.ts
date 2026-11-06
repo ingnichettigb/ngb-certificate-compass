@@ -11,11 +11,18 @@
  *                              corso base, specifico, preposto, antincendio, primo soccorso.
  *   rev 5 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta» (campi mancanti per lavoratore), colonne «Cosa manca»,
  *                              fine contratto e cessazione, titolo stampa dinamico, passaggio automatico all'elenco lavoratori.
+ *   rev 6 — 05/11/2026 21:30 — La regola dei dati mancanti (campiMancanti, etichette) è spostata in dipendenti/anagrafica-completa.ts
+ *                              e qui riesportata: nessun cambio di comportamento.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import type { TipoCorso } from "@/lib/api/tipi-corso";
+import { campiMancanti, ETICHETTA_CAMPO, type CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
+
+// La regola dei dati mancanti vive in dipendenti/anagrafica-completa.ts (condivisa con la coda «Da completare»).
+export { campiMancanti, ETICHETTA_CAMPO };
+export type { CampoAnagrafica };
 
 export type Modello = "registro" | "gruppo" | "scadenze" | "scheda" | "reparto" | "lavoratori";
 export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
@@ -116,18 +123,6 @@ export const COLONNE_NUOVI_ARRIVATI: Colonna[] = [
   "lavoratore", "cf", "nascita", "assunzione", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso",
 ];
 
-/** Campi anagrafici controllati dalla selezione «Anagrafica incompleta». */
-export type CampoAnagrafica =
-  | "cognome" | "nome" | "codice_fiscale" | "luogo_nascita" | "data_nascita" | "reparto" | "data_assunzione"
-  | "sottoreparto" | "classe_concorso" | "materia" | "data_fine_contratto" | "data_cessazione";
-
-export const ETICHETTA_CAMPO: Record<CampoAnagrafica, string> = {
-  cognome: "cognome", nome: "nome", codice_fiscale: "codice fiscale", luogo_nascita: "luogo di nascita",
-  data_nascita: "data di nascita", reparto: "reparto", data_assunzione: "data di assunzione",
-  sottoreparto: "profilo ATA", classe_concorso: "classe di concorso", materia: "materia",
-  data_fine_contratto: "data fine contratto", data_cessazione: "data di cessazione",
-};
-
 /** In quale colonna compare ogni campo mancante. */
 const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
   cognome: "lavoratore", nome: "lavoratore", codice_fiscale: "cf", luogo_nascita: "nascita", data_nascita: "nascita",
@@ -137,31 +132,6 @@ const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
 
 /** Colonne aggiunte da sole, in quest'ordine, se almeno un lavoratore mostrato ha quel dato mancante. */
 const COLONNE_SE_MANCANTI: Colonna[] = ["nascita", "assunzione", "mansione", "fineContratto", "cessazione"];
-
-const vuoto = (v: string | null | undefined) => !v || !v.trim();
-
-/**
- * Dati che mancano nell'anagrafica. Alcuni campi sono dovuti solo in certi casi:
- * profilo per ATA, classe e materia per Docente, fine contratto solo a tempo determinato,
- * cessazione solo per i cessati. L'email non è controllata.
- */
-export function campiMancanti(d: Partial<Dipendente>): CampoAnagrafica[] {
-  const m: CampoAnagrafica[] = [];
-  const sempre: [CampoAnagrafica, string | null | undefined][] = [
-    ["cognome", d.cognome], ["nome", d.nome], ["codice_fiscale", d.codice_fiscale], ["luogo_nascita", d.luogo_nascita],
-    ["data_nascita", d.data_nascita], ["reparto", d.reparto], ["data_assunzione", d.data_assunzione],
-  ];
-  for (const [c, v] of sempre) if (vuoto(v)) m.push(c);
-  const reparto = (d.reparto ?? "").trim().toLowerCase();
-  if (reparto === "ata" && vuoto(d.sottoreparto)) m.push("sottoreparto");
-  if (reparto === "docente") {
-    if (vuoto(d.classe_concorso)) m.push("classe_concorso");
-    if (vuoto(d.materia)) m.push("materia");
-  }
-  if (d.tipo_contratto === "determinato" && vuoto(d.data_fine_contratto)) m.push("data_fine_contratto");
-  if (d.stato_lavoratore === "cessato" && vuoto(d.data_cessazione)) m.push("data_cessazione");
-  return m;
-}
 
 /** Colonne da mostrare: dipendono dal modello, dalle selezioni attive e (per l'incompleta) dai dati mancanti. */
 export function colonnePerVista(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta">, righe: RigaStampa[] = []): Colonna[] {

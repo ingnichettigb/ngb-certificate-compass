@@ -6,6 +6,7 @@
  *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
  *   - Rev 5 (2026-11-03 14:30): Bottone «Importa elenco Word/Excel».
+ *   - Rev 6 (2026-11-06 08:20): Prop onCompletaUnoAUno: dall'esito dell'importazione si apre la finestra «Da completare».
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -17,7 +18,13 @@ import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
 import { DialogImportaElenco } from "../import-elenco/DialogImportaElenco";
 
-export function IntestazioneDipendenti({ totale }: { totale: number }) {
+export function IntestazioneDipendenti({
+  totale,
+  onCompletaUnoAUno,
+}: {
+  totale: number;
+  onCompletaUnoAUno?: () => void;
+}) {
   const [apriMatrice, setApriMatrice] = useState(false);
   const [apriImport, setApriImport] = useState(false);
 
@@ -62,7 +69,7 @@ export function IntestazioneDipendenti({ totale }: { totale: number }) {
 
       {/* Matrice a tutto schermo */}
       <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
-      <DialogImportaElenco open={apriImport} onClose={() => setApriImport(false)} />
+      <DialogImportaElenco open={apriImport} onClose={() => setApriImport(false)} onCompleta={onCompletaUnoAUno} />
     </>
   );
 }

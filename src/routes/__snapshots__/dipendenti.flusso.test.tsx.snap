@@ -1025,7 +1025,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     "sb",
     "from.upsert",
     "dipendenti",
-    "[{"codice_fiscale":"GLLLPA80A01H501U","cognome":"Gialli","nome":"Paolo","email":"p@x.it","reparto":"Docente","sottoreparto":null,"classe_concorso":null,"materia":null,"luogo_nascita":"Soresina","data_nascita":"1980-01-01","codice_ateco":"85.20","tipo_contratto":"indeterminato","data_assunzione":null,"data_fine_contratto":null,"note_contratto":null},{"onConflict":"codice_fiscale"}]",
+    "[{"codice_fiscale":"GLLLPA80A01H501U","cognome":"GIALLI","nome":"PAOLO","email":"p@x.it","reparto":"Docente","sottoreparto":null,"classe_concorso":null,"materia":null,"luogo_nascita":"SORESINA","data_nascita":"1980-01-01","codice_ateco":"85.20","tipo_contratto":"indeterminato","data_assunzione":null,"data_fine_contratto":null,"note_contratto":null},{"onConflict":"codice_fiscale"}]",
   ],
   [
     "sb",

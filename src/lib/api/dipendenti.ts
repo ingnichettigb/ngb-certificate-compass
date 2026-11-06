@@ -4,9 +4,12 @@
  * Anagrafica dipendenti.
  * Revisioni:
  *   - Rev 2 — 05/11/2026 17:50 — aggiornaAnagraficaDipendente (modifica per ID, allineamento CF).
+ *   - Rev 3 — 05/11/2026 21:30 — Cognome, nome e luogo di nascita salvati sempre in MAIUSCOLO; la modifica anagrafica
+ *             salva anche profilo, classe di concorso e materia; nuova riabilitaDipendenti (cessati che tornano in forza).
  */
 import { leggiTutto, sb } from "./client";
 import { registraClasseEMateria } from "./insegnamento";
+import { maiuscolo } from "@/lib/testo-maiuscolo";
 
 export type Dipendente = {
   id: string;
@@ -103,13 +106,16 @@ export async function aggiornaAnagraficaDipendente(
 ): Promise<void> {
   const nuovoCF = d.codice_fiscale.trim().toUpperCase();
   const payload = {
-    cognome: d.cognome.trim(),
-    nome: d.nome.trim(),
+    cognome: maiuscolo(d.cognome),
+    nome: maiuscolo(d.nome),
     codice_fiscale: nuovoCF,
     email: d.email?.trim() || null,
     reparto: d.reparto || null,
+    sottoreparto: d.sottoreparto?.trim() || null,
+    classe_concorso: d.classe_concorso?.trim().toUpperCase() || null,
+    materia: d.materia?.trim() || null,
     codice_ateco: d.codice_ateco?.trim() || null,
-    luogo_nascita: d.luogo_nascita?.trim() || null,
+    luogo_nascita: maiuscolo(d.luogo_nascita) || null,
     data_nascita: d.data_nascita || null,
     tipo_contratto: d.tipo_contratto,
     data_assunzione: d.data_assunzione || null,
@@ -134,6 +140,9 @@ export async function aggiornaAnagraficaDipendente(
 export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipendente> {
   const payload = {
     ...d,
+    cognome: maiuscolo(d.cognome),
+    nome: maiuscolo(d.nome),
+    luogo_nascita: d.luogo_nascita ? maiuscolo(d.luogo_nascita) : d.luogo_nascita,
     codice_fiscale: d.codice_fiscale.trim().toUpperCase(),
     data_nascita: d.data_nascita || null,
     sottoreparto: d.sottoreparto?.trim() || null,
@@ -151,4 +160,23 @@ export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipen
     .single();
   if (error) throw error;
   return data as Dipendente;
+}
+
+/**
+ * Riabilita i lavoratori cessati che tornano in servizio: tornano «in forza» con la nuova data di
+ * assunzione e contratto determinato senza data di fine. La data di cessazione NON viene toccata:
+ * è il segnale che li tiene nella coda «Da completare» finché non vengono salvati dalla scheda.
+ */
+export async function riabilitaDipendenti(ids: string[], dataAssunzione: string): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await sb
+    .from("dipendenti")
+    .update({
+      stato_lavoratore: "in_forza",
+      data_assunzione: dataAssunzione,
+      tipo_contratto: "determinato",
+      data_fine_contratto: null,
+    })
+    .in("id", ids);
+  if (error) throw error;
 }
