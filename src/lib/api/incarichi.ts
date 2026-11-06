@@ -2,7 +2,10 @@
  * File:      incarichi.ts
  * Percorso:  src/lib/api/incarichi.ts
  * Incarichi di sicurezza e stato delle scadenze.
+ * - Rev (2026-11-06 18:00): per i Preposti lo stato deriva dal motore dei cicli (regime transitorio 19/05/2026),
+ *   non dal vecchio campo data_scadenza_calcolata a 5 anni.
  */
+import { applicaScadenzaPreposti } from "@/features/scadenze/preposti";
 import type { Attestato } from "./attestati";
 
 export type LivelloKey = "Base" | "Specifico" | "Aggiornamento";
@@ -88,7 +91,8 @@ export function etichettaStato(s: StatoScadenza) {
 
 const ORDINE: StatoScadenza[] = ["scaduto", "in-scadenza", "mancante", "valido"];
 
-export function riepilogoIncarichi(attestati: Attestato[]): RiepilogoIncarico[] {
+export function riepilogoIncarichi(attestatiGrezzi: Attestato[]): RiepilogoIncarico[] {
+  const attestati = applicaScadenzaPreposti(attestatiGrezzi);
   return INCARICHI.map((incarico) => {
     const voci: VoceIncarico[] = incarico.livelli.map((livello) => {
       const candidati = attestati

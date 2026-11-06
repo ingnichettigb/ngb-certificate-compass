@@ -14,11 +14,13 @@
  *   rev 6 — 05/11/2026 21:30 — La regola dei dati mancanti (campiMancanti, etichette) è spostata in dipendenti/anagrafica-completa.ts
  *                              e qui riesportata: nessun cambio di comportamento.
  *   rev 7 — 06/11/2026 — Ordinamento per colonna (A→Z / Z→A) e «Univoco» (una riga per lavoratore, scadenza più urgente).
+ *   rev 8 — 06/11/2026 18:00 — Preposti: data e stato da motore dei cicli (regime transitorio 19/05/2026).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import type { TipoCorso } from "@/lib/api/tipi-corso";
+import { applicaScadenzaPreposti } from "@/features/scadenze/preposti";
 import { campiMancanti, ETICHETTA_CAMPO, type CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
 // La regola dei dati mancanti vive in dipendenti/anagrafica-completa.ts (condivisa con la coda «Da completare»).
@@ -236,7 +238,8 @@ export function voceFormazione(tc: Pick<TipoCorso, "codice" | "nome_corso" | "ma
 }
 
 /** Per ogni lavoratore, per ogni voce: «Sì – data corso» (o «Scaduto – data corso») dell'attestato approvato più recente. */
-function formazionePerLavoratore(attestati: Attestato[], oggi: Date): Map<string, Partial<Record<VoceFormazione, string>>> {
+function formazionePerLavoratore(attestatiGrezzi: Attestato[], oggi: Date): Map<string, Partial<Record<VoceFormazione, string>>> {
+  const attestati = applicaScadenzaPreposti(attestatiGrezzi, oggi);
   const ultimo = new Map<string, Map<VoceFormazione, Attestato>>();
   for (const a of attestati) {
     if (a.stato_validazione !== "Approvato" || !a.tipi_corso) continue;
@@ -294,12 +297,17 @@ function dipendentiConRuolo(ruoloId: string, assegnazioni: AssegnazioneRuolo[]):
 
 /** Converte gli attestati approvati in righe filtrate e ordinate per cognome, nome, data corso. */
 export function calcolaRighe(
-  attestati: Attestato[],
+  attestatiGrezzi: Attestato[],
   filtri: FiltriStampa,
   oggi = new Date(),
   assegnazioni: AssegnazioneRuolo[] = [],
   soloDipendenti: Set<string> | null = null,
 ): RigaStampa[] {
+  // Solo attestati approvati; i Preposti hanno data e stato dal motore dei cicli (regime transitorio).
+  const attestati = applicaScadenzaPreposti(
+    attestatiGrezzi.filter((a) => a.stato_validazione === "Approvato"),
+    oggi,
+  );
   let righe = attestati
     .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
     .filter((a) => filtri.includiCessati || a.dipendenti!.stato_lavoratore !== "cessato")

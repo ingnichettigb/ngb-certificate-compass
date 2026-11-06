@@ -218,8 +218,8 @@ describe("cicli ed eventi per la linea temporale", () => {
   it("prima tranche: ciclo 1 da completare (4/6) e ciclo 2 non attivo", () => {
     const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2022, 6, 1));
     expect(stati(r)).toEqual(["da_completare", "futuro"]);
-    expect(r.cicli[0].oreAccumulate).toBe(4);
-    expect(r.cicli[0].attivo).toBe(true);
+    expect(r.cicli[0]!.oreAccumulate).toBe(4);
+    expect(r.cicli[0]!.attivo).toBe(true);
     expect(tipi(r)).toEqual(["base", "parziale"]);
   });
 
@@ -230,8 +230,8 @@ describe("cicli ed eventi per la linea temporale", () => {
     );
     expect(stati(r)).toEqual(["completato", "futuro"]);
     expect(tipi(r)).toEqual(["base", "parziale", "completo"]);
-    expect(r.cicli[1].inizio).toBe("2023-09-15");
-    expect(r.cicli[1].fine).toBe("2028-09-15");
+    expect(r.cicli[1]!.inizio).toBe("2023-09-15");
+    expect(r.cicli[1]!.fine).toBe("2028-09-15");
   });
 
   it("anche più ore del necessario rendono il ciclo verde", () => {
@@ -245,29 +245,29 @@ describe("cicli ed eventi per la linea temporale", () => {
       giorno(2026, 11, 6),
     );
     expect(stati(r)).toEqual(["completato", "da_completare", "futuro"]);
-    expect(r.cicli[1].attivo).toBe(true);
-    expect(r.cicli[1].oreAccumulate).toBe(0);
-    expect(r.cicli[2].inizio).toBe("2028-09-15");
+    expect(r.cicli[1]!.attivo).toBe(true);
+    expect(r.cicli[1]!.oreAccumulate).toBe(0);
+    expect(r.cicli[2]!.inizio).toBe("2028-09-15");
   });
 
   it("ciclo scaduto senza aggiornamenti: rosso, poi arancione e nero", () => {
     const r = calcola([base("2018-09-15")], giorno(2026, 11, 6));
     expect(stati(r)).toEqual(["scaduto", "da_completare", "futuro"]);
-    expect(r.cicli[0].attivo).toBe(true);
-    expect(r.cicli[1].attivo).toBe(false);
+    expect(r.cicli[0]!.attivo).toBe(true);
+    expect(r.cicli[1]!.attivo).toBe(false);
   });
 
   it("rosso con ore parziali: il ciclo scaduto mostra le ore già fatte", () => {
     const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2024, 6, 1));
     expect(stati(r)).toEqual(["scaduto", "da_completare", "futuro"]);
-    expect(r.cicli[0].oreAccumulate).toBe(4);
+    expect(r.cicli[0]!.oreAccumulate).toBe(4);
   });
 
   it("sanatoria tardiva: da rosso a verde, il ciclo dopo è nero", () => {
     const r = calcola([base("2018-09-15"), agg("2024-01-10", 6)], giorno(2026, 11, 6));
     expect(stati(r)).toEqual(["completato", "completato", "futuro"]);
-    expect(r.cicli[2].inizio).toBe("2028-09-15");
-    expect(r.cicli[2].attivo).toBe(true);
+    expect(r.cicli[2]!.inizio).toBe("2028-09-15");
+    expect(r.cicli[2]!.attivo).toBe(true);
   });
 
   it("secondo ciclo: un aggiornamento parziale non è 'completo' per le ore del ciclo precedente", () => {
@@ -277,7 +277,7 @@ describe("cicli ed eventi per la linea temporale", () => {
     );
     expect(tipi(r)).toEqual(["base", "completo", "parziale"]);
     expect(stati(r)).toEqual(["completato", "da_completare", "futuro"]);
-    expect(r.cicli[1].oreAccumulate).toBe(4);
+    expect(r.cicli[1]!.oreAccumulate).toBe(4);
   });
 
   it("aggiornamenti non contati sono eventi 'ignorato' con il motivo", () => {
@@ -307,7 +307,7 @@ describe("cicli ed eventi per la linea temporale", () => {
     expect(r.durataCicloAnni).toBe(5);
     expect(r.dataValutazione).toBe("2031-01-01");
     for (let i = 1; i < r.cicli.length; i++) {
-      expect(r.cicli[i].inizio).toBe(r.cicli[i - 1].fine);
+      expect(r.cicli[i]!.inizio).toBe(r.cicli[i - 1]!.fine);
     }
   });
 
@@ -323,42 +323,98 @@ describe("cicli ed eventi per la linea temporale", () => {
   });
 });
 
-describe("data di taglio (regime transitorio Preposti) e record storici", () => {
+describe("regime transitorio Preposti (taglio 19/05/2026, ciclo biennale)", () => {
+  const REGIME = { dataTaglio: "2026-05-19", dataSogliaEvidenza: "2023-05-19", cicloVecchioAnni: 5 };
   const prep = (attestati: AttestatoCiclo[], oggi: Date) =>
-    calcola(attestati, oggi, {
-      durataCicloAnni: 2,
-      oreRichiesteAggiornamento: 6,
-      dataTaglio: "2026-05-19",
-    });
+    calcola(attestati, oggi, { durataCicloAnni: 2, oreRichiesteAggiornamento: 6, regimeTransitorio: REGIME });
 
-  it("fine ciclo anteriore al taglio: la scadenza diventa il 19/05/2026", () => {
-    const r = prep([base("2022-03-10")], giorno(2026, 1, 15));
+  it("Base pre-2023 senza aggiornamento: scadenza tassativa 19/05/2026, scaduto oggi", () => {
+    const r = prep([base("2022-03-10")], giorno(2026, 11, 6));
     expect(r.scadenzaEffettiva).toBe("2026-05-19");
     expect(r.scadenzaPortataAlTaglio).toBe(true);
+    expect(r.motivoScadenza).toContain("19/05/2026");
+    expect(r.stato).toBe("scaduto_sanabile");
+    expect(r.regolaPreposti).toBe(true);
+  });
+
+  it("prima del taglio lo stesso preposto è ancora in regola (fino al 19/05/2026)", () => {
+    const r = prep([base("2022-03-10")], giorno(2026, 1, 15));
+    expect(r.scadenzaEffettiva).toBe("2026-05-19");
     expect(r.stato).toBe("valido");
   });
 
-  it("dopo il taglio senza aggiornamento risulta scaduto", () => {
+  it("la scadenza naturale quinquennale più lontana viene anticipata al taglio", () => {
+    // 2022-03-10 + 5 anni = 2027-03-10, ma il ciclo è troncato al 19/05/2026
+    const r = prep([base("2022-03-10")], giorno(2025, 6, 1));
+    expect(r.scadenzaEffettiva).toBe("2026-05-19");
+  });
+
+  it("ciclo vecchio troncato e cicli successivi biennali dal taglio", () => {
     const r = prep([base("2022-03-10")], giorno(2026, 11, 6));
+    const [c1, c2, c3] = r.cicli;
+    expect(c1?.fine).toBe("2026-05-19");
+    expect(c1?.troncato).toBe(true);
+    expect(c1?.stato).toBe("scaduto");
+    expect(c2?.inizio).toBe("2026-05-19");
+    expect(c2?.fine).toBe("2028-05-19");
+    expect(c3?.fine).toBe("2030-05-19");
+    expect(c3?.stato).toBe("futuro");
+  });
+
+  it("aggiornamento entro il taglio: nuovo ciclo biennale, scadenza 19/05/2028", () => {
+    const r = prep([base("2022-03-10"), agg("2026-02-01", 6)], giorno(2026, 11, 6));
+    expect(r.scadenzaEffettiva).toBe("2028-05-19");
+    expect(r.scadenzaPortataAlTaglio).toBe(false);
+    expect(r.motivoScadenza).toBeNull();
+    expect(r.stato).toBe("valido");
+  });
+
+  it("vecchio regime con più cicli: Base 2018 + aggiornamento 2020 copre il ciclo 1, il ciclo 2 è troncato al taglio", () => {
+    const r = prep([base("2018-01-10"), agg("2020-06-01", 6)], giorno(2026, 11, 6));
+    expect(r.cicli[0]?.fine).toBe("2023-01-10");
+    expect(r.cicli[0]?.stato).toBe("completato");
+    expect(r.cicli[1]?.fine).toBe("2026-05-19");
+    expect(r.cicli[1]?.troncato).toBe(true);
     expect(r.scadenzaEffettiva).toBe("2026-05-19");
     expect(r.stato).toBe("scaduto_sanabile");
   });
 
-  it("aggiornamento fatto in tempo: cicli biennali rigidi dall'ancora", () => {
-    const r = prep([base("2022-03-10"), agg("2026-02-01", 6)], giorno(2026, 11, 6));
-    // Il 01/02/2026 cade nel ciclo 2 (10/03/2024 → 10/03/2026): lo copre, la scadenza è la fine del ciclo 3.
-    expect(r.scadenzaEffettiva).toBe("2028-03-10");
+  it("sanatoria tardiva dopo il taglio: l'aggiornamento copre il ciclo in corso", () => {
+    const r = prep([base("2022-03-10"), agg("2026-08-01", 6)], giorno(2026, 11, 6));
+    expect(r.cicli.find((c) => c.indice === 1)?.stato).toBe("completato");
     expect(r.scadenzaPortataAlTaglio).toBe(false);
     expect(r.stato).toBe("valido");
   });
 
-  it("senza dataTaglio il comportamento non cambia", () => {
-    const r = calcola([base("2022-03-10")], giorno(2026, 11, 6), { durataCicloAnni: 2 });
-    expect(r.scadenzaEffettiva).toBe("2024-03-10");
-    expect(r.dataTaglio).toBeNull();
-    expect(r.scadenzaPortataAlTaglio).toBe(false);
+  it("aggiornamento parziale (3 ore) entro il taglio non basta", () => {
+    const r = prep([base("2022-03-10"), agg("2026-02-01", 3)], giorno(2026, 11, 6));
+    expect(r.scadenzaEffettiva).toBe("2026-05-19");
+    expect(r.oreAccumulate).toBe(3);
   });
 
+  it("Base dopo la soglia (2024): nessun transitorio, cicli biennali dall'ancora", () => {
+    const r = prep([base("2024-02-01")], giorno(2026, 11, 6));
+    expect(r.scadenzaEffettiva).toBe("2026-02-01");
+    expect(r.scadenzaPortataAlTaglio).toBe(false);
+    expect(r.dataTaglio).toBeNull();
+    expect(r.stato).toBe("scaduto_sanabile");
+  });
+
+  it("Base 2015 mai aggiornato: decaduto (oltre 10 anni)", () => {
+    const r = prep([base("2015-01-10")], giorno(2026, 11, 6));
+    expect(r.stato).toBe("decaduto");
+    expect(r.richiedeNuovoCorsoBase).toBe(true);
+  });
+
+  it("senza regime il comportamento non cambia", () => {
+    const r = calcola([base("2022-03-10")], giorno(2026, 11, 6), { durataCicloAnni: 2 });
+    expect(r.scadenzaEffettiva).toBe("2024-03-10");
+    expect(r.regolaPreposti).toBe(false);
+    expect(r.motivoScadenza).toBeNull();
+  });
+});
+
+describe("record storici senza data", () => {
   it("attestato con data mancante o non valida viene scartato senza errori", () => {
     const rotto = { id: "x", dataCorso: undefined as unknown as string, ore: 4, eBase: false };
     const vuoto = { id: "y", dataCorso: "", ore: 4, eBase: false };

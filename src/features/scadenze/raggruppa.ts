@@ -5,12 +5,14 @@
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Raggruppa gli attestati per lavoratore + corso/macro-categoria e calcola il ciclo una sola volta per gruppo.
  * - Rev 2 (2026-11-06 16:00): Regola Preposti (ciclo biennale, taglio al 19/05/2026); protezione su data_corso nulla.
+ * - Rev 3 (2026-11-06 18:00): Regime transitorio completo (cicli vecchi 5 anni troncati al taglio, poi biennali).
  */
 import type { Attestato } from "@/lib/api";
 import {
   DECADENZA_PREDEFINITA_ANNI,
   valutaCicloFormativo,
   type AttestatoCiclo,
+  type RegimeTransitorio,
 } from "./calcolo-ciclo";
 import type { RigaScadenzaDati } from "./types";
 
@@ -18,7 +20,17 @@ import type { RigaScadenzaDati } from "./types";
 export const CICLO_PREPOSTI_ANNI = 2;
 /** Data di taglio per i Preposti (entrata in vigore dell'Accordo secondo le FAQ del Ministero del Lavoro). */
 export const TAGLIO_PREPOSTI = "2026-05-19";
+/** Formazione pregressa: Base anteriore a questa data = oltre 2 anni prima dell'entrata in vigore (19/05/2025). */
+export const SOGLIA_EVIDENZA_PREPOSTI = "2023-05-19";
+/** Periodicità del vecchio regime (Accordo 2011): 5 anni. */
+export const CICLO_VECCHIO_PREPOSTI_ANNI = 5;
 const ORE_AGGIORNAMENTO_PREPOSTI = 6;
+
+export const REGIME_TRANSITORIO_PREPOSTI: RegimeTransitorio = {
+  dataTaglio: TAGLIO_PREPOSTI,
+  dataSogliaEvidenza: SOGLIA_EVIDENZA_PREPOSTI,
+  cicloVecchioAnni: CICLO_VECCHIO_PREPOSTI_ANNI,
+};
 
 /** Riconosce i corsi Preposto dalla macro-categoria, dal codice (PRP-…) o dal nome. */
 export function ePreposto(a: Attestato): boolean {
@@ -84,11 +96,11 @@ export function parametriDaGruppo(gruppoOrdinato: Attestato[]) {
       durataCicloAnni: CICLO_PREPOSTI_ANNI,
       oreRichiesteAggiornamento: oreRichiesteAggiornamento || ORE_AGGIORNAMENTO_PREPOSTI,
       decadenzaAnni,
-      dataTaglio: TAGLIO_PREPOSTI as string | null,
+      regimeTransitorio: REGIME_TRANSITORIO_PREPOSTI as RegimeTransitorio | null,
     };
   }
 
-  return { durataCicloAnni, oreRichiesteAggiornamento, decadenzaAnni, dataTaglio: null as string | null };
+  return { durataCicloAnni, oreRichiesteAggiornamento, decadenzaAnni, regimeTransitorio: null as RegimeTransitorio | null };
 }
 
 /** Calcola una riga per ogni gruppo lavoratore + corso. Gli attestati respinti non contano. */
@@ -111,7 +123,7 @@ export function costruisciRighe(attestati: Attestato[], oggi: Date): RigaScadenz
       durataCicloAnni: p.durataCicloAnni,
       oreRichiesteAggiornamento: p.oreRichiesteAggiornamento,
       decadenzaAnni: p.decadenzaAnni,
-      dataTaglio: p.dataTaglio,
+      regimeTransitorio: p.regimeTransitorio,
       oggi,
     });
     righe.push({ chiave, attestato: gruppo[gruppo.length - 1]!, attestatiGruppo: gruppo, ciclo });

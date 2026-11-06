@@ -7,6 +7,7 @@
  *   senza ricalcolare ore o scadenze.
  *
  * - Rev 2 (2026-11-06 16:00): Indicatore del taglio (Preposti 19/05/2026) con nota sul termine transitorio.
+ * - Rev 3 (2026-11-06 18:00): Tacche calcolate per ciclo reale; ciclo troncato; didascalia Preposti.
  *
  * Colori per ciclo: verde = completato, arancione = da completare, rosso = scaduto,
  * nero = non ancora attivo, bordeaux = decaduto.
@@ -90,7 +91,8 @@ function EtichettaCiclo({ c }: { c: CicloVisuale }) {
     c.attivo && (c.stato === "da_completare" || c.stato === "scaduto") && c.oreRichieste > 0;
   return (
     <>
-      Ciclo {c.indice} ·{" "}
+      Ciclo {c.indice}
+      {c.troncato ? " (vecchio regime, troncato)" : ""} ·{" "}
       {mostraOre ? `${c.oreAccumulate}/${c.oreRichieste} ore` : ETICHETTA_CICLO[c.stato]}
     </>
   );
@@ -108,12 +110,15 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
     const span = Math.max(1, giorniTra(inizio, fine));
     const pct = (data: string) => (giorniTra(inizio, data) / span) * 100;
 
-    // Tacche annuali (senza testo), escluse quelle sui confini di ciclo.
-    const N = ciclo.durataCicloAnni;
-    const anniTotali = cicli.length * N;
+    // Tacche annuali (senza testo) calcolate dentro ogni ciclo reale (inizio/fine effettivi: i cicli possono avere
+    // durate diverse, es. Preposti con ciclo vecchio troncato al taglio), escluse quelle vicine ai confini.
     const tacche: number[] = [];
-    for (let y = 1; y < anniTotali; y++) {
-      if (y % N !== 0) tacche.push(pct(aggiungiAnni(ciclo.dataAncora, y)));
+    for (const c of cicli) {
+      for (let y = 1; ; y++) {
+        const d = aggiungiAnni(c.inizio, y);
+        if (giorniTra(d, c.fine) < 30) break;
+        tacche.push(pct(d));
+      }
     }
 
     // Eventi dentro la finestra, con livello per evitare sovrapposizioni.
@@ -162,13 +167,13 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
       <div className="overflow-x-auto">
         <div className="min-w-[680px] px-14 pb-3 pt-3">
           <div className="mb-2 text-[11px] text-muted-foreground">
-            Ciclo di {ciclo.durataCicloAnni} anni
-            {ciclo.oreRichieste > 0
+            {ciclo.regolaPreposti
+              ? `Preposto: aggiornamento biennale (${ciclo.oreRichieste || 6} ore)`
+              : `Ciclo di ${ciclo.durataCicloAnni} anni`}
+            {!ciclo.regolaPreposti && ciclo.oreRichieste > 0
               ? ` · ${ciclo.oreRichieste} ore di aggiornamento per ciclo`
               : ""}
-            {ciclo.scadenzaPortataAlTaglio && ciclo.dataTaglio
-              ? ` · scadenza portata al ${formatData(ciclo.dataTaglio)} (regime transitorio)`
-              : ""}
+            {ciclo.motivoScadenza ? ` · ${ciclo.motivoScadenza}` : ""}
           </div>
 
           {/* 1. Eventi reali sopra la linea */}

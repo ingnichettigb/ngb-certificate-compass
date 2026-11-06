@@ -5,8 +5,9 @@
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Motore puro: ciclo rigido ancorato al Base, somma ore, decadenza, sanatoria tardiva.
  * - Rev 2 (2026-11-06 14:00): Restituisce cicli ed eventi classificati per la linea temporale.
- * - Rev 3 (2026-11-06 16:00): Guardia su dataCorso mancante/non valida (record storici); parametro dataTaglio
- *   (regime transitorio Preposti: la scadenza non può essere anteriore al taglio).
+ * - Rev 3 (2026-11-06 16:00): Guardia su dataCorso mancante/non valida (record storici).
+ * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti (RegimeTransitorio): cicli vecchi di 5 anni dall'ancora,
+ *   ciclo a cavallo del taglio troncato al 19/05/2026, poi cicli biennali dal taglio.
  *
  * Regole implementate (vedi MODIFICHE_SCADENZE.md):
  * 1. Ancora = data dell'ultimo Corso Base (se nessun attestato è Base, il più vecchio).
@@ -18,8 +19,12 @@
  * 5. Decadenza: se dall'ultima evidenza (Base o aggiornamento che ha completato il monte ore)
  *    sono passati più di decadenzaAnni, gli aggiornamenti successivi non contano: serve un nuovo Base.
  * 6. Le ore in eccesso non si riportano al ciclo successivo.
- * 7. Taglio (facoltativo): se la scadenza calcolata cade prima della data di taglio, diventa la data di taglio
- *    (es. Preposti: periodicità biennale con termine unico al 19/05/2026 per le formazioni pregresse).
+ * 7. Regime transitorio (facoltativo, Preposti, Accordo Stato-Regioni 17/04/2025): se il Corso Base (ancora) è anteriore
+ *    alla soglia (19/05/2023, cioè oltre 2 anni prima dell'entrata in vigore del 19/05/2025), i cicli sono quelli
+ *    del vecchio regime (5 anni dall'ancora) fino al ciclo che attraversa la data di taglio (19/05/2026): quel ciclo
+ *    è troncato al taglio e da lì i cicli sono biennali. Chi non ha un aggiornamento valido entro il taglio ha
+ *    scadenza tassativa il 19/05/2026 (anche se la fine teorica del vecchio ciclo era anteriore).
+ *    Senza ancora anteriore alla soglia i cicli sono biennali dall'ancora (durataCicloAnni = 2).
  */
 import type {
   CicloVisuale,
@@ -31,6 +36,15 @@ import type {
 } from "./types";
 
 export const DECADENZA_PREDEFINITA_ANNI = 10;
+
+export interface RegimeTransitorio {
+  /** Data di taglio (YYYY-MM-DD): il ciclo vecchio che la attraversa viene troncato qui. */
+  dataTaglio: string;
+  /** Ancora anteriore a questa data = formazione pregressa soggetta al transitorio. */
+  dataSogliaEvidenza: string;
+  /** Durata (anni) dei cicli del vecchio regime. */
+  cicloVecchioAnni: number;
+}
 
 export interface AttestatoCiclo {
   id: string | number;
@@ -54,8 +68,8 @@ export interface ParametriCiclo {
   decadenzaAnni?: number | null;
   giorniPreavviso?: number;
   consentiSanatoriaTardiva?: boolean;
-  /** Data (YYYY-MM-DD) prima della quale la scadenza non può cadere (regime transitorio); null = nessun taglio. */
-  dataTaglio?: string | null;
+  /** Regime transitorio (Preposti); null/assente = cicli rigidi uniformi. */
+  regimeTransitorio?: RegimeTransitorio | null;
   oggi?: Date;
 }
 
@@ -110,7 +124,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     decadenzaAnni = DECADENZA_PREDEFINITA_ANNI,
     giorniPreavviso = 90,
     consentiSanatoriaTardiva = true,
-    dataTaglio = null,
+    regimeTransitorio = null,
   } = p;
   const oggi = oggiIso(p.oggi);
   const N = Math.round(p.durataCicloAnni);
@@ -141,6 +155,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       dataValutazione: oggi,
       dataTaglio: null,
       scadenzaPortataAlTaglio: false,
+      regolaPreposti: regimeTransitorio !== null,
+      motivoScadenza: null,
       cicli: [],
       eventi: [],
     };
@@ -170,13 +186,30 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       dataValutazione: oggi,
       dataTaglio: null,
       scadenzaPortataAlTaglio: false,
+      regolaPreposti: regimeTransitorio !== null,
+      motivoScadenza: null,
       cicli: [],
       eventi: [],
     };
   }
 
   // 2. Cicli rigidi, sempre calcolati dall'ancora (nessun errore cumulato sul 29 febbraio).
-  const fineCiclo = (k: number) => aggiungiAnni(dataAncora, k * N);
+  const V = regimeTransitorio ? Math.round(regimeTransitorio.cicloVecchioAnni) : 0;
+  const legacy =
+    regimeTransitorio !== null && V >= 1 && dataAncora < regimeTransitorio.dataSogliaEvidenza;
+  const taglio = legacy ? regimeTransitorio!.dataTaglio : null;
+  // m = primo ciclo del vecchio regime che raggiunge il taglio: viene troncato al taglio.
+  let m = 0;
+  if (legacy) {
+    m = 1;
+    while (aggiungiAnni(dataAncora, V * m) < taglio!) m++;
+  }
+  const fineCiclo = (k: number) => {
+    if (!legacy) return aggiungiAnni(dataAncora, k * N);
+    if (k < m) return aggiungiAnni(dataAncora, V * k);
+    if (k === m) return taglio!;
+    return aggiungiAnni(taglio!, N * (k - m));
+  };
   const cicloDi = (data: string) => {
     let k = 1;
     while (data > fineCiclo(k)) k++;
@@ -237,10 +270,14 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     }
   }
 
-  // 7. Taglio: la scadenza non può precedere la data di taglio (regime transitorio).
+  // 7. Transitorio: chi non ha coperto il ciclo troncato ha scadenza tassativa al taglio (anche se la fine
+  //    teorica era anteriore: tutti i preposti con formazione pregressa avevano tempo fino al taglio).
   const scadenzaRigida = fineCiclo(copertoFino + 1);
-  const scadenzaPortataAlTaglio = dataTaglio !== null && scadenzaRigida < dataTaglio;
-  const scadenzaEffettiva = scadenzaPortataAlTaglio ? (dataTaglio as string) : scadenzaRigida;
+  const scadenzaPortataAlTaglio = legacy && copertoFino + 1 <= m;
+  const scadenzaEffettiva = scadenzaPortataAlTaglio ? taglio! : scadenzaRigida;
+  const motivoScadenza = scadenzaPortataAlTaglio
+    ? `Regime transitorio Accordo Stato-Regioni 2025: scadenza tassativa ${taglio!.slice(8, 10)}/${taglio!.slice(5, 7)}/${taglio!.slice(0, 4)}`
+    : null;
   const giorniAllaScadenza = giorniTra(oggi, scadenzaEffettiva);
   const decaduto = decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni);
 
@@ -273,6 +310,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       oreAccumulate: attivo ? pool : 0,
       oreRichieste: oreRichiesteAggiornamento,
       attivo,
+      troncato: legacy && k === m,
     });
   }
   if (!decaduto) {
@@ -285,6 +323,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       oreAccumulate: 0,
       oreRichieste: oreRichiesteAggiornamento,
       attivo: k === copertoFino + 1,
+      troncato: legacy && k === m,
     });
   }
 
@@ -302,8 +341,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     aggiornamentiIgnorati: ignorati,
     durataCicloAnni: N,
     dataValutazione: oggi,
-    dataTaglio,
+    dataTaglio: taglio,
     scadenzaPortataAlTaglio,
+    regolaPreposti: regimeTransitorio !== null,
+    motivoScadenza,
     cicli,
     eventi,
   };

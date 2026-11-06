@@ -6,7 +6,8 @@
  * - Rev 1 (2026-10-15 10:00): Struttura base tipi per la pagina Scadenze.
  * - Rev 2 (2026-11-06 12:00): Stati di conformità ciclo, decadenza, monte ore frazionato e riga raggruppata.
  * - Rev 3 (2026-11-06 14:00): Cicli ed eventi già calcolati dal motore per la linea temporale.
- * - Rev 4 (2026-11-06 16:00): dataTaglio e scadenzaPortataAlTaglio (regime transitorio Preposti).
+ * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti: dataTaglio, scadenzaPortataAlTaglio, regolaPreposti,
+ *   motivoScadenza; CicloVisuale.troncato.
  */
 import type { Attestato } from "@/lib/api";
 
@@ -40,6 +41,8 @@ export interface CicloVisuale {
   oreRichieste: number;
   /** true per il primo ciclo non ancora coperto, quello che definisce la scadenza. */
   attivo: boolean;
+  /** true per il ciclo del vecchio regime troncato alla data di taglio (Preposti). */
+  troncato: boolean;
 }
 
 export interface EventoCiclo {
@@ -77,6 +80,10 @@ export interface PosizioneCiclo {
   dataTaglio: string | null;
   /** true se la scadenza mostrata è stata portata alla data di taglio (la fine ciclo rigida era anteriore). */
   scadenzaPortataAlTaglio: boolean;
+  /** true se il gruppo è un corso Preposto (aggiornamento biennale). */
+  regolaPreposti: boolean;
+  /** Spiegazione da mostrare all'utente quando la scadenza deriva dal transitorio; altrimenti null. */
+  motivoScadenza: string | null;
   /** Cicli da disegnare: dal primo al ciclo di oggi, più il successivo non ancora attivo. */
   cicli: CicloVisuale[];
   /** Base e aggiornamenti classificati dal motore (contati, parziali, completi, ignorati). */

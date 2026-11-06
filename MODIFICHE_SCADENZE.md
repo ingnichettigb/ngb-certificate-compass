@@ -100,5 +100,18 @@ Causa: `TabellaScadenze.tsx` passava ancora `a={a}` a `RigaScadenza`, che ora ri
 
 Nessun file nuovo.
 
-### Regola Preposti
-Ciclo biennale ancorato al Corso Base; se la fine ciclo cade prima del 19/05/2026, la scadenza mostrata è il 19/05/2026 (regime transitorio dell'Accordo Stato-Regioni 17/04/2025). Vale per ogni corso riconosciuto come Preposto (macro-categoria, codice `PRP-` o nome). Le ore di aggiornamento sono quelle del tipo di corso, altrimenti 6.
+### Regola Preposti (versione completa, 18:00)
+
+Applicata in un solo punto (motore `calcolo-ciclo.ts`, parametro `regimeTransitorio`) e riusata ovunque.
+
+1. **Corso Base (ancora) prima del 19/05/2023** (oltre 2 anni prima dell'entrata in vigore del 19/05/2025): cicli del vecchio regime di 5 anni dall'ancora; il ciclo che attraversa il 19/05/2026 viene **troncato** a quella data; da lì cicli **biennali**.
+2. Senza un aggiornamento di almeno 6 ore che copra il ciclo troncato, la scadenza è **tassativamente il 19/05/2026** (dopo quella data: Scaduto; oltre 10 anni dall'ultima evidenza: Decaduto).
+3. **Base dal 19/05/2023 in poi**: cicli biennali dall'ancora, nessun transitorio.
+4. L'aggiornamento tardivo (sanatoria) copre il ciclo in cui cade la sua data, come per gli altri corsi.
+5. Riconoscimento: macro-categoria, codice `PRP-` o nome contenente «preposto».
+
+Dove si vede: scadenza e nota «Scadenza anticipata per Accordo Stato-Regioni 2025» nella riga; ciclo vecchio troncato (rosso se scaduto), tacche per ciclo reale e didascalia «Preposto: aggiornamento biennale» nella linea temporale; scheda dipendente (`riepilogoIncarichi`) e stampe (`calcolaRighe`, voce «Preposto» dell'elenco lavoratori) usano la stessa data tramite `src/features/scadenze/preposti.ts`.
+
+File aggiunti all'elenco sopra: `src/features/scadenze/preposti.ts` (nuovo), `src/features/scadenze/preposti.test.ts` (nuovo), `src/lib/api/incarichi.ts` e `src/features/stampe/dati-stampa.ts` (modificati).
+
+**Non coperto:** i contatori della Home («Scaduti», «In scadenza 6 mesi») e `VistaPianoCorsi` leggono ancora `data_scadenza_calcolata` dal database.

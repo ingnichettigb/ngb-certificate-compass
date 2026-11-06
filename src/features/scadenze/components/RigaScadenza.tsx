@@ -66,9 +66,12 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
         <td className="px-3 py-2">{formatData(a.data_corso)}</td>
         <td className={`px-3 py-2 font-mono ${scaduta ? "text-destructive" : ""}`}>
           {ciclo.scadenzaEffettiva ? formatData(ciclo.scadenzaEffettiva) : "Non scade"}
-          {ciclo.scadenzaPortataAlTaglio && (
-            <div className="font-sans text-xs font-normal text-muted-foreground">
-              termine transitorio
+          {ciclo.motivoScadenza && (
+            <div
+              title={ciclo.motivoScadenza}
+              className="font-sans text-xs font-normal text-muted-foreground"
+            >
+              Scadenza anticipata per Accordo Stato-Regioni 2025
             </div>
           )}
         </td>
