@@ -11,9 +11,10 @@
  *            la modifica anagrafica registra classe e materia nel catalogo quando cambiano.
  */
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { aggiornaAnagraficaDipendente, registraClasseEMateria, type Dipendente } from "@/lib/api";
+import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
 import { TUTTI, VUOTO } from "./types";
 import { calcolaRepartiFiltro, filtraDipendenti } from "./filtri";
 import { IntestazioneDipendenti } from "./components/IntestazioneDipendenti";
@@ -42,6 +43,9 @@ export function DipendentiPage({
   const [savingMod, setSavingMod] = useState(false);
   const [codaAperta, setCodaAperta] = useState(false);
   const qc = useQueryClient();
+  // ATECO primario della ditta: proposto di default nei nuovi lavoratori (resta modificabile).
+  const { data: dittaDb } = useQuery({ queryKey: CHIAVE_DITTA, queryFn: getDitta });
+  const atecoDitta = dittaDb?.codici_ateco?.[0]?.codice ?? "";
 
   const { repartiElenco, dipendenti, isLoading, attestati, ruoliCatalogo, assegnazioni, integrazioni } =
     useDatiDipendenti();
@@ -120,7 +124,7 @@ export function DipendentiPage({
             ruoliAttivi={ruoliAttivi}
             onNuovo={() => {
               setModifica(false);
-              setForm({ ...VUOTO });
+              setForm({ ...VUOTO, codice_ateco: atecoDitta });
             }}
           />
           <SelettoreStato

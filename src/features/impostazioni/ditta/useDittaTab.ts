@@ -6,8 +6,10 @@
  *   rev 1 — 01/11/2026 12:00 — Hook per la gestione form e salvataggio anagrafica ditta.
  *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise con gli avvisi in testata; codice ATECO controllato e normalizzato (con
  *                              rischio suggerito per l'Istruzione); data di aggiornamento impostata da sola quando cambia il numero.
+ *   rev 3 — 06/11/2026 — Modifiche pendenti (isDirty), salvaAdesso, reimpostaForm; il form non viene più sovrascritto
+ *                        da un ricaricamento mentre ci sono modifiche non salvate.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -20,6 +22,22 @@ import {
   CodiceAteco,
 } from "@/lib/api/ditta";
 import { normalizzaAteco, suggerisciRischioAteco } from "@/features/ditta/regole-ditta";
+
+/** Confronto profondo con chiavi ordinate: due oggetti con gli stessi dati risultano uguali. */
+function uguali(a: unknown, b: unknown): boolean {
+  const norm = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(norm)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.entries(v as Record<string, unknown>)
+              .filter(([k]) => k !== "updated_at" && k !== "created_at")
+              .sort(([x], [y]) => x.localeCompare(y))
+              .map(([k, val]) => [k, norm(val)]),
+          )
+        : v;
+  return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+}
 
 export function useDittaTab() {
   const qc = useQueryClient();
@@ -36,14 +54,24 @@ export function useDittaTab() {
     queryFn: getSoglieDitta,
   });
 
+  // Modifiche non ancora salvate: confronto profondo, indipendente dall'ordine delle chiavi.
+  const isDirty = useMemo(() => {
+    if (!form || !dittaDb) return false;
+    return !uguali(form, dittaDb);
+  }, [form, dittaDb]);
+  const dirtyRef = useRef(false);
+  dirtyRef.current = isDirty;
+
+  // Allinea il form al DB solo se non ci sono modifiche in corso (evita di perderle a un ricaricamento).
   useEffect(() => {
-    if (dittaDb) setForm(dittaDb);
+    if (dittaDb && !dirtyRef.current) setForm(dittaDb);
   }, [dittaDb]);
 
   const mutazioneSalva = useMutation({
     mutationFn: (dati: DittaRecord) => salvaDitta(dati),
     onSuccess: (datiSalvati) => {
       setForm(datiSalvati);
+      qc.setQueryData(CHIAVE_DITTA, datiSalvati);
       qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
       toast.success("Dati ditta salvati nel database con successo");
     },
@@ -93,14 +121,29 @@ export function useDittaTab() {
     updateCampo("codici_ateco", nuovaLista);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form) return;
+  /** Salva sul database; restituisce true se il salvataggio è riuscito. */
+  async function salvaAdesso(): Promise<boolean> {
+    if (!form) return false;
     if (!form.ragione_sociale.trim()) {
       toast.error("La Ragione Sociale è obbligatoria");
-      return;
+      return false;
     }
-    mutazioneSalva.mutate(form);
+    try {
+      await mutazioneSalva.mutateAsync(form);
+      return true;
+    } catch {
+      return false; // il toast di errore è già mostrato da onError
+    }
+  }
+
+  /** Scarta le modifiche non salvate e ripristina i dati del database. */
+  function reimpostaForm() {
+    if (dittaDb) setForm(dittaDb);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void salvaAdesso();
   }
 
   return {
@@ -108,6 +151,9 @@ export function useDittaTab() {
     soglie,
     isLoading: loadingDitta,
     isSaving: mutazioneSalva.isPending,
+    isDirty,
+    salvaAdesso,
+    reimpostaForm,
     nuovoAteco,
     setNuovoAteco,
     updateCampo,

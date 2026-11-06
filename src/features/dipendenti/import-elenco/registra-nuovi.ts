@@ -8,7 +8,9 @@
  * Revisioni:
  *   rev 1 — 05/11/2026 21:30 — Prima stesura.
  *   rev 2 — 06/11/2026 08:35 — Supporto riesumazione automatica dei già presenti cessati (idsDaRiesumare).
+ *   rev 3 — 06/11/2026 — Ai nuovi lavoratori viene assegnato l'ATECO primario della ditta.
  */
+import { getDitta } from "@/lib/api/ditta";
 import { getDipendenti, impostaRuoloDipendente, riabilitaDipendenti, upsertDipendente } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
 import { VUOTO } from "../types";
@@ -54,6 +56,14 @@ export async function registraNuovi(opzioni: {
   const perCf = new Map(freschi.map((d) => [normalizzaCf(d.codice_fiscale), d]));
   const { ruoloBase, ruoloSpecificaMedio } = trovaRuoliNuoviIngressi(ruoli);
 
+  // ATECO primario della ditta (se la lettura fallisce si procede senza: l'importazione non si blocca).
+  let atecoDitta = "";
+  try {
+    atecoDitta = (await getDitta()).codici_ateco?.[0]?.codice ?? "";
+  } catch {
+    atecoDitta = "";
+  }
+
   // 1. Riesumazione automatica dei cessati selezionati
   if (idsDaRiesumare.length > 0) {
     try {
@@ -98,6 +108,7 @@ export async function registraNuovi(opzioni: {
         luogo_nascita: r.luogoNascita,
         data_nascita: r.dataNascita,
         reparto: r.reparto,
+        codice_ateco: atecoDitta,
         tipo_contratto: "determinato",
         data_assunzione: dataInizio,
       });

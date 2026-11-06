@@ -6,7 +6,10 @@
  *   rev 1 — 01/11/2026 12:00 — Scheda Ditta con anagrafica, figure sicurezza, ATECO, rischio e presenze.
  *   rev 2 — 01/11/2026 14:00 — Mostra i lavoratori in forza nel programma accanto al numero dichiarato.
  *   rev 2 — 01/11/2026 12:15 — Evidenziazione gialla e avviso rosso se il dato inserito differisce dal D.Lgs. 81/08.
+ *   rev 3 — 06/11/2026 — Secondo pulsante «Salva modifiche DB» in fondo; Invio nel campo ATECO aggiunge il codice;
+ *                        controlli (isDirty/salva/scarta) esposti alla finestra Impostazioni tramite tabHandleRef.
  */
+import { useEffect } from "react";
 import {
   Building2,
   Save,
@@ -26,12 +29,25 @@ import { useDittaTab } from "./ditta/useDittaTab";
 import { useLavoratoriInForza } from "@/features/ditta/useDitta";
 import { calcolaSoglia } from "@/lib/api/ditta";
 
-export function DittaTab() {
+export type DittaTabHandle = {
+  isDirty: () => boolean;
+  salva: () => Promise<boolean>;
+  scarta: () => void;
+};
+
+export function DittaTab({
+  tabHandleRef,
+}: {
+  tabHandleRef?: React.MutableRefObject<DittaTabHandle | null>;
+} = {}) {
   const {
     form,
     soglie,
     isLoading,
     isSaving,
+    isDirty,
+    salvaAdesso,
+    reimpostaForm,
     nuovoAteco,
     setNuovoAteco,
     updateCampo,
@@ -40,6 +56,19 @@ export function DittaTab() {
     handleSubmit,
   } = useDittaTab();
   const { data: lavoratoriInForza } = useLavoratoriInForza();
+
+  // Sempre aggiornato all'ultimo render: la finestra padre legge i valori correnti senza stale closure.
+  const handle: DittaTabHandle = { isDirty: () => isDirty, salva: salvaAdesso, scarta: reimpostaForm };
+  useEffect(() => {
+    if (!tabHandleRef) return;
+    tabHandleRef.current = handle;
+  });
+  useEffect(() => {
+    if (!tabHandleRef) return;
+    return () => {
+      tabHandleRef.current = null;
+    };
+  }, [tabHandleRef]);
 
   if (isLoading || !form) {
     return (
@@ -311,12 +340,24 @@ export function DittaTab() {
               className="w-48 font-mono text-xs"
               value={nuovoAteco.codice}
               onChange={(e) => setNuovoAteco({ ...nuovoAteco, codice: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  aggiungiAteco();
+                }
+              }}
             />
             <Input
               placeholder="Descrizione attività (es. Istruzione secondaria di secondo grado)"
               className="flex-1 text-xs"
               value={nuovoAteco.descrizione}
               onChange={(e) => setNuovoAteco({ ...nuovoAteco, descrizione: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  aggiungiAteco();
+                }
+              }}
             />
             <Button
               type="button"
@@ -525,6 +566,18 @@ export function DittaTab() {
             Nota: I dati guidano il piano di formazione e possono essere rettificati in qualsiasi momento.
           </p>
         </div>
+      </div>
+
+      {/* Barra inferiore: secondo pulsante Salva per chi termina la compilazione in basso */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t">
+        <Button
+          type="submit"
+          disabled={isSaving}
+          className="border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground font-semibold gap-2"
+        >
+          {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          Salva modifiche DB
+        </Button>
       </div>
     </form>
   );
