@@ -1,12 +1,14 @@
 /*
  * File:      SelezioneReparto.tsx
  * Percorso:  src/features/dipendenti/components/SelezioneReparto.tsx
+ * Data creazione: non registrata nel file originale.
  * Selezione del reparto del dipendente, del profilo/sottocategoria (es. ATA: AA, CS, AT, DSGA)
  * e della classe di concorso scelta dal catalogo esistente.
  * Revisioni:
  *   rev 1 — data originale — Selezione del reparto.
  *   rev 2 — 04/11/2026 07:45 — Aggiunti profilo/sottocategoria del reparto e classe di concorso
  *            modificabili, scelti solo tra i valori già censiti.
+ *   rev 3 — 06/11/2026 06:53 UTC — Nomi accessibili distinti per reparto, profilo e classe.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -88,7 +90,7 @@ export function SelezioneReparto({
         value={repartoLeggibile(corrente.reparto) ? corrente.reparto.trim() : NESSUNO}
         onValueChange={(v) => onCambia(v)}
       >
-        <SelectTrigger className="w-[220px] bg-surface">
+        <SelectTrigger aria-label="Reparto dipendente" className="w-[220px] bg-surface">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -109,7 +111,7 @@ export function SelezioneReparto({
         <>
           <Label className="text-sm">Profilo</Label>
           <Select value={profiloCorrente || NESSUNO} onValueChange={cambiaProfilo}>
-            <SelectTrigger className="w-[260px] bg-surface">
+            <SelectTrigger aria-label="Profilo dipendente" className="w-[260px] bg-surface">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -129,7 +131,7 @@ export function SelezioneReparto({
 
       <Label className="text-sm">Classe di concorso</Label>
       <Select value={classeCorrente || NESSUNO} onValueChange={cambiaClasse}>
-        <SelectTrigger className="w-[260px] bg-surface">
+        <SelectTrigger aria-label="Classe di concorso dipendente" className="w-[260px] bg-surface">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

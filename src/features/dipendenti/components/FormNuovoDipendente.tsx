@@ -1,10 +1,12 @@
 /*
  * File:      FormNuovoDipendente.tsx
  * Percorso:  src/features/dipendenti/components/FormNuovoDipendente.tsx
+ * Data creazione: non registrata nel file originale.
  * Modulo «Nuovo dipendente».
  * Revisioni:
  *   rev 2 — 28/10/2026 10:00 — Campi contrattuali (tipo, assunzione, scadenza libera, note).
  *   rev 3 — 05/11/2026 17:50 — Modalità «modifica» e avviso codice fiscale da verificare.
+ *   rev 4 — 06/11/2026 06:53 UTC — Nome accessibile per la scelta del reparto nel modulo.
  */
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -77,7 +79,7 @@ export function FormNuovoDipendente({
               value={form.reparto ?? ""}
               onValueChange={(v) => setForm({ ...form, reparto: v })}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Reparto nel modulo anagrafica">
                 <SelectValue placeholder="Scegli il reparto" />
               </SelectTrigger>
               <SelectContent>
