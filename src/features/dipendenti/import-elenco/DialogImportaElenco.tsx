@@ -2,23 +2,21 @@
  * File:      DialogImportaElenco.tsx
  * Percorso:  src/features/dipendenti/import-elenco/DialogImportaElenco.tsx
  * Creato:    03/11/2026
- * Finestra «Importa elenco Word/Excel»: scelta primaria ATA / Docenti,
- * selezione profilo ATA (CS, AA, AT, DSGA) o classe docente, abbinamento CF
- * e assegnazione automatica di Formazione Base + Specifica Medio 8h ai nuovi ingressi.
+ * Finestra «Importa elenco Word/Excel»: modalità «Solo nuovi» (con spunte libere,
+ * selezione rapida e riesumazione cessati) e «Aggiornamento elenco» (con caselle libere).
  * Revisioni:
  *   rev 1 — 03/11/2026 14:30 — Prima stesura.
  *   rev 2 — 04/11/2026 08:40 — Colonna N° progressiva, intestazione fissa e scroll orizzontale.
- *   rev 3 — 04/11/2026 10:55 — Selettore ATA/Docenti in testa, tendina profili ATA e assegnazione automatica corsi base e rischio medio 8h.
- *   rev 4 — 05/11/2026 21:30 — Due modalità: «Solo nuovi» (predefinita: inserisce i soli nuovi, con nascita dal file, assunzione 01/09 dell'anno
- *            scolastico e MAIUSCOLO; poi mostra l'esito) e «Aggiornamento elenco» (come prima: cessazioni e cambi di profilo).
- *            Ruoli dei nuovi ingressi estratti in ruoli-nuovi-ingressi.ts; la finestra si azzera alla chiusura.
- *   rev 5 — 06/11/2026 08:20 — L'esito propone «Completa ora uno a uno» (apre la finestra «Da completare»).
+ *   rev 3 — 04/11/2026 10:55 — Selettore ATA/Docenti in testa, tendina profili ATA e assegnazione corsi base/medio.
+ *   rev 4 — 05/11/2026 21:30 — Due modalità: «Solo nuovi» ed «Aggiornamento elenco».
+ *   rev 5 — 06/11/2026 08:20 — Collegamento esito a finestra «Da completare».
+ *   rev 6 — 06/11/2026 08:35 — Caselle sbloccate in entrambe le modalità e pulsanti rapidi (Tutti/Nessuno/Nuovi/Archivio).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileUp, Users, GraduationCap } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CheckSquare, FileUp, GraduationCap, Square, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -78,25 +76,21 @@ export function DialogImportaElenco({
   const [profiloAtaGlobale, setProfiloAtaGlobale] = useState<ProfiloAta>("Collaboratore scolastico");
   const [lavoro, setLavoro] = useState(false);
 
-  // Chiudendo la finestra si riparte da zero (file, anteprima ed esito).
+  // All'apertura della finestra si azzerano file ed esito precedenti
   useEffect(() => {
-    if (open) return;
-    setEsito(null);
-    setRighe([]);
-    setProposte([]);
-    setSpunte({});
-    setNomeFile("");
+    if (!open) {
+      setNomeFile("");
+      setProposte([]);
+      setSpunte({});
+      setRighe([]);
+      setEsito(null);
+    }
   }, [open]);
 
-  const applicabile = (p: Proposta) =>
-    !p.nota.startsWith("Codice fiscale non valido") &&
-    ((p.tipo === "cessazione" && !!p.dipendenteId) ||
-      (p.tipo === "docente" && !!p.classe) ||
-      (p.tipo === "ata" && !!p.sottorepartoAta));
+  const applicabile = (p: Proposta) => !p.nota.startsWith("Codice fiscale non valido");
 
-  /** Modalità «Aggiornamento elenco»: analisi come prima (cessazioni, ATA, docenti). */
-  function elaboraAggiornamento(lette: RigaGrezza[], tipoDefault: "ata" | "docente") {
-    const pr = analizzaRighe(lette, dipendenti, codiciClasse, tipoDefault, profiloAtaGlobale);
+  function elaboraAggiornamento(r: RigaGrezza[], tipo: "ata" | "docente") {
+    const pr = analizzaRighe(r, dipendenti, codiciClasse, tipo, profiloAtaGlobale);
     setProposte(pr);
     setSpunte(Object.fromEntries(pr.map((p) => [p.cf, applicabile(p)])));
   }
@@ -104,14 +98,19 @@ export function DialogImportaElenco({
   async function caricaFile(f: File | undefined) {
     if (!f) return;
     try {
-      const lette = await leggiElenco(f);
+      const r = await leggiElenco(f);
+      setRighe(r);
+      setNomeFile(f.name);
+      setEsito(null);
+
       const nomeMin = f.name.toLowerCase();
       const tipoDefault: "ata" | "docente" = nomeMin.includes("docent") ? "docente" : "ata";
       setTipoPredefinito(tipoDefault);
-      setNomeFile(f.name);
-      setRighe(lette);
-      if (modalita === "aggiorna") elaboraAggiornamento(lette, tipoDefault);
-      if (lette.length === 0) toast.warning("Nessuna riga con codice fiscale trovata nel file");
+
+      if (modalita === "aggiorna") {
+        elaboraAggiornamento(r, tipoDefault);
+      }
+      if (r.length === 0) toast.warning("Nessuna riga con codice fiscale trovata nel file");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -140,15 +139,6 @@ export function DialogImportaElenco({
     setProposte((ps) =>
       ps.map((p) => (p.tipo === "ata" ? { ...p, sottorepartoAta: nuovoProfilo, nota: "" } : p)),
     );
-    setSpunte((s) => {
-      const next = { ...s };
-      proposte.forEach((p) => {
-        if (p.tipo === "ata" && !p.nota.startsWith("Codice fiscale non valido")) {
-          next[p.cf] = true;
-        }
-      });
-      return next;
-    });
   }
 
   function cambiaTipoRiga(cf: string, nuovoTipo: "ata" | "docente" | "cessazione") {
@@ -170,7 +160,6 @@ export function DialogImportaElenco({
     setProposte((ps) =>
       ps.map((p) => (p.cf === cf ? { ...p, sottorepartoAta: profilo || null, nota: "" } : p)),
     );
-    setSpunte((s) => ({ ...s, [cf]: !!profilo }));
   }
 
   function scegliClasse(cf: string, classe: string) {
@@ -186,8 +175,15 @@ export function DialogImportaElenco({
           : p,
       ),
     );
-    setSpunte((s) => ({ ...s, [cf]: !!classe }));
   }
+
+  // Selettori rapidi per modalità aggiornamento
+  const selezionaTuttiAgg = () => setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, true])));
+  const selezionaNessunoAgg = () => setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, false])));
+  const selezionaSoloNuoviAgg = () =>
+    setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, !p.dipendenteId])));
+  const selezionaSoloArchivioAgg = () =>
+    setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, !!p.dipendenteId])));
 
   async function applica() {
     const scelte = proposte.filter((p) => spunte[p.cf] && applicabile(p));
@@ -196,7 +192,6 @@ export function DialogImportaElenco({
     let ok = 0;
     const errori: string[] = [];
 
-    // Individua i ruoli di sicurezza per Formazione Base (Lavoratore) e Specifica Rischio Medio (8h)
     const { ruoloBase, ruoloSpecificaMedio } = trovaRuoliNuoviIngressi(ruoli);
 
     for (const p of scelte) {
@@ -220,7 +215,6 @@ export function DialogImportaElenco({
           const { error } = await sb.from("dipendenti").update(upd).eq("id", p.dipendenteId);
           if (error) throw error;
         } else {
-          // Nuovo lavoratore inserito ex novo
           const nuovo = await upsertDipendente({
             ...VUOTO,
             codice_fiscale: p.cf,
@@ -234,13 +228,8 @@ export function DialogImportaElenco({
             data_assunzione: dataInizio,
           });
 
-          // Assegna automaticamente ruolo Base (4h) e Specifica Rischio Medio (8h)
-          if (ruoloBase?.id) {
-            await impostaRuoloDipendente(nuovo.id, ruoloBase.id, true);
-          }
-          if (ruoloSpecificaMedio?.id) {
-            await impostaRuoloDipendente(nuovo.id, ruoloSpecificaMedio.id, true);
-          }
+          if (ruoloBase?.id) await impostaRuoloDipendente(nuovo.id, ruoloBase.id, true);
+          if (ruoloSpecificaMedio?.id) await impostaRuoloDipendente(nuovo.id, ruoloSpecificaMedio.id, true);
         }
 
         if (p.tipo === "docente") await registraClasseEMateria(p.classe, p.materia);
@@ -273,7 +262,7 @@ export function DialogImportaElenco({
         <DialogHeader>
           <DialogTitle>Importa elenco da Word o Excel</DialogTitle>
           <DialogDescription>
-            Abbinamento automatico per codice fiscale. I nuovi ingressi avranno di default spuntati i corsi di formazione base e specifica rischio medio (8 ore).
+            Abbinamento per codice fiscale. I nuovi ingressi hanno di default spuntati i corsi base e specifica rischio medio 8h.
           </DialogDescription>
         </DialogHeader>
 
@@ -293,7 +282,7 @@ export function DialogImportaElenco({
           />
         ) : (
           <>
-            {/* Modalità: solo nuovi (predefinita) oppure aggiornamento dell'elenco come prima */}
+            {/* Modalità: solo nuovi oppure aggiornamento dell'elenco */}
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold">Modalità:</span>
               <div className="inline-flex rounded-md border border-border bg-background p-0.5">
@@ -306,7 +295,7 @@ export function DialogImportaElenco({
               </div>
               <span className="text-xs text-muted-foreground">
                 {modalita === "nuovi"
-                  ? "Inserisce solo i lavoratori non ancora in archivio; chi c'è già non viene toccato."
+                  ? "Inserisce i nuovi e riabilita i cessati selezionati portandoli in «Da completare»."
                   : "Registra cessazioni e cambi di profilo o classe sui lavoratori già in archivio."}
               </span>
             </div>
@@ -345,7 +334,6 @@ export function DialogImportaElenco({
 
             {modalita === "aggiorna" && (
               <>
-                {/* Selezione primaria Tipo Personale & Mansione ATA per l'intero elenco */}
                 {proposte.length > 0 && (
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
                     <div className="flex items-center gap-2">
@@ -400,12 +388,31 @@ export function DialogImportaElenco({
                   </div>
                 )}
 
+                {/* Selezione rapida */}
+                {proposte.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-medium text-muted-foreground">Selezione rapida:</span>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaTuttiAgg}>
+                      <CheckSquare className="size-3 mr-1" /> Tutti ({proposte.length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaSoloNuoviAgg}>
+                      Solo nuovi ({proposte.filter((p) => !p.dipendenteId).length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaSoloArchivioAgg}>
+                      Solo già in archivio ({proposte.filter((p) => !!p.dipendenteId).length})
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={selezionaNessunoAgg}>
+                      <Square className="size-3 mr-1" /> Nessuno
+                    </Button>
+                  </div>
+                )}
+
                 {/* Tabella anteprima nominativi */}
                 {proposte.length > 0 && (
                   <div className="max-h-[55vh] overflow-auto rounded-lg border border-border">
                     <div className="flex items-center justify-between px-3 py-2 bg-muted/60 text-xs text-muted-foreground border-b border-border">
                       <span>
-                        <strong>{nomeFile}</strong>: {proposte.length} righe ({proposte.filter((p) => !p.dipendenteId).length} nuovi ingressi con corsi base e rischio medio 8h inclusi)
+                        <strong>{nomeFile}</strong>: {proposte.length} righe ({proposte.filter((p) => !p.dipendenteId).length} nuovi ingressi)
                       </span>
                       <span>{nSel} pronti da aggiornare</span>
                     </div>
@@ -428,7 +435,6 @@ export function DialogImportaElenco({
                             <td className="p-2 text-center">
                               <Checkbox
                                 checked={!!spunte[p.cf]}
-                                disabled={!applicabile(p)}
                                 onCheckedChange={(v) => setSpunte((s) => ({ ...s, [p.cf]: !!v }))}
                               />
                             </td>
@@ -440,7 +446,6 @@ export function DialogImportaElenco({
                             </td>
                             <td className="p-2 font-mono text-xs text-muted-foreground">{p.cf}</td>
 
-                            {/* Scelta Tipo per singola riga */}
                             <td className="p-2">
                               <select
                                 className="rounded border border-border bg-background px-2 py-1 text-xs font-medium"
@@ -453,7 +458,6 @@ export function DialogImportaElenco({
                               </select>
                             </td>
 
-                            {/* Dettaglio mansione ATA o Classe Docente */}
                             <td className="p-2">
                               {p.tipo === "ata" && (
                                 <div className="flex items-center gap-2">
@@ -515,7 +519,7 @@ export function DialogImportaElenco({
                 </div>
               </>
             )}
-        </>
+          </>
         )}
       </DialogContent>
     </Dialog>
