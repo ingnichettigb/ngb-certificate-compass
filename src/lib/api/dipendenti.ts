@@ -1,11 +1,14 @@
 /*
  * File:      dipendenti.ts
  * Percorso:  src/lib/api/dipendenti.ts
+ * Data creazione: 20/10/2026
  * Anagrafica dipendenti.
  * Revisioni:
- *   - Rev 2 — 05/11/2026 17:50 — aggiornaAnagraficaDipendente (modifica per ID, allineamento CF).
- *   - Rev 3 — 05/11/2026 21:30 — Cognome, nome e luogo di nascita salvati sempre in MAIUSCOLO; la modifica anagrafica
- *             salva anche profilo, classe di concorso e materia; nuova riabilitaDipendenti (cessati che tornano in forza).
+ *   rev 1 — 20/10/2026 14:00 — Modello iniziale anagrafica e upsert.
+ *   rev 2 — 05/11/2026 17:50 — aggiornaAnagraficaDipendente (modifica per ID, allineamento CF).
+ *   rev 3 — 05/11/2026 21:30 — Cognome, nome e luogo di nascita salvati sempre in MAIUSCOLO; la modifica anagrafica
+ *                              salva anche profilo, classe di concorso e materia; nuova riabilitaDipendenti (cessati che tornano in forza).
+ *   rev 4 — 07/11/2026 13:15 — cercaDipendentePerAnagrafica (ricerca flessibile per CF o cognome+nome) e recuperaAtecoPredefinito.
  */
 import { leggiTutto, sb } from "./client";
 import { registraClasseEMateria } from "./insegnamento";
@@ -96,6 +99,70 @@ export async function getDipendenti(): Promise<Dipendente[]> {
 }
 
 /**
+ * Recupera il codice ATECO predefinito della ditta (es. '85' per scuola).
+ */
+export async function recuperaAtecoPredefinito(): Promise<string> {
+  try {
+    const { data } = await sb.from("ditta").select("codici_ateco").eq("id", true).maybeSingle();
+    const arr = Array.isArray(data?.codici_ateco) ? (data.codici_ateco as Array<{ codice: string }>) : [];
+    return arr[0]?.codice?.trim() || "85";
+  } catch {
+    return "85";
+  }
+}
+
+/**
+ * Cerca un lavoratore nel database:
+ * 1. Per codice fiscale (se fornito).
+ * 2. In fallback per cognome e nome normalizzati (match esatto, invertito o per insieme parole per cognomi composti).
+ */
+export async function cercaDipendentePerAnagrafica(opts: {
+  codice_fiscale?: string | null;
+  cognome?: string | null;
+  nome?: string | null;
+}): Promise<Dipendente | null> {
+  const cf = (opts.codice_fiscale || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (cf) {
+    const { data } = await sb.from("dipendenti").select("*").eq("codice_fiscale", cf).maybeSingle();
+    if (data) return data as Dipendente;
+  }
+
+  const cogNorm = (opts.cognome || "").trim().toUpperCase().replace(/\s+/g, " ");
+  const nomNorm = (opts.nome || "").trim().toUpperCase().replace(/\s+/g, " ");
+  if (!cogNorm && !nomNorm) return null;
+
+  const tutti = await getDipendenti();
+
+  // 1. Corrispondenza esatta cognome + nome
+  const esatto = tutti.find(
+    (d) => d.cognome.trim().toUpperCase() === cogNorm && d.nome.trim().toUpperCase() === nomNorm,
+  );
+  if (esatto) return esatto;
+
+  // 2. Corrispondenza con nome e cognome invertiti
+  const invertito = tutti.find(
+    (d) => d.cognome.trim().toUpperCase() === nomNorm && d.nome.trim().toUpperCase() === cogNorm,
+  );
+  if (invertito) return invertito;
+
+  // 3. Corrispondenza per insieme di parole (es. cognomi composti come "ISABELLA VALENZI")
+  const paroleInput = new Set(`${cogNorm} ${nomNorm}`.split(" ").filter(Boolean));
+  if (paroleInput.size >= 2) {
+    const perParole = tutti.find((d) => {
+      const paroleD = new Set(`${d.cognome.trim().toUpperCase()} ${d.nome.trim().toUpperCase()}`.split(" ").filter(Boolean));
+      if (paroleInput.size !== paroleD.size) return false;
+      for (const p of paroleInput) {
+        if (!paroleD.has(p)) return false;
+      }
+      return true;
+    });
+    if (perParole) return perParole;
+  }
+
+  return null;
+}
+
+/**
  * Modifica l'anagrafica di un lavoratore esistente tramite ID (rev 05/11/2026 17:50).
  * Se cambia il CF, gli attestati seguono via ON UPDATE CASCADE; i documenti PDF vengono allineati.
  */
@@ -163,9 +230,7 @@ export async function upsertDipendente(d: Omit<Dipendente, "id">): Promise<Dipen
 }
 
 /**
- * Riabilita i lavoratori cessati che tornano in servizio: tornano «in forza» con la nuova data di
- * assunzione e contratto determinato senza data di fine. La data di cessazione NON viene toccata:
- * è il segnale che li tiene nella coda «Da completare» finché non vengono salvati dalla scheda.
+ * Riabilita i lavoratori cessati che tornano in servizio.
  */
 export async function riabilitaDipendenti(ids: string[], dataAssunzione: string): Promise<void> {
   if (ids.length === 0) return;
