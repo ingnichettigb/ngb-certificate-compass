@@ -59,7 +59,7 @@ export function DialogAggiungiAttestatoConValidazione({
 
       // Corso generico iniziale o primo corso disponibile per creare la bozza "In attesa"
       const corsoDefault = corsi[0]?.id || "";
-      const oggi = new Date().toISOString().split("T")[0];
+      const oggi = new Date().toISOString().slice(0, 10);
 
       // Crea il record in stato "In attesa", esattamente come se fosse arrivato dal Modulo di auto-invio
       const nuovo = await creaAttestato({
