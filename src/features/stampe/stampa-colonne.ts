@@ -1,0 +1,56 @@
+/*
+ * File:      stampa-colonne.ts
+ * Percorso:  src/features/stampe/stampa-colonne.ts
+ * Data creaz: 07/11/2026
+ * Revisioni:
+ *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: colonne aggiungibili dall'intestazione. Nessun cambio di comportamento.
+ */
+import type { Attestato } from "@/lib/api";
+import type { Colonna, Modello } from "./stampa-tipi";
+import { INTESTAZIONI } from "./stampa-testo";
+
+/* ------------------------------------------------------------------------------------------------
+ * Colonne aggiungibili dal «+» dell'intestazione
+ * ---------------------------------------------------------------------------------------------- */
+
+export type GruppoColonne = { titolo: string; colonne: Colonna[] };
+
+/** Raggruppamento funzionale di tutte le colonne esistenti. L'ordine qui è indifferente: gruppiColonne() ordina per nome. */
+const RAGGRUPPAMENTO_COLONNE: GruppoColonne[] = [
+  { titolo: "Anagrafica", colonne: ["lavoratore", "cf", "reparto", "categoria", "mansione", "nascita"] },
+  { titolo: "Attestato", colonne: ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato"] },
+  { titolo: "Contratto", colonne: ["assunzione", "fineContratto", "cessazione"] },
+  { titolo: "Controllo dati", colonne: ["mancano"] },
+  { titolo: "Formazione e incarichi", colonne: ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore", "ruoli"] },
+];
+
+/** Colonne con dato solo nelle righe «per attestato» (nell'elenco lavoratori sarebbero vuote). */
+const SOLO_PER_ATTESTATO: readonly Colonna[] = ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato"];
+/** Colonne con dato solo nelle righe «per lavoratore» (nelle righe per attestato non sono valorizzate). */
+const SOLO_PER_LAVORATORE: readonly Colonna[] = [
+  "assunzione", "ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore",
+];
+
+const ORDINE_ALFABETICO = new Intl.Collator("it", { sensitivity: "base" });
+
+/** Colonne che hanno un dato reale nel documento scelto. */
+export function colonneDisponibili(modello: Modello): Colonna[] {
+  const perLavoratore = modello === "lavoratori";
+  return RAGGRUPPAMENTO_COLONNE.flatMap((g) => g.colonne).filter((c) =>
+    perLavoratore ? !SOLO_PER_ATTESTATO.includes(c) : !SOLO_PER_LAVORATORE.includes(c),
+  );
+}
+
+/** Elenco per il «+»: gruppi in ordine alfabetico e, dentro ogni gruppo, colonne in ordine alfabetico; i gruppi vuoti non compaiono. */
+export function gruppiColonne(modello: Modello): GruppoColonne[] {
+  const disponibili = new Set(colonneDisponibili(modello));
+  return RAGGRUPPAMENTO_COLONNE
+    .map((g) => ({
+      titolo: g.titolo,
+      colonne: g.colonne
+        .filter((c) => disponibili.has(c))
+        .sort((a, b) => ORDINE_ALFABETICO.compare(INTESTAZIONI[a], INTESTAZIONI[b])),
+    }))
+    .filter((g) => g.colonne.length > 0)
+    .sort((a, b) => ORDINE_ALFABETICO.compare(a.titolo, b.titolo));
+}
