@@ -7,14 +7,11 @@
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
  *   - Rev 5 (2026-11-03 14:30): Bottone «Importa elenco Word/Excel».
  *   - Rev 6 (2026-11-06 08:20): Prop onCompletaUnoAUno: dall'esito dell'importazione si apre la finestra «Da completare».
+ *   - Rev 7 (2026-11-07): Backup, impostazioni, stato cartella e avviso ditta sono nel menu «Sistema» della barra; tolta la freccia «Home».
  */
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FileUp, Table, Users } from "lucide-react";
+import { FileUp, Table, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BackupBar } from "@/components/BackupBar";
-import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
-import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
 import { DialogImportaElenco } from "../import-elenco/DialogImportaElenco";
 
@@ -32,14 +29,7 @@ export function IntestazioneDipendenti({
     <>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <div className="-mb-2 flex basis-full flex-col items-end gap-1">
-            <IndicatoreCartella />
-            <AvvisoDatiDitta />
-          </div>
           <div className="flex items-center gap-3">
-            <Link to="/" aria-label="Torna alla home">
-              <ArrowLeft className="size-5 text-muted-foreground" />
-            </Link>
             <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
               <Users className="size-5" />
             </span>
@@ -62,7 +52,6 @@ export function IntestazioneDipendenti({
             <Button variant="outline" size="sm" onClick={() => setApriImport(true)} className="gap-1.5">
               <FileUp className="size-4" /> Importa elenco Word/Excel
             </Button>
-            <BackupBar />
           </div>
         </div>
       </header>

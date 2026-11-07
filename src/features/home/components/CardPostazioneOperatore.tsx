@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 20/10/2026 14:00 — Scheda postazione operatore con OCR AI.
  *   rev 2 — 28/10/2026 09:30 — Rinomina titolo in «Inserimento attestati».
+ *   rev 3 — 07/11/2026 — Titolo «Inserimento singolo» e collegamento a «Inserimento massivo».
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Bot, Sparkles } from "lucide-react";
@@ -19,13 +20,13 @@ export function CardPostazioneOperatore() {
         </span>
         <Button asChild>
           <Link to="/operatore">
-            Apri inserimento
+            Apri inserimento singolo
             <ArrowRight className="size-4" />
           </Link>
         </Button>
       </div>
 
-      <h2 className="mt-4 text-xl font-semibold">Inserimento attestati</h2>
+      <h2 className="mt-4 text-xl font-semibold">Inserimento singolo</h2>
 
       <p className="mt-2 text-sm text-muted-foreground">
         Carica foto e PDF da cartella o scanner, esegui la lettura automatica con intelligenza
@@ -40,6 +41,12 @@ export function CardPostazioneOperatore() {
         <p className="mt-1">
           Estrae nominativo, codice fiscale, data del corso ed ente formatore direttamente dal file.
         </p>
+      </div>
+
+      <div className="mt-4">
+        <Button asChild variant="outline">
+          <Link to="/massivo">Inserimento massivo</Link>
+        </Button>
       </div>
     </article>
   );

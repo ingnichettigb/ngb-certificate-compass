@@ -11,13 +11,13 @@
  *   rev 7 — 07/11/2026 — Guida (i) con ricette «Applica questi filtri»; filtro «Classe di concorso»; «Solo incarichi attualmente assegnati»;
  *                        striscia filtri «Per attestato» / «Per incarico».
  *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
+ *   rev 9 — 07/11/2026 — Tolta la freccia «Home»: c'è la barra di navigazione.
  *   rev 8 — 07/11/2026 — Colonne tolte/aggiunte (+) e larghezze ridimensionabili, ricordate per ogni tipo di documento; le scelte
  *                        valgono anche per stampa, CSV ed Excel. «Ripristina colonne» azzera le scelte del documento corrente.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getAttestati, getDipendenti } from "@/lib/api";
 import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
@@ -164,9 +164,6 @@ export function StampePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface print:hidden">
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-5 py-4">
-          <Link to="/" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-            <ArrowLeft className="size-4" /> Home
-          </Link>
           <h1 className="text-lg font-semibold">Stampe & Report</h1>
           <GuidaStampe
             ruoli={ruoliCatalogo}

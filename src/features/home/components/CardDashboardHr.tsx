@@ -16,16 +16,16 @@ export function CardDashboardHr() {
         </span>
         <Button asChild>
           <Link to="/hr">
-            Apri cruscotto
+            Apri validazione
             <ArrowRight className="size-4" />
           </Link>
         </Button>
       </div>
 
-      <h2 className="mt-4 text-xl font-semibold">Cruscotto risorse umane</h2>
+      <h2 className="mt-4 text-xl font-semibold">Validazione HR</h2>
 
       <p className="mt-2 text-sm text-muted-foreground">
-        Elenco degli attestati caricati: visualizza l&apos;immagine, correggi i dati letti dal
+        Attestati inviati dal Modulo auto invio: visualizza l&apos;immagine, correggi i dati letti dal
         documento e valida o respingi l&apos;attestato.
       </p>
 

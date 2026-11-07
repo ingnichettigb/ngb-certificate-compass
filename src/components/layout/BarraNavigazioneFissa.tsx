@@ -5,39 +5,68 @@
  * Revisioni:
  *   rev 1 — 28/10/2026 17:40 — Barra di navigazione fissa superiore con le 4 sezioni chiave (TanStack Router).
  *   rev 2 — 02/11/2026 11:10 — Aggiunta voce «Stampe & Report».
+ *   rev 3 — 07/11/2026 — Barra unica su tutte le pagine del gestionale (montata in __root): voci raggruppate per
+ *            fase di lavoro, suggerimento al passaggio del mouse, bottoni verde vivo, menu «Sistema» a destra.
  */
+import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bot, CheckCircle2, Users, Calendar, Home, Printer } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MenuSistema } from "./MenuSistema";
+import { GRUPPI_NAV, type VoceNav } from "./voci-navigazione";
 
-const VOCI_NAV = [
-  { to: "/" as const, label: "Home", Icona: Home },
-  { to: "/operatore" as const, label: "Inserimento attestati", Icona: Bot },
-  { to: "/hr" as const, label: "Validazione HR", Icona: CheckCircle2 },
-  { to: "/dipendenti" as const, label: "Dipendenti", Icona: Users },
-  { to: "/scadenze" as const, label: "Scadenze & Piano Corsi", Icona: Calendar },
-  { to: "/stampe" as const, label: "Stampe & Report", Icona: Printer },
-];
+// A riposo: verde chiaro con bordo verde vivo. Pagina attiva: verde scuro pieno.
+const BASE =
+  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-verde-vivo bg-verde-vivo/15 px-3 py-1.5 text-sm font-semibold text-primary transition-all hover:bg-verde-vivo/30";
+const ATTIVO = "!bg-primary !text-primary-foreground shadow-sm ring-2 ring-verde-vivo/40";
+
+function VoceBarra({ voce }: { voce: VoceNav }) {
+  const { to, label, descrizione, Icona, soloIcona, nuovaScheda } = voce;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to={to}
+          {...(soloIcona ? { "aria-label": label } : {})}
+          {...(nuovaScheda ? { target: "_blank", rel: "noopener" } : {})}
+          activeOptions={{ exact: to === "/" }}
+          className={BASE}
+          activeProps={{ className: ATTIVO }}
+        >
+          <Icona className="size-4" />
+          {soloIcona ? null : <span>{label}</span>}
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-64">
+        {descrizione}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function BarraNavigazioneFissa() {
   return (
-    <nav className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {VOCI_NAV.map(({ to, label, Icona }) => (
-            <Link
-              key={to}
-              to={to}
-              className="inline-flex items-center gap-1.5 rounded-lg border-2 border-primary bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
-              activeProps={{
-                className: "!bg-primary !text-primary-foreground shadow-sm ring-2 ring-primary/40",
-              }}
-            >
-              <Icona className="size-3.5" />
-              <span>{label}</span>
-            </Link>
-          ))}
+    <TooltipProvider delayDuration={250}>
+      <nav
+        aria-label="Navigazione principale"
+        className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm print:hidden"
+      >
+        <div
+          className="mx-auto flex max-w-[1600px] items-center gap-3 px-4"
+          style={{ height: "var(--altezza-barra)" }}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-1">
+            {GRUPPI_NAV.map((gruppo, i) => (
+              <Fragment key={gruppo[0]?.to}>
+                {i > 0 ? <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-border" /> : null}
+                {gruppo.map((voce) => (
+                  <VoceBarra key={voce.to} voce={voce} />
+                ))}
+              </Fragment>
+            ))}
+          </div>
+          <MenuSistema />
         </div>
-      </div>
-    </nav>
+      </nav>
+    </TooltipProvider>
   );
 }

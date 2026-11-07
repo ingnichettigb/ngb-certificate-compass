@@ -7,73 +7,25 @@
  *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
  *   - Rev 5 (2026-11-07 11:57): Aggiunto pulsante «Importa da cartella» per confluire attestati multipli in attesa di validazione.
+ *   - Rev 6 (2026-11-07): Solo titolo. «Importa da cartella» è passato in «Inserimento massivo»; backup, impostazioni e
+ *            stato cartella sono nel menu «Sistema» della barra; la Matrice resta in «Dipendenti».
  */
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FolderInput, ShieldCheck, Table } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { BackupBar } from "@/components/BackupBar";
-import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
-import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
-import { MatriceAbilitazioniRuoli } from "@/features/dipendenti/matrice/MatriceAbilitazioniRuoli";
-import { DialogImportaCartellaHr } from "./DialogImportaCartellaHr";
+import { ShieldCheck } from "lucide-react";
 
-export function IntestazioneHr({ onImported }: { onImported: () => void }) {
-  const [apriMatrice, setApriMatrice] = useState(false);
-  const [apriImportCartella, setApriImportCartella] = useState(false);
-
+export function IntestazioneHr() {
   return (
-    <>
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <div className="-mb-2 flex basis-full flex-col items-end gap-1">
-            <IndicatoreCartella />
-            <AvvisoDatiDitta />
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/" aria-label="Torna alla home">
-              <ArrowLeft className="size-5 text-muted-foreground" />
-            </Link>
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <ShieldCheck className="size-5" />
-            </span>
-            <div>
-              <h1 className="font-display text-base font-semibold">Cruscotto risorse umane</h1>
-              <p className="text-xs text-muted-foreground">Validazione attestati di formazione</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setApriImportCartella(true)}
-              className="gap-1.5 border-teal-500 font-medium text-foreground hover:bg-teal-500/10"
-            >
-              <FolderInput className="size-4 text-teal-600" /> Importa da cartella
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setApriMatrice(true)}
-              className="gap-1.5 border-emerald-500 font-medium text-foreground hover:bg-emerald-500/10"
-            >
-              <Table className="size-4 text-emerald-600" /> Matrice Abilitazioni e Ruoli
-            </Button>
-            <BackupBar onImported={onImported} />
-          </div>
+    <header className="border-b border-border bg-surface">
+      <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-5 py-4">
+        <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+          <ShieldCheck className="size-5" />
+        </span>
+        <div>
+          <h1 className="font-display text-base font-semibold">Validazione HR</h1>
+          <p className="text-xs text-muted-foreground">
+            Attestati ricevuti dal Modulo auto invio: verifica, correggi e approva o respingi
+          </p>
         </div>
-      </header>
-
-      {/* Finestra a tutto schermo della matrice */}
-      <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
-
-      {/* Finestra modale per l'importazione massiva da cartella */}
-      <DialogImportaCartellaHr
-        open={apriImportCartella}
-        onClose={() => setApriImportCartella(false)}
-        onImported={onImported}
-      />
-    </>
+      </div>
+    </header>
   );
 }
