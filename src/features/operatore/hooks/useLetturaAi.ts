@@ -1,7 +1,11 @@
 /*
  * File:      useLetturaAi.ts
  * Percorso:  src/features/operatore/hooks/useLetturaAi.ts
+ * Data creazione: 20/10/2026
  * Caricamento del documento e lettura automatica dei dati con l'AI.
+ * Revisioni:
+ *   rev 1 — 20/10/2026 14:00 — Prima versione con estrazione AI e aggancio per CF esatto.
+ *   rev 2 — 07/11/2026 13:15 — Aggancio automatico CF e ATECO da DB per cognome/nome se il CF manca sull'attestato.
  */
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,9 +13,9 @@ import { estraiAttestato } from "@/lib/estrazione.functions";
 import { getActiveProvider, useAiConfig } from "@/lib/ai-providers";
 import { contaPagine, piuSimile, renderizzaPrimaPaginaPdf } from "@/lib/pdf-pagine";
 import { pulisciCF } from "@/lib/api";
+import { cercaDipendentePerAnagrafica, recuperaAtecoPredefinito } from "@/lib/api/dipendenti";
 import { NOTA_PREDEFINITA, VUOTA } from "../types";
 import type { TipoCorso } from "../types";
-import { supabase as sb } from "@/integrations/supabase/client";
 import type { useDocumento } from "./useDocumento";
 import type { useFormRiga } from "./useFormRiga";
 
@@ -78,19 +82,26 @@ export function useLetturaAi({
       const d = r.dati;
       const tipo = tipi.find((t) => t.nome_corso.toLowerCase() === d.tipo_corso.toLowerCase()) ?? piuSimile(d.tipo_corso, tipi).tipo;
 
-      const cf = pulisciCF(d.codice_fiscale);
-      const { data: esistente } = cf
-        ? await sb.from("dipendenti").select("*").eq("codice_fiscale", cf).maybeSingle()
-        : { data: null };
+      const cfLetto = pulisciCF(d.codice_fiscale);
+      // Ricerca nel DB: prima per CF se presente, altrimenti per Cognome e Nome
+      const esistente = await cercaDipendentePerAnagrafica({
+        codice_fiscale: cfLetto,
+        cognome: d.cognome,
+        nome: d.nome,
+      });
+
+      const atecoPredefinito = await recuperaAtecoPredefinito();
+      const cfFinale = esistente?.codice_fiscale || cfLetto;
+      const atecoFinale = d.codice_ateco || esistente?.codice_ateco || atecoPredefinito;
 
       setForm({
         ...VUOTA,
-        cognome: (d.cognome || "").toUpperCase(),
-        nome: (d.nome || "").toUpperCase(),
-        codice_fiscale: cf,
-        data_nascita: d.data_nascita || "",
-        luogo_nascita: d.luogo_nascita || "",
-        codice_ateco: d.codice_ateco || esistente?.codice_ateco || "",
+        cognome: (esistente?.cognome || d.cognome || "").toUpperCase(),
+        nome: (esistente?.nome || d.nome || "").toUpperCase(),
+        codice_fiscale: cfFinale,
+        data_nascita: d.data_nascita || esistente?.data_nascita || "",
+        luogo_nascita: d.luogo_nascita || esistente?.luogo_nascita || "",
+        codice_ateco: atecoFinale,
         email: esistente?.email ?? "",
         reparto: esistente?.reparto ?? "",
         tipo_corso_id: tipo?.id ?? null,
@@ -103,7 +114,12 @@ export function useLetturaAi({
         note: d.motivazione || NOTA_PREDEFINITA,
         integrazione: "",
       });
-      toast.success(esistente ? "Dati estratti (dipendente già presente)" : "Dati estratti con successo");
+
+      if (esistente) {
+        toast.success(`Dati estratti e associati all'anagrafica di ${esistente.cognome} ${esistente.nome} (${esistente.codice_fiscale})`);
+      } else {
+        toast.success("Dati estratti con successo");
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
