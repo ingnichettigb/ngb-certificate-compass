@@ -64,7 +64,7 @@ export function DialogAggiungiAttestatoConValidazione({
       // Crea il record in stato "In attesa", esattamente come se fosse arrivato dal Modulo di auto-invio
       const nuovo = await creaAttestato({
         dipendente_id: dipendente.id,
-        codice_fiscale: dipendente.codice_fiscale,
+        codice_fiscale: dipendente.codice_fiscale ?? "",
         tipo_corso_id: corsoDefault,
         data_corso: oggi,
         ore_dichiarate: 4,
