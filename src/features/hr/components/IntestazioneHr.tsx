@@ -6,18 +6,21 @@
  *   - Rev 1 (2026-10-20 14:00): Intestazione dashboard HR con backup.
  *   - Rev 3 (2026-10-30 20:28): La matrice si apre con il solo onClose (porta i dati da sé).
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
+ *   - Rev 5 (2026-11-07 11:57): Aggiunto pulsante «Importa da cartella» per confluire attestati multipli in attesa di validazione.
  */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ShieldCheck, Table } from "lucide-react";
+import { ArrowLeft, FolderInput, ShieldCheck, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackupBar } from "@/components/BackupBar";
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { MatriceAbilitazioniRuoli } from "@/features/dipendenti/matrice/MatriceAbilitazioniRuoli";
+import { DialogImportaCartellaHr } from "./DialogImportaCartellaHr";
 
 export function IntestazioneHr({ onImported }: { onImported: () => void }) {
   const [apriMatrice, setApriMatrice] = useState(false);
+  const [apriImportCartella, setApriImportCartella] = useState(false);
 
   return (
     <>
@@ -44,6 +47,14 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setApriImportCartella(true)}
+              className="gap-1.5 border-teal-500 font-medium text-foreground hover:bg-teal-500/10"
+            >
+              <FolderInput className="size-4 text-teal-600" /> Importa da cartella
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setApriMatrice(true)}
               className="gap-1.5 border-emerald-500 font-medium text-foreground hover:bg-emerald-500/10"
             >
@@ -56,6 +67,13 @@ export function IntestazioneHr({ onImported }: { onImported: () => void }) {
 
       {/* Finestra a tutto schermo della matrice */}
       <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
+
+      {/* Finestra modale per l'importazione massiva da cartella */}
+      <DialogImportaCartellaHr
+        open={apriImportCartella}
+        onClose={() => setApriImportCartella(false)}
+        onImported={onImported}
+      />
     </>
   );
 }
