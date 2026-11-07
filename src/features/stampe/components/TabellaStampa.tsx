@@ -9,12 +9,21 @@
  *   rev 4 — 05/11/2026 19:50 — Celle con dato anagrafico mancante in rosso grassetto (anche in stampa).
  *   rev 5 — 06/11/2026 — Clic sull'intestazione per ordinare A→Z / Z→A / nessuno (frecce non stampate).
  *   rev 6 — 06/11/2026 — Neretto (anche in stampa) per l'attestato presente senza il ruolo di sicurezza assegnato.
+ *   rev 7 — 07/11/2026 — Larghezza delle colonne: si trascina il bordo dell'intestazione, doppio clic = adatta al contenuto più lungo.
+ *                        Pulsante «+» in fondo all'intestazione per aggiungere/togliere colonne. Tutto facoltativo: senza le
+ *                        nuove proprietà la tabella si comporta e si stampa come prima.
  */
+import { useMemo, useRef, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import {
   attestatoSenzaRuolo, cella, cellaMancante, INTESTAZIONI, ordinaRighe,
-  type Colonna, type OrdineColonna, type RigaStampa,
+  type Colonna, type GruppoColonne, type OrdineColonna, type RigaStampa,
 } from "../dati-stampa";
+import {
+  creaMisura, dimensioniTabella, haLarghezzePersonalizzate, larghezzaAdattata, limitaLarghezza, LARGHEZZA_NUMERO,
+} from "../larghezze-colonne";
+import type { LarghezzeColonne } from "../preferenze-colonne";
+import { SelettoreColonne } from "./SelettoreColonne";
 
 type Props = {
   righe: RigaStampa[];
@@ -23,12 +32,94 @@ type Props = {
   /** Ordinamento attivo (se c'è) e gestore del clic sull'intestazione. */
   ordine?: OrdineColonna | null | undefined;
   onOrdina?: ((c: Colonna) => void) | undefined;
+  /** Larghezze scelte dall'utente (px). Senza nessuna colonna ridimensionata la tabella resta a larghezza automatica. */
+  larghezze?: LarghezzeColonne | undefined;
+  /** Se presente compaiono le maniglie sul bordo delle intestazioni. */
+  onLarghezze?: ((l: LarghezzeColonne) => void) | undefined;
+  /** Righe di tutto il documento: la colonna si adatta al contenuto più lungo anche se sta in un'altra sezione. */
+  righeMisura?: RigaStampa[] | undefined;
+  /** Se presenti (con onAlternaColonna) compare il «+» in fondo all'intestazione. */
+  gruppiColonne?: GruppoColonne[] | undefined;
+  onAlternaColonna?: ((c: Colonna) => void) | undefined;
 };
 
-export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina }: Props) {
+/** Stesse regole di neretto della cella disegnata sotto: servono a misurare il testo come verrà mostrato. */
+function inGrassetto(r: RigaStampa, c: Colonna): boolean {
+  return (c === "stato" && (r.stato === "scaduto" || r.stato === "in_scadenza")) || c === "mancano" || cellaMancante(r, c) || attestatoSenzaRuolo(r, c);
+}
+
+const variabili = (px: number, pct: number) => ({ "--w": `${px}px`, "--p": `${pct}%` }) as CSSProperties;
+
+export function TabellaStampa({
+  righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina, larghezze, onLarghezze, righeMisura, gruppiColonne, onAlternaColonna,
+}: Props) {
   const righe = ordinaRighe(righeIn, ordine);
+  const tabRef = useRef<HTMLTableElement>(null);
+  const conSelettore = !!gruppiColonne && !!onAlternaColonna;
+  const personalizzata = haLarghezzePersonalizzate(colonne, larghezze);
+  const misuraSu = righeMisura ?? righeIn;
+
+  const adattaColonna = (c: Colonna, misura = creaMisura(tabRef.current)) =>
+    larghezzaAdattata(INTESTAZIONI[c], misuraSu.map((r) => ({ testo: cella(r, c), grassetto: inGrassetto(r, c) })), misura);
+
+  // Larghezze fisse solo se qualcuna è stata scelta; le colonne senza larghezza propria si adattano al contenuto.
+  const dim = useMemo(
+    () => {
+      if (!personalizzata) return null;
+      const misura = creaMisura(tabRef.current);
+      return dimensioniTabella(colonne, larghezze ?? {}, (c) => adattaColonna(c, misura));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [personalizzata, colonne, larghezze, misuraSu],
+  );
+
+  /** Fotografia delle larghezze di adesso: passando alle larghezze fisse nessuna colonna deve spostarsi. */
+  function larghezzeAttuali(): LarghezzeColonne {
+    const base: LarghezzeColonne = { ...(larghezze ?? {}) };
+    tabRef.current?.querySelectorAll<HTMLElement>("thead th[data-col]").forEach((th) => {
+      const c = th.dataset["col"] as Colonna;
+      if (base[c] == null) base[c] = limitaLarghezza(th.getBoundingClientRect().width);
+    });
+    return base;
+  }
+
+  function iniziaTrascinamento(e: PuntatoreReact<HTMLElement>, c: Colonna) {
+    if (!onLarghezze) return;
+    e.preventDefault();
+    const base = larghezzeAttuali();
+    const partenza = base[c] ?? limitaLarghezza(0);
+    const x0 = e.clientX;
+    const muovi = (ev: PointerEvent) => onLarghezze({ ...base, [c]: limitaLarghezza(partenza + ev.clientX - x0) });
+    const fine = () => {
+      window.removeEventListener("pointermove", muovi);
+      window.removeEventListener("pointerup", fine);
+      window.removeEventListener("pointercancel", fine);
+    };
+    window.addEventListener("pointermove", muovi);
+    window.addEventListener("pointerup", fine);
+    window.addEventListener("pointercancel", fine);
+  }
+
+  function adatta(c: Colonna) {
+    if (!onLarghezze) return;
+    onLarghezze({ ...larghezzeAttuali(), [c]: adattaColonna(c) });
+  }
+
   return (
-    <table className="w-full border-collapse text-[11px]">
+    <table
+      ref={tabRef}
+      className={`border-collapse text-[11px] ${dim ? "w-[var(--tw)] print:w-full" : "w-full"}`}
+      style={dim ? ({ tableLayout: "fixed", "--tw": `${dim.totale + (conSelettore ? 32 : 0)}px` } as CSSProperties) : undefined}
+    >
+      {dim && (
+        <colgroup>
+          <col className="w-[var(--w)] print:w-[var(--p)]" style={variabili(LARGHEZZA_NUMERO, dim.percentuali.numero)} />
+          {colonne.map((c, i) => (
+            <col key={c} className="w-[var(--w)] print:w-[var(--p)]" style={variabili(dim.px[i]!, dim.percentuali.colonne[i]!)} />
+          ))}
+          {conSelettore && <col className="w-8 print:hidden" />}
+        </colgroup>
+      )}
       <thead className="table-header-group sticky top-0 z-10 bg-background print:static">
         <tr>
           <th className="sticky top-0 z-10 w-8 border border-foreground/60 bg-muted px-1.5 py-1 text-center font-semibold print:static">
@@ -37,6 +128,7 @@ export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordin
           {colonne.map((c) => (
             <th
               key={c}
+              data-col={c}
               aria-sort={ordine?.colonna === c ? (ordine.direzione === "asc" ? "ascending" : "descending") : undefined}
               className="sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static"
             >
@@ -78,8 +170,24 @@ export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordin
                   </button>
                 )}
               </div>
+              {onLarghezze && (
+                <span
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Larghezza della colonna ${INTESTAZIONI[c]}`}
+                  title="Trascina per cambiare la larghezza; doppio clic per adattarla al contenuto"
+                  onPointerDown={(e) => iniziaTrascinamento(e, c)}
+                  onDoubleClick={() => adatta(c)}
+                  className="absolute -right-1 top-0 z-20 h-full w-2 cursor-col-resize touch-none select-none hover:bg-primary/40 print:hidden"
+                />
+              )}
             </th>
           ))}
+          {conSelettore && (
+            <th className="sticky top-0 z-10 w-8 border border-foreground/60 bg-muted p-0 text-center print:hidden">
+              <SelettoreColonne gruppi={gruppiColonne!} visibili={colonne} onAlterna={onAlternaColonna!} />
+            </th>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -94,6 +202,7 @@ export function TabellaStampa({ righe: righeIn, colonne, onRimuoviColonna, ordin
                 {cella(r, c)}
               </td>
             ))}
+            {conSelettore && <td aria-hidden="true" className="print:hidden" />}
           </tr>
         ))}
       </tbody>

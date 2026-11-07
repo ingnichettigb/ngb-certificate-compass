@@ -24,6 +24,9 @@
  *                         ruolo + attestato = data, ruolo senza attestato = «No», nessun ruolo e nessun attestato = «NA»;
  *                         attestato senza ruolo = data in neretto (vedi attestatoSenzaRuolo).
  *   rev 10 — 06/11/2026 — Colonna «Mansione / Classe di concorso»: ATA = mansione (profilo), Docenti = classe di concorso (senza materia).
+ *   rev 13 — 07/11/2026 — Colonne aggiungibili dal «+» dell'intestazione: nuove colonne Categoria, Argomento corso, Giorni alla scadenza;
+ *                         elenco delle colonne disponibili per documento, raggruppato per funzione e in ordine alfabetico (gruppiColonne).
+ *                         Nessun cambio alle colonne predefinite né ai calcoli esistenti.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -51,7 +54,8 @@ export type Colonna =
   | "lavoratore" | "cf" | "reparto" | "mansione" | "ruoli" | "assunzione" | "nascita"
   | "mancano" | "fineContratto" | "cessazione"
   | VoceFormazione
-  | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato";
+  | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato"
+  | "categoria" | "argomento" | "giorni";
 
 /** «no» = selezione spenta; scolastico = dal 1 settembre; solare = dal 1 gennaio. */
 export type PeriodoArrivi = "no" | "scolastico" | "solare";
@@ -596,6 +600,7 @@ export const INTESTAZIONI: Record<Colonna, string> = {
   primoSoccorso: "Primo soccorso", defibrillatore: "Defibrillatore", mancano: "Cosa manca",
   fineContratto: "Fine contratto", cessazione: "Data cessazione", corso: "Corso", ore: "Ore",
   numero: "N. attestato", data: "Data corso", scadenza: "Scadenza", stato: "Stato",
+  categoria: "Categoria / Profilo", argomento: "Argomento corso", giorni: "Giorni alla scadenza",
 };
 
 /** Testo della cella: usato sia dall'anteprima sia dalle esportazioni (stesso contenuto). */
@@ -624,6 +629,9 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "data": return dataIt(r.dataCorso);
     case "scadenza": return dataIt(r.scadenza);
     case "stato": return ETICHETTA_STATO[r.stato];
+    case "categoria": return r.sottoreparto || "—";
+    case "argomento": return r.gruppoTitolo || "—";
+    case "giorni": return r.giorniAllaScadenza != null ? String(r.giorniAllaScadenza) : "—";
   }
 }
 
@@ -682,6 +690,7 @@ function chiaveOrdine(r: RigaStampa, c: Colonna): string | number | null {
     case "cessazione": return r.cessazione;
     case "nascita": return r.dataNascita;
     case "ore": return r.ore;
+    case "giorni": return r.giorniAllaScadenza;
     case "stato": return PESO_STATO[r.stato];
     case "mancano": return r.mancanti.length ? testoMancanti(r) : null;
     default: {
@@ -730,4 +739,51 @@ export function unicoPerLavoratore(righe: RigaStampa[]): RigaStampa[] {
   // Mantiene l'ordine originale delle righe scelte.
   const scelte = new Set(migliori.values());
   return righe.filter((r) => scelte.has(r));
+}
+
+
+/* ------------------------------------------------------------------------------------------------
+ * Colonne aggiungibili dal «+» dell'intestazione
+ * ---------------------------------------------------------------------------------------------- */
+
+export type GruppoColonne = { titolo: string; colonne: Colonna[] };
+
+/** Raggruppamento funzionale di tutte le colonne esistenti. L'ordine qui è indifferente: gruppiColonne() ordina per nome. */
+const RAGGRUPPAMENTO_COLONNE: GruppoColonne[] = [
+  { titolo: "Anagrafica", colonne: ["lavoratore", "cf", "reparto", "categoria", "mansione", "nascita"] },
+  { titolo: "Attestato", colonne: ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato"] },
+  { titolo: "Contratto", colonne: ["assunzione", "fineContratto", "cessazione"] },
+  { titolo: "Controllo dati", colonne: ["mancano"] },
+  { titolo: "Formazione e incarichi", colonne: ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore", "ruoli"] },
+];
+
+/** Colonne con dato solo nelle righe «per attestato» (nell'elenco lavoratori sarebbero vuote). */
+const SOLO_PER_ATTESTATO: readonly Colonna[] = ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato"];
+/** Colonne con dato solo nelle righe «per lavoratore» (nelle righe per attestato non sono valorizzate). */
+const SOLO_PER_LAVORATORE: readonly Colonna[] = [
+  "assunzione", "ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore",
+];
+
+const ORDINE_ALFABETICO = new Intl.Collator("it", { sensitivity: "base" });
+
+/** Colonne che hanno un dato reale nel documento scelto. */
+export function colonneDisponibili(modello: Modello): Colonna[] {
+  const perLavoratore = modello === "lavoratori";
+  return RAGGRUPPAMENTO_COLONNE.flatMap((g) => g.colonne).filter((c) =>
+    perLavoratore ? !SOLO_PER_ATTESTATO.includes(c) : !SOLO_PER_LAVORATORE.includes(c),
+  );
+}
+
+/** Elenco per il «+»: gruppi in ordine alfabetico e, dentro ogni gruppo, colonne in ordine alfabetico; i gruppi vuoti non compaiono. */
+export function gruppiColonne(modello: Modello): GruppoColonne[] {
+  const disponibili = new Set(colonneDisponibili(modello));
+  return RAGGRUPPAMENTO_COLONNE
+    .map((g) => ({
+      titolo: g.titolo,
+      colonne: g.colonne
+        .filter((c) => disponibili.has(c))
+        .sort((a, b) => ORDINE_ALFABETICO.compare(INTESTAZIONI[a], INTESTAZIONI[b])),
+    }))
+    .filter((g) => g.colonne.length > 0)
+    .sort((a, b) => ORDINE_ALFABETICO.compare(a.titolo, b.titolo));
 }

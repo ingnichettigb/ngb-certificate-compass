@@ -5,12 +5,16 @@
  * Revisioni:
  *   rev 1 — 03/11/2026 20:50 — Pulsanti CSV, Excel, Stampa/PDF in alto a destra e ripristino colonne tolte.
  *   rev 2 — 06/11/2026 — Pulsante «Univoco» (un lavoratore per riga) e suggerimento sull'ordinamento delle colonne.
+ *   rev 3 — 07/11/2026 — «Ripristina colonne» conta anche colonne aggiunte e larghezze; suggerimento su trascinamento, doppio clic e «+».
  */
 import { FileSpreadsheet, FileText, Printer, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
   colonneTolte: number;
+  /** Colonne in più scelte con il «+» e presenza di larghezze personalizzate (facoltativi). */
+  colonneAggiunte?: number;
+  larghezzeScelte?: boolean;
   onRipristina: () => void;
   onPdf: () => void;
   onExcel: () => void;
@@ -23,16 +27,23 @@ type Props = {
   univocoNonApplicabile?: boolean;
 };
 
-export function BarraEsportazione({ colonneTolte, onRipristina, onPdf, onExcel, onCsv, disabilitato, univoco = false, onUnivoco, univocoNonApplicabile = false }: Props) {
+export function BarraEsportazione({ colonneTolte, colonneAggiunte = 0, larghezzeScelte = false, onRipristina, onPdf, onExcel, onCsv, disabilitato, univoco = false, onUnivoco, univocoNonApplicabile = false }: Props) {
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
       <div className="text-xs text-muted-foreground">
-        {colonneTolte > 0 ? (
+        {colonneTolte > 0 || colonneAggiunte > 0 || larghezzeScelte ? (
           <Button size="sm" type="button" variant="ghost" onClick={onRipristina}>
-            <RotateCcw className="size-3.5" /> Ripristina colonne ({colonneTolte} tolte)
+            <RotateCcw className="size-3.5" /> Ripristina colonne ({[
+              colonneTolte > 0 && `${colonneTolte} tolte`,
+              colonneAggiunte > 0 && `${colonneAggiunte} ${colonneAggiunte === 1 ? "aggiunta" : "aggiunte"}`,
+              larghezzeScelte && "larghezze",
+            ].filter(Boolean).join(", ")})
           </Button>
         ) : (
-          <span>Clicca il titolo di una colonna per ordinarla (A→Z / Z→A), ✕ per toglierla prima di stampare o esportare.</span>
+          <span>
+            Clicca il titolo di una colonna per ordinarla (A→Z / Z→A), ✕ per toglierla, + per aggiungerne;
+            trascina il bordo per restringerla, doppio clic per adattarla al contenuto.
+          </span>
         )}
       </div>
       <div className="flex items-center gap-1.5">

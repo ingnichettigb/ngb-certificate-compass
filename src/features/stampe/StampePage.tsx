@@ -11,6 +11,8 @@
  *   rev 7 — 07/11/2026 — Guida (i) con ricette «Applica questi filtri»; filtro «Classe di concorso»; «Solo incarichi attualmente assegnati»;
  *                        striscia filtri «Per attestato» / «Per incarico».
  *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
+ *   rev 8 — 07/11/2026 — Colonne tolte/aggiunte (+) e larghezze ridimensionabili, ricordate per ogni tipo di documento; le scelte
+ *                        valgono anche per stampa, CSV ed Excel. «Ripristina colonne» azzera le scelte del documento corrente.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -22,10 +24,14 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
+import {
+  alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze,
+  type LarghezzeColonne, type PreferenzeColonne,
+} from "./preferenze-colonne";
 import { FiltriStampa } from "./components/FiltriStampa";
 import { FoglioStampa } from "./components/FoglioStampa";
 import { ContenutoStampa } from "./components/ContenutoStampa";
@@ -37,7 +43,7 @@ const distinti = (v: (string | null | undefined)[]) =>
 
 export function StampePage() {
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_INIZIALI);
-  const [tolte, setTolte] = useState<Colonna[]>([]);
+  const [pref, setPref] = useState<PreferenzeColonne>(PREFERENZE_VUOTE);
   const [ordine, setOrdine] = useState<OrdineColonna | null>(null);
   const [univoco, setUnivoco] = useState(false);
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
@@ -48,8 +54,15 @@ export function StampePage() {
 
   const conArrivi = filtri.arrivi !== "no";
   const vista = `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
-  // Cambiando tipo di documento o selezione si riparte dalle colonne predefinite.
-  useEffect(() => { setTolte([]); setOrdine(null); }, [vista]);
+  // Cambiando tipo di documento o selezione si ritrovano le colonne e le larghezze che l'utente aveva scelto per quel documento
+  // (se non ne ha scelte, quelle predefinite).
+  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); }, [vista]);
+  const cambiaPreferenze = (cambia: (p: PreferenzeColonne) => PreferenzeColonne) =>
+    setPref((p) => {
+      const n = cambia(p);
+      salvaPreferenze(vista, n);
+      return n;
+    });
 
   const tutti = dip.data ?? [];
   const assegnazioni = assQ.data ?? [];
@@ -99,12 +112,20 @@ export function StampePage() {
     [righeCalcolate, univocoAttivo],
   );
 
-  const colonne = colonnePerVista(filtri, righe).filter((c) => !tolte.includes(c));
+  const colonneBase = colonnePerVista(filtri, righe);
+  const colonne = applicaPreferenze(colonneBase, pref, filtri.modello);
+  const gruppiAggiungibili = useMemo(() => gruppiColonne(filtri.modello), [filtri.modello]);
+  const alternaUnaColonna = (c: Colonna) => {
+    // Non si può togliere l'ultima colonna rimasta.
+    if (colonne.includes(c) && colonne.length <= 1) return;
+    cambiaPreferenze((p) => alternaColonna(colonneBase, p, c));
+  };
+  const cambiaLarghezze = (l: LarghezzeColonne) => cambiaPreferenze((p) => ({ ...p, larghezze: l }));
   // L'ordine vale solo se la colonna è ancora visibile.
   const ordineAttivo = ordine && colonne.includes(ordine.colonna) ? ordine : null;
   const righeFile = useMemo(() => ordinaRighe(righe, ordineAttivo), [righe, ordineAttivo]);
   // Nella scheda individuale il nome è nell'intestazione: nei file esportati serve come colonna.
-  const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne] : colonne;
+  const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne.filter((c) => c !== "lavoratore")] : colonne;
   const titolo = titoloStampa(filtri);
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -174,8 +195,10 @@ export function StampePage() {
         ) : (
           <div className="min-w-0">
             <BarraEsportazione
-              colonneTolte={tolte.length}
-              onRipristina={() => setTolte([])}
+              colonneTolte={pref.tolte.length}
+              colonneAggiunte={pref.aggiunte.length}
+              larghezzeScelte={Object.keys(pref.larghezze).length > 0}
+              onRipristina={() => cambiaPreferenze(() => PREFERENZE_VUOTE)}
               onPdf={() => window.print()}
               onExcel={excel}
               onCsv={() => scaricaCsv(nomeBase, righeFile, colonneFile)}
@@ -198,7 +221,11 @@ export function StampePage() {
                 filtri={filtri}
                 righe={righe}
                 colonne={colonne}
-                onRimuoviColonna={(c) => setTolte((t) => [...t, c])}
+                onRimuoviColonna={alternaUnaColonna}
+                larghezze={pref.larghezze}
+                onLarghezze={cambiaLarghezze}
+                gruppiColonne={gruppiAggiungibili}
+                onAlternaColonna={alternaUnaColonna}
                 ordine={ordineAttivo}
                 onOrdina={(c) => setOrdine((o) => prossimoOrdine(o, c))}
                 dipendenti={tutti}

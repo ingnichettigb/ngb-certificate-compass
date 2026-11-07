@@ -9,10 +9,12 @@
  *   rev 4 — 06/11/2026 — Ordinamento per colonna: vale dentro ogni sezione; con un ordine scelto lo scadenzario non si riordina da solo.
  *   rev 6 — 07/11/2026 — Totale delle righe (e dei lavoratori) in fondo al documento, anche in stampa.
  *   rev 5 — 06/11/2026 — Legenda di «NA», «No» e neretto per le colonne legate al ruolo (Preposto, Antincendio, Primo soccorso, Defibrillatore).
+ *   rev 8 — 07/11/2026 — Passa alla tabella larghezze delle colonne e «+» delle colonne aggiungibili (proprietà facoltative).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "../dati-stampa";
+import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type GruppoColonne, type OrdineColonna, type RigaStampa } from "../dati-stampa";
+import type { LarghezzeColonne } from "../preferenze-colonne";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
 import { TabellaStampa } from "./TabellaStampa";
 
@@ -28,6 +30,12 @@ type Props = {
   ditta: DittaRecord | undefined;
   /** Spiegazione mostrata quando non ci sono righe (se dipende dalle selezioni attive). */
   messaggioVuoto?: string | undefined;
+  /** Larghezze delle colonne scelte dall'utente e relativo gestore (maniglie sul bordo delle intestazioni). */
+  larghezze?: LarghezzeColonne | undefined;
+  onLarghezze?: ((l: LarghezzeColonne) => void) | undefined;
+  /** Colonne che si possono aggiungere o togliere dal «+» in fondo all'intestazione. */
+  gruppiColonne?: GruppoColonne[] | undefined;
+  onAlternaColonna?: ((c: Colonna) => void) | undefined;
 };
 
 const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
@@ -69,10 +77,13 @@ export function ContenutoStampa(props: Props) {
   );
 }
 
-function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto }: Props) {
+function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
-    <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} ordine={ordine} onOrdina={onOrdina} />
+    <TabellaStampa
+      righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} ordine={ordine} onOrdina={onOrdina}
+      larghezze={larghezze} onLarghezze={onLarghezze} righeMisura={righe} gruppiColonne={gruppiColonne} onAlternaColonna={onAlternaColonna}
+    />
   );
 
   switch (filtri.modello) {
