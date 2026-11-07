@@ -7,11 +7,12 @@
  *   rev 2 — 03/11/2026 20:50 — Colonne decise dall'anteprima (rimovibili) e modello «Elenco lavoratori in servizio».
  *   rev 3 — 05/11/2026 19:50 — Messaggio di elenco vuoto personalizzato e legenda (Sì/Scaduto/No, MANCA) sotto l'elenco lavoratori.
  *   rev 4 — 06/11/2026 — Ordinamento per colonna: vale dentro ogni sezione; con un ordine scelto lo scadenzario non si riordina da solo.
+ *   rev 6 — 07/11/2026 — Totale delle righe (e dei lavoratori) in fondo al documento, anche in stampa.
  *   rev 5 — 06/11/2026 — Legenda di «NA», «No» e neretto per le colonne legate al ruolo (Preposto, Antincendio, Primo soccorso, Defibrillatore).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, raggruppa, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "../dati-stampa";
+import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "../dati-stampa";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
 import { TabellaStampa } from "./TabellaStampa";
 
@@ -55,7 +56,20 @@ function Sezione({ titolo, children }: { titolo: string; children: React.ReactNo
   );
 }
 
-export function ContenutoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto }: Props) {
+export function ContenutoStampa(props: Props) {
+  return (
+    <>
+      <CorpoStampa {...props} />
+      {props.righe.length > 0 && (
+        <p className="mt-3 border-t border-foreground/40 pt-1 text-xs" style={{ breakInside: "avoid" }}>
+          <b>Totale:</b> {testoTotale(props.filtri.modello, props.righe)}
+        </p>
+      )}
+    </>
+  );
+}
+
+function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
     <TabellaStampa righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} ordine={ordine} onOrdina={onOrdina} />

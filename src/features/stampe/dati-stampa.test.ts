@@ -7,6 +7,7 @@
  *   rev 2 — 03/11/2026 20:50 — Test scadenza 9 mesi, filtro ruolo, elenco lavoratori, esportazione colonne visibili.
  *   rev 3 — 05/11/2026 18:30 — Test nuovi arrivati (periodi, filtro righe) e colonne nascita / corsi Sì-No.
  *   rev 4 — 05/11/2026 19:50 — Test anagrafica incompleta, colonne dinamiche, titolo, messaggi vuoti, passaggio automatico modello.
+ *   rev 7 — 07/11/2026 — Test ruoli collegati ai gruppi, «Solo incarichi attualmente assegnati» e filtro «Classe di concorso».
  *   rev 6 — 06/11/2026 — Test colonne legate al ruolo (NA / No / data), defibrillatore e neretto.
  *   rev 5 — 06/11/2026 — Test selezione «Senza attestati» (modalità «almeno uno» e «nessuno dei due»); mansione/classe di concorso e materia non richiesta.
  */
@@ -14,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
 import {
   attestatoSenzaRuolo, calcolaRighe, calcolaRigheLavoratori, campiMancanti, cella, colonnePerVista, conSelezione, FILTRI_INIZIALI,
-  inizioPeriodoArrivi, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, titoloStampa, voceDelRuolo,
+  inizioPeriodoArrivi, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, titoloStampa, TUTTI, voceDelRuolo,
 } from "./dati-stampa";
 import { nomeFileEsportazione, testoCsv } from "./esporta-file";
 
@@ -327,5 +328,72 @@ describe("colonne legate al ruolo di sicurezza", () => {
   });
   it("la colonna Defibrillatore compare nell'elenco dei nuovi arrivati", () => {
     expect(colonnePerVista({ modello: "lavoratori", arrivi: "scolastico", incompleta: false })).toContain("defibrillatore");
+  });
+});
+
+describe("ruoli collegati ai gruppi e «Solo incarichi attualmente assegnati»", () => {
+  const ruolo = (id: string, nome: string, macro: string | null, attivo = true) => ({ id, nome, descrizione: null, macro_categoria: macro, obbligatorio_tutti: false, attivo, ordine: 0 });
+  const ruoli = [
+    ruolo("r1", "Preposto", "Preposto"), ruolo("r2", "Addetto Primo Soccorso", "Primo Soccorso"),
+    ruolo("r3", "Addetto Antincendio", "Antincendio"), ruolo("r4", "Addetto BLSD / Defibrillatore", "Defibrillatore"),
+    ruolo("r5", "Lavoratore", "Sicurezza Lavoratori"),
+  ];
+  const ass = (d: string, r: string) => ({ id: `${d}${r}`, dipendente_id: d, ruolo_id: r });
+  const ids = (g: string, rr = ruoli) => ruoliDelGruppo(g, rr).map((r) => r.id);
+
+  it("collega ogni gruppo al suo ruolo", () => {
+    expect(ids("preposti")).toEqual(["r1"]);
+    expect(ids("antincendio")).toEqual(["r3"]);
+    expect(ids("primo-soccorso")).toEqual(["r2"]);
+    expect(ids("defibrillatore")).toEqual(["r4"]);
+    expect(ids("sicurezza-lavoratori")).toEqual(["r5"]);
+  });
+  it("nessun ruolo collegato: Privacy, Altro e «tutti i gruppi»", () => {
+    expect(ids("privacy")).toEqual([]);
+    expect(ids("altro")).toEqual([]);
+    expect(ids(TUTTI)).toEqual([]);
+  });
+  it("si estende da solo: un ruolo con macro-categoria Privacy collega il gruppo Privacy", () => {
+    expect(ids("privacy", [...ruoli, ruolo("r6", "Referente Privacy", "Privacy")])).toEqual(["r6"]);
+  });
+  it("i ruoli disattivati non contano", () => {
+    expect(ids("preposti", [ruolo("r1", "Preposto", "Preposto", false)])).toEqual([]);
+  });
+
+  const atts = [att("a", "Rossi", "PRP-BAS-12", "2026-05-20", null), att("b", "Bianchi", "PRP-BAS-12", "2026-05-21", null)];
+  const f = { ...FILTRI_INIZIALI, gruppo: "preposti" };
+  it("senza la spunta compaiono tutti quelli con l'attestato", () => {
+    expect(calcolaRighe(atts, f, oggi, [ass("Rossi", "r1")], null, ruoli).map((x) => x.cognome)).toEqual(["Bianchi", "Rossi"]);
+  });
+  it("con la spunta restano solo quelli con il ruolo assegnato (gli ex preposti escono)", () => {
+    expect(calcolaRighe(atts, { ...f, soloIncarichi: true }, oggi, [ass("Rossi", "r1")], null, ruoli).map((x) => x.cognome)).toEqual(["Rossi"]);
+  });
+  it("con un gruppo senza ruolo collegato la spunta non filtra", () => {
+    const priv = [att("c", "Rossi", "PRIVACY-01", "2026-01-10", null), att("d", "Bianchi", "PRIVACY-01", "2026-01-11", null)];
+    const r = calcolaRigheSoloIncarichi(priv, ruoli, []);
+    expect(r).toEqual(["Bianchi", "Rossi"]);
+  });
+  it("con un ruolo Privacy la spunta vale anche per la privacy", () => {
+    const priv = [att("c", "Rossi", "PRIVACY-01", "2026-01-10", null), att("d", "Bianchi", "PRIVACY-01", "2026-01-11", null)];
+    const r = calcolaRigheSoloIncarichi(priv, [...ruoli, ruolo("r6", "Referente Privacy", "Privacy")], [ass("Bianchi", "r6")]);
+    expect(r).toEqual(["Bianchi"]);
+  });
+  function calcolaRigheSoloIncarichi(a: Attestato[], rr: typeof ruoli, assegnazioni: ReturnType<typeof ass>[]) {
+    return calcolaRighe(a, { ...FILTRI_INIZIALI, gruppo: "privacy", soloIncarichi: true }, oggi, assegnazioni, null, rr).map((x) => x.cognome);
+  }
+});
+
+describe("filtro «Classe di concorso»", () => {
+  const doc = (id: string, classe: string) => dip(id, id, { reparto: "Docente", sottoreparto: null, classe_concorso: classe });
+  it("nell'elenco lavoratori tiene solo la classe scelta", () => {
+    const r = calcolaRigheLavoratori([doc("Rossi", "A027"), doc("Bianchi", "A050")], { ...FILTRI_INIZIALI, modello: "lavoratori", classe: "A027" });
+    expect(r.map((x) => x.cognome)).toEqual(["Rossi"]);
+  });
+  it("negli attestati tiene solo la classe scelta", () => {
+    const a = [
+      att("a", "Rossi", "PRP-BAS-12", "2026-05-20", null, { dipendenti: { ...doc("Rossi", "A027") } as never }),
+      att("b", "Bianchi", "PRP-BAS-12", "2026-05-21", null, { dipendenti: { ...doc("Bianchi", "A050") } as never }),
+    ];
+    expect(calcolaRighe(a, { ...FILTRI_INIZIALI, classe: "A050" }, oggi).map((x) => x.cognome)).toEqual(["Bianchi"]);
   });
 });

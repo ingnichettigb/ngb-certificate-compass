@@ -8,6 +8,8 @@
  *   rev 3 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno»: limita tutte le stampe ai lavoratori assunti nel periodo.
  *   rev 4 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta», striscia «Filtri attivi», titolo dinamico, messaggi di elenco vuoto.
  *   rev 5 — 06/11/2026 — Ordinamento A→Z / Z→A dalle intestazioni e pulsante «Univoco»; stampa ed esportazioni seguono la stessa vista.
+ *   rev 7 — 07/11/2026 — Guida (i) con ricette «Applica questi filtri»; filtro «Classe di concorso»; «Solo incarichi attualmente assegnati»;
+ *                        striscia filtri «Per attestato» / «Per incarico».
  *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -20,7 +22,7 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
@@ -28,6 +30,7 @@ import { FiltriStampa } from "./components/FiltriStampa";
 import { FoglioStampa } from "./components/FoglioStampa";
 import { ContenutoStampa } from "./components/ContenutoStampa";
 import { BarraEsportazione } from "./components/BarraEsportazione";
+import { GuidaStampe } from "./components/GuidaStampe";
 
 const distinti = (v: (string | null | undefined)[]) =>
   [...new Set(v.filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, "it"));
@@ -66,10 +69,11 @@ export function StampePage() {
     () => distinti(tutti.filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto).map((d) => d.sottoreparto)),
     [tutti, filtri.reparto],
   );
-  const materie = useMemo(
-    () => distinti(tutti.filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto).map((d) => d.materia)),
+  const classi = useMemo(
+    () => distinti(tutti.filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto).map((d) => d.classe_concorso)),
     [tutti, filtri.reparto],
   );
+  const ruoliCatalogo = useMemo(() => (ruoliQ.data ?? []).filter((r) => r.attivo), [ruoliQ.data]);
 
   const arrivi = useMemo(() => nuoviArrivati(tutti, filtri.arrivi, new Date()), [tutti, filtri.arrivi]);
 
@@ -83,7 +87,7 @@ export function StampePage() {
   const righeCalcolate = useMemo(
     () => filtri.modello === "lavoratori"
       ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
-      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds),
+      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? []),
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
   );
 
@@ -105,15 +109,17 @@ export function StampePage() {
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
+  const incarichiAttivi = filtri.modello !== "lavoratori" && filtri.soloIncarichi && ruoliDelGruppo(filtri.gruppo, ruoliCatalogo).length > 0;
   const parti = [
     conArrivi && `Assunti dal ${dataIt(arrivi.inizio)}`,
     filtri.incompleta && "Solo anagrafiche incomplete",
     filtri.senzaAttestati && (filtri.senzaModo === "nessuno" ? "Senza Corso base né Corso specifico" : "Manca Corso base o Corso specifico"),
-    filtri.modello !== "lavoratori" && filtri.gruppo !== TUTTI && GRUPPI_ARGOMENTO.find((g) => g.chiave === filtri.gruppo)?.titolo,
+    filtri.modello !== "lavoratori" && filtri.gruppo !== TUTTI && `Per attestato: ${GRUPPI_ARGOMENTO.find((g) => g.chiave === filtri.gruppo)?.titolo}`,
+    incarichiAttivi && "Solo con incarico assegnato",
     filtri.reparto !== TUTTI && `Reparto ${filtri.reparto}`,
-    nomeRuolo && `Ruolo: ${nomeRuolo}`,
+    nomeRuolo && `Per incarico: ${nomeRuolo}`,
     filtri.categoria !== TUTTI && `Categoria: ${filtri.categoria}`,
-    filtri.materia !== TUTTI && `Materia: ${filtri.materia}`,
+    filtri.classe !== TUTTI && `Classe di concorso: ${filtri.classe}`,
     filtri.modello !== "lavoratori" && filtri.finestra === "scaduti" && "Solo scaduti",
     filtri.modello !== "lavoratori" && filtri.finestra === "270" && "Scadenza entro 9 mesi",
     filtri.modello !== "lavoratori" && ["90", "180", "365"].includes(filtri.finestra) && `Scadenza entro ${filtri.finestra} giorni`,
@@ -141,6 +147,13 @@ export function StampePage() {
             <ArrowLeft className="size-4" /> Home
           </Link>
           <h1 className="text-lg font-semibold">Stampe & Report</h1>
+          <GuidaStampe
+            ruoli={ruoliCatalogo}
+            onApplica={(f, titolo) => {
+              setFiltri(f);
+              toast.success(`Filtri impostati: ${titolo}`);
+            }}
+          />
         </div>
       </header>
       <main className="mx-auto grid max-w-[1400px] gap-4 p-4 lg:grid-cols-[280px_1fr] print:block print:max-w-none print:p-0">
@@ -150,7 +163,8 @@ export function StampePage() {
           reparti={reparti}
           ruoli={ruoliPresenti}
           categorie={categorie}
-          materie={materie}
+          classi={classi}
+          ruoliCatalogo={ruoliCatalogo}
           dipendenti={dipendenti}
           conteggio={righe.length}
           infoArrivi={{ inizio: arrivi.inizio, senzaData: arrivi.senzaData }}

@@ -18,6 +18,8 @@
  *   rev 9 — 06/11/2026 — Selezione «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico (minimi richiesti),
  *                        con colonne Corso base / Corso specifico (data dove c'è, «No» dove manca).
  *                        Scelta tra «Nessuno dei due» e «Manca almeno uno dei due».
+ *   rev 12 — 07/11/2026 — Filtro «Materia» sostituito da «Classe di concorso»; spunta «Solo incarichi attualmente assegnati» valida per
+ *                         ogni gruppo corsi che abbia un ruolo collegato (ruoliDelGruppo); RigaStampa.classe.
  *   rev 11 — 06/11/2026 — Colonne Preposto / Antincendio / Primo soccorso / Defibrillatore legate al ruolo di sicurezza assegnato:
  *                         ruolo + attestato = data, ruolo senza attestato = «No», nessun ruolo e nessun attestato = «NA»;
  *                         attestato senza ruolo = data in neretto (vedi attestatoSenzaRuolo).
@@ -65,13 +67,14 @@ export type FiltriStampa = {
   reparto: string; // nome reparto o TUTTI
   ruoloId: string; // id ruolo di sicurezza o TUTTI
   categoria: string; // sottoreparto / profilo ATA o TUTTI
-  materia: string; // materia docente o TUTTI
+  classe: string; // classe di concorso docente o TUTTI
   dipendenteId: string; // id o TUTTI
   finestra: Finestra;
   includiCessati: boolean;
   soloUltimo: boolean; // solo l'attestato più recente per lavoratore+corso
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
+  soloIncarichi: boolean; // con un gruppo corsi: tiene solo chi ha oggi il ruolo collegato assegnato
   incompleta: boolean; // selezione «Anagrafica incompleta»
   senzaAttestati: boolean; // selezione «Senza attestati»
   senzaModo: ModoSenza; // «nessuno» dei due minimi oppure manca «almeno» uno dei due
@@ -84,9 +87,10 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   reparto: TUTTI,
   ruoloId: TUTTI,
   categoria: TUTTI,
-  materia: TUTTI,
+  classe: TUTTI,
   dipendenteId: TUTTI,
   finestra: "tutti",
+  soloIncarichi: false,
   includiCessati: false,
   soloUltimo: true,
   mostraFirme: false,
@@ -106,6 +110,8 @@ export type RigaStampa = {
   reparto: string;
   sottoreparto: string;
   materia: string;
+  /** Classe di concorso (solo Docenti); serve al filtro «Classe di concorso». */
+  classe?: string;
   mansione: string;
   ruoli: string;
   assunzione: string | null;
@@ -368,6 +374,20 @@ function ordina(a: RigaStampa, b: RigaStampa) {
   return a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it") || a.dataCorso.localeCompare(b.dataCorso);
 }
 
+const radice = (t: string | null | undefined) =>
+  (t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/[aeio]$/, "");
+
+/**
+ * Ruoli di sicurezza attivi collegati a un gruppo corsi (macro-categoria o nome del ruolo che coincidono con il gruppo:
+ * «Preposti» ↔ Preposto, «Antincendio» ↔ Addetto Antincendio, «Privacy» ↔ un ruolo con macro-categoria Privacy…).
+ * Vuoto se nella Matrice non c'è ancora un ruolo collegato: in quel caso «Solo incarichi attualmente assegnati» non si può applicare.
+ */
+export function ruoliDelGruppo(chiaveGruppo: string, ruoli: RuoloSicurezza[]): RuoloSicurezza[] {
+  if (chiaveGruppo === TUTTI || chiaveGruppo === "altro") return [];
+  const g = radice(chiaveGruppo);
+  return ruoli.filter((r) => r.attivo && (radice(r.macro_categoria) === g || radice(r.nome).includes(g)));
+}
+
 function dipendentiConRuolo(ruoloId: string, assegnazioni: AssegnazioneRuolo[]): Set<string> {
   return new Set(assegnazioni.filter((a) => a.ruolo_id === ruoloId).map((a) => a.dipendente_id));
 }
@@ -379,6 +399,7 @@ export function calcolaRighe(
   oggi = new Date(),
   assegnazioni: AssegnazioneRuolo[] = [],
   soloDipendenti: Set<string> | null = null,
+  ruoli: RuoloSicurezza[] = [],
 ): RigaStampa[] {
   // Solo attestati approvati; i Preposti hanno data e stato dal motore dei cicli (regime transitorio).
   const attestati = applicaScadenzaPreposti(
@@ -402,6 +423,7 @@ export function calcolaRighe(
         reparto: d.reparto ?? "—",
         sottoreparto: d.sottoreparto ?? "",
         materia: d.materia ?? "",
+        classe: d.classe_concorso ?? "",
         mansione: mansioneDi(d),
         ruoli: "",
         assunzione: null,
@@ -429,8 +451,15 @@ export function calcolaRighe(
   if (filtri.gruppo !== TUTTI) righe = righe.filter((r) => r.gruppo === filtri.gruppo);
   if (filtri.reparto !== TUTTI) righe = righe.filter((r) => r.reparto === filtri.reparto);
   if (filtri.categoria !== TUTTI) righe = righe.filter((r) => r.sottoreparto === filtri.categoria);
-  if (filtri.materia !== TUTTI) righe = righe.filter((r) => r.materia === filtri.materia);
+  if (filtri.classe !== TUTTI) righe = righe.filter((r) => r.classe === filtri.classe);
   if (filtri.dipendenteId !== TUTTI) righe = righe.filter((r) => r.dipendenteId === filtri.dipendenteId);
+  if (filtri.soloIncarichi && filtri.gruppo !== TUTTI) {
+    const collegati = ruoliDelGruppo(filtri.gruppo, ruoli);
+    if (collegati.length) {
+      const con = new Set(assegnazioni.filter((a) => collegati.some((r) => r.id === a.ruolo_id)).map((a) => a.dipendente_id));
+      righe = righe.filter((r) => con.has(r.dipendenteId));
+    }
+  }
   if (filtri.ruoloId !== TUTTI) {
     const con = dipendentiConRuolo(filtri.ruoloId, assegnazioni);
     righe = righe.filter((r) => con.has(r.dipendenteId));
@@ -466,7 +495,7 @@ export function calcolaRigheLavoratori(
   if (filtri.incompleta) elenco = elenco.filter((d) => campiMancanti(d).length > 0);
   if (filtri.reparto !== TUTTI) elenco = elenco.filter((d) => d.reparto === filtri.reparto);
   if (filtri.categoria !== TUTTI) elenco = elenco.filter((d) => d.sottoreparto === filtri.categoria);
-  if (filtri.materia !== TUTTI) elenco = elenco.filter((d) => d.materia === filtri.materia);
+  if (filtri.classe !== TUTTI) elenco = elenco.filter((d) => d.classe_concorso === filtri.classe);
   if (filtri.dipendenteId !== TUTTI) elenco = elenco.filter((d) => d.id === filtri.dipendenteId);
   if (filtri.ruoloId !== TUTTI) {
     const con = dipendentiConRuolo(filtri.ruoloId, assegnazioni);
@@ -502,6 +531,7 @@ export function calcolaRigheLavoratori(
       reparto: d.reparto ?? "—",
       sottoreparto: d.sottoreparto ?? "",
       materia: d.materia ?? "",
+      classe: d.classe_concorso ?? "",
       mansione: mansioneDi(d),
       ruoli: (ruoliPer.get(d.id) ?? []).sort((a, b) => a.localeCompare(b, "it")).join(", "),
       assunzione: d.data_assunzione ?? null,
@@ -595,6 +625,12 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "scadenza": return dataIt(r.scadenza);
     case "stato": return ETICHETTA_STATO[r.stato];
   }
+}
+
+/** Totale in fondo al documento: elenco lavoratori = lavoratori; negli altri documenti righe e lavoratori distinti. */
+export function testoTotale(modello: FiltriStampa["modello"], righe: RigaStampa[]): string {
+  const lavoratori = new Set(righe.map((r) => r.dipendenteId)).size;
+  return modello === "lavoratori" ? `${righe.length} lavoratori` : `${righe.length} righe · ${lavoratori} lavoratori`;
 }
 
 /** Ha l'attestato ma non il ruolo di sicurezza assegnato: la cella va in neretto (anche in stampa). */
