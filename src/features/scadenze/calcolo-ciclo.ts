@@ -6,6 +6,8 @@
  * - Rev 1 (2026-11-06 12:00): Motore puro: ciclo rigido ancorato al Base, somma ore, decadenza, sanatoria tardiva.
  * - Rev 2 (2026-11-06 14:00): Restituisce cicli ed eventi classificati per la linea temporale.
  * - Rev 3 (2026-11-06 16:00): Guardia su dataCorso mancante/non valida (record storici).
+ * - Rev 5 (2026-11-07): Ciclo con aggiornamenti parziali = «da completare» (arancione) anche a ciclo concluso; rosso solo senza
+ *   alcun aggiornamento. Eventi con oreStimate; CicloVisuale.oreNelCiclo/parzialiNelCiclo; annoMese(). Nessun cambio a scadenze e ore.
  * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti (RegimeTransitorio): cicli vecchi di 5 anni dall'ancora,
  *   ciclo a cavallo del taglio troncato al 19/05/2026, poi cicli biennali dal taglio.
  *
@@ -106,6 +108,12 @@ export function giorniTra(da: string, a: string): number {
 /** Data di oggi nel fuso locale (non UTC), formato YYYY-MM-DD. */
 export function oggiIso(oggi: Date = new Date()): string {
   return `${pad(oggi.getFullYear(), 4)}-${pad(oggi.getMonth() + 1)}-${pad(oggi.getDate())}`;
+}
+
+/** «AA-MM» di una data ISO (anno a due cifre): 2022-03-24 → «22-03». */
+export function annoMese(dataIso: string): string {
+  const [y, m] = parti(dataIso);
+  return `${pad(y % 100)}-${pad(m)}`;
 }
 
 /** Anni interi trascorsi tra due date. */
@@ -224,8 +232,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
   let ignorati = 0;
   let oreDaVerificare = false;
   const eventi: EventoCiclo[] = [
-    { id: ancora.id, data: dataAncora, ore: ancora.ore, tipo: "base" },
+    { id: ancora.id, data: dataAncora, ore: ancora.ore, ...(ancora.oreStimate ? { oreStimate: true } : {}), tipo: "base" },
   ];
+  // Aggiornamenti parziali per ciclo (ore e numero): servono al colore del ciclo.
+  const parzialiPerCiclo = new Map<number, { ore: number; n: number }>();
 
   // 3-6. Aggiornamenti in ordine cronologico.
   for (const u of ordinati) {
@@ -233,7 +243,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     if (u.dataCorso < dataAncora) continue; // precedente al Base corrente: irrilevante
     const ignora = (motivo: MotivoIgnorato) => {
       ignorati++;
-      eventi.push({ id: u.id, data: u.dataCorso, ore: u.ore, tipo: "ignorato", motivo });
+      eventi.push({ id: u.id, data: u.dataCorso, ore: u.ore, ...(u.oreStimate ? { oreStimate: true } : {}), tipo: "ignorato", motivo });
     };
     if (u.dataCorso > oggi) {
       ignora("futuro");
@@ -260,8 +270,13 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       id: u.id,
       data: u.dataCorso,
       ore: u.ore,
+      ...(u.oreStimate ? { oreStimate: true } : {}),
       tipo: completo ? "completo" : "parziale",
     });
+    if (!completo) {
+      const p = parzialiPerCiclo.get(k) ?? { ore: 0, n: 0 };
+      parzialiPerCiclo.set(k, { ore: p.ore + (u.ore ?? 0), n: p.n + 1 });
+    }
     if (completo) {
       copertoFino = k;
       ultimaEvidenza = u.dataCorso;
@@ -300,7 +315,7 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     if (k <= copertoFino) statoCiclo = "completato";
     else if (decaduto && dataDecadenza !== null && fine > dataDecadenza) statoCiclo = "decaduto";
     else if (inizio > oggi) statoCiclo = "futuro";
-    else if (fine < oggi) statoCiclo = "scaduto";
+    else if (fine < oggi) statoCiclo = (parzialiPerCiclo.get(k)?.n ?? 0) > 0 ? "da_completare" : "scaduto";
     else statoCiclo = "da_completare";
     cicli.push({
       indice: k,
@@ -308,6 +323,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       fine,
       stato: statoCiclo,
       oreAccumulate: attivo ? pool : 0,
+      oreNelCiclo: parzialiPerCiclo.get(k)?.ore ?? 0,
+      parzialiNelCiclo: parzialiPerCiclo.get(k)?.n ?? 0,
       oreRichieste: oreRichiesteAggiornamento,
       attivo,
       troncato: legacy && k === m,
@@ -321,6 +338,8 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       fine: fineCiclo(k),
       stato: "futuro",
       oreAccumulate: 0,
+      oreNelCiclo: 0,
+      parzialiNelCiclo: 0,
       oreRichieste: oreRichiesteAggiornamento,
       attivo: k === copertoFino + 1,
       troncato: legacy && k === m,

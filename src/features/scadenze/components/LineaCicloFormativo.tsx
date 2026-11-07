@@ -9,12 +9,15 @@
  * - Rev 2 (2026-11-06 16:00): Indicatore del taglio (Preposti 19/05/2026) con nota sul termine transitorio.
  * - Rev 3 (2026-11-06 18:00): Tacche calcolate per ciclo reale; ciclo troncato; didascalia Preposti.
  *
- * Colori per ciclo: verde = completato, arancione = da completare, rosso = scaduto,
- * nero = non ancora attivo, bordeaux = decaduto.
+ * - Rev 4 (2026-11-07): Targhette essenziali sopra la linea: data «AA-MM» e sotto le ore (1h, 2h, 4h…; «~» se stimate),
+ *   senza titolo; stanghetta colorata fino al giorno esatto; livelli più compatti. Ciclo con ore parziali = arancione.
+ *
+ * Colori per ciclo: verde = completato, arancione = da completare (in corso, oppure con ore parziali anche a ciclo concluso),
+ * rosso = concluso senza alcun aggiornamento, nero = non ancora attivo, bordeaux = decaduto.
  */
 import { useMemo } from "react";
 import { formatData } from "@/lib/api";
-import { aggiungiAnni, giorniTra } from "../calcolo-ciclo";
+import { aggiungiAnni, annoMese, giorniTra } from "../calcolo-ciclo";
 import type {
   CicloVisuale,
   EventoCiclo,
@@ -47,9 +50,9 @@ const MOTIVO_IGNORATO: Record<MotivoIgnorato, string> = {
 };
 
 /** Altezza (px) di un livello di etichette sopra la linea. */
-const ALTEZZA_LIVELLO = 52;
+const ALTEZZA_LIVELLO = 40;
 /** Distanza minima (in % della larghezza) tra due etichette sullo stesso livello. */
-const DISTANZA_MIN_PCT = 13;
+const DISTANZA_MIN_PCT = 8;
 const LIVELLI_MAX = 3;
 
 /** Assegna un livello (0..2) a ciascun evento, in ordine di posizione, per evitare sovrapposizioni. */
@@ -63,13 +66,21 @@ function assegnaLivelli(posizioni: number[]): number[] {
   });
 }
 
-function titoloEvento(ev: EventoCiclo): string {
-  if (ev.tipo === "base") return "Corso Base";
-  return ev.ore !== null && ev.ore > 0 ? `Agg. ${ev.ore}h` : "Agg.";
+/** Ore dell'evento sotto la data: «4h», «~4h» se stimate (ore minime di legge), «ore n.d.» se non note. */
+function oreEvento(ev: EventoCiclo): string {
+  if (ev.ore === null) return "ore n.d.";
+  return `${ev.oreStimate ? "~" : ""}${ev.ore}h`;
 }
 
+const COLORE_STANGHETTA: Record<EventoCiclo["tipo"], string> = {
+  base: "bg-emerald-500",
+  completo: "bg-emerald-500",
+  parziale: "bg-amber-500",
+  ignorato: "bg-muted-foreground/50",
+};
+
 function suggerimentoEvento(ev: EventoCiclo): string {
-  const ore = ev.ore !== null ? ` (${ev.ore}h)` : "";
+  const ore = ev.ore !== null ? ` (${ev.oreStimate ? "~" : ""}${ev.ore}h${ev.oreStimate ? ", ore minime di legge" : ""})` : "";
   if (ev.tipo === "base") return `Corso Base · ${formatData(ev.data)}`;
   if (ev.tipo === "parziale") return `Aggiornamento parziale${ore} · ${formatData(ev.data)}`;
   if (ev.tipo === "completo")
@@ -88,15 +99,27 @@ function PallinoEvento({ tipo }: { tipo: EventoCiclo["tipo"] }) {
 
 function EtichettaCiclo({ c }: { c: CicloVisuale }) {
   const mostraOre =
-    c.attivo && (c.stato === "da_completare" || c.stato === "scaduto") && c.oreRichieste > 0;
+    (c.attivo || c.parzialiNelCiclo > 0) &&
+    (c.stato === "da_completare" || c.stato === "scaduto") &&
+    c.oreRichieste > 0;
+  const ore = c.attivo ? c.oreAccumulate : c.oreNelCiclo;
   return (
     <>
       Ciclo {c.indice}
       {c.troncato ? " (vecchio regime, troncato)" : ""} ·{" "}
-      {mostraOre ? `${c.oreAccumulate}/${c.oreRichieste} ore` : ETICHETTA_CICLO[c.stato]}
+      {mostraOre ? `${ore}/${c.oreRichieste} ore` : ETICHETTA_CICLO[c.stato]}
     </>
   );
 }
+
+/** Testi della legenda dei colori della linea. */
+const LEGENDA_CICLO: Record<StatoCiclo, string> = {
+  completato: "completato",
+  da_completare: "da completare (in corso o con ore parziali)",
+  scaduto: "scaduto, nessun aggiornamento",
+  futuro: "non attivo",
+  decaduto: "decaduto",
+};
 
 export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
   const { ciclo } = riga;
@@ -142,7 +165,7 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
       pct,
       tacche,
       eventi,
-      altezzaSopra: 6 + livelloMax * ALTEZZA_LIVELLO + 54,
+      altezzaSopra: 44 + livelloMax * ALTEZZA_LIVELLO,
       oggi,
       pctOggi: oggi >= inizio && oggi <= fine ? pct(oggi) : null,
       taglio: ciclo.dataTaglio,
@@ -186,28 +209,26 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
                 style={{ left: `${p}%` }}
               >
                 <div className="text-center leading-tight">
-                  <div className="whitespace-nowrap text-[10px] font-medium text-foreground">
-                    {titoloEvento(ev)}
-                  </div>
-                  <div className="whitespace-nowrap font-mono text-[10px] text-muted-foreground">
-                    {formatData(ev.data)}
+                  <div className="whitespace-nowrap font-mono text-[10px] font-medium text-foreground">
+                    {annoMese(ev.data)}
                   </div>
                   <div
-                    className={`h-3 whitespace-nowrap text-[9px] font-medium ${
+                    className={`whitespace-nowrap text-[10px] font-semibold ${
                       ev.tipo === "parziale"
                         ? "text-amber-600 dark:text-amber-400"
-                        : ev.tipo === "completo"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-muted-foreground"
+                        : ev.tipo === "ignorato"
+                          ? "text-muted-foreground"
+                          : "text-emerald-600 dark:text-emerald-400"
                     }`}
                   >
-                    {ev.tipo === "parziale" && "parziale"}
-                    {ev.tipo === "completo" && "completo"}
-                    {ev.tipo === "ignorato" && "non contato"}
+                    {oreEvento(ev)}
                   </div>
                 </div>
                 <PallinoEvento tipo={ev.tipo} />
-                <div className="w-px bg-border" style={{ height: 6 + livello * ALTEZZA_LIVELLO }} />
+                <div
+                  className={`w-0.5 ${COLORE_STANGHETTA[ev.tipo]}`}
+                  style={{ height: 6 + livello * ALTEZZA_LIVELLO }}
+                />
               </div>
             ))}
           </div>
@@ -310,13 +331,20 @@ export function LineaCicloFormativo({ riga }: { riga: RigaScadenzaDati }) {
               (s) => (
                 <span key={s} className="inline-flex items-center gap-1">
                   <span className={`h-2 w-3 rounded-sm ${COLORE_CICLO[s]}`} />
-                  {ETICHETTA_CICLO[s]}
+                  {LEGENDA_CICLO[s]}
                 </span>
               ),
             )}
             <span className="inline-flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30" />
+              ore parziali
+            </span>
+            <span className="inline-flex items-center gap-1">
               <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground/60" />
               non contato
+            </span>
+            <span className="inline-flex items-center gap-1">
+              data AA-MM · ore sotto (~ = ore stimate)
             </span>
             {ciclo.dataTaglio && (
               <span className="inline-flex items-center gap-1">

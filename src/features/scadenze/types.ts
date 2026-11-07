@@ -39,6 +39,10 @@ export interface CicloVisuale {
   /** Ore accumulate: valorizzate solo sul ciclo che definisce la scadenza (attivo). */
   oreAccumulate: number;
   oreRichieste: number;
+  /** Ore degli aggiornamenti parziali con data dentro il ciclo (serve al colore: parziali = arancione anche a ciclo concluso). */
+  oreNelCiclo: number;
+  /** Numero di aggiornamenti parziali con data dentro il ciclo (le ore possono essere sconosciute). */
+  parzialiNelCiclo: number;
   /** true per il primo ciclo non ancora coperto, quello che definisce la scadenza. */
   attivo: boolean;
   /** true per il ciclo del vecchio regime troncato alla data di taglio (Preposti). */
@@ -49,6 +53,8 @@ export interface EventoCiclo {
   id: string | number;
   data: string;
   ore: number | null;
+  /** true se le ore sono una stima (ore minime di legge) e non quelle dichiarate. */
+  oreStimate?: boolean;
   tipo: TipoEvento;
   /** Solo per tipo = "ignorato". */
   motivo?: MotivoIgnorato;

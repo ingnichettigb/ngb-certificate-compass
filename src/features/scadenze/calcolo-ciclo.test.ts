@@ -4,11 +4,13 @@
  * Data creazione: 2026-11-06
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Test del motore di calcolo dei cicli formativi.
+ * - Rev 2 (2026-11-07): Colore dei cicli con ore parziali, ore stimate negli eventi, annoMese.
  */
 import { describe, expect, it } from "vitest";
 import {
   aggiungiAnni,
   anniCompleti,
+  annoMese,
   valutaCicloFormativo,
   type AttestatoCiclo,
 } from "./calcolo-ciclo";
@@ -257,9 +259,9 @@ describe("cicli ed eventi per la linea temporale", () => {
     expect(r.cicli[1]!.attivo).toBe(false);
   });
 
-  it("rosso con ore parziali: il ciclo scaduto mostra le ore già fatte", () => {
+  it("arancione con ore parziali anche a ciclo concluso: mostra le ore già fatte", () => {
     const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2024, 6, 1));
-    expect(stati(r)).toEqual(["scaduto", "da_completare", "futuro"]);
+    expect(stati(r)).toEqual(["da_completare", "da_completare", "futuro"]);
     expect(r.cicli[0]!.oreAccumulate).toBe(4);
   });
 
@@ -427,5 +429,50 @@ describe("record storici senza data", () => {
     const r = calcola([rotto], giorno(2026, 11, 6));
     expect(r.stato).toBe("decaduto");
     expect(r.richiedeNuovoCorsoBase).toBe(true);
+  });
+});
+
+describe("colore dei cicli sulla linea (verde / arancione / rosso)", () => {
+  it("ciclo concluso senza alcun aggiornamento: scaduto (rosso)", () => {
+    const r = calcola([base("2018-09-15")], giorno(2024, 6, 1));
+    expect(r.cicli[0]!.stato).toBe("scaduto");
+    expect(r.cicli[0]!.parzialiNelCiclo).toBe(0);
+  });
+  it("ciclo concluso con ore parziali: da completare (arancione), non rosso", () => {
+    const r = calcola([base("2018-09-15"), agg("2022-05-10", 4)], giorno(2024, 6, 1));
+    expect(r.cicli[0]!.stato).toBe("da_completare");
+    expect(r.cicli[0]!.oreNelCiclo).toBe(4);
+    expect(r.cicli[0]!.parzialiNelCiclo).toBe(1);
+    // il calcolo della scadenza non cambia: il ciclo resta scaduto per la conformità
+    expect(r.stato).toBe("scaduto_sanabile");
+    expect(r.scadenzaEffettiva).toBe("2023-09-15");
+  });
+  it("ciclo coperto completando le ore: completato (verde)", () => {
+    const r = calcola([base("2018-09-15"), agg("2022-05-10", 4), agg("2023-01-20", 2)], giorno(2024, 6, 1));
+    expect(r.cicli[0]!.stato).toBe("completato");
+  });
+  it("ciclo in corso senza aggiornamenti: da completare (arancione); il successivo: non attivo", () => {
+    const r = calcola([base("2022-03-24")], giorno(2026, 11, 7), { durataCicloAnni: 3, oreRichiesteAggiornamento: 4 });
+    expect(r.cicli.map((c) => c.stato)).toEqual(["scaduto", "da_completare", "futuro"]);
+  });
+  it("le ore parziali contano nel ciclo in cui cade la data del corso", () => {
+    const r = calcola([base("2018-09-15"), agg("2024-02-01", 2)], giorno(2026, 11, 7));
+    expect(r.cicli[0]!.parzialiNelCiclo).toBe(0);
+    expect(r.cicli[0]!.stato).toBe("scaduto");
+    expect(r.cicli[1]!.oreNelCiclo).toBe(2);
+  });
+});
+
+describe("eventi: ore stimate e formato AA-MM", () => {
+  it("annoMese usa l'anno a due cifre", () => {
+    expect(annoMese("2022-03-24")).toBe("22-03");
+    expect(annoMese("2009-11-05")).toBe("09-11");
+  });
+  it("le ore stimate arrivano agli eventi (base e aggiornamenti)", () => {
+    const r = calcola(
+      [{ ...base("2018-09-15"), oreStimate: true }, { ...agg("2022-05-10", 4), oreStimate: true }, agg("2023-01-20", 2)],
+      giorno(2024, 6, 1),
+    );
+    expect(r.eventi.map((e) => e.oreStimate === true)).toEqual([true, true, false]);
   });
 });
