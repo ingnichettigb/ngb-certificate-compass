@@ -59,22 +59,23 @@ export function DialogAggiungiAttestatoConValidazione({
 
       // Corso generico iniziale o primo corso disponibile per creare la bozza "In attesa"
       const corsoDefault = corsi[0]?.id || "";
-      const oggi = new Date().toISOString().split("T")[0];
+      const oggi = new Date().toISOString().slice(0, 10);
 
       // Crea il record in stato "In attesa", esattamente come se fosse arrivato dal Modulo di auto-invio
       const nuovo = await creaAttestato({
         dipendente_id: dipendente.id,
-        codice_fiscale: dipendente.codice_fiscale,
+        codice_fiscale: dipendente.codice_fiscale ?? "",
         tipo_corso_id: corsoDefault,
         data_corso: oggi,
         ore_dichiarate: 4,
-        url_foto_fronte: r.selezionato.percorsoRelativo || r.selezionato.nome,
-        stato_validazione: "In attesa",
+        url_foto_fronte: r.selezionato.percorsoRelativo ?? r.selezionato.nome ?? "",
+        url_foto_retro: null,
       });
 
       // Associa i dati completi del dipendente per la visualizzazione nel pannello HR
       const attestatoCompleto: Attestato = {
         ...nuovo,
+        stato_validazione: nuovo.stato_validazione as Attestato["stato_validazione"],
         dipendenti: dipendente,
         tipi_corso: corsi.find((c) => c.id === corsoDefault) || null,
       };
