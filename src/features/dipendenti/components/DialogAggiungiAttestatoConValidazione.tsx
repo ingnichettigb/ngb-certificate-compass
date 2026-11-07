@@ -69,7 +69,7 @@ export function DialogAggiungiAttestatoConValidazione({
         data_corso: oggi,
         ore_dichiarate: 4,
         url_foto_fronte: r.selezionato.percorsoRelativo ?? r.selezionato.nome ?? "",
-        stato_validazione: "In attesa",
+        url_foto_retro: null,
       });
 
       // Associa i dati completi del dipendente per la visualizzazione nel pannello HR
