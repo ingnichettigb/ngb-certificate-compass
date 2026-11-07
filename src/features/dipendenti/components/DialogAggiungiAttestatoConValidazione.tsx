@@ -68,13 +68,14 @@ export function DialogAggiungiAttestatoConValidazione({
         tipo_corso_id: corsoDefault,
         data_corso: oggi,
         ore_dichiarate: 4,
-        url_foto_fronte: r.selezionato.percorsoRelativo || r.selezionato.nome,
+        url_foto_fronte: r.selezionato.percorsoRelativo ?? r.selezionato.nome ?? "",
         stato_validazione: "In attesa",
       });
 
       // Associa i dati completi del dipendente per la visualizzazione nel pannello HR
       const attestatoCompleto: Attestato = {
         ...nuovo,
+        stato_validazione: nuovo.stato_validazione as Attestato["stato_validazione"],
         dipendenti: dipendente,
         tipi_corso: corsi.find((c) => c.id === corsoDefault) || null,
       };
