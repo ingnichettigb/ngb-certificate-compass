@@ -11,27 +11,27 @@
  *   rev 4 — 05/11/2026 21:30 — Due modalità: «Solo nuovi» ed «Aggiornamento elenco».
  *   rev 5 — 06/11/2026 08:20 — Collegamento esito a finestra «Da completare».
  *   rev 6 — 06/11/2026 08:35 — Caselle sbloccate in entrambe le modalità e pulsanti rapidi (Tutti/Nessuno/Nuovi/Archivio).
+ *   rev 7 — 07/11/2026 — Diviso in file per responsabilità (applica-aggiornamento, ControlliElenco, BarreAggiornamento, TabellaProposte). Nessun cambio di comportamento.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckSquare, FileUp, GraduationCap, Square, Users } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   getDipendenti,
   getClassiConcorso,
   getRuoliSicurezza,
-  upsertDipendente,
-  impostaRuoloDipendente,
-  registraClasseEMateria,
   CHIAVE_RUOLI,
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
-import { sb } from "@/lib/api/client";
-import { VUOTO } from "../types";
 import { inCodaDaCompletare, inizioAnnoScolastico } from "@/features/da-completare/regola-coda";
 import {
   analizzaRighe,
@@ -42,9 +42,12 @@ import {
   type RigaGrezza,
 } from "./analisi-elenco";
 import { leggiElenco } from "./leggi-file";
-import { trovaRuoliNuoviIngressi } from "./ruoli-nuovi-ingressi";
 import { PannelloSoloNuovi } from "./PannelloSoloNuovi";
 import { EsitoImportazioneElenco } from "./EsitoImportazione";
+import { applicaProposte } from "./applica-aggiornamento";
+import { BarraConfigurazione, SelettoreModalita } from "./ControlliElenco";
+import { BarraSelezioneRapida, BarraTipoPersonale } from "./BarreAggiornamento";
+import { TabellaProposte } from "./TabellaProposte";
 import type { EsitoImportazione } from "./registra-nuovi";
 
 export function DialogImportaElenco({
@@ -58,9 +61,21 @@ export function DialogImportaElenco({
   onCompleta?: (() => void) | undefined;
 }) {
   const qc = useQueryClient();
-  const { data: dipendenti = [] } = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti, enabled: open });
-  const { data: classi = [] } = useQuery({ queryKey: ["classi-concorso"], queryFn: getClassiConcorso, enabled: open });
-  const { data: ruoli = [] } = useQuery({ queryKey: CHIAVE_RUOLI, queryFn: getRuoliSicurezza, enabled: open });
+  const { data: dipendenti = [] } = useQuery({
+    queryKey: ["dipendenti"],
+    queryFn: getDipendenti,
+    enabled: open,
+  });
+  const { data: classi = [] } = useQuery({
+    queryKey: ["classi-concorso"],
+    queryFn: getClassiConcorso,
+    enabled: open,
+  });
+  const { data: ruoli = [] } = useQuery({
+    queryKey: CHIAVE_RUOLI,
+    queryFn: getRuoliSicurezza,
+    enabled: open,
+  });
 
   const codiciClasse = useMemo(() => classi.filter((c) => c.attivo).map((c) => c.codice), [classi]);
 
@@ -73,7 +88,9 @@ export function DialogImportaElenco({
   const [righe, setRighe] = useState<RigaGrezza[]>([]);
   const [esito, setEsito] = useState<EsitoImportazione | null>(null);
   const [tipoPredefinito, setTipoPredefinito] = useState<"ata" | "docente">("ata");
-  const [profiloAtaGlobale, setProfiloAtaGlobale] = useState<ProfiloAta>("Collaboratore scolastico");
+  const [profiloAtaGlobale, setProfiloAtaGlobale] = useState<ProfiloAta>(
+    "Collaboratore scolastico",
+  );
   const [lavoro, setLavoro] = useState(false);
 
   // All'apertura della finestra si azzerano file ed esito precedenti
@@ -127,7 +144,12 @@ export function DialogImportaElenco({
       ps.map((p) => {
         if (p.tipo === "cessazione") return p;
         if (nuovoTipo === "ata") {
-          return { ...p, tipo: "ata", sottorepartoAta: p.sottorepartoAta || profiloAtaGlobale, nota: "" };
+          return {
+            ...p,
+            tipo: "ata",
+            sottorepartoAta: p.sottorepartoAta || profiloAtaGlobale,
+            nota: "",
+          };
         }
         return { ...p, tipo: "docente", nota: p.classe ? "" : "Scegli la classe di concorso" };
       }),
@@ -146,7 +168,12 @@ export function DialogImportaElenco({
       ps.map((p) => {
         if (p.cf !== cf) return p;
         if (nuovoTipo === "ata") {
-          return { ...p, tipo: "ata", sottorepartoAta: p.sottorepartoAta || profiloAtaGlobale, nota: "" };
+          return {
+            ...p,
+            tipo: "ata",
+            sottorepartoAta: p.sottorepartoAta || profiloAtaGlobale,
+            nota: "",
+          };
         }
         if (nuovoTipo === "docente") {
           return { ...p, tipo: "docente", nota: p.classe ? "" : "Scegli la classe" };
@@ -179,7 +206,8 @@ export function DialogImportaElenco({
 
   // Selettori rapidi per modalità aggiornamento
   const selezionaTuttiAgg = () => setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, true])));
-  const selezionaNessunoAgg = () => setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, false])));
+  const selezionaNessunoAgg = () =>
+    setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, false])));
   const selezionaSoloNuoviAgg = () =>
     setSpunte(Object.fromEntries(proposte.map((p) => [p.cf, !p.dipendenteId])));
   const selezionaSoloArchivioAgg = () =>
@@ -189,55 +217,8 @@ export function DialogImportaElenco({
     const scelte = proposte.filter((p) => spunte[p.cf] && applicabile(p));
     if (scelte.length === 0) return;
     setLavoro(true);
-    let ok = 0;
-    const errori: string[] = [];
 
-    const { ruoloBase, ruoloSpecificaMedio } = trovaRuoliNuoviIngressi(ruoli);
-
-    for (const p of scelte) {
-      try {
-        if (p.dipendenteId) {
-          let upd: Record<string, unknown> = {};
-          if (p.tipo === "cessazione") upd = { stato_lavoratore: "cessato", data_cessazione: dataFine };
-          if (p.tipo === "docente") {
-            upd = {
-              reparto: "Docente",
-              classe_concorso: p.classe,
-              ...(p.materia && { materia: p.materia }),
-            };
-          }
-          if (p.tipo === "ata") {
-            upd = {
-              reparto: "ATA",
-              sottoreparto: p.sottorepartoAta,
-            };
-          }
-          const { error } = await sb.from("dipendenti").update(upd).eq("id", p.dipendenteId);
-          if (error) throw error;
-        } else {
-          const nuovo = await upsertDipendente({
-            ...VUOTO,
-            codice_fiscale: p.cf,
-            cognome: p.cognome,
-            nome: p.nome,
-            reparto: p.tipo === "ata" ? "ATA" : "Docente",
-            sottoreparto: p.sottorepartoAta ?? "",
-            classe_concorso: p.classe ?? "",
-            materia: p.materia ?? "",
-            tipo_contratto: "determinato",
-            data_assunzione: dataInizio,
-          });
-
-          if (ruoloBase?.id) await impostaRuoloDipendente(nuovo.id, ruoloBase.id, true);
-          if (ruoloSpecificaMedio?.id) await impostaRuoloDipendente(nuovo.id, ruoloSpecificaMedio.id, true);
-        }
-
-        if (p.tipo === "docente") await registraClasseEMateria(p.classe, p.materia);
-        ok++;
-      } catch (e) {
-        errori.push(`${p.cognome} ${p.nome}: ${(e as Error).message}`);
-      }
-    }
+    const { ok, errori } = await applicaProposte({ scelte, ruoli, dataFine, dataInizio });
 
     setLavoro(false);
     await Promise.all([
@@ -246,7 +227,9 @@ export function DialogImportaElenco({
     ]);
 
     if (errori.length) {
-      toast.error(`${errori.length} righe non aggiornate`, { description: errori.slice(0, 3).join("\n") });
+      toast.error(`${errori.length} righe non aggiornate`, {
+        description: errori.slice(0, 3).join("\n"),
+      });
     }
     toast.success(`${ok} nominativi aggiornati con fabbisogno base e rischio medio attivo`);
     setProposte([]);
@@ -262,7 +245,8 @@ export function DialogImportaElenco({
         <DialogHeader>
           <DialogTitle>Importa elenco da Word o Excel</DialogTitle>
           <DialogDescription>
-            Abbinamento per codice fiscale. I nuovi ingressi hanno di default spuntati i corsi base e specifica rischio medio 8h.
+            Abbinamento per codice fiscale. I nuovi ingressi hanno di default spuntati i corsi base
+            e specifica rischio medio 8h.
           </DialogDescription>
         </DialogHeader>
 
@@ -283,40 +267,17 @@ export function DialogImportaElenco({
         ) : (
           <>
             {/* Modalità: solo nuovi oppure aggiornamento dell'elenco */}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold">Modalità:</span>
-              <div className="inline-flex rounded-md border border-border bg-background p-0.5">
-                <Button type="button" size="sm" variant={modalita === "nuovi" ? "default" : "ghost"} className="h-8 px-3 text-xs" onClick={() => cambiaModalita("nuovi")}>
-                  Solo nuovi
-                </Button>
-                <Button type="button" size="sm" variant={modalita === "aggiorna" ? "default" : "ghost"} className="h-8 px-3 text-xs" onClick={() => cambiaModalita("aggiorna")}>
-                  Aggiornamento elenco
-                </Button>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {modalita === "nuovi"
-                  ? "Inserisce i nuovi e riabilita i cessati selezionati portandoli in «Da completare»."
-                  : "Registra cessazioni e cambi di profilo o classe sui lavoratori già in archivio."}
-              </span>
-            </div>
+            <SelettoreModalita modalita={modalita} onCambia={cambiaModalita} />
 
             {/* Barra configurazione generale */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 rounded-lg border border-border bg-muted/30 p-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-foreground">File (.docx, .xlsx, .csv)</span>
-                <Input type="file" accept=".docx,.xlsx,.xls,.xlsm,.csv" onChange={(e) => caricaFile(e.target.files?.[0])} />
-              </label>
-              {modalita === "aggiorna" && (
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-foreground">Data fine servizio (cessati)</span>
-                  <Input type="date" value={dataFine} onChange={(e) => setDataFine(e.target.value)} />
-                </label>
-              )}
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-foreground">Data inizio servizio (nuovi)</span>
-                <Input type="date" value={dataInizio} onChange={(e) => setDataInizio(e.target.value)} />
-              </label>
-            </div>
+            <BarraConfigurazione
+              modalita={modalita}
+              dataFine={dataFine}
+              setDataFine={setDataFine}
+              dataInizio={dataInizio}
+              setDataInizio={setDataInizio}
+              onFile={caricaFile}
+            />
 
             {modalita === "nuovi" && (
               <PannelloSoloNuovi
@@ -335,178 +296,38 @@ export function DialogImportaElenco({
             {modalita === "aggiorna" && (
               <>
                 {proposte.length > 0 && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">Tipo personale per questo elenco:</span>
-                      <div className="inline-flex rounded-md border border-border bg-background p-0.5">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={tipoPredefinito === "ata" ? "default" : "ghost"}
-                          className="h-8 gap-1.5 px-3 text-xs"
-                          onClick={() => cambiaTipoGlobale("ata")}
-                        >
-                          <Users className="size-3.5" /> ATA
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={tipoPredefinito === "docente" ? "default" : "ghost"}
-                          className="h-8 gap-1.5 px-3 text-xs"
-                          onClick={() => cambiaTipoGlobale("docente")}
-                        >
-                          <GraduationCap className="size-3.5" /> Docenti
-                        </Button>
-                      </div>
-                    </div>
-
-                    {tipoPredefinito === "ata" && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground font-medium">Mansione ATA predefinita:</span>
-                        <select
-                          className="h-8 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium"
-                          value={profiloAtaGlobale}
-                          onChange={(e) => applicaProfiloAtaATutti(e.target.value as ProfiloAta)}
-                        >
-                          {PROFILI_ATA.map((p) => (
-                            <option key={p.codice} value={p.nome}>
-                              {p.nome} ({p.codice})
-                            </option>
-                          ))}
-                        </select>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => applicaProfiloAtaATutti(profiloAtaGlobale)}
-                        >
-                          Applica a tutti gli ATA
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <BarraTipoPersonale
+                    tipoPredefinito={tipoPredefinito}
+                    profiloAtaGlobale={profiloAtaGlobale}
+                    onTipo={cambiaTipoGlobale}
+                    onProfilo={applicaProfiloAtaATutti}
+                  />
                 )}
 
                 {/* Selezione rapida */}
                 {proposte.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="font-medium text-muted-foreground">Selezione rapida:</span>
-                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaTuttiAgg}>
-                      <CheckSquare className="size-3 mr-1" /> Tutti ({proposte.length})
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaSoloNuoviAgg}>
-                      Solo nuovi ({proposte.filter((p) => !p.dipendenteId).length})
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={selezionaSoloArchivioAgg}>
-                      Solo già in archivio ({proposte.filter((p) => !!p.dipendenteId).length})
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={selezionaNessunoAgg}>
-                      <Square className="size-3 mr-1" /> Nessuno
-                    </Button>
-                  </div>
+                  <BarraSelezioneRapida
+                    proposte={proposte}
+                    onTutti={selezionaTuttiAgg}
+                    onSoloNuovi={selezionaSoloNuoviAgg}
+                    onSoloArchivio={selezionaSoloArchivioAgg}
+                    onNessuno={selezionaNessunoAgg}
+                  />
                 )}
 
-                {/* Tabella anteprima nominativi */}
                 {proposte.length > 0 && (
-                  <div className="max-h-[55vh] overflow-auto rounded-lg border border-border">
-                    <div className="flex items-center justify-between px-3 py-2 bg-muted/60 text-xs text-muted-foreground border-b border-border">
-                      <span>
-                        <strong>{nomeFile}</strong>: {proposte.length} righe ({proposte.filter((p) => !p.dipendenteId).length} nuovi ingressi)
-                      </span>
-                      <span>{nSel} pronti da aggiornare</span>
-                    </div>
-
-                    <table className="w-full text-sm">
-                      <thead className="sticky top-0 z-10 bg-muted text-left">
-                        <tr>
-                          <th className="p-2 w-10 text-center">N°</th>
-                          <th className="p-2 w-10" />
-                          <th className="p-2">Nominativo</th>
-                          <th className="p-2">Codice fiscale</th>
-                          <th className="p-2 w-32">Tipo</th>
-                          <th className="p-2">Mansione / Classe proposta</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {proposte.map((p, n) => (
-                          <tr key={p.cf} className={`border-t border-border ${p.dipendenteId ? "" : "bg-amber-500/10"}`}>
-                            <td className="p-2 text-center font-mono text-xs text-muted-foreground">{n + 1}</td>
-                            <td className="p-2 text-center">
-                              <Checkbox
-                                checked={!!spunte[p.cf]}
-                                onCheckedChange={(v) => setSpunte((s) => ({ ...s, [p.cf]: !!v }))}
-                              />
-                            </td>
-                            <td className="p-2">
-                              <span className="font-medium">{p.cognome} {p.nome}</span>
-                              <span className={`ml-2 rounded px-1.5 py-0.5 text-[11px] font-semibold ${p.dipendenteId ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/25 text-amber-800"}`}>
-                                {p.dipendenteId ? "in archivio" : "nuovo"}
-                              </span>
-                            </td>
-                            <td className="p-2 font-mono text-xs text-muted-foreground">{p.cf}</td>
-
-                            <td className="p-2">
-                              <select
-                                className="rounded border border-border bg-background px-2 py-1 text-xs font-medium"
-                                value={p.tipo}
-                                onChange={(e) => cambiaTipoRiga(p.cf, e.target.value as "ata" | "docente" | "cessazione")}
-                              >
-                                <option value="ata">ATA</option>
-                                <option value="docente">Docente</option>
-                                <option value="cessazione">Cessato</option>
-                              </select>
-                            </td>
-
-                            <td className="p-2">
-                              {p.tipo === "ata" && (
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    className="block rounded border border-border bg-background px-2 py-1 text-xs font-medium"
-                                    value={p.sottorepartoAta ?? ""}
-                                    onChange={(e) => scegliProfiloAta(p.cf, e.target.value)}
-                                  >
-                                    <option value="">— scegli mansione ATA —</option>
-                                    {PROFILI_ATA.map((pr) => (
-                                      <option key={pr.codice} value={pr.nome}>
-                                        {pr.nome} ({pr.codice})
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-
-                              {p.tipo === "docente" && (
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    className="block rounded border border-border bg-background px-2 py-1 text-xs"
-                                    value={p.classe ?? ""}
-                                    onChange={(e) => scegliClasse(p.cf, e.target.value)}
-                                  >
-                                    <option value="">— scegli classe —</option>
-                                    {codiciClasse.map((c) => (
-                                      <option key={c} value={c}>
-                                        {c}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  {p.materia && <span className="text-xs text-muted-foreground">({p.materia})</span>}
-                                </div>
-                              )}
-
-                              {p.tipo === "cessazione" && (
-                                <span className="text-xs text-muted-foreground">
-                                  {p.dipendenteId ? `Data fine servizio: ${dataFine}` : "Non presente in archivio"}
-                                </span>
-                              )}
-
-                              {p.nota && <div className="text-[11px] text-amber-700 font-medium mt-0.5">{p.nota}</div>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <TabellaProposte
+                    proposte={proposte}
+                    nomeFile={nomeFile}
+                    nSel={nSel}
+                    spunte={spunte}
+                    setSpunte={setSpunte}
+                    codiciClasse={codiciClasse}
+                    dataFine={dataFine}
+                    onTipoRiga={cambiaTipoRiga}
+                    onProfiloAta={scegliProfiloAta}
+                    onClasse={scegliClasse}
+                  />
                 )}
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-border">
