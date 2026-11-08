@@ -16,7 +16,10 @@ import { getAttestati, getTipiCorso } from "@/lib/api";
 import { GRUPPI_ARGOMENTO, assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { csvElencoAttestati, filtraAttestati, nomeFileElenco, type Ambito } from "./elenco-csv";
 
-export function DialogEsportaAttestati() {
+const STILE_TASTO =
+  "border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-medium";
+
+export function DialogEsportaAttestati({ className }: { className?: string } = {}) {
   const [aperto, setAperto] = useState(false);
   const [tipo, setTipo] = useState<Ambito["tipo"]>("tutto");
   const [categoria, setCategoria] = useState(GRUPPI_ARGOMENTO[0]!.chiave);
@@ -47,7 +50,7 @@ export function DialogEsportaAttestati() {
 
   return (
     <>
-      <Button type="button" onClick={() => setAperto(true)}>
+      <Button type="button" variant="outline" size="sm" className={`${STILE_TASTO} ${className ?? ""}`.trim()} onClick={() => setAperto(true)}>
         <FileSpreadsheet className="size-4" /> Esporta dati in Excel
       </Button>
       <Dialog open={aperto} onOpenChange={setAperto}>

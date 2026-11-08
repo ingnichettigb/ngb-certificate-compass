@@ -1,5 +1,5 @@
 /*
- * Test di flusso della Cruscotto risorse umane (validazione attestati).
+ * Test di flusso della Validazione HR (validazione attestati).
  * Registra chiamate al database, notifiche, email preparate e contenuto della pagina durante un
  * percorso d'uso (filtri per stato, scelta di un attestato, correzione dati, approva/respingi, email)
  * e le confronta con lo snapshot.
@@ -106,7 +106,7 @@ describe("Cruscotto risorse umane: percorso d'uso completo", () => {
         <Pagina />
       </QueryClientProvider>,
     );
-    await screen.findByText("Cruscotto risorse umane");
+    await screen.findByText("Validazione HR");
     await attendi();
     foto("iniziale (In attesa, nessun dettaglio)");
 

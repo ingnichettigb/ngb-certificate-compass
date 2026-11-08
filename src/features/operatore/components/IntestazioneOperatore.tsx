@@ -5,11 +5,11 @@
  * Revisioni:
  *   rev 1 — 20/10/2026 14:00 — Titolo della pagina, impostazioni AI e pulsante «Carica documento».
  *   rev 2 — 28/10/2026 09:30 — Titolo aggiornato in «Inserimento Attestati».
+ *   rev 3 — 07/11/2026 — Titolo «Inserimento singolo» (distinto dal massivo); tolta la freccia «Home».
  */
 import { useRef } from "react";
-import { Link } from "@tanstack/react-router";
 import { ImpostaAiButton } from "@/features/ai/ImpostaAiButton";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function IntestazioneOperatore({ onFile }: { onFile: (f: File) => void }) {
@@ -18,17 +18,9 @@ export function IntestazioneOperatore({ onFile }: { onFile: (f: File) => void })
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
       <div className="flex items-center gap-3">
-        <Link
-          to="/"
-          className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title="Torna alla home"
-          aria-label="Torna alla home"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inserimento Attestati</h1>
-          <p className="text-sm text-muted-foreground">Verifica, lettura automatica con AI e archiviazione attestati</p>
+          <h1 className="text-2xl font-bold tracking-tight">Inserimento singolo</h1>
+          <p className="text-sm text-muted-foreground">Un attestato alla volta: verifica, lettura automatica con AI e archiviazione</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
