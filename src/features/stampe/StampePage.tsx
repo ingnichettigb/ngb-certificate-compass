@@ -17,6 +17,8 @@
  *   rev 10 — 08/11/2026 — Stessa pagina anche per le stampe predefinite (prop «predefinita»): filtri e colonne di partenza già
  *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina; la personalizzata non cambia
  *                         (aggiunto solo il link «Scelta stampe»).
+ *   rev 11 — 08/11/2026 14:30 — Integrazione BarraFunzioniPredefinite nella stampa «per-funzioni», compattazione testata (padding py-2.5)
+ *                               e filtro reattivo per singola funzione su tabella, PDF, CSV ed Excel.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -37,12 +39,13 @@ import {
   alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze,
   type LarghezzeColonne, type PreferenzeColonne,
 } from "./preferenze-colonne";
-import { conFunzione } from "./stampa-gruppi";
+import { conFunzione, elencoFunzioni } from "./stampa-gruppi";
 import type { StampaPredefinita } from "./stampe-predefinite";
 import { FiltriStampa } from "./components/FiltriStampa";
 import { FoglioStampa } from "./components/FoglioStampa";
 import { ContenutoStampa } from "./components/ContenutoStampa";
 import { BarraEsportazione } from "./components/BarraEsportazione";
+import { BarraFunzioniPredefinite } from "./components/BarraFunzioniPredefinite";
 import { GuidaStampe } from "./components/GuidaStampe";
 
 const distinti = (v: (string | null | undefined)[]) =>
@@ -54,6 +57,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const [pref, setPref] = useState<PreferenzeColonne>(PREFERENZE_VUOTE);
   const [ordine, setOrdine] = useState<OrdineColonna | null>(null);
   const [univoco, setUnivoco] = useState(false);
+  const [funzioneScelta, setFunzioneScelta] = useState<string | null>(null);
+
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
   const dip = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti });
   const ditta = useQuery({ queryKey: ["ditta"], queryFn: getDitta });
@@ -62,9 +67,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const conArrivi = filtri.arrivi !== "no";
   const vista = predefinita ? `pre:${predefinita.id}` : `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
-  // Cambiando tipo di documento o selezione si ritrovano le colonne e le larghezze che l'utente aveva scelto per quel documento
-  // (se non ne ha scelte, quelle predefinite).
-  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); }, [vista]);
+
+  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setFunzioneScelta(null); }, [vista]);
   const cambiaPreferenze = (cambia: (p: PreferenzeColonne) => PreferenzeColonne) =>
     setPref((p) => {
       const n = cambia(p);
@@ -81,7 +85,6 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     [tutti, filtri.includiCessati],
   );
   const reparti = useMemo(() => distinti(tutti.map((d) => d.reparto)), [tutti]);
-  // Solo valori realmente presenti nel database.
   const ruoliPresenti = useMemo(() => {
     const usati = new Set(assegnazioni.map((a) => a.ruolo_id));
     return (ruoliQ.data ?? []).filter((r) => r.attivo && usati.has(r.id)).sort((a, b) => a.nome.localeCompare(b.nome, "it"));
@@ -97,8 +100,6 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const ruoliCatalogo = useMemo(() => (ruoliQ.data ?? []).filter((r) => r.attivo), [ruoliQ.data]);
 
   const arrivi = useMemo(() => nuoviArrivati(tutti, filtri.arrivi, new Date()), [tutti, filtri.arrivi]);
-
-  // «Senza attestati»: lavoratori a cui manca il Corso base e/o il Corso specifico; si somma ai nuovi arrivati.
   const senzaMinimi = useMemo(
     () => (filtri.senzaAttestati ? lavoratoriSenzaMinimi(tutti, att.data ?? [], new Date(), filtri.senzaModo) : null),
     [filtri.senzaAttestati, filtri.senzaModo, tutti, att.data],
@@ -111,14 +112,30 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
       : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? []),
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
   );
-  // Stampe predefinite raggruppate: per funzione restano solo i lavoratori con almeno una funzione; per reparto (anche i file CSV/Excel) si parte dal reparto.
+
+  // Per la stampa per-funzioni: elenco completo dei lavoratori con almeno una funzione
+  const righeConFunzione = useMemo(
+    () => (predefinita?.raggruppaPer === "funzione" ? conFunzione(righeGrezze) : []),
+    [righeGrezze, predefinita],
+  );
+
+  // Lista dinamica delle funzioni realmente censite con conteggi
+  const listaFunzioni = useMemo(
+    () => (predefinita?.raggruppaPer === "funzione" ? elencoFunzioni(righeConFunzione) : []),
+    [righeConFunzione, predefinita],
+  );
+
   const righeCalcolate = useMemo(() => {
-    if (predefinita?.raggruppaPer === "funzione") return conFunzione(righeGrezze);
+    if (predefinita?.raggruppaPer === "funzione") {
+      if (funzioneScelta) {
+        return righeConFunzione.filter((r) => r.ruoliElenco?.includes(funzioneScelta));
+      }
+      return righeConFunzione;
+    }
     if (predefinita?.raggruppaPer === "reparto") return [...righeGrezze].sort((a, b) => a.reparto.localeCompare(b.reparto, "it"));
     return righeGrezze;
-  }, [righeGrezze, predefinita]);
+  }, [righeGrezze, righeConFunzione, predefinita, funzioneScelta]);
 
-  // «Univoco» non ha senso dove c'è già un lavoratore per riga (elenco lavoratori) o per sezione (schede).
   const univocoNonApplicabile = filtri.modello === "lavoratori" || filtri.modello === "scheda";
   const univocoAttivo = univoco && !univocoNonApplicabile;
   const righe = useMemo(
@@ -130,17 +147,15 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const colonne = applicaPreferenze(colonneBase, pref, filtri.modello);
   const gruppiAggiungibili = useMemo(() => gruppiColonne(filtri.modello), [filtri.modello]);
   const alternaUnaColonna = (c: Colonna) => {
-    // Non si può togliere l'ultima colonna rimasta.
     if (colonne.includes(c) && colonne.length <= 1) return;
     cambiaPreferenze((p) => alternaColonna(colonneBase, p, c));
   };
   const cambiaLarghezze = (l: LarghezzeColonne) => cambiaPreferenze((p) => ({ ...p, larghezze: l }));
-  // L'ordine vale solo se la colonna è ancora visibile.
   const ordineAttivo = ordine && colonne.includes(ordine.colonna) ? ordine : null;
   const righeFile = useMemo(() => ordinaRighe(righe, ordineAttivo), [righe, ordineAttivo]);
-  // Nella scheda individuale il nome è nell'intestazione: nei file esportati serve come colonna.
+
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne.filter((c) => c !== "lavoratore")] : colonne;
-  const titolo = predefinita?.titolo ?? titoloStampa(filtri);
+  const titolo = predefinita ? (funzioneScelta ? `${predefinita.titolo} – ${funzioneScelta}` : predefinita.titolo) : titoloStampa(filtri);
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
@@ -161,7 +176,13 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     filtri.includiCessati && "Inclusi cessati",
     univocoAttivo && "Univoco: un lavoratore per riga (scadenza più urgente)",
   ].filter(Boolean);
-  const parti = predefinita ? predefinita.filtriApplicati : partiPersonalizzata;
+
+  const partiPredefinita = [
+    ...predefinita?.filtriApplicati ?? [],
+    funzioneScelta ? `Funzione: ${funzioneScelta}` : null,
+  ].filter(Boolean) as string[];
+
+  const parti = predefinita ? partiPredefinita : partiPersonalizzata;
   const orizzontale = filtri.modello !== "scheda";
   const unita = filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
   const sottotitolo = [...parti, `${righe.length} ${unita}`].join(" · ");
@@ -178,25 +199,25 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface print:hidden">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-5 py-4">
-          <Button asChild size="sm" variant="ghost">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-2.5">
+          <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
             <Link to={predefinita ? "/stampe/predefinite" : "/stampe"}>
-              <ArrowLeft className="size-4" /> {predefinita ? "Stampe predefinite" : "Scelta stampe"}
+              <ArrowLeft className="size-3.5" /> {predefinita ? "Stampe predefinite" : "Scelta stampe"}
             </Link>
           </Button>
-          <h1 className="text-lg font-semibold">{predefinita ? predefinita.titolo : "Stampa personalizzata"}</h1>
+          <h1 className="text-base font-semibold">{predefinita ? predefinita.titolo : "Stampa personalizzata"}</h1>
           {!predefinita && (
             <GuidaStampe
               ruoli={ruoliCatalogo}
-              onApplica={(f, titolo) => {
+              onApplica={(f, t) => {
                 setFiltri(f);
-                toast.success(`Filtri impostati: ${titolo}`);
+                toast.success(`Filtri impostati: ${t}`);
               }}
             />
           )}
         </div>
       </header>
-      <main className={`mx-auto grid max-w-[1400px] gap-4 p-4 ${predefinita ? "" : "lg:grid-cols-[280px_1fr]"} print:block print:max-w-none print:p-0`}>
+      <main className={`mx-auto grid max-w-[1400px] gap-3 p-3 ${predefinita ? "" : "lg:grid-cols-[280px_1fr]"} print:block print:max-w-none print:p-0`}>
         {!predefinita && <FiltriStampa
           filtri={filtri}
           onChange={setFiltri}
@@ -213,6 +234,16 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="size-5 animate-spin" /> Caricamento…</div>
         ) : (
           <div className="min-w-0">
+            {/* Pillole di selezione rapida per le funzioni */}
+            {predefinita?.raggruppaPer === "funzione" && (
+              <BarraFunzioniPredefinite
+                funzioni={listaFunzioni}
+                totaleLavoratori={righeConFunzione.length}
+                funzioneScelta={funzioneScelta}
+                onSeleziona={setFunzioneScelta}
+              />
+            )}
+
             <BarraEsportazione
               colonneTolte={pref.tolte.length}
               colonneAggiunte={pref.aggiunte.length}
@@ -226,9 +257,11 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
               univocoNonApplicabile={univocoNonApplicabile}
               disabilitato={!righe.length}
             />
-            <div className="mb-2 rounded-md border border-emerald-700/40 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-950 print:hidden dark:bg-emerald-950/30 dark:text-emerald-100">
+
+            <div className="mb-2 rounded-md border border-emerald-700/40 bg-emerald-50 px-3 py-1 text-xs text-emerald-950 print:hidden dark:bg-emerald-950/30 dark:text-emerald-100">
               <b>Filtri attivi:</b> {parti.length ? parti.join(" · ") : "nessuno"} — <b>{righe.length} {unita}</b>
             </div>
+
             <FoglioStampa
               titolo={titolo}
               sottotitolo={sottotitolo}
