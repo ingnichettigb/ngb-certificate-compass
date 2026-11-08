@@ -4,6 +4,7 @@
  * Data creaz: 03/11/2026
  * Revisioni:
  *   rev 1 — 03/11/2026 20:50 — Esportazione Excel (foglio unico) e CSV con le sole colonne visibili in anteprima.
+ *   rev 2 — 08/11/2026 — Nome file anche per il PDF (estensione «pdf») e funzione «scarica» condivisa con esporta-pdf.ts.
  */
 import { cella, INTESTAZIONI, type Colonna, type RigaStampa } from "./dati-stampa";
 
@@ -13,7 +14,7 @@ export function timestampArchivio(d = new Date()): string {
   return `${String(d.getFullYear()).slice(-2)}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
 }
 
-export function nomeFileEsportazione(nomeBase: string, estensione: "xlsx" | "csv", d = new Date()): string {
+export function nomeFileEsportazione(nomeBase: string, estensione: "xlsx" | "csv" | "pdf", d = new Date()): string {
   return `030ArchAttestati_${timestampArchivio(d)}_${nomeBase}.${estensione}`;
 }
 
@@ -29,7 +30,7 @@ export function testoCsv(righe: RigaStampa[], colonne: Colonna[]): string {
     .join("\r\n");
 }
 
-function scarica(blob: Blob, nome: string) {
+export function scarica(blob: Blob, nome: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

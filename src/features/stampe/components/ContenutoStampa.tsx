@@ -11,6 +11,7 @@
  *   rev 5 — 06/11/2026 — Legenda di «NA», «No» e neretto per le colonne legate al ruolo (Preposto, Antincendio, Primo soccorso, Defibrillatore).
  *   rev 8 — 07/11/2026 — Passa alla tabella larghezze delle colonne e «+» delle colonne aggiungibili (proprietà facoltative).
  *   rev 9 — 08/11/2026 — Elenco lavoratori raggruppato per reparto o per funzione, con salto pagina a ogni gruppo (stampe predefinite).
+ *   rev 10 — 08/11/2026 — Prop «soloGruppo»: con un gruppo scelto l'anteprima mostra solo quel gruppo (come il PDF).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
@@ -40,6 +41,8 @@ type Props = {
   onAlternaColonna?: ((c: Colonna) => void) | undefined;
   /** Solo elenco lavoratori: divide il documento in gruppi, ciascuno su una pagina nuova in stampa. */
   raggruppaPer?: RaggruppaPer | undefined;
+  /** Solo con raggruppamento per gruppi di sicurezza: mostra un solo gruppo. */
+  soloGruppo?: string | null | undefined;
 };
 
 const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
@@ -81,7 +84,7 @@ export function ContenutoStampa(props: Props) {
   );
 }
 
-function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna, raggruppaPer }: Props) {
+function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna, raggruppaPer, soloGruppo }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
     <TabellaStampa
@@ -97,7 +100,7 @@ function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, 
       return (
         <>
           {raggruppaPer
-            ? gruppiLavoratori(righe, raggruppaPer).map((g, i) => (
+            ? gruppiLavoratori(righe, raggruppaPer, soloGruppo).map((g, i) => (
                 <Sezione key={g.titolo} titolo={g.titolo} saltoPagina={i > 0}>
                   {tab(g.righe)}
                 </Sezione>
