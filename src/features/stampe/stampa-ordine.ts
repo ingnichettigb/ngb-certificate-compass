@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: ordinamento per colonna e «Univoco». Nessun cambio di comportamento.
+ *   rev 2 — 08/11/2026 — Ordinamento per la nuova colonna «Data di nascita».
  */
 import type { Colonna, RigaStampa, StatoValidita } from "./stampa-tipi";
 import { cella, testoMancanti } from "./stampa-testo";
@@ -27,7 +28,8 @@ function chiaveOrdine(r: RigaStampa, c: Colonna): string | number | null {
     case "assunzione": return r.assunzione;
     case "fineContratto": return r.fineContratto;
     case "cessazione": return r.cessazione;
-    case "nascita": return r.dataNascita;
+    case "nascita":
+    case "dataNascita": return r.dataNascita;
     case "ore": return r.ore;
     case "giorni": return r.giorniAllaScadenza;
     case "stato": return PESO_STATO[r.stato];

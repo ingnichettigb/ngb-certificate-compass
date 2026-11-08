@@ -10,11 +10,13 @@
  *   rev 6 — 07/11/2026 — Totale delle righe (e dei lavoratori) in fondo al documento, anche in stampa.
  *   rev 5 — 06/11/2026 — Legenda di «NA», «No» e neretto per le colonne legate al ruolo (Preposto, Antincendio, Primo soccorso, Defibrillatore).
  *   rev 8 — 07/11/2026 — Passa alla tabella larghezze delle colonne e «+» delle colonne aggiungibili (proprietà facoltative).
+ *   rev 9 — 08/11/2026 — Elenco lavoratori raggruppato per reparto o per funzione, con salto pagina a ogni gruppo (stampe predefinite).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
 import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type GruppoColonne, type OrdineColonna, type RigaStampa } from "../dati-stampa";
 import type { LarghezzeColonne } from "../preferenze-colonne";
+import { gruppiLavoratori, type RaggruppaPer } from "../stampa-gruppi";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
 import { TabellaStampa } from "./TabellaStampa";
 
@@ -36,6 +38,8 @@ type Props = {
   /** Colonne che si possono aggiungere o togliere dal «+» in fondo all'intestazione. */
   gruppiColonne?: GruppoColonne[] | undefined;
   onAlternaColonna?: ((c: Colonna) => void) | undefined;
+  /** Solo elenco lavoratori: divide il documento in gruppi, ciascuno su una pagina nuova in stampa. */
+  raggruppaPer?: RaggruppaPer | undefined;
 };
 
 const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
@@ -55,9 +59,9 @@ function Legenda({ colonne }: { colonne: Colonna[] }) {
   );
 }
 
-function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
+function Sezione({ titolo, children, saltoPagina = false }: { titolo: string; children: React.ReactNode; saltoPagina?: boolean }) {
   return (
-    <section className="mb-5">
+    <section className="mb-5" style={saltoPagina ? { breakBefore: "page" } : undefined}>
       <h3 className="mb-1 border-b border-foreground/40 text-sm font-bold" style={{ breakAfter: "avoid" }}>{titolo}</h3>
       {children}
     </section>
@@ -77,7 +81,7 @@ export function ContenutoStampa(props: Props) {
   );
 }
 
-function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna }: Props) {
+function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna, raggruppaPer }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
     <TabellaStampa
@@ -92,7 +96,13 @@ function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, 
     case "lavoratori":
       return (
         <>
-          {tab(righe)}
+          {raggruppaPer
+            ? gruppiLavoratori(righe, raggruppaPer).map((g, i) => (
+                <Sezione key={g.titolo} titolo={g.titolo} saltoPagina={i > 0}>
+                  {tab(g.righe)}
+                </Sezione>
+              ))
+            : tab(righe)}
           <Legenda colonne={colonne} />
         </>
       );

@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: raggruppamento, etichette e testo delle celle. Nessun cambio di comportamento.
+ *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» (intestazioni e testo delle celle).
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
@@ -26,6 +27,7 @@ export function raggruppa<T>(righe: T[], chiave: (r: T) => string): [string, T[]
 export const INTESTAZIONI: Record<Colonna, string> = {
   lavoratore: "Lavoratore", cf: "Codice fiscale", reparto: "Reparto", mansione: "Mansione / Classe di concorso",
   ruoli: "Ruoli sicurezza", assunzione: "Data assunzione", nascita: "Luogo e data di nascita",
+  luogoNascita: "Luogo di nascita", dataNascita: "Data di nascita",
   corsoBase: "Corso base", corsoSpecifico: "Corso specifico", preposto: "Preposto", antincendio: "Antincendio",
   primoSoccorso: "Primo soccorso", defibrillatore: "Defibrillatore", mancano: "Cosa manca",
   fineContratto: "Fine contratto", cessazione: "Data cessazione", corso: "Corso", ore: "Ore",
@@ -46,6 +48,8 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "mansione": return r.mansione || "—";
     case "ruoli": return r.ruoli || "—";
     case "assunzione": return dataIt(r.assunzione);
+    case "luogoNascita": return r.luogoNascita || "—";
+    case "dataNascita": return dataIt(r.dataNascita);
     case "nascita": return [r.luogoNascita, r.dataNascita ? dataIt(r.dataNascita) : ""].filter(Boolean).join(", ") || "—";
     case "corsoBase":
     case "corsoSpecifico": return r.formazione[c] ?? "No";

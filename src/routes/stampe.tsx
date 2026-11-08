@@ -4,9 +4,10 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Rotta /stampe (pagina in src/features/stampe/).
+ *   rev 2 — 08/11/2026 — /stampe diventa il contenitore delle sotto-pagine (Outlet): ingresso (stampe.index.tsx), stampa personalizzata
+ *            (stampe.personalizzata.tsx), elenco carte (stampe.predefinite.index.tsx) e singola stampa (stampe.predefinite.$id.tsx).
  */
-import { createFileRoute } from "@tanstack/react-router";
-import { StampePage } from "@/features/stampe/StampePage";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/stampe")({
   head: () => ({
@@ -19,5 +20,5 @@ export const Route = createFileRoute("/stampe")({
       { property: "og:description", content: "Elenchi stampabili A4 della formazione sicurezza D.Lgs. 81/08." },
     ],
   }),
-  component: StampePage,
+  component: () => <Outlet />,
 });
