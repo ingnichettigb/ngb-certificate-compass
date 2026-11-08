@@ -6,6 +6,8 @@
  *   - Rev 1 (2026-10-28 21:40): Menu a tendina con spunte per corsi del piano formativo,
  *     tasto per inserimento nuovo corso nel catalogo, bottoni attivi con verifica attestato e 
  *     sincronizzazione bidirezionale con la matrice generale.
+ *   - Rev 2 (2026-11-08 11:10): Badge fabbisogno a 3 stati con indicazione data sintetica MM-AA
+ *     (Verde = in regola, Arancione = entro MM-AA, Rosso = scaduto MM-AA o da svolgere).
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,10 +15,10 @@ import {
   ChevronDown,
   Search,
   Plus,
-  Check,
   X,
   FileCheck,
-  AlertCircle,
+  Clock,
+  AlertTriangle,
   Loader2,
   BookOpen,
 } from "lucide-react";
@@ -49,6 +51,7 @@ import {
   CHIAVE_RUOLI,
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
+import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
 
 export function SelettoreCorsiDipendente({
   corrente,
@@ -90,17 +93,6 @@ export function SelettoreCorsiDipendente({
     if (!ruolo) return false;
     if (ruolo.obbligatorio_tutti) return true;
     return assegnazioni.some((a) => a.dipendente_id === corrente.id && a.ruolo_id === ruolo.id);
-  };
-
-  const haAttestatoCorso = (corso: TipoCorso): boolean => {
-    const cNome = corso.nome_corso.toLowerCase();
-    const cCod = (corso.codice || "").toLowerCase();
-    return attestati.some((att) => {
-      const nomeAtt = att.tipi_corso?.nome_corso;
-      if (att.dipendente_id !== corrente.id || !nomeAtt) return false;
-      const t = nomeAtt.toLowerCase();
-      return (cCod && t.includes(cCod)) || t.includes(cNome);
-    });
   };
 
   async function handleToggleCorso(corso: TipoCorso) {
@@ -311,27 +303,54 @@ export function SelettoreCorsiDipendente({
       {corsiAttivi.length > 0 ? (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {corsiAttivi.map((c) => {
-            const haDoc = haAttestatoCorso(c);
+            const esito = valutaStatoFabbisognoCorso({
+              corso: c,
+              attestati,
+              dipendenteId: corrente.id,
+            });
             const inLavorazione = salvandoCorsoId === c.id;
+
+            // Stile semantico del badge
+            const stileBordoSfondo =
+              esito.colore === "verde"
+                ? "border-primary bg-primary/10 text-foreground"
+                : esito.colore === "arancione"
+                  ? "border-amber-500/70 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                  : "border-destructive/60 bg-destructive/10 text-destructive";
 
             return (
               <div
                 key={c.id}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs shadow-2xs transition-all ${
-                  haDoc
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-amber-500/70 bg-amber-500/10 text-amber-900 dark:text-amber-200"
-                }`}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs shadow-2xs transition-all ${stileBordoSfondo}`}
+                title={esito.descrizione}
               >
-                {haDoc ? (
-                  <span title="Attestato in regola"><FileCheck className="h-3.5 w-3.5 text-primary shrink-0" /></span>
-                ) : (
-                  <span title="Da formare: attestato mancante"><AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" /></span>
+                {esito.colore === "verde" && (
+                  <FileCheck className="h-3.5 w-3.5 text-primary shrink-0" />
                 )}
+                {esito.colore === "arancione" && (
+                  <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                )}
+                {esito.colore === "rosso" && (
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                )}
+
                 <span className="font-medium">
                   {c.codice ? `[${c.codice}] ` : ""}
                   {c.nome_corso}
                 </span>
+
+                {esito.etichettaData && (
+                  <span
+                    className={`rounded px-1.5 py-0.2 font-mono text-[10px] font-semibold ${
+                      esito.colore === "arancione"
+                        ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
+                        : "bg-destructive/20 text-destructive"
+                    }`}
+                  >
+                    {esito.etichettaData}
+                  </span>
+                )}
+
                 <button
                   type="button"
                   disabled={inLavorazione}
