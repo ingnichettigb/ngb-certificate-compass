@@ -4,6 +4,8 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: tipi, filtri iniziali e colonne predefinite. Nessun cambio di comportamento.
+ *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» separate (luogoNascita, dataNascita); RigaStampa.ruoliElenco
+ *            (ruoli come elenco, per la stampa raggruppata per funzione).
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -19,7 +21,7 @@ export type VoceRuolo = "preposto" | "antincendio" | "primoSoccorso" | "defibril
 export const VOCI_CON_RUOLO: readonly VoceRuolo[] = ["preposto", "antincendio", "primoSoccorso", "defibrillatore"];
 
 export type Colonna =
-  | "lavoratore" | "cf" | "reparto" | "mansione" | "ruoli" | "assunzione" | "nascita"
+  | "lavoratore" | "cf" | "reparto" | "mansione" | "ruoli" | "assunzione" | "nascita" | "luogoNascita" | "dataNascita"
   | "mancano" | "fineContratto" | "cessazione"
   | VoceFormazione
   | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato"
@@ -86,6 +88,8 @@ export type RigaStampa = {
   classe?: string;
   mansione: string;
   ruoli: string;
+  /** Gli stessi ruoli di «ruoli» come elenco ordinato (solo elenco lavoratori). */
+  ruoliElenco?: string[];
   assunzione: string | null;
   luogoNascita: string;
   dataNascita: string | null;

@@ -17,6 +17,10 @@ import { Route as MassivoRouteImport } from './routes/massivo'
 import { Route as OperatoreRouteImport } from './routes/operatore'
 import { Route as ScadenzeRouteImport } from './routes/scadenze'
 import { Route as StampeRouteImport } from './routes/stampe'
+import { Route as StampeIndexRouteImport } from './routes/stampe.index'
+import { Route as StampePersonalizzataRouteImport } from './routes/stampe.personalizzata'
+import { Route as StampePredefiniteIndexRouteImport } from './routes/stampe.predefinite.index'
+import { Route as StampePredefiniteIdRouteImport } from './routes/stampe.predefinite.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +62,26 @@ const StampeRoute = StampeRouteImport.update({
   path: '/stampe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StampeIndexRoute = StampeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StampeRoute,
+} as any)
+const StampePersonalizzataRoute = StampePersonalizzataRouteImport.update({
+  id: '/personalizzata',
+  path: '/personalizzata',
+  getParentRoute: () => StampeRoute,
+} as any)
+const StampePredefiniteIndexRoute = StampePredefiniteIndexRouteImport.update({
+  id: '/predefinite/',
+  path: '/predefinite/',
+  getParentRoute: () => StampeRoute,
+} as any)
+const StampePredefiniteIdRoute = StampePredefiniteIdRouteImport.update({
+  id: '/predefinite/$id',
+  path: '/predefinite/$id',
+  getParentRoute: () => StampeRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,7 +91,11 @@ export interface FileRoutesByFullPath {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
-  '/stampe': typeof StampeRoute
+  '/stampe': typeof StampeRouteWithChildren
+  '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe/': typeof StampeIndexRoute
+  '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
+  '/stampe/predefinite/': typeof StampePredefiniteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,7 +105,10 @@ export interface FileRoutesByTo {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
-  '/stampe': typeof StampeRoute
+  '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe': typeof StampeIndexRoute
+  '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
+  '/stampe/predefinite': typeof StampePredefiniteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,7 +119,11 @@ export interface FileRoutesById {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
-  '/stampe': typeof StampeRoute
+  '/stampe': typeof StampeRouteWithChildren
+  '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe/': typeof StampeIndexRoute
+  '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
+  '/stampe/predefinite/': typeof StampePredefiniteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +136,10 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/stampe/personalizzata'
+    | '/stampe/'
+    | '/stampe/predefinite/$id'
+    | '/stampe/predefinite/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -110,7 +149,10 @@ export interface FileRouteTypes {
     | '/massivo'
     | '/operatore'
     | '/scadenze'
+    | '/stampe/personalizzata'
     | '/stampe'
+    | '/stampe/predefinite/$id'
+    | '/stampe/predefinite'
   id:
     | '__root__'
     | '/'
@@ -121,6 +163,10 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/stampe/personalizzata'
+    | '/stampe/'
+    | '/stampe/predefinite/$id'
+    | '/stampe/predefinite/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,7 +177,7 @@ export interface RootRouteChildren {
   MassivoRoute: typeof MassivoRoute
   OperatoreRoute: typeof OperatoreRoute
   ScadenzeRoute: typeof ScadenzeRoute
-  StampeRoute: typeof StampeRoute
+  StampeRoute: typeof StampeRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -192,8 +238,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StampeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stampe/': {
+      id: '/stampe/'
+      path: '/'
+      fullPath: '/stampe/'
+      preLoaderRoute: typeof StampeIndexRouteImport
+      parentRoute: typeof StampeRoute
+    }
+    '/stampe/personalizzata': {
+      id: '/stampe/personalizzata'
+      path: '/personalizzata'
+      fullPath: '/stampe/personalizzata'
+      preLoaderRoute: typeof StampePersonalizzataRouteImport
+      parentRoute: typeof StampeRoute
+    }
+    '/stampe/predefinite/': {
+      id: '/stampe/predefinite/'
+      path: '/predefinite'
+      fullPath: '/stampe/predefinite/'
+      preLoaderRoute: typeof StampePredefiniteIndexRouteImport
+      parentRoute: typeof StampeRoute
+    }
+    '/stampe/predefinite/$id': {
+      id: '/stampe/predefinite/$id'
+      path: '/predefinite/$id'
+      fullPath: '/stampe/predefinite/$id'
+      preLoaderRoute: typeof StampePredefiniteIdRouteImport
+      parentRoute: typeof StampeRoute
+    }
   }
 }
+
+interface StampeRouteChildren {
+  StampePersonalizzataRoute: typeof StampePersonalizzataRoute
+  StampeIndexRoute: typeof StampeIndexRoute
+  StampePredefiniteIdRoute: typeof StampePredefiniteIdRoute
+  StampePredefiniteIndexRoute: typeof StampePredefiniteIndexRoute
+}
+
+const StampeRouteChildren: StampeRouteChildren = {
+  StampePersonalizzataRoute: StampePersonalizzataRoute,
+  StampeIndexRoute: StampeIndexRoute,
+  StampePredefiniteIdRoute: StampePredefiniteIdRoute,
+  StampePredefiniteIndexRoute: StampePredefiniteIndexRoute,
+}
+
+const StampeRouteWithChildren =
+  StampeRoute._addFileChildren(StampeRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -203,7 +294,7 @@ const rootRouteChildren: RootRouteChildren = {
   MassivoRoute: MassivoRoute,
   OperatoreRoute: OperatoreRoute,
   ScadenzeRoute: ScadenzeRoute,
-  StampeRoute: StampeRoute,
+  StampeRoute: StampeRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

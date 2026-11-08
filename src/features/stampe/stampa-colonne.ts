@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: colonne aggiungibili dall'intestazione. Nessun cambio di comportamento.
+ *   rev 2 — 08/11/2026 — Aggiunte tra le colonne dell'anagrafica «Luogo di nascita» e «Data di nascita».
  */
 import type { Attestato } from "@/lib/api";
 import type { Colonna, Modello } from "./stampa-tipi";
@@ -17,7 +18,7 @@ export type GruppoColonne = { titolo: string; colonne: Colonna[] };
 
 /** Raggruppamento funzionale di tutte le colonne esistenti. L'ordine qui è indifferente: gruppiColonne() ordina per nome. */
 const RAGGRUPPAMENTO_COLONNE: GruppoColonne[] = [
-  { titolo: "Anagrafica", colonne: ["lavoratore", "cf", "reparto", "categoria", "mansione", "nascita"] },
+  { titolo: "Anagrafica", colonne: ["lavoratore", "cf", "reparto", "categoria", "mansione", "nascita", "luogoNascita", "dataNascita"] },
   { titolo: "Attestato", colonne: ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato"] },
   { titolo: "Contratto", colonne: ["assunzione", "fineContratto", "cessazione"] },
   { titolo: "Controllo dati", colonne: ["mancano"] },
