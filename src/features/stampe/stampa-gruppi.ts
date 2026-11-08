@@ -4,44 +4,107 @@
  * Data creaz: 08/11/2026
  * Revisioni:
  *   rev 1 — 08/11/2026 — Raggruppamento dell'elenco lavoratori per reparto o per funzione di sicurezza (stampe predefinite 2 e 3).
- *   rev 2 — 08/11/2026 14:30 — Supporto filtro singola funzione (soloFunzione) ed elenco delle funzioni con conteggio lavoratori per le pillole di selezione rapida.
+ *   rev 2 — 08/11/2026 14:40 — Raggruppamento per Gruppi di sicurezza (Preposti, Antincendio, Primo soccorso, Defibrillatore, Evacuazione, Privacy, Sicurezza lavoratori) al posto delle singole funzioni, con filtro rapido e conteggi.
  */
 import type { RigaStampa } from "./stampa-tipi";
 import { raggruppa } from "./stampa-testo";
 
 export type RaggruppaPer = "reparto" | "funzione";
 export type GruppoStampa = { titolo: string; righe: RigaStampa[] };
-export type InfoFunzione = { nome: string; conteggio: number };
+export type InfoGruppo = { nome: string; conteggio: number };
 
 const ORDINE_ALFABETICO = new Intl.Collator("it", { sensitivity: "base" });
 
-/** Tiene solo i lavoratori che hanno almeno una funzione (ruolo di sicurezza) assegnata. */
-export function conFunzione(righe: RigaStampa[]): RigaStampa[] {
-  return righe.filter((r) => (r.ruoliElenco?.length ?? 0) > 0);
+/** Ordine standard canonico delle macro-aree della sicurezza per la barra e la stampa. */
+export const ORDINE_MACRO_GRUPPI = [
+  "Preposti",
+  "Antincendio",
+  "Primo soccorso",
+  "Defibrillatore",
+  "Evacuazione ed emergenze",
+  "Privacy",
+  "Sicurezza lavoratori",
+] as const;
+
+/**
+ * Risolve la macro-categoria o il gruppo omogeneo partendo dal nome del ruolo
+ * o dell'attestato di sicurezza.
+ */
+export function gruppoDiRuolo(nomeRuolo: string): string {
+  const n = nomeRuolo.toLowerCase().trim();
+  if (n.includes("preposto")) return "Preposti";
+  if (n.includes("antincendio") || n.includes("vvff")) return "Antincendio";
+  if (n.includes("primo soccorso")) return "Primo soccorso";
+  if (n.includes("defibrillatore") || n.includes("blsd") || n.includes("dae")) return "Defibrillatore";
+  if (n.includes("evacuaz") || n.includes("emergenz")) return "Evacuazione ed emergenze";
+  if (n.includes("privac")) return "Privacy";
+  if (n.includes("sicurezza") || n.includes("lavorator") || n.includes("aspp") || n.includes("dvr")) {
+    return "Sicurezza lavoratori";
+  }
+  return "Altro";
 }
 
 /**
- * Ricava l'elenco distinto di tutte le funzioni di sicurezza presenti nei lavoratori,
- * ciascuna con il numero totale di lavoratori che la ricoprono.
+ * Ricava l'insieme univoco dei gruppi a cui appartiene un lavoratore,
+ * valutando sia i suoi ruoli sia eventuali attestati registrati.
  */
-export function elencoFunzioni(righe: RigaStampa[]): InfoFunzione[] {
+export function gruppiLavoratore(r: RigaStampa): string[] {
+  const gruppi = new Set<string>();
+  for (const ruolo of r.ruoliElenco ?? []) {
+    const g = gruppoDiRuolo(ruolo);
+    if (g && g !== "Altro") gruppi.add(g);
+  }
+  // Se ha esplicitamente attestati di Privacy
+  if (
+    r.codice?.toUpperCase().startsWith("PRIV") ||
+    r.corso?.toLowerCase().includes("privac") ||
+    r.gruppo?.toLowerCase().includes("privac")
+  ) {
+    gruppi.add("Privacy");
+  }
+  return [...gruppi];
+}
+
+/** Tiene solo i lavoratori che appartengono ad almeno un gruppo di sicurezza. */
+export function conFunzione(righe: RigaStampa[]): RigaStampa[] {
+  return righe.filter((r) => gruppiLavoratore(r).length > 0);
+}
+
+/**
+ * Ricava l'elenco dei gruppi presenti nei lavoratori filtrati,
+ * ordinati secondo la sequenza logica di riferimento, con il conteggio dei lavoratori per ciascuno.
+ */
+export function elencoGruppi(righe: RigaStampa[]): InfoGruppo[] {
   const conteggi = new Map<string, number>();
   for (const r of righe) {
-    for (const f of new Set(r.ruoliElenco ?? [])) {
-      conteggi.set(f, (conteggi.get(f) ?? 0) + 1);
+    for (const g of new Set(gruppiLavoratore(r))) {
+      conteggi.set(g, (conteggi.get(g) ?? 0) + 1);
     }
   }
-  return [...conteggi.entries()]
+
+  const risultato: InfoGruppo[] = [];
+  // 1. Inserisce prima i gruppi nell'ordine canonico stabilito
+  for (const g of ORDINE_MACRO_GRUPPI) {
+    const c = conteggi.get(g);
+    if (c && c > 0) {
+      risultato.push({ nome: g, conteggio: c });
+      conteggi.delete(g);
+    }
+  }
+  // 2. Aggiunge eventuali altri gruppi residuali in ordine alfabetico
+  const residuali = [...conteggi.entries()]
     .sort(([a], [b]) => ORDINE_ALFABETICO.compare(a, b))
     .map(([nome, conteggio]) => ({ nome, conteggio }));
+
+  return [...risultato, ...residuali];
 }
 
 /**
  * Divide le righe in gruppi, ciascuno da stampare su una pagina nuova.
- * - reparto: un gruppo per reparto, in ordine alfabetico; dentro il gruppo restano l'ordine e le scelte dell'utente.
- * - funzione: un gruppo per funzione (oppure solo quello della funzione scelta); chi non ne ha nessuna non compare.
+ * - reparto: un gruppo per reparto, in ordine alfabetico.
+ * - funzione: un gruppo per macro-area di sicurezza (oppure solo quello scelto dal filtro pillola).
  */
-export function gruppiLavoratori(righe: RigaStampa[], per: RaggruppaPer, soloFunzione?: string | null): GruppoStampa[] {
+export function gruppiLavoratori(righe: RigaStampa[], per: RaggruppaPer, soloGruppo?: string | null): GruppoStampa[] {
   if (per === "reparto") {
     const ordinate = [...righe].sort((a, b) => ORDINE_ALFABETICO.compare(a.reparto, b.reparto));
     return raggruppa(ordinate, (r) => r.reparto).map(([reparto, rr]) => ({
@@ -50,21 +113,32 @@ export function gruppiLavoratori(righe: RigaStampa[], per: RaggruppaPer, soloFun
     }));
   }
 
-  // Se è selezionata una specifica funzione, mostra solo quella sezione
-  if (soloFunzione) {
-    const filtrate = righe.filter((r) => r.ruoliElenco?.includes(soloFunzione));
-    return [{ titolo: `Funzione: ${soloFunzione} – ${filtrate.length} lavoratori`, righe: filtrate }];
+  // Se è selezionato un singolo gruppo tramite la pillola in alto
+  if (soloGruppo) {
+    const filtrate = righe.filter((r) => gruppiLavoratore(r).includes(soloGruppo));
+    return [{ titolo: `Gruppo: ${soloGruppo} – ${filtrate.length} lavoratori`, righe: filtrate }];
   }
 
-  const perFunzione = new Map<string, RigaStampa[]>();
+  const perGruppo = new Map<string, RigaStampa[]>();
   for (const r of righe) {
-    for (const f of new Set(r.ruoliElenco ?? [])) {
-      const lista = perFunzione.get(f) ?? [];
+    for (const g of new Set(gruppiLavoratore(r))) {
+      const lista = perGruppo.get(g) ?? [];
       lista.push(r);
-      perFunzione.set(f, lista);
+      perGruppo.set(g, lista);
     }
   }
-  return [...perFunzione.entries()]
-    .sort(([a], [b]) => ORDINE_ALFABETICO.compare(a, b))
-    .map(([funzione, rr]) => ({ titolo: `Funzione: ${funzione} – ${rr.length} lavoratori`, righe: rr }));
+
+  const risultato: GruppoStampa[] = [];
+  for (const g of ORDINE_MACRO_GRUPPI) {
+    const rr = perGruppo.get(g);
+    if (rr && rr.length > 0) {
+      risultato.push({ titolo: `Gruppo: ${g} – ${rr.length} lavoratori`, righe: rr });
+      perGruppo.delete(g);
+    }
+  }
+  for (const [g, rr] of [...perGruppo.entries()].sort(([a], [b]) => ORDINE_ALFABETICO.compare(a, b))) {
+    risultato.push({ titolo: `Gruppo: ${g} – ${rr.length} lavoratori`, righe: rr });
+  }
+
+  return risultato;
 }
