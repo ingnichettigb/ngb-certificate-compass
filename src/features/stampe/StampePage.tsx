@@ -15,10 +15,9 @@
  *   rev 8 — 07/11/2026 — Colonne tolte/aggiunte (+) e larghezze ridimensionabili, ricordate per ogni tipo di documento; le scelte
  *                        valgono anche per stampa, CSV ed Excel. «Ripristina colonne» azzera le scelte del documento corrente.
  *   rev 10 — 08/11/2026 — Stessa pagina anche per le stampe predefinite (prop «predefinita»): filtri e colonne di partenza già
- *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina; la personalizzata non cambia
- *                         (aggiunto solo il link «Scelta stampe»).
- *   rev 11 — 08/11/2026 14:30 — Integrazione BarraFunzioniPredefinite nella stampa «per-funzioni», compattazione testata (padding py-2.5)
- *                               e filtro reattivo per singola funzione su tabella, PDF, CSV ed Excel.
+ *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina.
+ *   rev 11 — 08/11/2026 14:40 — Integrazione BarraGruppiPredefinite nella stampa predefinita per gruppi, compattazione testata (padding py-2.5)
+ *                               e filtro reattivo per singolo gruppo su tabella, PDF, CSV ed Excel.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -39,13 +38,13 @@ import {
   alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze,
   type LarghezzeColonne, type PreferenzeColonne,
 } from "./preferenze-colonne";
-import { conFunzione, elencoFunzioni } from "./stampa-gruppi";
+import { conFunzione, elencoGruppi, gruppiLavoratore } from "./stampa-gruppi";
 import type { StampaPredefinita } from "./stampe-predefinite";
 import { FiltriStampa } from "./components/FiltriStampa";
 import { FoglioStampa } from "./components/FoglioStampa";
 import { ContenutoStampa } from "./components/ContenutoStampa";
 import { BarraEsportazione } from "./components/BarraEsportazione";
-import { BarraFunzioniPredefinite } from "./components/BarraFunzioniPredefinite";
+import { BarraGruppiPredefinite } from "./components/BarraGruppiPredefinite";
 import { GuidaStampe } from "./components/GuidaStampe";
 
 const distinti = (v: (string | null | undefined)[]) =>
@@ -57,7 +56,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const [pref, setPref] = useState<PreferenzeColonne>(PREFERENZE_VUOTE);
   const [ordine, setOrdine] = useState<OrdineColonna | null>(null);
   const [univoco, setUnivoco] = useState(false);
-  const [funzioneScelta, setFunzioneScelta] = useState<string | null>(null);
+  const [gruppoScelto, setGruppoScelto] = useState<string | null>(null);
 
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
   const dip = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti });
@@ -68,7 +67,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const conArrivi = filtri.arrivi !== "no";
   const vista = predefinita ? `pre:${predefinita.id}` : `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
 
-  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setFunzioneScelta(null); }, [vista]);
+  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setGruppoScelto(null); }, [vista]);
   const cambiaPreferenze = (cambia: (p: PreferenzeColonne) => PreferenzeColonne) =>
     setPref((p) => {
       const n = cambia(p);
@@ -113,28 +112,28 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
   );
 
-  // Per la stampa per-funzioni: elenco completo dei lavoratori con almeno una funzione
-  const righeConFunzione = useMemo(
+  // Per la stampa raggruppata per gruppi: elenco lavoratori con almeno un gruppo
+  const righeConGruppo = useMemo(
     () => (predefinita?.raggruppaPer === "funzione" ? conFunzione(righeGrezze) : []),
     [righeGrezze, predefinita],
   );
 
-  // Lista dinamica delle funzioni realmente censite con conteggi
-  const listaFunzioni = useMemo(
-    () => (predefinita?.raggruppaPer === "funzione" ? elencoFunzioni(righeConFunzione) : []),
-    [righeConFunzione, predefinita],
+  // Elenco dei gruppi presenti con conteggio lavoratori
+  const listaGruppi = useMemo(
+    () => (predefinita?.raggruppaPer === "funzione" ? elencoGruppi(righeConGruppo) : []),
+    [righeConGruppo, predefinita],
   );
 
   const righeCalcolate = useMemo(() => {
     if (predefinita?.raggruppaPer === "funzione") {
-      if (funzioneScelta) {
-        return righeConFunzione.filter((r) => r.ruoliElenco?.includes(funzioneScelta));
+      if (gruppoScelto) {
+        return righeConGruppo.filter((r) => gruppiLavoratore(r).includes(gruppoScelto));
       }
-      return righeConFunzione;
+      return righeConGruppo;
     }
     if (predefinita?.raggruppaPer === "reparto") return [...righeGrezze].sort((a, b) => a.reparto.localeCompare(b.reparto, "it"));
     return righeGrezze;
-  }, [righeGrezze, righeConFunzione, predefinita, funzioneScelta]);
+  }, [righeGrezze, righeConGruppo, predefinita, gruppoScelto]);
 
   const univocoNonApplicabile = filtri.modello === "lavoratori" || filtri.modello === "scheda";
   const univocoAttivo = univoco && !univocoNonApplicabile;
@@ -155,7 +154,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const righeFile = useMemo(() => ordinaRighe(righe, ordineAttivo), [righe, ordineAttivo]);
 
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne.filter((c) => c !== "lavoratore")] : colonne;
-  const titolo = predefinita ? (funzioneScelta ? `${predefinita.titolo} – ${funzioneScelta}` : predefinita.titolo) : titoloStampa(filtri);
+  const titolo = predefinita ? (gruppoScelto ? `${predefinita.titolo} – ${gruppoScelto}` : predefinita.titolo) : titoloStampa(filtri);
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
@@ -179,7 +178,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const partiPredefinita = [
     ...predefinita?.filtriApplicati ?? [],
-    funzioneScelta ? `Funzione: ${funzioneScelta}` : null,
+    gruppoScelto ? `Gruppo: ${gruppoScelto}` : null,
   ].filter(Boolean) as string[];
 
   const parti = predefinita ? partiPredefinita : partiPersonalizzata;
@@ -234,13 +233,13 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="size-5 animate-spin" /> Caricamento…</div>
         ) : (
           <div className="min-w-0">
-            {/* Pillole di selezione rapida per le funzioni */}
+            {/* Barra pillole per i gruppi di sicurezza */}
             {predefinita?.raggruppaPer === "funzione" && (
-              <BarraFunzioniPredefinite
-                funzioni={listaFunzioni}
-                totaleLavoratori={righeConFunzione.length}
-                funzioneScelta={funzioneScelta}
-                onSeleziona={setFunzioneScelta}
+              <BarraGruppiPredefinite
+                gruppi={listaGruppi}
+                totaleLavoratori={righeConGruppo.length}
+                gruppoScelto={gruppoScelto}
+                onSeleziona={setGruppoScelto}
               />
             )}
 
