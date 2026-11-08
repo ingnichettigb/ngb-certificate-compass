@@ -6,7 +6,7 @@
  *   rev 1 — 03/11/2026 20:50 — Pulsanti CSV, Excel, Stampa/PDF in alto a destra e ripristino colonne tolte.
  *   rev 2 — 06/11/2026 — Pulsante «Univoco» (un lavoratore per riga) e suggerimento sull'ordinamento delle colonne.
  *   rev 3 — 07/11/2026 — «Ripristina colonne» conta anche colonne aggiunte e larghezze; suggerimento su trascinamento, doppio clic e «+».
- *   rev 4 — 08/11/2026 14:30 — Compattazione riga d'aiuto e margini verticali per ridurre l'ingombro in alto prima della tabella.
+ *   rev 4 — 08/11/2026 14:40 — Compattazione riga d'aiuto e margini verticali per ridurre l'ingombro in alto prima della tabella.
  */
 import { FileSpreadsheet, FileText, Printer, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ export function BarraEsportazione({
           </Button>
         ) : (
           <span>
-            <b>Gestione colonne:</b> clicca il titolo per ordinare, ✕ per togliere, + per aggiungere, trascina il bordo per larghezza.
+            <b>Gestione colonne:</b> clicca per ordinare, ✕ per togliere, + per aggiungere, trascina il bordo per larghezza.
           </span>
         )}
       </div>
