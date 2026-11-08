@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Elenco unico delle voci della barra di navigazione, raggruppate per fase di lavoro,
  *            con la descrizione mostrata al passaggio del mouse.
+ *   rev 2 — 07/11/2026 — Etichette su due righe («\n» = a capo) per accorciare i bottoni.
  */
 import {
   Calendar,
@@ -30,7 +31,7 @@ export type RottaNav =
 
 export interface VoceNav {
   to: RottaNav;
-  /** Testo breve mostrato nel bottone. */
+  /** Testo breve mostrato nel bottone; «\n» manda a capo (etichetta su due righe). */
   label: string;
   /** Spiegazione mostrata al passaggio del mouse. */
   descrizione: string;
@@ -55,7 +56,7 @@ export const GRUPPI_NAV: VoceNav[][] = [
   [
     {
       to: "/carica",
-      label: "Modulo auto invio",
+      label: "Modulo\nauto invio",
       descrizione:
         "Pagina pubblica da telefono: il lavoratore invia da solo il proprio attestato. Si apre in una nuova scheda.",
       Icona: Smartphone,
@@ -63,13 +64,13 @@ export const GRUPPI_NAV: VoceNav[][] = [
     },
     {
       to: "/operatore",
-      label: "Inserimento singolo",
+      label: "Inserimento\nsingolo",
       descrizione: "Carichi un attestato alla volta: l'AI legge nome, codice fiscale e data del corso.",
       Icona: Pencil,
     },
     {
       to: "/massivo",
-      label: "Inserimento massivo",
+      label: "Inserimento\nmassivo",
       descrizione:
         "Per l'avvio a regime e per gli arrivi in blocco dopo un corso: importi da cartella e agganci molti file al database.",
       Icona: FolderInput,
@@ -78,7 +79,7 @@ export const GRUPPI_NAV: VoceNav[][] = [
   [
     {
       to: "/hr",
-      label: "Validazione HR",
+      label: "Validazione\nHR",
       descrizione: "Controlli e approvi o respingi gli attestati inviati dal modulo.",
       Icona: CheckCircle2,
     },

@@ -19,7 +19,7 @@ import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
 import { DialogEsportaAttestati } from "@/features/esporta-attestati/DialogEsportaAttestati";
 
 const STILE_TASTO =
-  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-verde-vivo bg-verde-vivo/15 px-3 py-1.5 text-sm font-semibold text-primary transition-all hover:bg-verde-vivo/30";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-verde-vivo bg-verde-vivo/15 px-2.5 py-0.5 text-sm font-semibold leading-tight text-primary transition-all hover:bg-verde-vivo/30";
 
 export function MenuSistema() {
   const [aperto, setAperto] = useState(false);
