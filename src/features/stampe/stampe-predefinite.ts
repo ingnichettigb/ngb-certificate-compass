@@ -4,6 +4,7 @@
  * Data creaz: 08/11/2026
  * Revisioni:
  *   rev 1 — 08/11/2026 — Le 7 stampe predefinite: filtri già impostati, colonne di partenza, raggruppamento e spiegazione per le carte.
+ *   rev 2 — 08/11/2026 14:40 — Aggiornata la stampa per-funzioni in «Stampa per gruppi di sicurezza» con supporto a Privacy e macro-gruppi.
  */
 import { COLONNE_PREDEFINITE, FILTRI_INIZIALI, type Colonna, type FiltriStampa } from "./stampa-tipi";
 import type { RaggruppaPer } from "./stampa-gruppi";
@@ -63,15 +64,15 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
   {
     id: "per-funzioni",
     famiglia: "Anagrafica",
-    titolo: "Stampa per funzioni",
+    titolo: "Stampa per gruppi di sicurezza",
     descrizione:
-      "I lavoratori divisi per funzione di sicurezza (preposto, antincendio, primo soccorso…): ogni funzione parte su una pagina nuova. Chi ha più funzioni compare in ciascuna.",
+      "I lavoratori divisi per gruppo di sicurezza (preposti, antincendio, primo soccorso, defibrillatore, evacuazione, privacy…): ogni gruppo parte su una pagina nuova. Chi appartiene a più gruppi compare in ciascuno.",
     contiene: "Cognome e nome, codice fiscale, reparto, mansione, ruoli di sicurezza.",
     filtri: lavoratori,
     colonne: ["lavoratore", "cf", "reparto", "mansione", "ruoli"],
     raggruppaPer: "funzione",
-    filtriApplicati: ["Solo lavoratori con una funzione assegnata", "Divisi per funzione"],
-    messaggioVuoto: "Nessun lavoratore ha una funzione di sicurezza assegnata.",
+    filtriApplicati: ["Solo lavoratori con un gruppo assegnato", "Divisi per gruppo"],
+    messaggioVuoto: "Nessun lavoratore appartiene a un gruppo di sicurezza.",
   },
   {
     id: "scadenze-tutte",
