@@ -7,6 +7,7 @@
  *   rev 2 — 02/11/2026 11:10 — Aggiunta voce «Stampe & Report».
  *   rev 3 — 07/11/2026 — Barra unica su tutte le pagine del gestionale (montata in __root): voci raggruppate per
  *            fase di lavoro, suggerimento al passaggio del mouse, bottoni verde vivo, menu «Sistema» a destra.
+ *   rev 4 — 07/11/2026 — Etichette dei bottoni su due righe (più corti); icona e testo centrati.
  */
 import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
@@ -16,7 +17,7 @@ import { GRUPPI_NAV, type VoceNav } from "./voci-navigazione";
 
 // A riposo: verde chiaro con bordo verde vivo. Pagina attiva: verde scuro pieno.
 const BASE =
-  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-verde-vivo bg-verde-vivo/15 px-3 py-1.5 text-sm font-semibold text-primary transition-all hover:bg-verde-vivo/30";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 whitespace-pre-line rounded-lg border-2 border-verde-vivo bg-verde-vivo/15 px-2.5 py-0.5 text-center text-sm font-semibold leading-tight text-primary transition-all hover:bg-verde-vivo/30";
 const ATTIVO = "!bg-primary !text-primary-foreground shadow-sm ring-2 ring-verde-vivo/40";
 
 function VoceBarra({ voce }: { voce: VoceNav }) {
@@ -32,7 +33,7 @@ function VoceBarra({ voce }: { voce: VoceNav }) {
           className={BASE}
           activeProps={{ className: ATTIVO }}
         >
-          <Icona className="size-4" />
+          <Icona className="size-4 shrink-0" />
           {soloIcona ? null : <span>{label}</span>}
         </Link>
       </TooltipTrigger>
