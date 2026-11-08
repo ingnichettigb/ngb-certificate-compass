@@ -221,7 +221,7 @@ export function DialogImportaCartellaHr({
     let errori = 0;
 
     for (let i = 0; i < daImportare.length; i++) {
-      const item = daImportare[i];
+      const item = daImportare[i]!;
       setAvanzamento({ corrente: i + 1, totale: daImportare.length });
 
       try {

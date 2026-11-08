@@ -6,7 +6,7 @@
  *   rev 1 — 08/11/2026 14:30 — Barra orizzontale a pillole: «Tutte le funzioni» o selezione rapida singola funzione, con stile verde brand.
  */
 import { Shield } from "lucide-react";
-import type { InfoFunzione } from "../stampa-gruppi";
+type InfoFunzione = { nome: string; conteggio: number };
 
 type Props = {
   funzioni: InfoFunzione[];

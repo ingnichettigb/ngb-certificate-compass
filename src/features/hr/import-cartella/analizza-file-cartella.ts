@@ -98,7 +98,7 @@ export function abbinaDipendente(
   });
 
   if (candidati.length === 1) {
-    return { dipendente: candidati[0], stato: "univoco" };
+    return { dipendente: candidati[0] ?? null, stato: "univoco" };
   }
   if (candidati.length > 1) {
     // Prova a raffinare con il nome di battesimo
@@ -107,9 +107,9 @@ export function abbinaDipendente(
       return nomNorm && nomeFileNorm.includes(nomNorm);
     });
     if (precisi.length === 1) {
-      return { dipendente: precisi[0], stato: "univoco" };
+      return { dipendente: precisi[0] ?? null, stato: "univoco" };
     }
-    return { dipendente: candidati[0], stato: "ambiguo" };
+    return { dipendente: candidati[0] ?? null, stato: "ambiguo" };
   }
 
   return { dipendente: null, stato: "non_trovato" };

@@ -22,7 +22,7 @@ export function formattaMeseAnno(dataIso: string | null | undefined): string {
   if (!dataIso || dataIso.length < 7) return "";
   const parti = dataIso.slice(0, 10).split("-");
   if (parti.length < 2) return "";
-  const anno = parti[0];
+  const anno = parti[0] ?? "";
   const mese = parti[1];
   return `${mese}-${anno.slice(2)}`;
 }
@@ -73,7 +73,7 @@ export function valutaStatoFabbisognoCorso({
   if (svoltiDiretti.length > 0) {
     // Ordina dal più recente
     svoltiDiretti.sort((a, b) => (b.data_corso || "").localeCompare(a.data_corso || ""));
-    const piuRecente = svoltiDiretti[0];
+    const piuRecente = svoltiDiretti[0]!;
     const scadenza = piuRecente.data_scadenza_calcolata;
 
     if (!scadenza) {
@@ -118,7 +118,7 @@ export function valutaStatoFabbisognoCorso({
           a.data_scadenza_calcolata || a.data_corso || "",
         ),
       );
-      const rif = pertinentiFamiglia[0];
+      const rif = pertinentiFamiglia[0]!;
       const scadenza = rif.data_scadenza_calcolata;
 
       if (scadenza) {

@@ -63,7 +63,8 @@ export function ModuloDati({
 
   async function completaDatiDaDatabase() {
     if (!form.cognome.trim() && !form.nome.trim() && !form.codice_fiscale.trim()) {
-      return toast.info("Inserisci cognome e nome o il codice fiscale per cercare nel database");
+      toast.info("Inserisci cognome e nome o il codice fiscale per cercare nel database");
+      return;
     }
     setCercandoDb(true);
     try {
