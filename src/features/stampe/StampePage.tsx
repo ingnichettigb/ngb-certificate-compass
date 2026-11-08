@@ -18,6 +18,8 @@
  *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina.
  *   rev 11 — 08/11/2026 14:40 — Integrazione BarraGruppiPredefinite nella stampa predefinita per gruppi, compattazione testata (padding py-2.5)
  *                               e filtro reattivo per singolo gruppo su tabella, PDF, CSV ed Excel.
+ *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
+ *                         modificabile (esporta-pdf.ts), senza passare dalla stampante PDF installata.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,10 +32,11 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, testoTotale, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
+import { righeLegenda, scaricaPdf, sezioniPerPdf } from "./esporta-pdf";
 import {
   alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze,
   type LarghezzeColonne, type PreferenzeColonne,
@@ -195,6 +198,24 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     }
   }
 
+  async function pdf() {
+    try {
+      await scaricaPdf(nomeBase, {
+        titolo,
+        sottotitolo,
+        ditta: ditta.data,
+        orizzontale,
+        colonne,
+        larghezze: pref.larghezze,
+        sezioni: sezioniPerPdf(filtri, righeFile, ordineAttivo, tutti, predefinita?.raggruppaPer, gruppoScelto),
+        totale: testoTotale(filtri.modello, righe),
+        legenda: righeLegenda(colonne),
+      });
+    } catch (e) {
+      toast.error(`Creazione del PDF non riuscita: ${(e as Error).message}`);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface print:hidden">
@@ -248,7 +269,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
               colonneAggiunte={pref.aggiunte.length}
               larghezzeScelte={Object.keys(pref.larghezze).length > 0}
               onRipristina={() => cambiaPreferenze(() => PREFERENZE_VUOTE)}
-              onPdf={() => window.print()}
+              onStampa={() => window.print()}
+              onPdf={pdf}
               onExcel={excel}
               onCsv={() => scaricaCsv(nomeBase, righeFile, colonneFile)}
               univoco={univocoAttivo}
@@ -283,6 +305,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
                 ditta={ditta.data}
                 messaggioVuoto={predefinita?.messaggioVuoto ?? messaggioVuoto(filtri, arrivi.inizio, arrivi.senzaData)}
                 raggruppaPer={predefinita?.raggruppaPer}
+                soloGruppo={gruppoScelto}
               />
             </FoglioStampa>
           </div>

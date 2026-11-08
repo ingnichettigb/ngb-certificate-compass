@@ -7,8 +7,9 @@
  *   rev 2 — 06/11/2026 — Pulsante «Univoco» (un lavoratore per riga) e suggerimento sull'ordinamento delle colonne.
  *   rev 3 — 07/11/2026 — «Ripristina colonne» conta anche colonne aggiunte e larghezze; suggerimento su trascinamento, doppio clic e «+».
  *   rev 4 — 08/11/2026 14:40 — Compattazione riga d'aiuto e margini verticali per ridurre l'ingombro in alto prima della tabella.
+ *   rev 5 — 08/11/2026 — «Stampa» (stampante, finestra di stampa del browser) separata da «PDF» (genera e scarica un file PDF).
  */
-import { FileSpreadsheet, FileText, Printer, RotateCcw, Users } from "lucide-react";
+import { FileDown, FileSpreadsheet, FileText, Printer, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -17,6 +18,9 @@ type Props = {
   colonneAggiunte?: number;
   larghezzeScelte?: boolean;
   onRipristina: () => void;
+  /** Stampa classica sulla stampante. */
+  onStampa: () => void;
+  /** Genera e scarica un file PDF con testo modificabile. */
   onPdf: () => void;
   onExcel: () => void;
   onCsv: () => void;
@@ -33,6 +37,7 @@ export function BarraEsportazione({
   colonneAggiunte = 0,
   larghezzeScelte = false,
   onRipristina,
+  onStampa,
   onPdf,
   onExcel,
   onCsv,
@@ -83,8 +88,11 @@ export function BarraEsportazione({
         <Button size="sm" type="button" variant="outline" className="h-8 px-2.5 text-xs" disabled={disabilitato} onClick={onExcel}>
           <FileSpreadsheet className="size-3.5" /> Excel
         </Button>
-        <Button size="sm" type="button" className="h-8 px-3 text-xs" disabled={disabilitato} onClick={onPdf}>
-          <Printer className="size-3.5" /> Stampa / PDF
+        <Button size="sm" type="button" variant="outline" className="h-8 px-2.5 text-xs" disabled={disabilitato} onClick={onPdf} title="Scarica un file PDF con testo modificabile (non passa dalla stampante)">
+          <FileDown className="size-3.5" /> PDF
+        </Button>
+        <Button size="sm" type="button" className="h-8 px-3 text-xs" disabled={disabilitato} onClick={onStampa} title="Stampa sulla stampante">
+          <Printer className="size-3.5" /> Stampa
         </Button>
       </div>
     </div>

@@ -74,14 +74,14 @@ describe("raggruppamento con salto pagina", () => {
     expect(g[1]!.righe.map((r) => r.cognome)).toEqual(["Bianchi", "Verdi"]);
   });
 
-  it("per funzione: chi ha più funzioni compare in ciascuna, chi non ne ha nessuna non compare", () => {
+  it("per gruppi di sicurezza: chi ha più ruoli compare in ciascun gruppo, chi non ne ha nessuno non compare", () => {
     const g = gruppiLavoratori(righe, "funzione");
-    expect(g.map((x) => x.titolo)).toEqual(["Funzione: Addetto antincendio – 2 lavoratori", "Funzione: Preposto – 1 lavoratori"]);
+    expect(g.map((x) => x.titolo)).toEqual(["Gruppo: Preposti – 1 lavoratori", "Gruppo: Antincendio – 2 lavoratori"]);
     expect(g.flatMap((x) => x.righe).some((r) => r.cognome === "Verdi")).toBe(false);
     expect(conFunzione(righe).map((r) => r.cognome)).toEqual(["Bianchi", "Rossi"]);
   });
 
-  it("una funzione assegnata due volte allo stesso lavoratore non lo duplica", () => {
+  it("un ruolo assegnato due volte allo stesso lavoratore non lo duplica", () => {
     const g = gruppiLavoratori([riga({ ruoliElenco: ["Preposto", "Preposto"] })], "funzione");
     expect(g).toHaveLength(1);
     expect(g[0]!.righe).toHaveLength(1);

@@ -35,7 +35,7 @@ export const RICETTE: Ricetta[] = [
       "Tipo di documento: «Elenco incaricati per gruppo».",
       "Gruppo corsi: «Preposti».",
       "Spunta «Solo incarichi attualmente assegnati».",
-      "Premi «Stampa / PDF».",
+      "Premi «Stampa» (stampante) o «PDF» (file).",
     ],
     risultato: "Gli attestati dei soli lavoratori che hanno oggi il ruolo Preposto assegnato. Sotto la tabella trovi il totale.",
     applica: () => ({ ...partenza, modello: "gruppo", gruppo: "preposti", soloIncarichi: true }),
