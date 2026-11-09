@@ -4,9 +4,10 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: tipi, filtri iniziali e colonne predefinite. Nessun cambio di comportamento.
- *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
  *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» separate (luogoNascita, dataNascita); RigaStampa.ruoliElenco
  *            (ruoli come elenco, per la stampa raggruppata per funzione).
+ *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
+ *   rev 4 — 09/11/2026 17:30 — Nuova colonna «inSquadra» (Sì / No / —) per le tabelle degli abilitati e per attestato; RigaStampa.inSquadra.
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -29,7 +30,7 @@ export type Colonna =
   | "mancano" | "fineContratto" | "cessazione"
   | VoceFormazione
   | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato"
-  | "categoria" | "argomento" | "giorni";
+  | "categoria" | "argomento" | "giorni" | "inSquadra";
 
 /** «no» = selezione spenta; scolastico = dal 1 settembre; solare = dal 1 gennaio. */
 export type PeriodoArrivi = "no" | "scolastico" | "solare";
@@ -119,6 +120,12 @@ export type RigaStampa = {
   scadenza: string | null;
   stato: StatoValidita;
   giorniAllaScadenza: number | null;
+  /**
+   * true = il dipendente ha attualmente assegnato il ruolo/incarico di squadra per questo corso;
+   * false = dipendente abilitato ma non inserito nella squadra;
+   * null = corso senza specifica squadra operativa (es. Privacy o Formazione generale).
+   */
+  inSquadra?: boolean | null;
 };
 
 /** Colonne mostrate di partenza per ogni modello (l'utente può toglierle in anteprima). */
