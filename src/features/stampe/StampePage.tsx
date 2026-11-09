@@ -16,6 +16,8 @@
  *                        valgono anche per stampa, CSV ed Excel. «Ripristina colonne» azzera le scelte del documento corrente.
  *   rev 10 — 08/11/2026 — Stessa pagina anche per le stampe predefinite (prop «predefinita»): filtri e colonne di partenza già
  *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina.
+ *   rev 12 — 08/11/2026 — Scelta Tutti / Solo docenti / Solo ATA nelle stampe di scadenza (carta con «destinatari»), righe «Manca»,
+ *                        colonne spostabili (trascinamento e frecce) e ricordate per ogni stampa.
  *   rev 11 — 08/11/2026 14:40 — Integrazione BarraGruppiPredefinite nella stampa predefinita per gruppi, compattazione testata (padding py-2.5)
  *                               e filtro reattivo per singolo gruppo su tabella, PDF, CSV ed Excel.
  *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
@@ -38,9 +40,10 @@ import {
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
 import { righeLegenda, scaricaPdf, sezioniPerPdf } from "./esporta-pdf";
 import {
-  alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze,
+  alternaColonna, applicaPreferenze, leggiPreferenze, PREFERENZE_VUOTE, salvaPreferenze, spostaColonna, spostaDi,
   type LarghezzeColonne, type PreferenzeColonne,
 } from "./preferenze-colonne";
+import { contaPubblico, ETICHETTA_PUBBLICO, filtraPerPubblico, type Pubblico } from "./stampa-pubblico";
 import { conFunzione, elencoGruppi, gruppiLavoratore } from "./stampa-gruppi";
 import type { StampaPredefinita } from "./stampe-predefinite";
 import { FiltriStampa } from "./components/FiltriStampa";
@@ -48,6 +51,7 @@ import { FoglioStampa } from "./components/FoglioStampa";
 import { ContenutoStampa } from "./components/ContenutoStampa";
 import { BarraEsportazione } from "./components/BarraEsportazione";
 import { BarraGruppiPredefinite } from "./components/BarraGruppiPredefinite";
+import { BarraDestinatari } from "./components/BarraDestinatari";
 import { GuidaStampe } from "./components/GuidaStampe";
 
 const distinti = (v: (string | null | undefined)[]) =>
@@ -60,6 +64,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const [ordine, setOrdine] = useState<OrdineColonna | null>(null);
   const [univoco, setUnivoco] = useState(false);
   const [gruppoScelto, setGruppoScelto] = useState<string | null>(null);
+  const [pubblico, setPubblico] = useState<Pubblico>("tutti");
 
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
   const dip = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti });
@@ -70,7 +75,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const conArrivi = filtri.arrivi !== "no";
   const vista = predefinita ? `pre:${predefinita.id}` : `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
 
-  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setGruppoScelto(null); }, [vista]);
+  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setGruppoScelto(null); setPubblico("tutti"); }, [vista]);
   const cambiaPreferenze = (cambia: (p: PreferenzeColonne) => PreferenzeColonne) =>
     setPref((p) => {
       const n = cambia(p);
@@ -111,8 +116,16 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const righeGrezze = useMemo(
     () => filtri.modello === "lavoratori"
       ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
-      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? []),
+      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
     [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
+  );
+
+  // Carte di scadenza: scelta del pubblico (Tutti / Solo docenti / Solo ATA); i numeri contano i lavoratori di ogni scelta.
+  const conDestinatari = !!predefinita?.destinatari;
+  const conteggiPubblico = useMemo(() => contaPubblico(righeGrezze), [righeGrezze]);
+  const righePubblico = useMemo(
+    () => (conDestinatari ? filtraPerPubblico(righeGrezze, pubblico) : righeGrezze),
+    [righeGrezze, conDestinatari, pubblico],
   );
 
   // Per la stampa raggruppata per gruppi: elenco lavoratori con almeno un gruppo
@@ -134,9 +147,9 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
       }
       return righeConGruppo;
     }
-    if (predefinita?.raggruppaPer === "reparto") return [...righeGrezze].sort((a, b) => a.reparto.localeCompare(b.reparto, "it"));
-    return righeGrezze;
-  }, [righeGrezze, righeConGruppo, predefinita, gruppoScelto]);
+    if (predefinita?.raggruppaPer === "reparto") return [...righePubblico].sort((a, b) => a.reparto.localeCompare(b.reparto, "it"));
+    return righePubblico;
+  }, [righePubblico, righeGrezze, righeConGruppo, predefinita, gruppoScelto]);
 
   const univocoNonApplicabile = filtri.modello === "lavoratori" || filtri.modello === "scheda";
   const univocoAttivo = univoco && !univocoNonApplicabile;
@@ -153,11 +166,14 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     cambiaPreferenze((p) => alternaColonna(colonneBase, p, c));
   };
   const cambiaLarghezze = (l: LarghezzeColonne) => cambiaPreferenze((p) => ({ ...p, larghezze: l }));
+  const spostaUna = (da: Colonna, a: Colonna) => cambiaPreferenze((p) => spostaColonna(colonne, p, da, a));
+  const spostaDiUno = (c: Colonna, passo: -1 | 1) => cambiaPreferenze((p) => spostaDi(colonne, p, c, passo));
   const ordineAttivo = ordine && colonne.includes(ordine.colonna) ? ordine : null;
   const righeFile = useMemo(() => ordinaRighe(righe, ordineAttivo), [righe, ordineAttivo]);
 
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne.filter((c) => c !== "lavoratore")] : colonne;
-  const titolo = predefinita ? (gruppoScelto ? `${predefinita.titolo} – ${gruppoScelto}` : predefinita.titolo) : titoloStampa(filtri);
+  const suffissoPubblico = conDestinatari && pubblico !== "tutti" ? ` – ${ETICHETTA_PUBBLICO[pubblico]}` : "";
+  const titolo = predefinita ? `${gruppoScelto ? `${predefinita.titolo} – ${gruppoScelto}` : predefinita.titolo}${suffissoPubblico}` : titoloStampa(filtri);
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
@@ -182,6 +198,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const partiPredefinita = [
     ...predefinita?.filtriApplicati ?? [],
     gruppoScelto ? `Gruppo: ${gruppoScelto}` : null,
+    conDestinatari ? `Per: ${ETICHETTA_PUBBLICO[pubblico]}` : null,
   ].filter(Boolean) as string[];
 
   const parti = predefinita ? partiPredefinita : partiPersonalizzata;
@@ -264,10 +281,13 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
               />
             )}
 
+            {conDestinatari && <BarraDestinatari scelto={pubblico} conteggi={conteggiPubblico} onSeleziona={setPubblico} />}
+
             <BarraEsportazione
               colonneTolte={pref.tolte.length}
               colonneAggiunte={pref.aggiunte.length}
               larghezzeScelte={Object.keys(pref.larghezze).length > 0}
+              ordineScelto={!!pref.ordine?.length}
               onRipristina={() => cambiaPreferenze(() => PREFERENZE_VUOTE)}
               onStampa={() => window.print()}
               onPdf={pdf}
@@ -299,6 +319,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
                 onLarghezze={cambiaLarghezze}
                 gruppiColonne={gruppiAggiungibili}
                 onAlternaColonna={alternaUnaColonna}
+                onSposta={spostaUna}
+                onSpostaDi={spostaDiUno}
                 ordine={ordineAttivo}
                 onOrdina={(c) => setOrdine((o) => prossimoOrdine(o, c))}
                 dipendenti={tutti}

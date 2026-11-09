@@ -28,3 +28,20 @@ export function applicaScadenzaPreposti(attestati: Attestato[], oggi: Date = new
     return scadenza ? { ...a, data_scadenza_calcolata: scadenza } : a;
   });
 }
+
+/**
+ * Come applicaScadenzaPreposti, ma per TUTTI i corsi: la scadenza di ogni attestato è quella del ciclo del suo gruppo
+ * (lavoratore + macro-categoria: corso base più aggiornamenti), cioè la stessa della pagina Scadenze.
+ * Se il motore non dà una scadenza (corso senza durata) resta quella salvata sull'attestato.
+ */
+export function applicaScadenzaCicli(attestati: Attestato[], oggi: Date = new Date()): Attestato[] {
+  if (attestati.length === 0) return attestati;
+  const scadenzaPerGruppo = new Map<string, string>();
+  for (const riga of costruisciRighe(attestati, oggi)) {
+    if (riga.ciclo.scadenzaEffettiva) scadenzaPerGruppo.set(riga.chiave, riga.ciclo.scadenzaEffettiva);
+  }
+  return attestati.map((a) => {
+    const scadenza = scadenzaPerGruppo.get(chiaveGruppo(a));
+    return scadenza ? { ...a, data_scadenza_calcolata: scadenza } : a;
+  });
+}

@@ -17,6 +17,8 @@ type Props = {
   /** Colonne in più scelte con il «+» e presenza di larghezze personalizzate (facoltativi). */
   colonneAggiunte?: number;
   larghezzeScelte?: boolean;
+  /** Ordine delle colonne scelto dall'utente (trascinamento o frecce). */
+  ordineScelto?: boolean;
   onRipristina: () => void;
   /** Stampa classica sulla stampante. */
   onStampa: () => void;
@@ -36,6 +38,7 @@ export function BarraEsportazione({
   colonneTolte,
   colonneAggiunte = 0,
   larghezzeScelte = false,
+  ordineScelto = false,
   onRipristina,
   onStampa,
   onPdf,
@@ -49,17 +52,18 @@ export function BarraEsportazione({
   return (
     <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5 print:hidden">
       <div className="text-[11px] text-muted-foreground">
-        {colonneTolte > 0 || colonneAggiunte > 0 || larghezzeScelte ? (
+        {colonneTolte > 0 || colonneAggiunte > 0 || larghezzeScelte || ordineScelto ? (
           <Button size="sm" type="button" variant="ghost" className="h-7 px-2 text-xs" onClick={onRipristina}>
             <RotateCcw className="size-3" /> Ripristina colonne ({[
               colonneTolte > 0 && `${colonneTolte} tolte`,
               colonneAggiunte > 0 && `${colonneAggiunte} ${colonneAggiunte === 1 ? "aggiunta" : "aggiunte"}`,
               larghezzeScelte && "larghezze",
+              ordineScelto && "spostate",
             ].filter(Boolean).join(", ")})
           </Button>
         ) : (
           <span>
-            <b>Gestione colonne:</b> clicca per ordinare, ✕ per togliere, + per aggiungere, trascina il bordo per larghezza.
+            <b>Gestione colonne:</b> clicca per ordinare, ✕ per togliere, + per aggiungere, trascina il bordo per larghezza, trascina ⠿ per spostare.
           </span>
         )}
       </div>

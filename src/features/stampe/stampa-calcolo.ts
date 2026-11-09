@@ -8,12 +8,95 @@
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
-import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
-import { applicaScadenzaPreposti } from "@/features/scadenze/preposti";
+import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
+import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
-import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo } from "./stampa-selezioni";
+import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo, voceFormazione } from "./stampa-selezioni";
+
+const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
+
+/**
+ * Lavoratori a cui il corso manca, come righe con stato «Manca». Chi deve averlo:
+ * - Corso base / Corso specifico: tutti i lavoratori (con i filtri scelti);
+ * - gruppo corsi con «Solo incarichi attualmente assegnati»: chi ha oggi il ruolo collegato; senza ruolo collegato nessuno.
+ */
+function righeMancanti(
+  dipendenti: Dipendente[],
+  attestati: Attestato[],
+  filtri: FiltriStampa,
+  assegnazioni: AssegnazioneRuolo[],
+  ruoli: RuoloSicurezza[],
+  soloDipendenti: Set<string> | null,
+): RigaStampa[] {
+  let obbligati: Dipendente[];
+  let corso: string;
+  let gruppo: string;
+  let gruppoTitolo: string;
+  let haCorso: (a: Attestato) => boolean;
+  if (filtri.soloCorso) {
+    const voce = filtri.soloCorso;
+    obbligati = dipendenti;
+    corso = ETICHETTA_CORSO_MANCANTE[voce];
+    gruppo = "sicurezza-lavoratori";
+    gruppoTitolo = GRUPPI_ARGOMENTO.find((g) => g.chiave === gruppo)?.titolo ?? "Sicurezza lavoratori";
+    haCorso = (a) => !!a.tipi_corso && voceFormazione(a.tipi_corso) === voce;
+  } else if (filtri.gruppo !== TUTTI && filtri.soloIncarichi) {
+    const collegati = ruoliDelGruppo(filtri.gruppo, ruoli);
+    if (!collegati.length) return [];
+    const con = new Set(assegnazioni.filter((a) => collegati.some((r) => r.id === a.ruolo_id)).map((a) => a.dipendente_id));
+    obbligati = dipendenti.filter((d) => con.has(d.id));
+    gruppo = filtri.gruppo;
+    gruppoTitolo = GRUPPI_ARGOMENTO.find((g) => g.chiave === gruppo)?.titolo ?? gruppo;
+    corso = gruppoTitolo;
+    haCorso = (a) => assegnaGruppoArgomento(a.tipi_corso ?? {}).chiave === gruppo;
+  } else {
+    return [];
+  }
+
+  const conCorso = new Set(attestati.filter(haCorso).map((a) => a.dipendente_id));
+  const conRuolo = filtri.ruoloId !== TUTTI ? dipendentiConRuolo(filtri.ruoloId, assegnazioni) : null;
+  return obbligati
+    .filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato")
+    .filter((d) => !conCorso.has(d.id))
+    .filter((d) => !soloDipendenti || soloDipendenti.has(d.id))
+    .filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto)
+    .filter((d) => filtri.categoria === TUTTI || d.sottoreparto === filtri.categoria)
+    .filter((d) => filtri.classe === TUTTI || d.classe_concorso === filtri.classe)
+    .filter((d) => filtri.dipendenteId === TUTTI || d.id === filtri.dipendenteId)
+    .filter((d) => !conRuolo || conRuolo.has(d.id))
+    .map((d): RigaStampa => ({
+      id: `manca-${d.id}-${gruppo}-${filtri.soloCorso ?? ""}`,
+      dipendenteId: d.id,
+      cognome: d.cognome ?? "",
+      nome: d.nome ?? "",
+      cf: d.codice_fiscale ?? "",
+      reparto: d.reparto ?? "—",
+      sottoreparto: d.sottoreparto ?? "",
+      materia: d.materia ?? "",
+      classe: d.classe_concorso ?? "",
+      mansione: mansioneDi(d),
+      ruoli: "",
+      assunzione: d.data_assunzione ?? null,
+      luogoNascita: d.luogo_nascita ?? "",
+      dataNascita: d.data_nascita ?? null,
+      formazione: {},
+      mancanti: campiMancanti(d),
+      fineContratto: d.data_fine_contratto ?? null,
+      cessazione: d.data_cessazione ?? null,
+      corso,
+      codice: "",
+      gruppo,
+      gruppoTitolo,
+      ore: null,
+      numero: "",
+      dataCorso: "",
+      scadenza: null,
+      stato: "manca",
+      giorniAllaScadenza: null,
+    }));
+}
 
 /** Converte gli attestati approvati in righe filtrate e ordinate per cognome, nome, data corso. */
 export function calcolaRighe(
@@ -23,15 +106,17 @@ export function calcolaRighe(
   assegnazioni: AssegnazioneRuolo[] = [],
   soloDipendenti: Set<string> | null = null,
   ruoli: RuoloSicurezza[] = [],
+  dipendenti: Dipendente[] = [],
 ): RigaStampa[] {
   // Solo attestati approvati; i Preposti hanno data e stato dal motore dei cicli (regime transitorio).
-  const attestati = applicaScadenzaPreposti(
+  const attestati = applicaScadenzaCicli(
     attestatiGrezzi.filter((a) => a.stato_validazione === "Approvato"),
     oggi,
   );
   let righe = attestati
     .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
     .filter((a) => filtri.includiCessati || a.dipendenti!.stato_lavoratore !== "cessato")
+    .filter((a) => !filtri.soloCorso || (!!a.tipi_corso && voceFormazione(a.tipi_corso) === filtri.soloCorso))
     .map((a): RigaStampa => {
       const d = a.dipendenti!;
       const tc = a.tipi_corso;
@@ -100,6 +185,9 @@ export function calcolaRighe(
 
   const finestra = filtri.modello === "scadenze" && filtri.finestra === "tutti" ? "365" : filtri.finestra;
   righe = righe.filter((r) => nellaFinestra(r, finestra));
+  if (filtri.conMancanti && dipendenti.length) {
+    righe = [...righe, ...righeMancanti(dipendenti, attestati, filtri, assegnazioni, ruoli, soloDipendenti)];
+  }
   return righe.sort(ordina);
 }
 

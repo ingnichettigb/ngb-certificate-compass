@@ -13,8 +13,8 @@
  *                        Pulsante «+» in fondo all'intestazione per aggiungere/togliere colonne. Tutto facoltativo: senza le
  *                        nuove proprietà la tabella si comporta e si stampa come prima.
  */
-import { useMemo, useRef, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
 import {
   attestatoSenzaRuolo, cella, cellaMancante, INTESTAZIONI, ordinaRighe,
   type Colonna, type GruppoColonne, type OrdineColonna, type RigaStampa,
@@ -41,18 +41,25 @@ type Props = {
   /** Se presenti (con onAlternaColonna) compare il «+» in fondo all'intestazione. */
   gruppiColonne?: GruppoColonne[] | undefined;
   onAlternaColonna?: ((c: Colonna) => void) | undefined;
+  /** Se presente compare la maniglia per trascinare una colonna in un'altra posizione: (colonna presa, colonna sopra cui è lasciata). */
+  onSposta?: ((da: Colonna, a: Colonna) => void) | undefined;
+  /** Frecce «sposta a sinistra / a destra» nel selettore colonne (utili dove il trascinamento è scomodo). */
+  onSpostaDi?: ((c: Colonna, passo: -1 | 1) => void) | undefined;
 };
+
+const TIPO_TRASCINAMENTO = "application/x-colonna-stampa";
 
 /** Stesse regole di neretto della cella disegnata sotto: servono a misurare il testo come verrà mostrato. */
 function inGrassetto(r: RigaStampa, c: Colonna): boolean {
-  return (c === "stato" && (r.stato === "scaduto" || r.stato === "in_scadenza")) || c === "mancano" || cellaMancante(r, c) || attestatoSenzaRuolo(r, c);
+  return (c === "stato" && (r.stato === "scaduto" || r.stato === "in_scadenza" || r.stato === "manca")) || (c === "scadenza" && r.stato === "manca") || c === "mancano" || cellaMancante(r, c) || attestatoSenzaRuolo(r, c);
 }
 
 const variabili = (px: number, pct: number) => ({ "--w": `${px}px`, "--p": `${pct}%` }) as CSSProperties;
 
 export function TabellaStampa({
-  righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina, larghezze, onLarghezze, righeMisura, gruppiColonne, onAlternaColonna,
+  righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina, larghezze, onLarghezze, righeMisura, gruppiColonne, onAlternaColonna, onSposta, onSpostaDi,
 }: Props) {
+  const [sopra, setSopra] = useState<Colonna | null>(null);
   const righe = ordinaRighe(righeIn, ordine);
   const tabRef = useRef<HTMLTableElement>(null);
   const conSelettore = !!gruppiColonne && !!onAlternaColonna;
@@ -130,9 +137,43 @@ export function TabellaStampa({
               key={c}
               data-col={c}
               aria-sort={ordine?.colonna === c ? (ordine.direzione === "asc" ? "ascending" : "descending") : undefined}
-              className="sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static"
+              className={`sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static ${sopra === c ? "ring-2 ring-inset ring-primary" : ""}`}
+              {...(onSposta
+                ? {
+                    onDragOver: (e: React.DragEvent) => {
+                      e.preventDefault();
+                      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+                      if (sopra !== c) setSopra(c);
+                    },
+                    onDragLeave: () => setSopra((s) => (s === c ? null : s)),
+                    onDrop: (e: React.DragEvent) => {
+                      e.preventDefault();
+                      const da = e.dataTransfer?.getData(TIPO_TRASCINAMENTO) as Colonna | undefined;
+                      setSopra(null);
+                      if (da && da !== c) onSposta(da, c);
+                    },
+                  }
+                : {})}
             >
               <div className="flex items-center justify-between gap-1">
+                <div className="flex items-center gap-0.5">
+                {onSposta && (
+                  <span
+                    draggable
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`Sposta la colonna ${INTESTAZIONI[c]}`}
+                    title="Trascina per spostare la colonna"
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(TIPO_TRASCINAMENTO, c);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => setSopra(null)}
+                    className="cursor-grab rounded p-0.5 opacity-50 hover:bg-primary/15 hover:opacity-100 active:cursor-grabbing print:hidden"
+                  >
+                    <GripVertical className="size-3" />
+                  </span>
+                )}
                 {onOrdina ? (
                   <button
                     type="button"
@@ -158,6 +199,7 @@ export function TabellaStampa({
                 ) : (
                   <span>{INTESTAZIONI[c]}</span>
                 )}
+                </div>
                 {onRimuoviColonna && colonne.length > 1 && (
                   <button
                     type="button"
@@ -185,7 +227,7 @@ export function TabellaStampa({
           ))}
           {conSelettore && (
             <th className="sticky top-0 z-10 w-8 border border-foreground/60 bg-muted p-0 text-center print:hidden">
-              <SelettoreColonne gruppi={gruppiColonne!} visibili={colonne} onAlterna={onAlternaColonna!} />
+              <SelettoreColonne gruppi={gruppiColonne!} visibili={colonne} onAlterna={onAlternaColonna!} onSpostaDi={onSpostaDi} />
             </th>
           )}
         </tr>
@@ -197,7 +239,7 @@ export function TabellaStampa({
             {colonne.map((c) => (
               <td
                 key={c}
-                className={`border border-foreground/40 px-1.5 py-0.5 ${c === "stato" && r.stato === "scaduto" ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""} ${attestatoSenzaRuolo(r, c) ? "font-bold" : ""}`}
+                className={`border border-foreground/40 px-1.5 py-0.5 ${(c === "stato" && (r.stato === "scaduto" || r.stato === "manca")) || (c === "scadenza" && r.stato === "manca") ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""} ${attestatoSenzaRuolo(r, c) ? "font-bold" : ""}`}
               >
                 {cella(r, c)}
               </td>

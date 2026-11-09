@@ -4,6 +4,8 @@
  * Data creaz: 08/11/2026
  * Revisioni:
  *   rev 1 — 08/11/2026 — Le 7 stampe predefinite: filtri già impostati, colonne di partenza, raggruppamento e spiegazione per le carte.
+ *   rev 3 — 08/11/2026 — Tre nuove scadenze (Corso base generale, Corso specifico, Privacy); tutte le carte di scadenza hanno la scelta
+ *            Tutti / Solo docenti / Solo ATA (destinatari), con Docenti e ATA su pagine separate; chi non ha il corso compare con «Manca».
  *   rev 2 — 08/11/2026 14:40 — Aggiornata la stampa per-funzioni in «Stampa per gruppi di sicurezza» con supporto a Privacy e macro-gruppi.
  */
 import { COLONNE_PREDEFINITE, FILTRI_INIZIALI, type Colonna, type FiltriStampa } from "./stampa-tipi";
@@ -23,7 +25,9 @@ export type StampaPredefinita = {
   filtri: FiltriStampa;
   /** Colonne di partenza (l'utente può toglierne, aggiungerne e ridimensionarle in anteprima). */
   colonne: Colonna[];
-  /** Raggruppamento con salto pagina (solo elenco lavoratori). */
+  /** Mostra la scelta Tutti / Solo docenti / Solo ATA sopra l'anteprima (carte di scadenza). */
+  destinatari?: boolean;
+  /** Raggruppamento con salto pagina (elenco lavoratori e carte di scadenza per reparto). */
   raggruppaPer?: RaggruppaPer;
   /** Filtri applicati, in parole, per il sottotitolo del foglio e la striscia sopra l'anteprima. */
   filtriApplicati: string[];
@@ -38,6 +42,8 @@ const CONTIENE_SCADENZE = "Scadenza, stato, lavoratore, codice fiscale, reparto,
 const lavoratori: FiltriStampa = { ...FILTRI_INIZIALI, modello: "lavoratori" };
 const scadenze: FiltriStampa = { ...FILTRI_INIZIALI, modello: "scadenze", finestra: "365" };
 const scaduteOEntro12Mesi = "Scaduti e in scadenza entro 12 mesi";
+const MANCA = "Chi non ha il corso compare con «Manca»";
+const NOTA_MANCA = " Chi non ha il corso compare in cima con «Manca».";
 
 export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
   {
@@ -82,37 +88,82 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     contiene: CONTIENE_SCADENZE,
     filtri: scadenze,
     colonne: COLONNE_SCADENZE,
+    destinatari: true,
+    raggruppaPer: "reparto",
     filtriApplicati: [scaduteOEntro12Mesi, "Solo l'attestato più recente per lavoratore e corso"],
+  },
+  {
+    id: "scadenze-corso-base",
+    famiglia: "Scadenze",
+    titolo: "Scadenze – corso base (generale)",
+    descrizione: `Le scadenze del Corso base di formazione generale, calcolate con il ciclo come nella pagina Scadenze: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA}`,
+    contiene: CONTIENE_SCADENZE,
+    filtri: { ...scadenze, soloCorso: "corsoBase", conMancanti: true },
+    colonne: COLONNE_SCADENZE,
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo Corso base (formazione generale)", MANCA],
+  },
+  {
+    id: "scadenze-corso-specifico",
+    famiglia: "Scadenze",
+    titolo: "Scadenze – corso specifico",
+    descrizione: `Le scadenze del Corso specifico (rischio basso, medio, alto), calcolate con il ciclo come nella pagina Scadenze: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA}`,
+    contiene: CONTIENE_SCADENZE,
+    filtri: { ...scadenze, soloCorso: "corsoSpecifico", conMancanti: true },
+    colonne: COLONNE_SCADENZE,
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo Corso specifico", MANCA],
   },
   {
     id: "scadenze-preposti",
     famiglia: "Scadenze",
     titolo: "Scadenze – preposti",
-    descrizione: "Le scadenze dei preposti con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.",
+    descrizione: `Le scadenze dei preposti con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA}`,
     contiene: CONTIENE_SCADENZE,
-    filtri: { ...scadenze, gruppo: "preposti", soloIncarichi: true },
+    filtri: { ...scadenze, gruppo: "preposti", soloIncarichi: true, conMancanti: true },
     colonne: COLONNE_SCADENZE,
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo preposti con incarico assegnato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo preposti con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-antincendio",
     famiglia: "Scadenze",
     titolo: "Scadenze – antincendio",
-    descrizione: "Le scadenze degli addetti antincendio con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.",
+    descrizione: `Le scadenze degli addetti antincendio con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA}`,
     contiene: CONTIENE_SCADENZE,
-    filtri: { ...scadenze, gruppo: "antincendio", soloIncarichi: true },
+    filtri: { ...scadenze, gruppo: "antincendio", soloIncarichi: true, conMancanti: true },
     colonne: COLONNE_SCADENZE,
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti antincendio con incarico assegnato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti antincendio con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-primo-soccorso",
     famiglia: "Scadenze",
     titolo: "Scadenze – primo soccorso",
-    descrizione: "Le scadenze degli addetti al primo soccorso con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.",
+    descrizione: `Le scadenze degli addetti al primo soccorso con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA}`,
     contiene: CONTIENE_SCADENZE,
-    filtri: { ...scadenze, gruppo: "primo-soccorso", soloIncarichi: true },
+    filtri: { ...scadenze, gruppo: "primo-soccorso", soloIncarichi: true, conMancanti: true },
     colonne: COLONNE_SCADENZE,
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti primo soccorso con incarico assegnato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti primo soccorso con incarico assegnato", MANCA],
+  },
+  {
+    id: "scadenze-privacy",
+    famiglia: "Scadenze",
+    titolo: "Scadenze – privacy",
+    descrizione:
+      "Le scadenze degli attestati Privacy, calcolate con il ciclo: scaduti e in scadenza entro 12 mesi. Se nella Matrice c'è un ruolo Privacy, restano solo i lavoratori con quel ruolo e chi non ha il corso compare con «Manca».",
+    contiene: CONTIENE_SCADENZE,
+    filtri: { ...scadenze, gruppo: "privacy", soloIncarichi: true, conMancanti: true },
+    colonne: COLONNE_SCADENZE,
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo attestati Privacy", "Con un ruolo Privacy: solo chi lo ha assegnato; chi non ha il corso compare con «Manca»"],
   },
 ];
 

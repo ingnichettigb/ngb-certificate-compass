@@ -61,7 +61,7 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "ore": return r.ore != null ? String(r.ore) : "—";
     case "numero": return r.numero || "—";
     case "data": return dataIt(r.dataCorso);
-    case "scadenza": return dataIt(r.scadenza);
+    case "scadenza": return r.stato === "manca" ? "Manca" : dataIt(r.scadenza);
     case "stato": return ETICHETTA_STATO[r.stato];
     case "categoria": return r.sottoreparto || "—";
     case "argomento": return r.gruppoTitolo || "—";

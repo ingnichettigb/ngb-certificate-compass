@@ -9,7 +9,7 @@ import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import type { TipoCorso } from "@/lib/api/tipi-corso";
-import { applicaScadenzaPreposti } from "@/features/scadenze/preposti";
+import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { TUTTI } from "./stampa-tipi";
 import type { Finestra, ModoSenza, PeriodoArrivi, RigaStampa, StatoValidita, VoceFormazione, VoceRuolo } from "./stampa-tipi";
 import { dataIt } from "./stampa-formati";
@@ -65,7 +65,7 @@ export function voceDelRuolo(r: Pick<RuoloSicurezza, "nome" | "macro_categoria">
 
 /** Per ogni lavoratore, per ogni voce: «Sì – data corso» (o «Scaduto – data corso») dell'attestato approvato più recente. */
 export function formazionePerLavoratore(attestatiGrezzi: Attestato[], oggi: Date): Map<string, Partial<Record<VoceFormazione, string>>> {
-  const attestati = applicaScadenzaPreposti(attestatiGrezzi, oggi);
+  const attestati = applicaScadenzaCicli(attestatiGrezzi, oggi);
   const ultimo = new Map<string, Map<VoceFormazione, Attestato>>();
   for (const a of attestati) {
     if (a.stato_validazione !== "Approvato" || !a.tipi_corso) continue;

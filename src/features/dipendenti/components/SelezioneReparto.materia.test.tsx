@@ -4,8 +4,9 @@
  * Data creaz: 06/11/2026
  * Revisioni:
  *   rev 1 — 06/11/2026 — Il campo «Materia» compare solo per i Docenti, vuoto = bordo giallo, si salva uscendo dal campo.
+ *   rev 2 — 08/11/2026 — La materia non è più richiesta ai Docenti (basta la classe di concorso): il campo non compare nella scheda.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Dipendente } from "@/lib/api";
@@ -40,35 +41,16 @@ function mostra(d: Dipendente) {
   );
 }
 
-describe("SelezioneReparto: campo Materia", () => {
+describe("SelezioneReparto: la materia non è richiesta", () => {
   beforeEach(() => aggiorna.mockClear());
 
-  it("per un docente senza materia il campo c'è ed è giallo", () => {
+  it("per un docente c'è la classe di concorso ma non il campo Materia", () => {
     mostra(dip({}));
-    const campo = screen.getByLabelText("Materia dipendente");
-    expect(campo).toHaveValue("");
-    expect(campo.className).toContain("amber");
+    expect(screen.queryByLabelText("Materia dipendente")).toBeNull();
+    expect(screen.getByText("Classe di concorso")).toBeTruthy();
   });
-  it("con la materia compilata non è giallo e mostra il valore", () => {
-    mostra(dip({ materia: "Matematica e fisica" }));
-    const campo = screen.getByLabelText("Materia dipendente");
-    expect(campo).toHaveValue("Matematica e fisica");
-    expect(campo.className).not.toContain("amber");
-  });
-  it("non compare per i non docenti", () => {
+  it("nemmeno per gli ATA", () => {
     mostra(dip({ reparto: "ATA" }));
     expect(screen.queryByLabelText("Materia dipendente")).toBeNull();
-  });
-  it("uscendo dal campo salva classe e materia", async () => {
-    mostra(dip({}));
-    const campo = screen.getByLabelText("Materia dipendente");
-    fireEvent.change(campo, { target: { value: "  Matematica e fisica " } });
-    fireEvent.blur(campo);
-    await waitFor(() => expect(aggiorna).toHaveBeenCalledWith("d1", "A027", "Matematica e fisica"));
-  });
-  it("se il testo non cambia non salva", () => {
-    mostra(dip({ materia: "Storia" }));
-    fireEvent.blur(screen.getByLabelText("Materia dipendente"));
-    expect(aggiorna).not.toHaveBeenCalled();
   });
 });
