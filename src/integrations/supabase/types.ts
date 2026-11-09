@@ -353,6 +353,7 @@ export type Database = {
       }
       ditta: {
         Row: {
+          aspp: string | null
           cap: string | null
           codice_fiscale: string | null
           codici_ateco: Json
@@ -382,6 +383,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aspp?: string | null
           cap?: string | null
           codice_fiscale?: string | null
           codici_ateco?: Json
@@ -411,6 +413,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aspp?: string | null
           cap?: string | null
           codice_fiscale?: string | null
           codici_ateco?: Json
