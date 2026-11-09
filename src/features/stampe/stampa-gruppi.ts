@@ -4,6 +4,7 @@
  * Data creaz: 08/11/2026
  * Revisioni:
  *   rev 1 — 08/11/2026 — Raggruppamento dell'elenco lavoratori per reparto o per funzione di sicurezza (stampe predefinite 2 e 3).
+ *   rev 3 — 09/11/2026 20:00 — Le righe dell'Organigramma portano la propria squadra: appartengono solo a quella.
  *   rev 2 — 08/11/2026 14:40 — Raggruppamento per Gruppi di sicurezza (Preposti, Antincendio, Primo soccorso, Defibrillatore, Evacuazione, Privacy, Sicurezza lavoratori) al posto delle singole funzioni, con filtro rapido e conteggi.
  */
 import type { RigaStampa } from "./stampa-tipi";
@@ -49,6 +50,7 @@ export function gruppoDiRuolo(nomeRuolo: string): string {
  * valutando sia i suoi ruoli sia eventuali attestati registrati.
  */
 export function gruppiLavoratore(r: RigaStampa): string[] {
+  if (r.squadra) return [r.squadra];
   const gruppi = new Set<string>();
   for (const ruolo of r.ruoliElenco ?? []) {
     const g = gruppoDiRuolo(ruolo);

@@ -28,13 +28,14 @@
  *                         elenco delle colonne disponibili per documento, raggruppato per funzione e in ordine alfabetico (gruppiColonne).
  *                         Nessun cambio alle colonne predefinite né ai calcoli esistenti.
  *   rev 14 — 07/11/2026 — Diviso in file per responsabilità (stampa-*.ts); questo file riesporta gli stessi nomi di prima.
+ *   rev 15 — 09/11/2026 20:00 — Riesportati Organigramma squadre (calcolaRigheOrganigramma, LEGENDA_SQUADRE) e stile delle celle (righeCella).
  */
 
 // La regola dei dati mancanti vive in dipendenti/anagrafica-completa.ts (condivisa con la coda «Da completare»).
 export { campiMancanti, ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 export type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 export { VOCI_CON_RUOLO, TUTTI, FILTRI_INIZIALI, COLONNE_PREDEFINITE, COLONNE_NUOVI_ARRIVATI, COLONNE_SENZA_ATTESTATI } from "./stampa-tipi";
-export type { Modello, Finestra, StatoValidita, VoceFormazione, VoceRuolo, Colonna, PeriodoArrivi, ModoSenza, FiltriStampa, RigaStampa } from "./stampa-tipi";
+export type { CellaSquadra, EsitoSquadra, Modello, Finestra, StatoValidita, VoceFormazione, VoceRuolo, Colonna, PeriodoArrivi, ModoSenza, FiltriStampa, RigaStampa } from "./stampa-tipi";
 export { colonnePerVista, cellaMancante, conSelezione, etichettaPeriodo, titoloStampa, messaggioVuoto } from "./stampa-vista";
 export { inizioPeriodoArrivi, nuoviArrivati, voceFormazione, voceDelRuolo, lavoratoriSenzaMinimi, intersezioneId, statoValidita, mansioneDi, ruoliDelGruppo } from "./stampa-selezioni";
 export { calcolaRighe, calcolaRigheLavoratori } from "./stampa-calcolo";
@@ -42,5 +43,9 @@ export { dataIt, ETICHETTA_STATO, TITOLI_MODELLO } from "./stampa-formati";
 export { raggruppa, INTESTAZIONI, cella, testoTotale, attestatoSenzaRuolo, testoMancanti } from "./stampa-testo";
 export { ordinaRighe, prossimoOrdine, unicoPerLavoratore } from "./stampa-ordine";
 export type { DirezioneOrdine, OrdineColonna } from "./stampa-ordine";
+export { calcolaRigheOrganigramma } from "./stampa-organigramma";
+export { LEGENDA_SQUADRE } from "./stampa-squadre";
+export { righeCella } from "./stampa-stile";
+export type { Colore, RigaVisuale } from "./stampa-stile";
 export { colonneDisponibili, gruppiColonne } from "./stampa-colonne";
 export type { GruppoColonne } from "./stampa-colonne";

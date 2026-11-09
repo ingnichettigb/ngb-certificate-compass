@@ -8,6 +8,7 @@
  *            (ruoli come elenco, per la stampa raggruppata per funzione).
  *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
  *   rev 4 — 09/11/2026 17:30 — Nuova colonna «inSquadra» (Sì / No / —) per le tabelle degli abilitati e per attestato; RigaStampa.inSquadra.
+ *   rev 5 — 09/11/2026 20:00 — Organigramma squadre: colonne «squadra», «corsoBaseSquadra», «aggiornamentoSquadra» e relativi campi di RigaStampa.
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -30,7 +31,12 @@ export type Colonna =
   | "mancano" | "fineContratto" | "cessazione"
   | VoceFormazione
   | "corso" | "ore" | "numero" | "data" | "scadenza" | "stato"
-  | "categoria" | "argomento" | "giorni" | "inSquadra";
+  | "categoria" | "argomento" | "giorni" | "inSquadra"
+  | "squadra" | "corsoBaseSquadra" | "aggiornamentoSquadra";
+
+/** Esito del Corso base o dell'Aggiornamento di un lavoratore in una squadra (Organigramma). */
+export type EsitoSquadra = "valido" | "in_scadenza" | "scaduto" | "fuori_termine" | "da_formare" | "non_necessario";
+export type CellaSquadra = { data: string | null; etichetta: EsitoSquadra };
 
 /** «no» = selezione spenta; scolastico = dal 1 settembre; solare = dal 1 gennaio. */
 export type PeriodoArrivi = "no" | "scolastico" | "solare";
@@ -126,6 +132,10 @@ export type RigaStampa = {
    * null = corso senza specifica squadra operativa (es. Privacy o Formazione generale).
    */
   inSquadra?: boolean | null;
+  /** Solo Organigramma: la squadra di questa riga (una riga per lavoratore e per squadra) e le due celle di formazione. */
+  squadra?: string;
+  cellaBase?: CellaSquadra;
+  cellaAggiornamento?: CellaSquadra;
 };
 
 /** Colonne mostrate di partenza per ogni modello (l'utente può toglierle in anteprima). */

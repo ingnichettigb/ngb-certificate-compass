@@ -6,6 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
+ *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
@@ -259,7 +260,7 @@ export function calcolaRigheLavoratori(
     }
   }
 
-  const formazione = formazionePerLavoratore(attestati, ruoli, assegnazioni, oggi);
+  const formazione = formazionePerLavoratore(attestati, oggi);
   let righe = dipendenti
     .filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato")
     .map((d): RigaStampa => ({

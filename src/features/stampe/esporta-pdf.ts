@@ -6,11 +6,13 @@
  *   rev 1 — 08/11/2026 — Genera direttamente un file PDF con testo reale (modificabile con un editor PDF), senza passare dalla
  *            stampante: stesso contenuto dell'anteprima (intestazione ditta, titolo, filtri, colonne visibili e larghezze scelte,
  *            sezioni con salto pagina, totale, legenda). Usa pdf-lib, già nel progetto, caricato solo al clic.
+ *   rev 2 — 09/11/2026 20:00 — Colori e grassetto come in anteprima (righeCella: rosso, arancione, grassetto), righe alternate grigie,
+ *            celle su due righe (data + avviso) e legenda dell'Organigramma.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, INTESTAZIONI, cella, raggruppa, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "./dati-stampa";
+import { dataIt, INTESTAZIONI, cella, raggruppa, righeCella, LEGENDA_SQUADRE, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "./dati-stampa";
 import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "./stampa-gruppi";
 import { scarica, nomeFileEsportazione } from "./esporta-file";
 import type { LarghezzeColonne } from "./preferenze-colonne";
@@ -105,6 +107,7 @@ export function righeLegenda(colonne: Colonna[]): string[] {
       "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto sull'anteprima = ha l'attestato ma non il ruolo assegnato.",
     );
   }
+  if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
   if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
   return out;
 }
@@ -200,6 +203,10 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   const grigio = rgb(0.9, 0.9, 0.9);
   const linea = rgb(0.75, 0.75, 0.75);
   const nero = rgb(0, 0, 0);
+  // Stessi colori dell'anteprima: rosso = text-destructive, arancione = avviso «In scadenza», righe alternate = odd:bg-muted/30.
+  const rosso = rgb(0.78, 0.1, 0.1);
+  const arancione = rgb(0.85, 0.42, 0.02);
+  const zebra = rgb(0.955, 0.955, 0.955);
 
   let pagina: PDFPage;
   let y = 0;
@@ -260,12 +267,22 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
     y -= alt;
   };
 
-  const altezzaRiga = (celle: string[][]) => Math.max(...celle.map((r) => r.length), 1) * INTERLINEA + 2 * PAD;
+  const altezzaRiga = (celle: unknown[][]) => Math.max(...celle.map((r) => r.length), 1) * INTERLINEA + 2 * PAD;
 
   const disegnaSezione = (s: SezionePdf, prima: boolean) => {
     const altTitolo = s.titolo ? 16 : 0;
     const altHead = INTERLINEA + 2 * PAD;
-    const celleDi = (r: RigaStampa) => o.colonne.map((c, i) => spezzaTesto(cella(r, c), largColonne[i]! - 2 * PAD, misura(normale, CORPO)));
+    // Ogni cella = righe di testo già spezzate alla larghezza della colonna, ciascuna con il proprio font e colore.
+    const celleDi = (r: RigaStampa) =>
+      o.colonne.map((c, i) =>
+        righeCella(r, c).flatMap((v) =>
+          spezzaTesto(v.testo, largColonne[i]! - 2 * PAD, misura(v.grassetto ? grassetto : normale, CORPO)).map((t) => ({
+            t,
+            font: v.grassetto ? grassetto : normale,
+            colore: v.colore === "rosso" ? rosso : v.colore === "arancione" ? arancione : nero,
+          })),
+        ),
+      );
     const primaRiga = s.righe[0] ? altezzaRiga(celleDi(s.righe[0])) : 0;
 
     if (prima || s.nuovaPagina || y - altTitolo - altHead - primaRiga < fondoPagina) nuovaPagina(prima && pagine.length === 0);
@@ -278,17 +295,18 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
       y -= 4;
     }
     rigaIntestazioneTabella();
-    for (const r of s.righe) {
+    for (const [n, r] of s.righe.entries()) {
       const celle = celleDi(r);
       const alt = altezzaRiga(celle);
       if (y - alt < fondoPagina) {
         nuovaPagina(false);
         rigaIntestazioneTabella();
       }
+      if (n % 2 === 0) pagina.drawRectangle({ x: MARGINE, y: y - alt, width: utile, height: alt, color: zebra });
       let x = MARGINE;
       celle.forEach((righe, i) => {
-        righe.forEach((t, k) => {
-          pagina.drawText(t, { x: x + PAD, y: y - PAD - CORPO + 1 - k * INTERLINEA, size: CORPO, font: normale, color: nero });
+        righe.forEach((v, k) => {
+          pagina.drawText(v.t, { x: x + PAD, y: y - PAD - CORPO + 1 - k * INTERLINEA, size: CORPO, font: v.font, color: v.colore });
         });
         x += largColonne[i]!;
       });

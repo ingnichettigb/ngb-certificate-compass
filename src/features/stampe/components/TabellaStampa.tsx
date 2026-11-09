@@ -12,12 +12,14 @@
  *   rev 7 — 07/11/2026 — Larghezza delle colonne: si trascina il bordo dell'intestazione, doppio clic = adatta al contenuto più lungo.
  *                        Pulsante «+» in fondo all'intestazione per aggiungere/togliere colonne. Tutto facoltativo: senza le
  *                        nuove proprietà la tabella si comporta e si stampa come prima.
+ *   rev 8 — 09/11/2026 20:00 — Testo, colore e grassetto delle celle da righeCella (lo stesso del PDF); celle su due righe
+ *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
 import {
-  attestatoSenzaRuolo, cella, cellaMancante, INTESTAZIONI, ordinaRighe,
-  type Colonna, type GruppoColonne, type OrdineColonna, type RigaStampa,
+  cella, INTESTAZIONI, ordinaRighe, righeCella,
+  type Colonna, type GruppoColonne, type OrdineColonna, type RigaStampa, type RigaVisuale,
 } from "../dati-stampa";
 import {
   creaMisura, dimensioniTabella, haLarghezzePersonalizzate, larghezzaAdattata, limitaLarghezza, LARGHEZZA_NUMERO,
@@ -51,10 +53,18 @@ const TIPO_TRASCINAMENTO = "application/x-colonna-stampa";
 
 /** Stesse regole di neretto della cella disegnata sotto: servono a misurare il testo come verrà mostrato. */
 function inGrassetto(r: RigaStampa, c: Colonna): boolean {
-  return (c === "stato" && (r.stato === "scaduto" || r.stato === "in_scadenza" || r.stato === "manca")) || (c === "scadenza" && r.stato === "manca") || c === "mancano" || cellaMancante(r, c) || attestatoSenzaRuolo(r, c);
+  return righeCella(r, c).some((v) => v.grassetto);
 }
 
 const variabili = (px: number, pct: number) => ({ "--w": `${px}px`, "--p": `${pct}%` }) as CSSProperties;
+
+/** Classi di colore e grassetto di una riga di testo (le stesse scelte vengono usate nel PDF). */
+function classiTesto(t: RigaVisuale): string {
+  return [
+    t.colore === "rosso" ? "text-destructive" : t.colore === "arancione" ? "text-orange-600 dark:text-orange-400" : "",
+    t.grassetto ? "font-bold" : "",
+  ].filter(Boolean).join(" ");
+}
 
 export function TabellaStampa({
   righe: righeIn, colonne, onRimuoviColonna, ordine = null, onOrdina, larghezze, onLarghezze, righeMisura, gruppiColonne, onAlternaColonna, onSposta, onSpostaDi,
@@ -115,7 +125,7 @@ export function TabellaStampa({
   return (
     <table
       ref={tabRef}
-      className={`border-collapse text-[11px] ${dim ? "w-[var(--tw)] print:w-full" : "w-full"}`}
+      className={`border-collapse text-[11px] [-webkit-print-color-adjust:exact] [print-color-adjust:exact] ${dim ? "w-[var(--tw)] print:w-full" : "w-full"}`}
       style={dim ? ({ tableLayout: "fixed", "--tw": `${dim.totale + (conSelettore ? 32 : 0)}px` } as CSSProperties) : undefined}
     >
       {dim && (
@@ -236,14 +246,18 @@ export function TabellaStampa({
         {righe.map((r, i) => (
           <tr key={r.id} className="odd:bg-muted/30" style={{ breakInside: "avoid" }}>
             <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono">{i + 1}</td>
-            {colonne.map((c) => (
-              <td
-                key={c}
-                className={`border border-foreground/40 px-1.5 py-0.5 ${(c === "stato" && (r.stato === "scaduto" || r.stato === "manca")) || (c === "scadenza" && r.stato === "manca") ? "font-bold text-destructive" : ""} ${c === "stato" && r.stato === "in_scadenza" ? "font-semibold" : ""} ${c === "mancano" || cellaMancante(r, c) ? "font-bold text-destructive" : ""} ${attestatoSenzaRuolo(r, c) ? "font-bold" : ""}`}
-              >
-                {cella(r, c)}
-              </td>
-            ))}
+            {colonne.map((c) => {
+              const righeTesto = righeCella(r, c);
+              const unica = righeTesto.length === 1 ? righeTesto[0]! : null;
+              return (
+                <td
+                  key={c}
+                  className={`border border-foreground/40 px-1.5 py-0.5 ${unica ? classiTesto(unica) : ""}`}
+                >
+                  {unica ? unica.testo : righeTesto.map((t, k) => <div key={k} className={classiTesto(t)}>{t.testo}</div>)}
+                </td>
+              );
+            })}
             {conSelettore && <td aria-hidden="true" className="print:hidden" />}
           </tr>
         ))}

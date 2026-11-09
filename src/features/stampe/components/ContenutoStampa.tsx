@@ -12,10 +12,11 @@
  *   rev 8 — 07/11/2026 — Passa alla tabella larghezze delle colonne e «+» delle colonne aggiungibili (proprietà facoltative).
  *   rev 9 — 08/11/2026 — Elenco lavoratori raggruppato per reparto o per funzione, con salto pagina a ogni gruppo (stampe predefinite).
  *   rev 10 — 08/11/2026 — Prop «soloGruppo»: con un gruppo scelto l'anteprima mostra solo quel gruppo (come il PDF).
+ *   rev 11 — 09/11/2026 20:00 — Legenda dell'Organigramma squadre (Corso base / Aggiornamento).
  */
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type GruppoColonne, type OrdineColonna, type RigaStampa } from "../dati-stampa";
+import { dataIt, LEGENDA_SQUADRE, raggruppa, testoTotale, type Colonna, type FiltriStampa, type GruppoColonne, type OrdineColonna, type RigaStampa } from "../dati-stampa";
 import type { LarghezzeColonne } from "../preferenze-colonne";
 import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "../stampa-gruppi";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
@@ -55,11 +56,13 @@ function Legenda({ colonne }: { colonne: Colonna[] }) {
   const corsi = colonne.some((c) => VOCI_CORSO.includes(c));
   const conRuolo = colonne.some((c) => VOCI_RUOLO.includes(c));
   const manca = colonne.includes("mancano");
-  if (!corsi && !manca) return null;
+  const squadre = colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra");
+  if (!corsi && !manca && !squadre) return null;
   return (
     <div className="mt-3 space-y-0.5 text-[10px]" style={{ breakInside: "avoid" }}>
       {corsi && <p><b>Legenda corsi:</b> «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.</p>}
       {conRuolo && <p><b>Preposto, Antincendio, Primo soccorso, Defibrillatore:</b> «NA» = ruolo di sicurezza non assegnato al lavoratore; «No» = ruolo assegnato ma attestato mancante; <b>in neretto</b> = ha l'attestato ma non il ruolo assegnato.</p>}
+      {squadre && <p>{LEGENDA_SQUADRE}</p>}
       {manca && <p><b>Anagrafica:</b> «MANCA» in rosso = dato assente nell'anagrafica del lavoratore.</p>}
     </div>
   );

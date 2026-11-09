@@ -6,6 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: raggruppamento, etichette e testo delle celle. Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» (intestazioni e testo delle celle).
  *   rev 3 — 09/11/2026 17:30 — Intestazione e rendering cella per «inSquadra» (Sì / No / —).
+ *   rev 4 — 09/11/2026 20:00 — Colonne dell'Organigramma (Squadra, Corso base, Aggiornamento); totale con lavoratori distinti.
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
@@ -13,6 +14,7 @@ import { VOCI_CON_RUOLO } from "./stampa-tipi";
 import type { Colonna, FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
 import { cellaMancante } from "./stampa-vista";
 import { ETICHETTA_STATO, dataIt } from "./stampa-formati";
+import { testoCellaSquadra } from "./stampa-squadre";
 
 /** Raggruppa le righe per una chiave mantenendo l'ordine. */
 export function raggruppa<T>(righe: T[], chiave: (r: T) => string): [string, T[]][] {
@@ -35,6 +37,7 @@ export const INTESTAZIONI: Record<Colonna, string> = {
   numero: "N. attestato", data: "Data corso", scadenza: "Scadenza", stato: "Stato",
   categoria: "Categoria / Profilo", argomento: "Argomento corso", giorni: "Giorni alla scadenza",
   inSquadra: "In squadra",
+  squadra: "Squadra", corsoBaseSquadra: "Corso base", aggiornamentoSquadra: "Aggiornamento",
 };
 
 /** Testo della cella: usato sia dall'anteprima sia dalle esportazioni (stesso contenuto). */
@@ -69,13 +72,20 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "argomento": return r.gruppoTitolo || "—";
     case "giorni": return r.giorniAllaScadenza != null ? String(r.giorniAllaScadenza) : "—";
     case "inSquadra": return r.inSquadra === true ? "Sì" : r.inSquadra === false ? "No" : "—";
+    case "squadra": return r.squadra ?? "—";
+    case "corsoBaseSquadra": return testoCellaSquadra(r.cellaBase);
+    case "aggiornamentoSquadra": return testoCellaSquadra(r.cellaAggiornamento);
   }
 }
 
 /** Totale in fondo al documento: elenco lavoratori = lavoratori; negli altri documenti righe e lavoratori distinti. */
 export function testoTotale(modello: FiltriStampa["modello"], righe: RigaStampa[]): string {
   const lavoratori = new Set(righe.map((r) => r.dipendenteId)).size;
-  return modello === "lavoratori" ? `${righe.length} lavoratori` : `${righe.length} righe · ${lavoratori} lavoratori`;
+  if (modello === "lavoratori") {
+    // Con l'Organigramma chi è in più squadre compare più volte: si indicano anche i lavoratori distinti.
+    return righe.length === lavoratori ? `${righe.length} lavoratori` : `${righe.length} nominativi · ${lavoratori} lavoratori`;
+  }
+  return `${righe.length} righe · ${lavoratori} lavoratori`;
 }
 
 /** Ha l'attestato ma non il ruolo di sicurezza assegnato: la cella va in neretto (anche in stampa). */

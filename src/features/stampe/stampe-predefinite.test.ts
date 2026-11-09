@@ -2,7 +2,8 @@
  * File:      stampe-predefinite.test.ts
  * Percorso:  src/features/stampe/stampe-predefinite.test.ts
  * Data creaz: 08/11/2026
- * Verifica le 10 stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Verifica le stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Rev 3 (09/11/2026 20:00): catalogo attuale (famiglie Anagrafica / Scadenze / Completati) e carta Organigramma squadre.
  * Rev 2 (08/11/2026): tre nuove scadenze (Corso base, Corso specifico, Privacy), scelta del pubblico e righe «Manca».
  */
 import { describe, expect, it } from "vitest";
@@ -17,15 +18,21 @@ const riga = (extra: Partial<RigaStampa> = {}): RigaStampa => ({
   giorniAllaScadenza: null, ...extra,
 });
 
-describe("stampe predefinite: le 10 carte", () => {
-  it("sono dieci, con id unico, titolo e spiegazione", () => {
-    expect(STAMPE_PREDEFINITE).toHaveLength(10);
-    expect(new Set(STAMPE_PREDEFINITE.map((s) => s.id)).size).toBe(10);
+describe("stampe predefinite: il catalogo", () => {
+  it("ogni carta ha id unico, titolo e spiegazione", () => {
+    expect(new Set(STAMPE_PREDEFINITE.map((s) => s.id)).size).toBe(STAMPE_PREDEFINITE.length);
     for (const s of STAMPE_PREDEFINITE) {
       expect(s.titolo.length).toBeGreaterThan(0);
       expect(s.descrizione.length).toBeGreaterThan(0);
       expect(s.filtriApplicati.length).toBeGreaterThan(0);
     }
+  });
+
+  it("le famiglie sono quelle dell'elenco (Anagrafica, Scadenze, Completati): nessuna carta resta fuori", () => {
+    for (const s of STAMPE_PREDEFINITE) expect(["Anagrafica", "Scadenze", "Completati"]).toContain(s.famiglia);
+    expect(STAMPE_PREDEFINITE.filter((s) => s.famiglia === "Anagrafica").map((s) => s.id)).toEqual([
+      "anagrafica-tutti", "anagrafica-settori", "anagrafica-gruppi", "organigramma-squadre",
+    ]);
   });
 
   it("le colonne di partenza hanno un'intestazione e non hanno doppioni", () => {
@@ -44,8 +51,8 @@ describe("stampe predefinite: le 10 carte", () => {
       expect(s.filtri.modello).toBe("scadenze");
       expect(s.filtri.finestra).toBe("365");
     }
-    const perRuolo = ["scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-privacy"].map((id) => trovaPredefinita(id)!);
-    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso", "privacy"]);
+    const perRuolo = ["scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso"].map((id) => trovaPredefinita(id)!);
+    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso"]);
     for (const s of perRuolo) expect(s.filtri.soloIncarichi).toBe(true);
     expect(trovaPredefinita("scadenze-tutte")?.filtri.soloIncarichi).toBe(false);
   });
@@ -61,7 +68,6 @@ describe("stampe predefinite: le 10 carte", () => {
       expect(s.destinatari).toBe(true);
       expect(s.raggruppaPer).toBe("reparto");
     }
-    for (const s of STAMPE_PREDEFINITE.filter((x) => x.famiglia !== "Scadenze")) expect(s.destinatari).toBeUndefined();
   });
 
   it("anagrafica: tutti i dati; per settori e per funzioni raggruppano", () => {
@@ -69,8 +75,18 @@ describe("stampe predefinite: le 10 carte", () => {
     expect(tutti.filtri.modello).toBe("lavoratori");
     expect(tutti.colonne).toEqual(expect.arrayContaining(["cf", "luogoNascita", "dataNascita"]));
     expect(tutti.raggruppaPer).toBeUndefined();
-    expect(trovaPredefinita("anagrafica-reparti")?.raggruppaPer).toBe("reparto");
-    expect(trovaPredefinita("per-funzioni")?.raggruppaPer).toBe("funzione");
+    expect(trovaPredefinita("anagrafica-settori")?.raggruppaPer).toBe("reparto");
+    expect(trovaPredefinita("anagrafica-gruppi")?.raggruppaPer).toBe("funzione");
+  });
+
+  it("Organigramma squadre: Docenti/ATA, squadre, colonne e righe dedicate", () => {
+    const o = trovaPredefinita("organigramma-squadre")!;
+    expect(o.famiglia).toBe("Anagrafica");
+    expect(o.destinatari).toBe(true);
+    expect(o.raggruppaPer).toBe("funzione");
+    expect(o.organigramma).toBe(true);
+    expect(o.colonne).toEqual(["lavoratore", "reparto", "squadra", "corsoBaseSquadra", "aggiornamentoSquadra"]);
+    expect(o.messaggioVuoto).toBeTruthy();
   });
 
   it("id sconosciuto: nessuna stampa", () => {

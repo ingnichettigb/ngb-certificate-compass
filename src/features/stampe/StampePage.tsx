@@ -20,6 +20,8 @@
  *                        colonne spostabili (trascinamento e frecce) e ricordate per ogni stampa.
  *   rev 11 — 08/11/2026 14:40 — Integrazione BarraGruppiPredefinite nella stampa predefinita per gruppi, compattazione testata (padding py-2.5)
  *                               e filtro reattivo per singolo gruppo su tabella, PDF, CSV ed Excel.
+ *   rev 13 — 09/11/2026 20:00 — Organigramma squadre: righe per lavoratore e squadra, filtro Docenti/ATA e barra delle squadre insieme,
+ *                         colonne «+» dedicate, totale dei lavoratori distinti nella barra delle squadre.
  *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
  *                         modificabile (esporta-pdf.ts), senza passare dalla stampante PDF installata.
  */
@@ -34,7 +36,7 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, testoTotale, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, calcolaRigheOrganigramma, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe, prossimoOrdine, testoTotale, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
@@ -113,11 +115,14 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   );
   const soloIds = useMemo(() => intersezioneId(arrivi.ids, senzaMinimi), [arrivi.ids, senzaMinimi]);
 
+  const organigramma = !!predefinita?.organigramma;
   const righeGrezze = useMemo(
-    () => filtri.modello === "lavoratori"
-      ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
-      : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
-    [att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
+    () => organigramma
+      ? calcolaRigheOrganigramma(tutti, att.data ?? [], ruoliQ.data ?? [], assegnazioni, filtri, soloIds)
+      : filtri.modello === "lavoratori"
+        ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
+        : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
+    [organigramma, att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
   );
 
   // Carte di scadenza: scelta del pubblico (Tutti / Solo docenti / Solo ATA); i numeri contano i lavoratori di ogni scelta.
@@ -129,9 +134,10 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   );
 
   // Per la stampa raggruppata per gruppi: elenco lavoratori con almeno un gruppo
+  // (Docenti/ATA e gruppo lavorano insieme: il pubblico scelto restringe anche l'elenco dei gruppi e i loro conteggi.)
   const righeConGruppo = useMemo(
-    () => (predefinita?.raggruppaPer === "funzione" ? conFunzione(righeGrezze) : []),
-    [righeGrezze, predefinita],
+    () => (predefinita?.raggruppaPer === "funzione" ? conFunzione(conDestinatari ? righePubblico : righeGrezze) : []),
+    [righeGrezze, righePubblico, conDestinatari, predefinita],
   );
 
   // Elenco dei gruppi presenti con conteggio lavoratori
@@ -160,7 +166,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const colonneBase = predefinita ? predefinita.colonne : colonnePerVista(filtri, righe);
   const colonne = applicaPreferenze(colonneBase, pref, filtri.modello);
-  const gruppiAggiungibili = useMemo(() => gruppiColonne(filtri.modello), [filtri.modello]);
+  const gruppiAggiungibili = useMemo(() => gruppiColonne(filtri.modello, organigramma), [filtri.modello, organigramma]);
   const alternaUnaColonna = (c: Colonna) => {
     if (colonne.includes(c) && colonne.length <= 1) return;
     cambiaPreferenze((p) => alternaColonna(colonneBase, p, c));
@@ -203,7 +209,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const parti = predefinita ? partiPredefinita : partiPersonalizzata;
   const orizzontale = filtri.modello !== "scheda";
-  const unita = filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
+  const unita = organigramma ? "componenti" : filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
   const sottotitolo = [...parti, `${righe.length} ${unita}`].join(" · ");
   const caricamento = att.isLoading || dip.isLoading;
 
@@ -275,9 +281,10 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
             {predefinita?.raggruppaPer === "funzione" && (
               <BarraGruppiPredefinite
                 gruppi={listaGruppi}
-                totaleLavoratori={righeConGruppo.length}
+                totaleLavoratori={new Set(righeConGruppo.map((r) => r.dipendenteId)).size}
                 gruppoScelto={gruppoScelto}
                 onSeleziona={setGruppoScelto}
+                {...(organigramma ? { etichetta: "Squadra", etichettaTutti: "Tutte le squadre" } : {})}
               />
             )}
 

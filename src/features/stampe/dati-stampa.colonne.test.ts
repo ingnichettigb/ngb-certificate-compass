@@ -3,6 +3,7 @@
  * Percorso:  src/features/stampe/dati-stampa.colonne.test.ts
  * Data creaz: 07/11/2026
  * Verifica l'elenco delle colonne aggiungibili (gruppi funzionali in ordine alfabetico, per documento) e le colonne nuove.
+ * Rev 2 (09/11/2026 20:00): le colonne dell'Organigramma si raggiungono solo con quel documento; gli altri non le offrono.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -56,8 +57,16 @@ describe("gruppiColonne: raggruppamento funzionale in ordine alfabetico", () => 
   });
 
   it("ogni colonna esistente si può raggiungere da almeno un documento", () => {
-    const raggiungibili = new Set(MODELLI.flatMap((m) => colonneDisponibili(m)));
+    const raggiungibili = new Set(MODELLI.flatMap((m) => colonneDisponibili(m, true)));
     for (const c of Object.keys(INTESTAZIONI) as Colonna[]) expect(raggiungibili.has(c)).toBe(true);
+  });
+
+  it("le colonne dell'Organigramma non compaiono negli altri documenti", () => {
+    for (const m of MODELLI) {
+      expect(colonneDisponibili(m)).not.toContain("corsoBaseSquadra");
+      expect(colonneDisponibili(m)).not.toContain("squadra");
+    }
+    expect(colonneDisponibili("lavoratori", true)).toEqual(expect.arrayContaining(["squadra", "corsoBaseSquadra", "aggiornamentoSquadra"]));
   });
 });
 
