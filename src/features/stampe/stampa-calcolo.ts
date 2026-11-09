@@ -6,12 +6,12 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
+ *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
-import { trovaRuoloPerCorso } from "@/features/dipendenti/matrice/mappatura-ruoli-corsi";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
@@ -19,9 +19,15 @@ import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra,
 
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
 
+/** Gruppi tematici della sicurezza che identificano una squadra operativa o un incarico specifico. */
+const GRUPPI_SQUADRA = new Set(["primo-soccorso", "antincendio", "defibrillatore", "preposti", "emergenze"]);
+
 /**
- * Determina se un corso è legato a una squadra/ruolo operativo e se il dipendente ne fa parte.
+ * Determina se un corso/gruppo è legato a una squadra o ruolo operativo e se il dipendente ne fa parte.
  * Restituisce true se ha l'incarico, false se non lo ha, null se per il corso non esiste squadra.
+ *
+ * La verifica è condotta a livello di squadra (gruppo tematico), in modo che sia per il corso base
+ * sia per i successivi aggiornamenti la risposta sia univoca per il lavoratore (Sì se in squadra, No se escluso).
  */
 function calcolaInSquadra(
   dipendenteId: string,
@@ -30,11 +36,16 @@ function calcolaInSquadra(
   ruoli: RuoloSicurezza[],
   assegnazioni: AssegnazioneRuolo[],
 ): boolean | null {
-  const ruolo = (tipoCorso ? trovaRuoloPerCorso(tipoCorso, ruoli) : null) ?? ruoliDelGruppo(gruppoChiave, ruoli)[0] ?? null;
-  if (!ruolo) return null;
-  // Escludiamo ruoli generali come "Lavoratore" che non identificano una squadra specifica
-  if (ruolo.obbligatorio_tutti || ruolo.nome.trim().toLowerCase() === "lavoratore") return null;
-  return assegnazioni.some((a) => a.dipendente_id === dipendenteId && a.ruolo_id === ruolo.id);
+  const gruppo = gruppoChiave || (tipoCorso ? assegnaGruppoArgomento(tipoCorso).chiave : "");
+  if (!GRUPPI_SQUADRA.has(gruppo)) return null;
+
+  const ruoliSquadra = ruoliDelGruppo(gruppo, ruoli).filter(
+    (r) => !r.obbligatorio_tutti && r.nome.trim().toLowerCase() !== "lavoratore",
+  );
+  if (!ruoliSquadra.length) return null;
+
+  const idRuoliSquadra = new Set(ruoliSquadra.map((r) => r.id));
+  return assegnazioni.some((a) => a.dipendente_id === dipendenteId && idRuoliSquadra.has(a.ruolo_id));
 }
 
 /**
