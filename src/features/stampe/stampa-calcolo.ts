@@ -5,17 +5,37 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
+ *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
  */
-import type { Attestato, Dipendente } from "@/lib/api";
+import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
+import { trovaRuoloPerCorso } from "@/features/dipendenti/matrice/mappatura-ruoli-corsi";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
 import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo, voceFormazione } from "./stampa-selezioni";
 
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
+
+/**
+ * Determina se un corso è legato a una squadra/ruolo operativo e se il dipendente ne fa parte.
+ * Restituisce true se ha l'incarico, false se non lo ha, null se per il corso non esiste squadra.
+ */
+function calcolaInSquadra(
+  dipendenteId: string,
+  tipoCorso: TipoCorso | null | undefined,
+  gruppoChiave: string,
+  ruoli: RuoloSicurezza[],
+  assegnazioni: AssegnazioneRuolo[],
+): boolean | null {
+  const ruolo = (tipoCorso ? trovaRuoloPerCorso(tipoCorso, ruoli) : null) ?? ruoliDelGruppo(gruppoChiave, ruoli)[0] ?? null;
+  if (!ruolo) return null;
+  // Escludiamo ruoli generali come "Lavoratore" che non identificano una squadra specifica
+  if (ruolo.obbligatorio_tutti || ruolo.nome.trim().toLowerCase() === "lavoratore") return null;
+  return assegnazioni.some((a) => a.dipendente_id === dipendenteId && a.ruolo_id === ruolo.id);
+}
 
 /**
  * Lavoratori a cui il corso manca, come righe con stato «Manca». Chi deve averlo:
@@ -95,6 +115,7 @@ function righeMancanti(
       scadenza: null,
       stato: "manca",
       giorniAllaScadenza: null,
+      inSquadra: calcolaInSquadra(d.id, null, gruppo, ruoli, assegnazioni),
     }));
 }
 
@@ -151,6 +172,7 @@ export function calcolaRighe(
         scadenza: a.data_scadenza_calcolata,
         stato,
         giorniAllaScadenza: giorni,
+        inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
       };
     });
 
@@ -201,38 +223,34 @@ export function calcolaRigheLavoratori(
   soloDipendenti: Set<string> | null = null,
   oggi = new Date(),
 ): RigaStampa[] {
-  let elenco = dipendenti.filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato");
-  if (soloDipendenti) elenco = elenco.filter((d) => soloDipendenti.has(d.id));
-  if (filtri.incompleta) elenco = elenco.filter((d) => campiMancanti(d).length > 0);
-  if (filtri.reparto !== TUTTI) elenco = elenco.filter((d) => d.reparto === filtri.reparto);
-  if (filtri.categoria !== TUTTI) elenco = elenco.filter((d) => d.sottoreparto === filtri.categoria);
-  if (filtri.classe !== TUTTI) elenco = elenco.filter((d) => d.classe_concorso === filtri.classe);
-  if (filtri.dipendenteId !== TUTTI) elenco = elenco.filter((d) => d.id === filtri.dipendenteId);
-  if (filtri.ruoloId !== TUTTI) {
-    const con = dipendentiConRuolo(filtri.ruoloId, assegnazioni);
-    elenco = elenco.filter((d) => con.has(d.id));
-  }
-
-  const nomeRuolo = new Map(ruoli.filter((r) => r.attivo).map((r) => [r.id, r.nome]));
-  const ruoliPer = new Map<string, string[]>();
-  for (const a of assegnazioni) {
-    const n = nomeRuolo.get(a.ruolo_id);
-    if (!n) continue;
-    ruoliPer.set(a.dipendente_id, [...(ruoliPer.get(a.dipendente_id) ?? []), n]);
-  }
-
-  const formazione = formazionePerLavoratore(attestati, oggi);
-
-  // Voci per cui ogni lavoratore ha il ruolo assegnato (solo ruoli attivi).
-  const vocePerRuolo = new Map(ruoli.filter((r) => r.attivo).map((r) => [r.id, voceDelRuolo(r)]));
+  const ruoliPer = new Map<string, Set<string>>();
   const vociPer = new Map<string, Set<VoceRuolo>>();
   for (const a of assegnazioni) {
-    const v = vocePerRuolo.get(a.ruolo_id);
-    if (!v) continue;
-    (vociPer.get(a.dipendente_id) ?? vociPer.set(a.dipendente_id, new Set()).get(a.dipendente_id)!).add(v);
+    const r = ruoli.find((x) => x.id === a.ruolo_id);
+    if (!r?.attivo) continue;
+    const v = voceDelRuolo(r);
+    if (v) {
+      if (!vociPer.has(a.dipendente_id)) vociPer.set(a.dipendente_id, new Set());
+      vociPer.get(a.dipendente_id)!.add(v);
+    }
+    if (!ruoliPer.has(a.dipendente_id)) ruoliPer.set(a.dipendente_id, new Set());
+    ruoliPer.get(a.dipendente_id)!.add(r.nome);
+  }
+  for (const r of ruoli.filter((x) => x.attivo && x.obbligatorio_tutti)) {
+    const v = voceDelRuolo(r);
+    for (const d of dipendenti) {
+      if (v) {
+        if (!vociPer.has(d.id)) vociPer.set(d.id, new Set());
+        vociPer.get(d.id)!.add(v);
+      }
+      if (!ruoliPer.has(d.id)) ruoliPer.set(d.id, new Set());
+      ruoliPer.get(d.id)!.add(r.nome);
+    }
   }
 
-  return elenco
+  const formazione = formazionePerLavoratore(attestati, ruoli, assegnazioni, oggi);
+  let righe = dipendenti
+    .filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato")
     .map((d): RigaStampa => ({
       id: d.id,
       dipendenteId: d.id,
@@ -262,8 +280,19 @@ export function calcolaRigheLavoratori(
       numero: "",
       dataCorso: "",
       scadenza: null,
-      stato: "senza_scadenza",
+      stato: "valido",
       giorniAllaScadenza: null,
-    }))
-    .sort(ordina);
+    }));
+
+  if (soloDipendenti) righe = righe.filter((r) => soloDipendenti.has(r.dipendenteId));
+  if (filtri.incompleta) righe = righe.filter((r) => r.mancanti.length > 0);
+  if (filtri.reparto !== TUTTI) righe = righe.filter((r) => r.reparto === filtri.reparto);
+  if (filtri.categoria !== TUTTI) righe = righe.filter((r) => r.sottoreparto === filtri.categoria);
+  if (filtri.classe !== TUTTI) righe = righe.filter((r) => r.classe === filtri.classe);
+  if (filtri.dipendenteId !== TUTTI) righe = righe.filter((r) => r.dipendenteId === filtri.dipendenteId);
+  if (filtri.ruoloId !== TUTTI) {
+    const con = dipendentiConRuolo(filtri.ruoloId, assegnazioni);
+    righe = righe.filter((r) => con.has(r.dipendenteId));
+  }
+  return righe.sort((a, b) => (a.cognome + a.nome).localeCompare(b.cognome + b.nome, "it"));
 }
