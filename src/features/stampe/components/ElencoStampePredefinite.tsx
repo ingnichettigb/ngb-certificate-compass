@@ -4,6 +4,7 @@
  * Data creaz: 08/11/2026
  * Revisioni:
  *   rev 1 — 08/11/2026 — Pagina con le carte delle stampe predefinite: titolo, spiegazione e cosa contiene; la carta apre la stampa.
+ *   rev 2 — 09/11/2026 17:10 — Aggiunta la sezione «Formazione completata e abilitazioni» per le 6 nuove carte.
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -13,6 +14,7 @@ import { STAMPE_PREDEFINITE, type FamigliaPredefinita } from "../stampe-predefin
 const FAMIGLIE: { nome: FamigliaPredefinita; titolo: string }[] = [
   { nome: "Anagrafica", titolo: "Anagrafica e organico" },
   { nome: "Scadenze", titolo: "Scadenze degli attestati" },
+  { nome: "Completati", titolo: "Formazione completata e abilitazioni" },
 ];
 
 export function ElencoStampePredefinite() {
