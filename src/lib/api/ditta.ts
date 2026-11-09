@@ -6,6 +6,7 @@
  *   rev 1 — 01/11/2026 12:00 — Modulo API database per anagrafica ditta e soglie di sicurezza D.Lgs. 81/08.
  *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise; conteggio lavoratori in forza; dati per le email letti dal database;
  *                              importazione una tantum dei dati ditta salvati nel browser.
+ *   rev 3 — 09/11/2026 12:05 — Aggiunto campo ASPP tra le figure della sicurezza.
  */
 import { sb } from "./client";
 import {
@@ -43,6 +44,7 @@ export type DittaRecord = {
   email_mittente_resend: string | null;
   datore_di_lavoro: string | null;
   rspp: string | null;
+  aspp: string | null;
   medico_competente: string | null;
   codici_ateco: CodiceAteco[];
   rischio_ditta: "basso" | "medio" | "alto" | null;
@@ -85,6 +87,7 @@ export const DITTA_DEFAULT: DittaRecord = {
   email_mittente_resend: "onboarding@resend.dev",
   datore_di_lavoro: null,
   rspp: null,
+  aspp: null,
   medico_competente: null,
   codici_ateco: [],
   rischio_ditta: "medio",
