@@ -7,11 +7,12 @@
  *   rev 3 — 08/11/2026 — Tre nuove scadenze (Corso base generale, Corso specifico, Privacy); tutte le carte di scadenza hanno la scelta
  *            Tutti / Solo docenti / Solo ATA (destinatari), con Docenti e ATA su pagine separate; chi non ha il corso compare con «Manca».
  *   rev 2 — 08/11/2026 14:40 — Aggiornata la stampa per-funzioni in «Stampa per gruppi di sicurezza» con supporto a Privacy e macro-gruppi.
+ *   rev 4 — 09/11/2026 17:10 — Nuova famiglia «Completati» con 6 carte di formazione completata e abilitazioni (Corso base, Corso specifico, Antincendio, Primo Soccorso, Defibrillatore DAE, Privacy).
  */
 import { COLONNE_PREDEFINITE, FILTRI_INIZIALI, type Colonna, type FiltriStampa } from "./stampa-tipi";
 import type { RaggruppaPer } from "./stampa-gruppi";
 
-export type FamigliaPredefinita = "Anagrafica" | "Scadenze";
+export type FamigliaPredefinita = "Anagrafica" | "Scadenze" | "Completati";
 
 export type StampaPredefinita = {
   id: string;
@@ -38,9 +39,11 @@ const ANAGRAFICA: Colonna[] = ["lavoratore", "cf", "luogoNascita", "dataNascita"
 const COLONNE_SCADENZE: Colonna[] = [...COLONNE_PREDEFINITE.scadenze];
 const CONTIENE_ANAGRAFICA = "Cognome e nome, codice fiscale, luogo e data di nascita, reparto, mansione, data di assunzione.";
 const CONTIENE_SCADENZE = "Scadenza, stato, lavoratore, codice fiscale, reparto, corso, data del corso.";
+const CONTIENE_COMPLETATI = "Lavoratore, codice fiscale, reparto, corso, ore, data, scadenza, stato.";
 
 const lavoratori: FiltriStampa = { ...FILTRI_INIZIALI, modello: "lavoratori" };
 const scadenze: FiltriStampa = { ...FILTRI_INIZIALI, modello: "scadenze", finestra: "365" };
+const completati: FiltriStampa = { ...FILTRI_INIZIALI, modello: "registro", soloUltimo: true, finestra: "tutti" };
 const scaduteOEntro12Mesi = "Scaduti e in scadenza entro 12 mesi";
 const MANCA = "Chi non ha il corso compare con «Manca»";
 const NOTA_MANCA = " Chi non ha il corso compare in cima con «Manca».";
@@ -164,6 +167,78 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     destinatari: true,
     raggruppaPer: "reparto",
     filtriApplicati: [scaduteOEntro12Mesi, "Solo attestati Privacy", "Con un ruolo Privacy: solo chi lo ha assegnato; chi non ha il corso compare con «Manca»"],
+  },
+  {
+    id: "completati-corso-base",
+    famiglia: "Completati",
+    titolo: "Formazione generale (Corso base)",
+    descrizione: "Lavoratori che hanno completato regolarmente il Corso base di formazione generale (4 ore), con data attestato e numero.",
+    contiene: "Lavoratore, codice fiscale, reparto, corso, ore, data, numero attestato, stato.",
+    filtri: { ...completati, soloCorso: "corsoBase" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "numero", "data", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Corso base generale (SIC-GEN)"],
+  },
+  {
+    id: "completati-corso-specifico",
+    famiglia: "Completati",
+    titolo: "Formazione specifica (Rischio medio/alto)",
+    descrizione: "Lavoratori con formazione specifica completata, con data corso, ore svolte, scadenza quinquennale e stato di validità.",
+    contiene: CONTIENE_COMPLETATI,
+    filtri: { ...completati, soloCorso: "corsoSpecifico" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "data", "scadenza", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Formazione specifica (SIC-SPE / SIC-SPI)"],
+  },
+  {
+    id: "completati-antincendio",
+    famiglia: "Completati",
+    titolo: "Addetti Antincendio abilitati",
+    descrizione: "Lavoratori con formazione antincendio completata e in corso di validità (base o aggiornamento), con data, ore e scadenza.",
+    contiene: CONTIENE_COMPLETATI,
+    filtri: { ...completati, gruppo: "antincendio" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "data", "scadenza", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Gruppo Antincendio"],
+  },
+  {
+    id: "completati-primo-soccorso",
+    famiglia: "Completati",
+    titolo: "Addetti Primo Soccorso abilitati",
+    descrizione: "Lavoratori con attestato di primo soccorso in corso di validità (Gruppo A o B/C, base o aggiornamento), con ore e scadenza triennale.",
+    contiene: CONTIENE_COMPLETATI,
+    filtri: { ...completati, gruppo: "primo-soccorso" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "data", "scadenza", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Gruppo Primo Soccorso"],
+  },
+  {
+    id: "completati-defibrillatore",
+    famiglia: "Completati",
+    titolo: "Abilitati Defibrillatore (DAE / BLSD)",
+    descrizione: "Lavoratori abilitati all'uso del defibrillatore semiautomatico esterno (BLSD/DAE), con data rilascio/retraining e scadenza biennale.",
+    contiene: CONTIENE_COMPLETATI,
+    filtri: { ...completati, gruppo: "defibrillatore" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "data", "scadenza", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Gruppo Defibrillatore (BLSD/DAE)"],
+  },
+  {
+    id: "completati-privacy",
+    famiglia: "Completati",
+    titolo: "Formazione Privacy completata",
+    descrizione: "Lavoratori che hanno svolto regolarmente la formazione Privacy / GDPR, con data attestato, ore e stato di validità.",
+    contiene: CONTIENE_COMPLETATI,
+    filtri: { ...completati, gruppo: "privacy" },
+    colonne: ["lavoratore", "cf", "reparto", "corso", "ore", "data", "scadenza", "stato"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: ["Solo attestati approvati", "Gruppo Privacy"],
   },
 ];
 
