@@ -8,6 +8,7 @@
  *            sezioni con salto pagina, totale, legenda). Usa pdf-lib, già nel progetto, caricato solo al clic.
  *   rev 2 — 09/11/2026 20:00 — Colori e grassetto come in anteprima (righeCella: rosso, arancione, grassetto), righe alternate grigie,
  *            celle su due righe (data + avviso) e legenda dell'Organigramma.
+ *   rev 3 — 09/11/2026 21:55 — Legenda coerente con i colori: «in grassetto» (non più «sull'anteprima») e riga «Stato» con rosso/arancione.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -104,10 +105,11 @@ export function righeLegenda(colonne: Colonna[]): string[] {
   }
   if (colonne.some((c) => VOCI_RUOLO.includes(c))) {
     out.push(
-      "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto sull'anteprima = ha l'attestato ma non il ruolo assegnato.",
+      "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto = ha l'attestato ma non il ruolo assegnato.",
     );
   }
   if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
+  if (colonne.includes("stato")) out.push("Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione (scadenza entro 90 giorni).");
   if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
   return out;
 }

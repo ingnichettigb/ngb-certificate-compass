@@ -46,6 +46,8 @@ describe("testo del PDF", () => {
     expect(righeLegenda(["corsoBase"]).length).toBe(1);
     expect(righeLegenda(["preposto"]).length).toBe(2); // come l'anteprima: corsi + ruoli di sicurezza
     expect(righeLegenda(["corsoBase", "preposto", "mancano"]).length).toBe(3);
+    expect(righeLegenda(["stato"]).join(" ")).toContain("arancione");
+    expect(righeLegenda(["preposto"]).join(" ")).not.toContain("sull'anteprima");
   });
 });
 

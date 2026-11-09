@@ -190,7 +190,7 @@ describe("colori delle celle", () => {
   it("stesse regole di prima per le altre celle: rosso e grassetto per Scaduto / Manca / dati mancanti", () => {
     const { cellaBase: _b, cellaAggiornamento: _a, ...base } = righe()[0]!;
     expect(righeCella({ ...base, stato: "scaduto" }, "stato")).toEqual([{ testo: "Scaduto", colore: "rosso", grassetto: true }]);
-    expect(righeCella({ ...base, stato: "in_scadenza" }, "stato")).toEqual([{ testo: "In scadenza", grassetto: true }]);
+    expect(righeCella({ ...base, stato: "in_scadenza" }, "stato")).toEqual([{ testo: "In scadenza", colore: "arancione", grassetto: true }]);
     expect(righeCella({ ...base, stato: "manca" }, "scadenza")).toEqual([{ testo: "Manca", colore: "rosso", grassetto: true }]);
     expect(righeCella({ ...base, stato: "valido" }, "stato")).toEqual([{ testo: "Valido" }]);
   });
