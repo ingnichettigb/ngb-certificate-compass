@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: tipi, filtri iniziali e colonne predefinite. Nessun cambio di comportamento.
+ *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
  *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» separate (luogoNascita, dataNascita); RigaStampa.ruoliElenco
  *            (ruoli come elenco, per la stampa raggruppata per funzione).
  */
@@ -11,7 +12,10 @@ import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa"
 
 export type Modello = "registro" | "gruppo" | "scadenze" | "scheda" | "reparto" | "lavoratori";
 export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
-export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza";
+export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza" | "manca";
+
+/** Corsi che si possono isolare per codice (SIC-GEN = Corso base generale, SIC-SPE = Corso specifico). */
+export type SoloCorso = "corsoBase" | "corsoSpecifico";
 
 /** Voci di formazione mostrate come Sì/No nell'elenco lavoratori. */
 export type VoceFormazione = "corsoBase" | "corsoSpecifico" | "preposto" | "antincendio" | "primoSoccorso" | "defibrillatore";
@@ -49,6 +53,8 @@ export type FiltriStampa = {
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
   soloIncarichi: boolean; // con un gruppo corsi: tiene solo chi ha oggi il ruolo collegato assegnato
+  soloCorso: SoloCorso | null; // solo gli attestati del Corso base o del Corso specifico
+  conMancanti: boolean; // aggiunge i lavoratori a cui il corso manca (stato «Manca»)
   incompleta: boolean; // selezione «Anagrafica incompleta»
   senzaAttestati: boolean; // selezione «Senza attestati»
   senzaModo: ModoSenza; // «nessuno» dei due minimi oppure manca «almeno» uno dei due
@@ -65,6 +71,8 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   dipendenteId: TUTTI,
   finestra: "tutti",
   soloIncarichi: false,
+  soloCorso: null,
+  conMancanti: false,
   includiCessati: false,
   soloUltimo: true,
   mostraFirme: false,

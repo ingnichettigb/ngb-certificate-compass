@@ -19,6 +19,7 @@ export const ETICHETTA_STATO: Record<StatoValidita, string> = {
   in_scadenza: "In scadenza",
   scaduto: "Scaduto",
   senza_scadenza: "Senza scadenza",
+  manca: "Manca",
 };
 
 export const TITOLI_MODELLO: Record<Modello, string> = {

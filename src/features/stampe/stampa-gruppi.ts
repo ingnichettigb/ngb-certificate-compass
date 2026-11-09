@@ -65,6 +65,26 @@ export function gruppiLavoratore(r: RigaStampa): string[] {
   return [...gruppi];
 }
 
+const NOME_REPARTO_PLURALE: Record<string, string> = { docente: "Docenti", ata: "ATA" };
+const RANGO_REPARTO: Record<string, number> = { docente: 0, ata: 1 };
+
+/**
+ * Sezioni per reparto dei documenti di scadenza: prima i Docenti, poi gli ATA, poi gli altri reparti in ordine alfabetico.
+ * Le righe di ogni sezione mantengono l'ordine con cui arrivano.
+ */
+export function sezioniPerReparto(righe: RigaStampa[]): GruppoStampa[] {
+  const chiave = (r: RigaStampa) => (r.reparto ?? "").trim().toLowerCase();
+  const ordinate = [...righe].sort((a, b) => {
+    const ra = RANGO_REPARTO[chiave(a)] ?? 2;
+    const rb = RANGO_REPARTO[chiave(b)] ?? 2;
+    return ra - rb || (ra === 2 ? ORDINE_ALFABETICO.compare(a.reparto, b.reparto) : 0);
+  });
+  return raggruppa(ordinate, (r) => r.reparto).map(([reparto, rr]) => ({
+    titolo: `${NOME_REPARTO_PLURALE[reparto.trim().toLowerCase()] ?? reparto} – ${new Set(rr.map((r) => r.dipendenteId)).size} lavoratori`,
+    righe: rr,
+  }));
+}
+
 /** Tiene solo i lavoratori che appartengono ad almeno un gruppo di sicurezza. */
 export function conFunzione(righe: RigaStampa[]): RigaStampa[] {
   return righe.filter((r) => gruppiLavoratore(r).length > 0);

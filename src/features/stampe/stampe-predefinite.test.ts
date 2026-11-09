@@ -2,7 +2,8 @@
  * File:      stampe-predefinite.test.ts
  * Percorso:  src/features/stampe/stampe-predefinite.test.ts
  * Data creaz: 08/11/2026
- * Verifica le 7 stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Verifica le 10 stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Rev 2 (08/11/2026): tre nuove scadenze (Corso base, Corso specifico, Privacy), scelta del pubblico e righe «Manca».
  */
 import { describe, expect, it } from "vitest";
 import { cella, colonneDisponibili, INTESTAZIONI, ordinaRighe, type RigaStampa } from "./dati-stampa";
@@ -16,10 +17,10 @@ const riga = (extra: Partial<RigaStampa> = {}): RigaStampa => ({
   giorniAllaScadenza: null, ...extra,
 });
 
-describe("stampe predefinite: le 7 carte", () => {
-  it("sono sette, con id unico, titolo e spiegazione", () => {
-    expect(STAMPE_PREDEFINITE).toHaveLength(7);
-    expect(new Set(STAMPE_PREDEFINITE.map((s) => s.id)).size).toBe(7);
+describe("stampe predefinite: le 10 carte", () => {
+  it("sono dieci, con id unico, titolo e spiegazione", () => {
+    expect(STAMPE_PREDEFINITE).toHaveLength(10);
+    expect(new Set(STAMPE_PREDEFINITE.map((s) => s.id)).size).toBe(10);
     for (const s of STAMPE_PREDEFINITE) {
       expect(s.titolo.length).toBeGreaterThan(0);
       expect(s.descrizione.length).toBeGreaterThan(0);
@@ -34,17 +35,33 @@ describe("stampe predefinite: le 7 carte", () => {
     }
   });
 
-  it("le scadenze guardano scaduti e prossimi 12 mesi; le tre per ruolo tengono solo chi ha l'incarico", () => {
+  it("le scadenze guardano scaduti e prossimi 12 mesi; quelle per ruolo tengono solo chi ha l'incarico", () => {
     const scadenze = STAMPE_PREDEFINITE.filter((s) => s.famiglia === "Scadenze");
-    expect(scadenze).toHaveLength(4);
+    expect(scadenze.map((s) => s.id)).toEqual([
+      "scadenze-tutte", "scadenze-corso-base", "scadenze-corso-specifico", "scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-privacy",
+    ]);
     for (const s of scadenze) {
       expect(s.filtri.modello).toBe("scadenze");
       expect(s.filtri.finestra).toBe("365");
     }
-    const perRuolo = scadenze.filter((s) => s.id !== "scadenze-tutte");
-    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso"]);
+    const perRuolo = ["scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-privacy"].map((id) => trovaPredefinita(id)!);
+    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso", "privacy"]);
     for (const s of perRuolo) expect(s.filtri.soloIncarichi).toBe(true);
     expect(trovaPredefinita("scadenze-tutte")?.filtri.soloIncarichi).toBe(false);
+  });
+
+  it("Corso base e Corso specifico: solo quel corso, con i lavoratori senza corso come «Manca»", () => {
+    expect(trovaPredefinita("scadenze-corso-base")?.filtri).toMatchObject({ soloCorso: "corsoBase", conMancanti: true });
+    expect(trovaPredefinita("scadenze-corso-specifico")?.filtri).toMatchObject({ soloCorso: "corsoSpecifico", conMancanti: true });
+    expect(trovaPredefinita("scadenze-tutte")?.filtri.conMancanti).toBe(false);
+  });
+
+  it("tutte le carte di scadenza permettono Tutti / Solo docenti / Solo ATA, con Docenti e ATA su pagine separate", () => {
+    for (const s of STAMPE_PREDEFINITE.filter((x) => x.famiglia === "Scadenze")) {
+      expect(s.destinatari).toBe(true);
+      expect(s.raggruppaPer).toBe("reparto");
+    }
+    for (const s of STAMPE_PREDEFINITE.filter((x) => x.famiglia !== "Scadenze")) expect(s.destinatari).toBeUndefined();
   });
 
   it("anagrafica: tutti i dati; per settori e per funzioni raggruppano", () => {

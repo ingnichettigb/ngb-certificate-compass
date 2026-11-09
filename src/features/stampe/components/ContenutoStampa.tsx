@@ -17,7 +17,7 @@ import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
 import { dataIt, raggruppa, testoTotale, type Colonna, type FiltriStampa, type GruppoColonne, type OrdineColonna, type RigaStampa } from "../dati-stampa";
 import type { LarghezzeColonne } from "../preferenze-colonne";
-import { gruppiLavoratori, type RaggruppaPer } from "../stampa-gruppi";
+import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "../stampa-gruppi";
 import { Firme, IntestazioneDitta } from "./FoglioStampa";
 import { TabellaStampa } from "./TabellaStampa";
 
@@ -39,6 +39,9 @@ type Props = {
   /** Colonne che si possono aggiungere o togliere dal «+» in fondo all'intestazione. */
   gruppiColonne?: GruppoColonne[] | undefined;
   onAlternaColonna?: ((c: Colonna) => void) | undefined;
+  /** Spostamento delle colonne: trascinamento dell'intestazione e frecce nel «+». */
+  onSposta?: ((da: Colonna, a: Colonna) => void) | undefined;
+  onSpostaDi?: ((c: Colonna, passo: -1 | 1) => void) | undefined;
   /** Solo elenco lavoratori: divide il documento in gruppi, ciascuno su una pagina nuova in stampa. */
   raggruppaPer?: RaggruppaPer | undefined;
   /** Solo con raggruppamento per gruppi di sicurezza: mostra un solo gruppo. */
@@ -84,12 +87,12 @@ export function ContenutoStampa(props: Props) {
   );
 }
 
-function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna, raggruppaPer, soloGruppo }: Props) {
+function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, onOrdina, dipendenti, ditta, messaggioVuoto, larghezze, onLarghezze, gruppiColonne, onAlternaColonna, onSposta, onSpostaDi, raggruppaPer, soloGruppo }: Props) {
   if (!righe.length) return <p className="py-10 text-center text-sm">{messaggioVuoto ?? "Nessun dato con i filtri scelti."}</p>;
   const tab = (rr: RigaStampa[], cols: Colonna[] = colonne) => (
     <TabellaStampa
       righe={rr} colonne={cols} onRimuoviColonna={onRimuoviColonna} ordine={ordine} onOrdina={onOrdina}
-      larghezze={larghezze} onLarghezze={onLarghezze} righeMisura={righe} gruppiColonne={gruppiColonne} onAlternaColonna={onAlternaColonna}
+      larghezze={larghezze} onLarghezze={onLarghezze} righeMisura={righe} gruppiColonne={gruppiColonne} onAlternaColonna={onAlternaColonna} onSposta={onSposta} onSpostaDi={onSpostaDi}
     />
   );
 
@@ -109,8 +112,21 @@ function CorpoStampa({ filtri, righe, colonne, onRimuoviColonna, ordine = null, 
           <Legenda colonne={colonne} />
         </>
       );
-    case "scadenze":
-      return tab(ordine ? righe : [...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
+    case "scadenze": {
+      const perUrgenza = (rr: RigaStampa[]) => (ordine ? rr : [...rr].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
+      // Con il raggruppamento per reparto: Docenti e poi ATA, ciascuno su una pagina nuova; chi non ha il corso («Manca») sta in cima.
+      return raggruppaPer === "reparto" ? (
+        <>
+          {sezioniPerReparto(righe).map((g, i) => (
+            <Sezione key={g.titolo} titolo={g.titolo} saltoPagina={i > 0}>
+              {tab(perUrgenza(g.righe))}
+            </Sezione>
+          ))}
+        </>
+      ) : (
+        tab(perUrgenza(righe))
+      );
+    }
     case "gruppo":
       return (
         <>

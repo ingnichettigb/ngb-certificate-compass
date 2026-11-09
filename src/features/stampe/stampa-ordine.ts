@@ -17,7 +17,7 @@ export type DirezioneOrdine = "asc" | "desc";
 export type OrdineColonna = { colonna: Colonna; direzione: DirezioneOrdine };
 
 const CONFRONTO = new Intl.Collator("it", { numeric: true, sensitivity: "base" });
-const PESO_STATO: Record<StatoValidita, number> = { scaduto: 0, in_scadenza: 1, valido: 2, senza_scadenza: 3 };
+const PESO_STATO: Record<StatoValidita, number> = { manca: -1, scaduto: 0, in_scadenza: 1, valido: 2, senza_scadenza: 3 };
 
 /** Valore con cui si ordina una colonna; null = dato assente (finisce sempre in fondo). */
 function chiaveOrdine(r: RigaStampa, c: Colonna): string | number | null {

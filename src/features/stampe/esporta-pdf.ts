@@ -11,7 +11,7 @@ import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
 import { dataIt, INTESTAZIONI, cella, raggruppa, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "./dati-stampa";
-import { gruppiLavoratori, type RaggruppaPer } from "./stampa-gruppi";
+import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "./stampa-gruppi";
 import { scarica, nomeFileEsportazione } from "./esporta-file";
 import type { LarghezzeColonne } from "./preferenze-colonne";
 
@@ -56,8 +56,12 @@ export function sezioniPerPdf(
       return raggruppaPer
         ? gruppiLavoratori(righe, raggruppaPer, soloGruppo).map((g, i) => ({ titolo: g.titolo, righe: g.righe, nuovaPagina: i > 0 }))
         : [{ righe, nuovaPagina: false }];
-    case "scadenze":
-      return [{ righe: ordine ? righe : [...righe].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")), nuovaPagina: false }];
+    case "scadenze": {
+      const perUrgenza = (rr: RigaStampa[]) => (ordine ? rr : [...rr].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
+      return raggruppaPer === "reparto"
+        ? sezioniPerReparto(righe).map((g, i) => ({ titolo: g.titolo, righe: perUrgenza(g.righe), nuovaPagina: i > 0 }))
+        : [{ righe: perUrgenza(righe), nuovaPagina: false }];
+    }
     case "gruppo":
       return raggruppa(righe, (r) => r.gruppoTitolo).map(([g, rr]) => ({
         titolo: `${g} – ${new Set(rr.map((r) => r.dipendenteId)).size} lavoratori`,
