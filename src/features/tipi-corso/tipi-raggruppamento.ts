@@ -8,6 +8,7 @@
  * - Rev 2: 2026-10-27 20:55 - Evacuazione viola, Defibrillatore teal, protetti EME-PRO-02/EME-EAA-02.
  * - Rev 3: 2026-11-01 11:00 - Antincendio solo codici VVF (VFF-FOR…): rimossi vecchi ANT-L…
  * - Rev 4: 2026-11-04 08:00 - Gruppi e colori dedicati per Privacy (Indaco) e Covid (Fucsia).
+ * - Rev 5: 2026-11-10 - Colore dedicato (lime) ai corsi ASPP/RSPP nella sola tabella corsi: per stampe, matrici ed esportazioni restano in «Sicurezza lavoratori».
  */
 
 export type GruppoArgomento = {
@@ -60,4 +61,30 @@ export function assegnaGruppoArgomento(c: {
 
 export function isCorsoProtetto(c: { codice?: string | null }): boolean {
   return Boolean(c.codice && CODICI_STANDARD_PROTETTI.has(c.codice.trim().toUpperCase()));
+}
+
+/** Corsi ASPP / RSPP (codici SIC-ASPP-… e SIC-RSPP-…). */
+export function isCorsoAsppRspp(c: { codice?: string | null }): boolean {
+  return /^SIC-(ASPP|RSPP)-/i.test((c.codice ?? "").trim());
+}
+
+/** Voce di legenda e colori dedicati ai corsi ASPP/RSPP (solo aspetto grafico). */
+export const GRUPPO_ASPP_RSPP_VISIVO: Pick<GruppoArgomento, "titolo" | "coloreSfondo" | "coloreTesto"> = {
+  titolo: "ASPP / RSPP",
+  coloreSfondo: "bg-lime-500/20 hover:bg-lime-500/25",
+  coloreTesto: "text-lime-800 dark:text-lime-300",
+};
+
+/**
+ * Gruppo con cui disegnare la riga nella tabella corsi. Coincide con il gruppo logico, tranne per
+ * ASPP/RSPP che hanno un colore e un'etichetta propri. `chiave` e `ordine` restano quelli di
+ * «Sicurezza lavoratori»: filtri, stampe e matrici non cambiano.
+ */
+export function gruppoVisuale(c: {
+  macro_categoria?: string | null;
+  codice?: string | null;
+  nome_corso?: string | null;
+}): GruppoArgomento {
+  const g = assegnaGruppoArgomento(c);
+  return isCorsoAsppRspp(c) ? { ...g, ...GRUPPO_ASPP_RSPP_VISIVO } : g;
 }

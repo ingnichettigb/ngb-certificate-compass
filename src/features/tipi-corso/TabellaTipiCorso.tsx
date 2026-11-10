@@ -5,6 +5,7 @@
  * Revisioni:
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ * - Rev (2026-11-10): Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
@@ -20,7 +21,17 @@ import type { TipoCorso } from "@/lib/api";
 import { RigaTipoCorso } from "./components/RigaTipoCorso";
 import { FormNuovoCorso } from "./components/FormNuovoCorso";
 import { useTabellaTipiCorso } from "./hooks/useTabellaTipiCorso";
-import { GRUPPI_ARGOMENTO, assegnaGruppoArgomento } from "./tipi-raggruppamento";
+import { useLarghezzeColonne } from "./components/useLarghezzeColonne";
+import {
+  GRUPPI_ARGOMENTO,
+  GRUPPO_ASPP_RSPP_VISIVO,
+  assegnaGruppoArgomento,
+  isCorsoAsppRspp,
+} from "./tipi-raggruppamento";
+
+/** Larghezze iniziali in pixel: N°, maniglia, Codice, Corso, Ore, Validità, Agg. anni, Agg. ore, Codice agg., Al lavoratore, cestino. */
+const LARGHEZZE_INIZIALI = [44, 64, 150, 340, 96, 104, 104, 100, 150, 104, 52];
+const CHIAVE_LARGHEZZE = "tabella-tipi-corso:larghezze:v1";
 
 type Chiave =
   | "codice"
@@ -40,6 +51,10 @@ export function ordina(corsi: TipoCorso[], ord: Ord): TipoCorso[] {
     const ga = assegnaGruppoArgomento(a).ordine;
     const gb = assegnaGruppoArgomento(b).ordine;
     if (ga !== gb) return ga - gb;
+    // dentro «Sicurezza lavoratori» i corsi ASPP/RSPP stanno insieme, dopo gli altri
+    const sa = isCorsoAsppRspp(a) ? 1 : 0;
+    const sb = isCorsoAsppRspp(b) ? 1 : 0;
+    if (sa !== sb) return sa - sb;
     const va = a[ord.chiave];
     const vb = b[ord.chiave];
     const vuotoA = va === null || va === undefined || va === "";
@@ -53,6 +68,10 @@ export function ordina(corsi: TipoCorso[], ord: Ord): TipoCorso[] {
 
 export function TabellaTipiCorso() {
   const [ord, setOrd] = useState<Ord>({ chiave: "codice", dir: "asc" });
+  const { larghezze, totale, maniglia, ripristina, modificate } = useLarghezzeColonne(
+    CHIAVE_LARGHEZZE,
+    LARGHEZZE_INIZIALI,
+  );
   const {
     corsi,
     isLoading,
@@ -94,11 +113,21 @@ export function TabellaTipiCorso() {
   }
 
   const righe = ordina(corsi, ord);
-  const intest = (chiave: Chiave, testo: string, cls: string) => (
-    <TableHead className={cls}>
+  const renderManiglia = (indice: number) => (
+    <span
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Trascina per cambiare la larghezza della colonna (doppio clic: larghezza originale)"
+      title="Trascina per allargare o restringere · doppio clic per ripristinare"
+      className="absolute right-0 top-0 z-20 h-full w-2 cursor-col-resize touch-none select-none border-r border-border/60 hover:border-primary hover:bg-primary/20"
+      {...maniglia(indice)}
+    />
+  );
+  const intest = (chiave: Chiave, testo: string, indice: number, cls = "") => (
+    <TableHead className={`relative overflow-hidden ${cls}`}>
       <button
         type="button"
-        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+        className="inline-flex max-w-full items-center gap-1 truncate font-medium hover:text-foreground"
         onClick={() =>
           setOrd((o) => ({ chiave, dir: o.chiave === chiave && o.dir === "asc" ? "desc" : "asc" }))
         }
@@ -110,6 +139,7 @@ export function TabellaTipiCorso() {
           <ArrowUpDown className="size-3 opacity-40" />
         )}
       </button>
+      {renderManiglia(indice)}
     </TableHead>
   );
 
@@ -122,22 +152,45 @@ export function TabellaTipiCorso() {
             {g.ordine}. {g.titolo}
           </span>
         ))}
+        <span
+          className={`rounded border border-border/40 px-2 py-0.5 font-medium ${GRUPPO_ASPP_RSPP_VISIVO.coloreSfondo} ${GRUPPO_ASPP_RSPP_VISIVO.coloreTesto}`}
+          title="Fanno parte di «Sicurezza lavoratori» per stampe, matrici ed esportazioni"
+        >
+          ASPP / RSPP
+        </span>
+        {modificate && (
+          <button
+            type="button"
+            onClick={ripristina}
+            className="ml-auto rounded border border-border px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            Ripristina larghezze colonne
+          </button>
+        )}
       </div>
       <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
-        <Table className="min-w-[900px]">
+        <Table className="table-fixed" style={{ width: totale }}>
+          <colgroup>
+            {larghezze.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
           <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
-              <TableHead className="w-10 text-center">N°</TableHead>
-              <TableHead className="w-8" />
-              {intest("codice", "Codice", "w-32 min-w-[118px]")}
-              {intest("nome_corso", "Corso", "min-w-[220px]")}
-              {intest("ore_minime_legge", "Ore corso", "w-24 min-w-[72px]")}
-              {intest("durata_validita_anni", "Validità (anni)", "w-28 min-w-[86px]")}
-              {intest("anni_aggiornamento", "Aggiorn. (anni)", "w-28 min-w-[86px]")}
-              {intest("ore_aggiornamento", "Aggiorn. (ore)", "w-24 min-w-[76px]")}
-              {intest("codice_corso_aggiornamento", "Codice aggiorn.", "w-32 min-w-[118px]")}
-              {intest("visibile_lavoratore", "Al lavoratore", "w-24 min-w-[84px] text-center")}
-              <TableHead className="w-10" />
+              <TableHead className="relative overflow-hidden text-center">
+                N°
+                {renderManiglia(0)}
+              </TableHead>
+              <TableHead />
+              {intest("codice", "Codice", 2)}
+              {intest("nome_corso", "Corso", 3)}
+              {intest("ore_minime_legge", "Ore corso", 4)}
+              {intest("durata_validita_anni", "Validità (anni)", 5)}
+              {intest("anni_aggiornamento", "Aggiorn. (anni)", 6)}
+              {intest("ore_aggiornamento", "Aggiorn. (ore)", 7)}
+              {intest("codice_corso_aggiornamento", "Codice aggiorn.", 8)}
+              {intest("visibile_lavoratore", "Al lavoratore", 9, "text-center")}
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>

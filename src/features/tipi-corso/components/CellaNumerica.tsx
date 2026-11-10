@@ -45,7 +45,7 @@ export function CellaNumerica({
           if (v === null) e.target.value = "";
           onSalva(v);
         }}
-        className="h-9 min-w-[90px]"
+        className="h-9 w-full min-w-0"
       />
     </TableCell>
   );

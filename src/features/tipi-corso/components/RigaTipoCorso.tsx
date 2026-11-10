@@ -6,6 +6,7 @@
  * - Rev 3: 2026-10-26 17:15 - Sfondo per argomento e blocco dei corsi standard del programma.
  * - Rev 4: 2026-10-31 13:40 - Corsi standard modificabili (solo eliminazione bloccata).
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ * - Rev (2026-11-10): Colore dedicato ai corsi ASPP/RSPP e celle senza larghezza minima (colonne ridimensionabili).
  */
 import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { type TipoCorso } from "@/lib/api";
 import { CellaNumerica } from "./CellaNumerica";
-import { assegnaGruppoArgomento, isCorsoProtetto } from "../tipi-raggruppamento";
+import { gruppoVisuale, isCorsoProtetto } from "../tipi-raggruppamento";
 
 export function RigaTipoCorso({
   c,
@@ -47,7 +48,7 @@ export function RigaTipoCorso({
   onLasciaRiga: () => void;
   onRilascia: () => void;
 }) {
-  const gruppo = assegnaGruppoArgomento(c);
+  const gruppo = gruppoVisuale(c);
   const protetto = isCorsoProtetto(c);
   // Rev 4 (31/10/2026 13:40): i corsi standard ora sono modificabili; restano solo non eliminabili.
   const blocca = occupata;
@@ -92,7 +93,7 @@ export function RigaTipoCorso({
           disabled={blocca}
           onBlur={(e) => onSalvaCampo("codice", e.target.value.trim() || null)}
           title={protetto ? "Corso standard del programma: non modificabile" : (c.codice ?? "Codice del corso")}
-          className={`h-9 min-w-[110px] font-mono text-xs ${bloccoCls}`}
+          className={`h-9 w-full min-w-0 font-mono text-xs ${bloccoCls}`}
         />
       </TableCell>
       <TableCell className="p-1.5">
@@ -100,7 +101,7 @@ export function RigaTipoCorso({
           defaultValue={c.nome_corso}
           disabled={blocca}
           onBlur={(e) => onSalvaCampo("nome_corso", e.target.value.trim())}
-          className={`h-9 ${bloccoCls}`}
+          className={`h-9 w-full min-w-0 ${bloccoCls}`}
         />
         <span className="flex items-center gap-1 pl-1 text-xs text-muted-foreground">
           <span className={`font-medium ${gruppo.coloreTesto}`}>{gruppo.titolo}</span> · {c.livello_specifico}
@@ -121,7 +122,7 @@ export function RigaTipoCorso({
           placeholder="—"
           disabled={blocca}
           onBlur={(e) => onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)}
-          className={`h-9 min-w-[96px] font-mono text-xs ${bloccoCls}`}
+          className={`h-9 w-full min-w-0 font-mono text-xs ${bloccoCls}`}
         />
       </TableCell>
       <TableCell className="p-1.5 text-center">
