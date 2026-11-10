@@ -52,6 +52,7 @@ import {
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
+import { validitaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 export function SelettoreCorsiDipendente({
   corrente,
@@ -190,6 +191,12 @@ export function SelettoreCorsiDipendente({
     });
   }, [corsiDb, filtroRicerca]);
 
+  // RSPP valido: l'aggiornamento Preposto non è dovuto (il corso base resta obbligatorio)
+  const rsppDelLavoratore = useMemo(
+    () => validitaRspp(corrente.id, attestati),
+    [attestati, corrente.id],
+  );
+
   const corsiAttivi = useMemo(() => {
     return corsiDb.filter((c) => haObbligoCorso(c));
   }, [corsiDb, mappaRuoli, assegnazioni, corrente.id]);
@@ -307,6 +314,7 @@ export function SelettoreCorsiDipendente({
               corso: c,
               attestati,
               dipendenteId: corrente.id,
+              rspp: rsppDelLavoratore,
             });
             const inLavorazione = salvandoCorsoId === c.id;
 
@@ -316,7 +324,9 @@ export function SelettoreCorsiDipendente({
                 ? "border-primary bg-primary/10 text-foreground"
                 : esito.colore === "arancione"
                   ? "border-amber-500/70 bg-amber-500/10 text-amber-900 dark:text-amber-200"
-                  : "border-destructive/60 bg-destructive/10 text-destructive";
+                  : esito.colore === "grigio"
+                    ? "border-border bg-muted/60 text-muted-foreground"
+                    : "border-destructive/60 bg-destructive/10 text-destructive";
 
             return (
               <div
@@ -329,6 +339,9 @@ export function SelettoreCorsiDipendente({
                 )}
                 {esito.colore === "arancione" && (
                   <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                )}
+                {esito.colore === "grigio" && (
+                  <FileCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 )}
                 {esito.colore === "rosso" && (
                   <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
@@ -344,7 +357,9 @@ export function SelettoreCorsiDipendente({
                     className={`rounded px-1.5 py-0.2 font-mono text-[10px] font-semibold ${
                       esito.colore === "arancione"
                         ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
-                        : "bg-destructive/20 text-destructive"
+                        : esito.colore === "grigio"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-destructive/20 text-destructive"
                     }`}
                   >
                     {esito.etichettaData}

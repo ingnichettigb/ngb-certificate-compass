@@ -18,10 +18,12 @@ export interface ParametriCsv {
   mappaAssegnazioni: Set<string>;
   haObbligoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
   haAttestatoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
+  /** Motivo per cui il corso non è dovuto (es. RSPP valido), oppure null. */
+  motivoEsenzione?: (dipendenteId: string, corso: TipoCorso) => string | null;
 }
 
 export function esportaMatriceCsv(p: ParametriCsv) {
-  const { corsiVisibili, lavoratori, ruoli, mappaAssegnazioni, haObbligoCorso, haAttestatoCorso } =
+  const { corsiVisibili, lavoratori, ruoli, mappaAssegnazioni, haObbligoCorso, haAttestatoCorso, motivoEsenzione } =
     p;
   const sep = ";";
   const intestazioni = [
@@ -44,7 +46,7 @@ export function esportaMatriceCsv(p: ParametriCsv) {
     const corsiVal = corsiVisibili.map((c) => {
       const ob = haObbligoCorso(d.id, c);
       const fatto = haAttestatoCorso(d.id, c);
-      if (!ob) return '"Non previsto"';
+      if (!ob) return motivoEsenzione?.(d.id, c) ? '"Esente (RSPP/ASPP valido)"' : '"Non previsto"';
       return fatto ? '"In regola"' : '"Da svolgere"';
     });
     return [

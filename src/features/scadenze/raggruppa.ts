@@ -6,6 +6,8 @@
  * - Rev 1 (2026-11-06 12:00): Raggruppa gli attestati per lavoratore + corso/macro-categoria e calcola il ciclo una sola volta per gruppo.
  * - Rev 2 (2026-11-06 16:00): Regola Preposti (ciclo biennale, taglio al 19/05/2026); protezione su data_corso nulla.
  * - Rev 3 (2026-11-06 18:00): Regime transitorio completo (cicli vecchi 5 anni troncati al taglio, poi biennali).
+ * - Rev 4 (2026-11-10): I corsi ASPP e RSPP hanno un ciclo proprio (non si mescolano a quello dei lavoratori) e
+ *   l'RSPP valido esonera dall'aggiornamento Preposto (vedi esenzioni-rspp.ts).
  */
 import type { Attestato } from "@/lib/api";
 import {
@@ -14,6 +16,7 @@ import {
   type AttestatoCiclo,
   type RegimeTransitorio,
 } from "./calcolo-ciclo";
+import { applicaEsenzioneRspp, famigliaAsppRspp, mappaValiditaRspp, oggiIso } from "./esenzioni-rspp";
 import type { RigaScadenzaDati } from "./types";
 
 /** Accordo Stato-Regioni 17/04/2025: aggiornamento Preposti ogni 2 anni. */
@@ -52,6 +55,9 @@ function eBase(a: Attestato): boolean {
 /** Un lavoratore + una macro-categoria (o, se manca, un tipo di corso) = un ciclo formativo. */
 export function chiaveGruppo(a: Attestato): string {
   const chi = a.dipendente_id ?? a.codice_fiscale ?? "";
+  // ASPP e RSPP: stessa macro-categoria dei lavoratori ma ciclo formativo a parte (moduli A, B, C, aggiornamento)
+  const famiglia = famigliaAsppRspp(a.tipi_corso);
+  if (famiglia) return `${chi}|famiglia:${famiglia}`;
   const macro = a.tipi_corso?.macro_categoria;
   return `${chi}|${macro ? `macro:${macro}` : `tipo:${a.tipo_corso_id}`}`;
 }
@@ -103,8 +109,16 @@ export function parametriDaGruppo(gruppoOrdinato: Attestato[]) {
   return { durataCicloAnni, oreRichiesteAggiornamento, decadenzaAnni, regimeTransitorio: null as RegimeTransitorio | null };
 }
 
-/** Calcola una riga per ogni gruppo lavoratore + corso. Gli attestati respinti non contano. */
-export function costruisciRighe(attestati: Attestato[], oggi: Date): RigaScadenzaDati[] {
+/**
+ * Calcola una riga per ogni gruppo lavoratore + corso. Gli attestati respinti non contano.
+ * `tuttiGliAttestati` serve a cercare l'RSPP valido quando `attestati` è già filtrato (es. i soli Preposti).
+ */
+export function costruisciRighe(
+  attestati: Attestato[],
+  oggi: Date,
+  tuttiGliAttestati: Attestato[] = attestati,
+): RigaScadenzaDati[] {
+  const rspp = mappaValiditaRspp(tuttiGliAttestati, oggiIso(oggi));
   const gruppi = new Map<string, Attestato[]>();
   for (const a of attestati) {
     if (a.stato_validazione === "Respinto") continue;
@@ -118,7 +132,7 @@ export function costruisciRighe(attestati: Attestato[], oggi: Date): RigaScadenz
   for (const [chiave, gruppo] of gruppi) {
     gruppo.sort((a, b) => (a.data_corso ?? "").localeCompare(b.data_corso ?? ""));
     const p = parametriDaGruppo(gruppo);
-    const ciclo = valutaCicloFormativo({
+    let ciclo = valutaCicloFormativo({
       attestati: gruppo.map(aAttestatoCiclo),
       durataCicloAnni: p.durataCicloAnni,
       oreRichiesteAggiornamento: p.oreRichiesteAggiornamento,
@@ -126,6 +140,9 @@ export function costruisciRighe(attestati: Attestato[], oggi: Date): RigaScadenz
       regimeTransitorio: p.regimeTransitorio,
       oggi,
     });
+    // Preposto + RSPP valido: l'aggiornamento Preposto non è dovuto (il base resta obbligatorio)
+    const rsppDelLavoratore = gruppo.some(ePreposto) ? rspp.get(gruppo[0]!.dipendente_id) : undefined;
+    if (rsppDelLavoratore) ciclo = applicaEsenzioneRspp(ciclo, rsppDelLavoratore);
     righe.push({ chiave, attestato: gruppo[gruppo.length - 1]!, attestatiGruppo: gruppo, ciclo });
   }
   return righe;

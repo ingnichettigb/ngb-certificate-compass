@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: riga di un lavoratore con funzione, ruoli e caselle dei corsi. Nessun cambio di comportamento.
+ *   rev 2 — 10/11/2026 — Casella «E» (esente) per l'aggiornamento Preposto di chi ha un RSPP valido.
  */
 import { Check } from "lucide-react";
 import type { Dipendente, TipoCorso } from "@/lib/api";
@@ -18,6 +19,7 @@ interface Props {
   ruoli: RuoloSicurezza[];
   mappaAssegnazioni: Set<string>;
   haObbligoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
+  motivoEsenzione?: (dipendenteId: string, corso: TipoCorso) => string | null;
   haAttestatoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
   onSeleziona: (id: string) => void;
   onToggleObbligo: (dip: Dipendente, corso: TipoCorso) => void;
@@ -31,6 +33,7 @@ export function RigaLavoratoreMatrice({
   ruoli,
   mappaAssegnazioni,
   haObbligoCorso,
+  motivoEsenzione,
   haAttestatoCorso,
   onSeleziona,
   onToggleObbligo,
@@ -97,6 +100,7 @@ export function RigaLavoratoreMatrice({
         const obbligatorio = haObbligoCorso(dip.id, c);
         const fatto = haAttestatoCorso(dip.id, c);
         const ruoloCollegato = trovaRuoloPerCorso(c, ruoli);
+        const esente = motivoEsenzione?.(dip.id, c) ?? null;
 
         return (
           <td
@@ -107,7 +111,9 @@ export function RigaLavoratoreMatrice({
             }}
             className="px-2 py-2 text-center select-none hover:bg-primary/10 transition-colors"
             title={
-              ruoloCollegato
+              esente
+                ? esente
+                : ruoloCollegato
                 ? `${obbligatorio ? "Revoca" : "Assegna"} ruolo "${ruoloCollegato.nome}" a ${dip.cognome}`
                 : `Corso: ${c.nome_corso}`
             }
@@ -120,10 +126,12 @@ export function RigaLavoratoreMatrice({
                     ? fatto
                       ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
                       : "bg-amber-500/20 border-amber-600 text-amber-700 dark:text-amber-400 font-bold"
-                    : "border-muted-foreground/30 hover:border-primary/60"
+                    : esente
+                      ? "border-slate-400/60 bg-slate-500/10 text-slate-600 dark:text-slate-300 text-[10px] font-bold"
+                      : "border-muted-foreground/30 hover:border-primary/60"
                 }`}
               >
-                {obbligatorio && (fatto ? <Check className="size-3.5 stroke-[3]" /> : "!")}
+                {esente ? "E" : obbligatorio && (fatto ? <Check className="size-3.5 stroke-[3]" /> : "!")}
               </button>
             </div>
           </td>

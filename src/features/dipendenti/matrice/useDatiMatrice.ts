@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: letture dal database, mappe di assegnazioni e attestati,
  *            regole «obbligo / attestato» e assegnazione del ruolo con un clic. Nessun cambio di comportamento.
+ *   rev 2 — 10/11/2026 — Esenzione dall'aggiornamento Preposto per chi ha un RSPP valido (motivoEsenzione).
  */
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,12 @@ import {
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
+import {
+  eAggiornamentoPreposto,
+  mappaValiditaRspp,
+  motivoEsenzioneRspp,
+  oggiIso,
+} from "@/features/scadenze/esenzioni-rspp";
 import {
   trovaRuoloPerCorso,
   trovaRuoloPerChiaveGruppo,
@@ -91,8 +98,23 @@ export function useDatiMatrice() {
     return map;
   }, [attestati]);
 
+  // Lavoratori con RSPP valido: non devono fare l'aggiornamento Preposto (il corso base resta obbligatorio)
+  const rsppValidi = useMemo(() => mappaValiditaRspp(attestati, oggiIso()), [attestati]);
+
   function haObbligoCorso(dipendenteId: string, corso: TipoCorso): boolean {
-    return isCorsoObbligatorioPerDipendente(dipendenteId, corso, ruoli, mappaAssegnazioni);
+    return isCorsoObbligatorioPerDipendente(
+      dipendenteId,
+      corso,
+      ruoli,
+      mappaAssegnazioni,
+      rsppValidi.get(dipendenteId) ?? null,
+    );
+  }
+
+  /** Motivo per cui il corso non è dovuto (RSPP valido), oppure null. */
+  function motivoEsenzione(dipendenteId: string, corso: TipoCorso): string | null {
+    const v = rsppValidi.get(dipendenteId);
+    return v && eAggiornamentoPreposto(corso) ? motivoEsenzioneRspp(v) : null;
   }
 
   function haAttestatoCorso(dipendenteId: string, corso: TipoCorso): boolean {
@@ -148,6 +170,7 @@ export function useDatiMatrice() {
     conteggiCorsiPerGruppo,
     mappaAssegnazioni,
     haObbligoCorso,
+    motivoEsenzione,
     haAttestatoCorso,
     haObbligoNelGruppo,
     handleToggleObbligo,

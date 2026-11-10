@@ -5,14 +5,20 @@
  * Revisioni:
  *   - Rev 1 (2026-11-08 11:10): Calcolo dello stato di conformità del corso nel fabbisogno (valido/in_corso/scaduto/mancante)
  *     con formattazione sintetica della data MM-AA («entro MM-AA» o «scaduto MM-AA»).
+ *   - Rev 2 (2026-11-10): Stato «esente» (grigio) per l'aggiornamento Preposto di chi ha un RSPP valido.
  */
 import { type Attestato, type TipoCorso } from "@/lib/api";
+import {
+  eAggiornamentoPreposto,
+  motivoEsenzioneRspp,
+  type ValiditaRspp,
+} from "@/features/scadenze/esenzioni-rspp";
 
-export type StatoFabbisogno = "valido" | "in_corso" | "scaduto" | "mancante";
+export type StatoFabbisogno = "valido" | "in_corso" | "scaduto" | "mancante" | "esente";
 
 export interface EsitoFabbisognoCorso {
   stato: StatoFabbisogno;
-  colore: "verde" | "arancione" | "rosso";
+  colore: "verde" | "arancione" | "rosso" | "grigio";
   etichettaData: string | null;
   descrizione: string;
 }
@@ -47,12 +53,24 @@ export function valutaStatoFabbisognoCorso({
   attestati,
   dipendenteId,
   oggi = oggiIso(),
+  rspp = null,
 }: {
   corso: TipoCorso;
   attestati: Attestato[];
   dipendenteId: string;
   oggi?: string;
+  /** RSPP valido del lavoratore: se presente, l'aggiornamento Preposto non è dovuto. */
+  rspp?: ValiditaRspp | null;
 }): EsitoFabbisognoCorso {
+  if (rspp && eAggiornamentoPreposto(corso)) {
+    return {
+      stato: "esente",
+      colore: "grigio",
+      etichettaData: "esente",
+      descrizione: motivoEsenzioneRspp(rspp),
+    };
+  }
+
   const nomeC = (corso.nome_corso || "").toLowerCase().trim();
   const codC = (corso.codice || "").toLowerCase().trim();
   const macroC = (corso.macro_categoria || "").toLowerCase().trim();

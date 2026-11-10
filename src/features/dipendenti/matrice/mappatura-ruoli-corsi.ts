@@ -5,9 +5,11 @@
  * Revisioni:
  *   - Rev 1 (2026-11-02 10:25): Modulo di collegamento logico Ruoli di sicurezza <-> Corsi e gruppi
  *     in funzione del rischio aziendale (D.Lgs. 81/08), con risoluzione automatica e fallback.
+ *   - Rev 2 (2026-11-10): isCorsoObbligatorioPerDipendente non richiede l'aggiornamento Preposto a chi ha un RSPP valido.
  */
 
 import type { TipoCorso, RuoloSicurezza } from "@/lib/api";
+import { eAggiornamentoPreposto, type ValiditaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 function normalizza(str: string | null | undefined): string {
   return (str ?? "").toLowerCase().trim();
@@ -214,7 +216,10 @@ export function isCorsoObbligatorioPerDipendente(
   corso: TipoCorso,
   ruoliCatalogo: RuoloSicurezza[],
   mappaAssegnazioni: Set<string>,
+  /** RSPP valido del lavoratore (se c'è): esonera dall'aggiornamento Preposto, non dal corso base. */
+  rspp: ValiditaRspp | null = null,
 ): boolean {
+  if (rspp && eAggiornamentoPreposto(corso)) return false;
   const ruolo = trovaRuoloPerCorso(corso, ruoliCatalogo);
   if (!ruolo) return false;
   if (ruolo.obbligatorio_tutti) return true;

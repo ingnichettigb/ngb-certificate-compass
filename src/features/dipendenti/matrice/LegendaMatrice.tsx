@@ -22,6 +22,12 @@ export function LegendaMatrice() {
           <span>Fabbisogno formativo da svolgere</span>
         </span>
         <span className="flex items-center gap-1.5">
+          <span className="size-3.5 rounded border border-slate-400/60 bg-slate-500/10 inline-block text-slate-600 dark:text-slate-300 text-[9px] font-bold text-center leading-3">
+            E
+          </span>
+          <span>Esente: RSPP/ASPP valido (aggiornamento Preposto non dovuto)</span>
+        </span>
+        <span className="flex items-center gap-1.5">
           <span className="size-3.5 rounded border border-muted-foreground/30 inline-block" />
           <span>Non previsto per questa figura</span>
         </span>

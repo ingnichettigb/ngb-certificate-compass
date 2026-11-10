@@ -3,6 +3,7 @@
  * Percorso:  src/features/scadenze/preposti.ts
  * Data creazione: 2026-11-06
  * Revisioni:
+ * - Rev 2 (2026-11-10): L'RSPP valido del lavoratore esonera dall'aggiornamento Preposto (esenzioni-rspp.ts).
  * - Rev 1 (2026-11-06 18:00): Applica la scadenza del motore dei cicli ai corsi Preposto, così che scheda dipendente
  *   e stampe mostrino la stessa data e lo stesso stato della pagina Scadenze (regime transitorio 19/05/2026).
  *
@@ -18,7 +19,7 @@ export function applicaScadenzaPreposti(attestati: Attestato[], oggi: Date = new
   if (preposti.length === 0) return attestati;
 
   const scadenzaPerGruppo = new Map<string, string>();
-  for (const riga of costruisciRighe(preposti, oggi)) {
+  for (const riga of costruisciRighe(preposti, oggi, attestati)) {
     if (riga.ciclo.scadenzaEffettiva) scadenzaPerGruppo.set(riga.chiave, riga.ciclo.scadenzaEffettiva);
   }
 

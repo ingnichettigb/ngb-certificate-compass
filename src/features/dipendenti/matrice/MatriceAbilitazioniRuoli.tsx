@@ -56,6 +56,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     conteggiCorsiPerGruppo,
     mappaAssegnazioni,
     haObbligoCorso,
+    motivoEsenzione,
     haAttestatoCorso,
     haObbligoNelGruppo,
     handleToggleObbligo,
@@ -172,6 +173,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
       mappaAssegnazioni,
       haObbligoCorso,
       haAttestatoCorso,
+      motivoEsenzione,
     });
   }
 
@@ -293,6 +295,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                     ruoli={ruoli}
                     mappaAssegnazioni={mappaAssegnazioni}
                     haObbligoCorso={haObbligoCorso}
+                    motivoEsenzione={motivoEsenzione}
                     haAttestatoCorso={haAttestatoCorso}
                     onSeleziona={setRigaSelezionata}
                     onToggleObbligo={handleToggleObbligo}

@@ -8,6 +8,7 @@
  * - Rev 3 (2026-11-06 14:00): Cicli ed eventi già calcolati dal motore per la linea temporale.
  * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti: dataTaglio, scadenzaPortataAlTaglio, regolaPreposti,
  *   motivoScadenza; CicloVisuale.troncato.
+ * - Rev 5 (2026-11-10): PosizioneCiclo.esenteRspp (aggiornamento Preposto non dovuto per RSPP valido).
  */
 import type { Attestato } from "@/lib/api";
 
@@ -90,6 +91,8 @@ export interface PosizioneCiclo {
   regolaPreposti: boolean;
   /** Spiegazione da mostrare all'utente quando la scadenza deriva dal transitorio; altrimenti null. */
   motivoScadenza: string | null;
+  /** true se l'aggiornamento Preposto non è dovuto perché il lavoratore ha un RSPP valido. */
+  esenteRspp?: boolean;
   /** Cicli da disegnare: dal primo al ciclo di oggi, più il successivo non ancora attivo. */
   cicli: CicloVisuale[];
   /** Base e aggiornamenti classificati dal motore (contati, parziali, completi, ignorati). */
