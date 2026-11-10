@@ -7,6 +7,7 @@
  *   rev 2 — 09/11/2026 17:10 — Aggiunta la sezione «Formazione completata e abilitazioni» per le 6 nuove carte.
  *   rev 3 — 09/11/2026 22:10 — Numero progressivo (01, 02, …) in alto a sinistra di ogni carta, nell'ordine in cui compaiono in pagina
  *            (le famiglie una dopo l'altra), per ricordare facilmente quale stampa usare. Se si aggiunge o sposta una carta si rinumera da solo.
+ *   rev 4 — 10/11/2026 16:10 — Carta «Organigramma della sicurezza – A3» (tavola grafica) in testa alla pagina.
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -38,6 +39,16 @@ export function ElencoStampePredefinite() {
         </div>
       </header>
       <main className="mx-auto max-w-[1100px] space-y-8 p-6">
+        <Link
+          to="/stampe/organigramma-a3"
+          className="group flex flex-col gap-1 rounded-lg border-2 border-border bg-card p-4 transition-all hover:border-verde-vivo hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-verde-vivo"
+        >
+          <h2 className="text-base font-semibold">Organigramma della sicurezza – tavola A3</h2>
+          <p className="text-sm">Tavola grafica A3 orizzontale: figure di vertice, preposti, squadre, voci aggiuntive e firme.</p>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+            Apri la tavola <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+          </span>
+        </Link>
         {FAMIGLIE.map((f) => (
           <section key={f.nome} aria-labelledby={`famiglia-${f.nome}`}>
             <h2 id={`famiglia-${f.nome}`} className="mb-3 text-base font-semibold">{f.titolo}</h2>
