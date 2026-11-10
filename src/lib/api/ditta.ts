@@ -7,6 +7,7 @@
  *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise; conteggio lavoratori in forza; dati per le email letti dal database;
  *                              importazione una tantum dei dati ditta salvati nel browser.
  *   rev 3 — 09/11/2026 12:05 — Aggiunto campo ASPP tra le figure della sicurezza.
+ *   rev 4 — 10/11/2026 15:25 — Aggiunto campo RLS tra le figure della sicurezza.
  */
 import { sb } from "./client";
 import {
@@ -45,6 +46,7 @@ export type DittaRecord = {
   datore_di_lavoro: string | null;
   rspp: string | null;
   aspp: string | null;
+  rls: string | null;
   medico_competente: string | null;
   codici_ateco: CodiceAteco[];
   rischio_ditta: "basso" | "medio" | "alto" | null;
@@ -88,6 +90,7 @@ export const DITTA_DEFAULT: DittaRecord = {
   datore_di_lavoro: null,
   rspp: null,
   aspp: null,
+  rls: null,
   medico_competente: null,
   codici_ateco: [],
   rischio_ditta: "medio",

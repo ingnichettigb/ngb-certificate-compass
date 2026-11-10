@@ -43,6 +43,13 @@
       "when": 1794222084636,
       "tag": "0005_ditta_add_aspp",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794320535575,
+      "tag": "0006_ditta_add_rls",
+      "breakpoints": true
     }
   ]
 }

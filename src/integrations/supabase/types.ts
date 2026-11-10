@@ -378,6 +378,7 @@ export type Database = {
           referente: string | null
           reparti_rischio_differenziato: boolean
           rischio_ditta: string | null
+          rls: string | null
           rspp: string | null
           telefono: string | null
           updated_at: string
@@ -408,6 +409,7 @@ export type Database = {
           referente?: string | null
           reparti_rischio_differenziato?: boolean
           rischio_ditta?: string | null
+          rls?: string | null
           rspp?: string | null
           telefono?: string | null
           updated_at?: string
@@ -438,6 +440,7 @@ export type Database = {
           referente?: string | null
           reparti_rischio_differenziato?: boolean
           rischio_ditta?: string | null
+          rls?: string | null
           rspp?: string | null
           telefono?: string | null
           updated_at?: string
