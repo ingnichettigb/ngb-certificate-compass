@@ -1,0 +1,1 @@
+ALTER TABLE public.ditta ADD COLUMN IF NOT EXISTS rls text;
