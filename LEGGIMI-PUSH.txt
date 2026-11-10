@@ -1,0 +1,25 @@
+ngb-certificate-compass — Tavola A3 su un foglio + riordino e rinumerazione carte (rev 10/11/2026 18:00)
+
+FILE (le cartelle rispecchiano il deposito: decomprimi nella radice del progetto, sovrascrivendo)
+  MODIFICATI
+    src/features/stampe/components/OrganigrammaA3Page.tsx      rev 2  tavola A3 su un solo foglio, zero salto pagina
+    src/features/stampe/components/ElencoStampePredefinite.tsx rev 5  tavola A3 = carta 01, numeri da numerazione-carte.ts
+    src/features/stampe/stampe-predefinite.ts                  rev 7  nuovo ordine della famiglia Anagrafica
+    src/features/stampe/stampe-predefinite.test.ts             rev 4  test sul nuovo ordine
+  NUOVI
+    src/features/stampe/numerazione-carte.ts                   rev 1  elenco carte e numeri progressivi
+    src/features/stampe/numerazione-carte.test.ts              rev 1  test sequenza 01-05 e numeri senza buchi
+
+NUMERAZIONE RISULTANTE
+  Anagrafica e organico: 01 Organigramma A3 | 02 Organigramma squadre | 03 Registro anagrafico | 04 Elenco per settore | 05 Per funzioni e squadre
+  Scadenze: 06-12   Completati: 13-18
+
+PUSH UNICO
+  cd ngb-certificate-compass
+  unzip -o ../ngb-a3-carte-rev7.zip
+  git add -A
+  git commit -m "Stampe: tavola A3 su un foglio, carta 01; riordino e rinumerazione carte Anagrafica (06+ Scadenze)"
+  git push origin main
+
+Nota: ho verificato tipi e test (nuovi + organigramma + predefinite passano). Prova comunque una stampa/PDF reale da Chrome
+con «Scala 100%» e margini «Predefiniti» (il CSS imposta già A3 orizzontale 8 mm).

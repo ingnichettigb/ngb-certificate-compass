@@ -10,6 +10,8 @@
  *   rev 5 — 09/11/2026 17:30 — Inserita la colonna «inSquadra» (Sì / No) nelle tabelle degli abilitati Antincendio, Primo Soccorso e Defibrillatore.
  *   rev 6 — 09/11/2026 20:00 — Nuova carta «Organigramma squadre di sicurezza»; famiglia «Anagrafica» (come la pagina dell'elenco, che prima
  *            risultava vuota); raggruppaPer allineato a RaggruppaPer («funzione»); campi facoltativi organigramma e messaggioVuoto.
+ *   rev 7 — 10/11/2026 18:00 — Riordino della famiglia «Anagrafica»: «Organigramma squadre di sicurezza» passa in testa (carta 02, dopo la
+ *            tavola A3 che è la carta 01); seguono Registro anagrafico (03), Elenco per settore (04), Stampa per funzioni e squadre (05).
  */
 import type { Colonna, FiltriStampa } from "./stampa-tipi";
 import { FILTRI_INIZIALI, TUTTI } from "./stampa-tipi";
@@ -141,6 +143,26 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     filtriApplicati: [scaduteOEntro12Mesi, "Gruppo Privacy"],
   },
   {
+    id: "organigramma-squadre",
+    famiglia: "Anagrafica",
+    titolo: "Organigramma squadre di sicurezza",
+    descrizione:
+      "Chi fa parte delle squadre Primo soccorso, Antincendio, Defibrillatore e Privacy (incarichi assegnati in «Piano Fabbisogno Formativo e Ruoli»), con la data del Corso base e dell'Aggiornamento e il loro stato. Chi è in più squadre compare in ciascuna.",
+    contiene: "Lavoratore, reparto, squadra, Corso base e Aggiornamento (data, con sotto «In scadenza», «Scaduto», «Fuori termine», «Non necessario» o «Da formare»).",
+    filtri: { ...FILTRI_INIZIALI, modello: "lavoratori" },
+    colonne: ["lavoratore", "reparto", "squadra", "corsoBaseSquadra", "aggiornamentoSquadra"],
+    destinatari: true,
+    raggruppaPer: "funzione",
+    organigramma: true,
+    messaggioVuoto:
+      "Nessun lavoratore ha un incarico nelle squadre di sicurezza. Assegna i ruoli in «Piano Fabbisogno Formativo e Ruoli» (Dipendenti).",
+    filtriApplicati: [
+      "Solo componenti delle squadre (incarico assegnato)",
+      "Raggruppato per squadra (con salto pagina)",
+      "Aggiornamento in tempo se fatto entro il 31/12 dell'anno di scadenza",
+    ],
+  },
+  {
     id: "anagrafica-tutti",
     famiglia: "Anagrafica",
     titolo: "Registro anagrafico generale",
@@ -171,26 +193,6 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     colonne: ["lavoratore", "cf", "reparto", "mansione", "ruoli"],
     raggruppaPer: "funzione",
     filtriApplicati: ["Solo lavoratori con almeno un ruolo assegnato", "Raggruppato per funzione/squadra (con salto pagina)"],
-  },
-  {
-    id: "organigramma-squadre",
-    famiglia: "Anagrafica",
-    titolo: "Organigramma squadre di sicurezza",
-    descrizione:
-      "Chi fa parte delle squadre Primo soccorso, Antincendio, Defibrillatore e Privacy (incarichi assegnati in «Piano Fabbisogno Formativo e Ruoli»), con la data del Corso base e dell'Aggiornamento e il loro stato. Chi è in più squadre compare in ciascuna.",
-    contiene: "Lavoratore, reparto, squadra, Corso base e Aggiornamento (data, con sotto «In scadenza», «Scaduto», «Fuori termine», «Non necessario» o «Da formare»).",
-    filtri: { ...FILTRI_INIZIALI, modello: "lavoratori" },
-    colonne: ["lavoratore", "reparto", "squadra", "corsoBaseSquadra", "aggiornamentoSquadra"],
-    destinatari: true,
-    raggruppaPer: "funzione",
-    organigramma: true,
-    messaggioVuoto:
-      "Nessun lavoratore ha un incarico nelle squadre di sicurezza. Assegna i ruoli in «Piano Fabbisogno Formativo e Ruoli» (Dipendenti).",
-    filtriApplicati: [
-      "Solo componenti delle squadre (incarico assegnato)",
-      "Raggruppato per squadra (con salto pagina)",
-      "Aggiornamento in tempo se fatto entro il 31/12 dell'anno di scadenza",
-    ],
   },
   {
     id: "completati-corso-base",

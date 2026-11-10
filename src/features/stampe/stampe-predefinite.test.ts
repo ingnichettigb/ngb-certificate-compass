@@ -3,6 +3,7 @@
  * Percorso:  src/features/stampe/stampe-predefinite.test.ts
  * Data creaz: 08/11/2026
  * Verifica le stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Rev 4 (10/11/2026 18:00): nuovo ordine di «Anagrafica» (organigramma squadre per primo, dopo la tavola A3 che è la carta 01).
  * Rev 3 (09/11/2026 20:00): catalogo attuale (famiglie Anagrafica / Scadenze / Completati) e carta Organigramma squadre.
  * Rev 2 (08/11/2026): tre nuove scadenze (Corso base, Corso specifico, Privacy), scelta del pubblico e righe «Manca».
  */
@@ -31,7 +32,7 @@ describe("stampe predefinite: il catalogo", () => {
   it("le famiglie sono quelle dell'elenco (Anagrafica, Scadenze, Completati): nessuna carta resta fuori", () => {
     for (const s of STAMPE_PREDEFINITE) expect(["Anagrafica", "Scadenze", "Completati"]).toContain(s.famiglia);
     expect(STAMPE_PREDEFINITE.filter((s) => s.famiglia === "Anagrafica").map((s) => s.id)).toEqual([
-      "anagrafica-tutti", "anagrafica-settori", "anagrafica-gruppi", "organigramma-squadre",
+      "organigramma-squadre", "anagrafica-tutti", "anagrafica-settori", "anagrafica-gruppi",
     ]);
   });
 

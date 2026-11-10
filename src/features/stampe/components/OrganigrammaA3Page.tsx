@@ -6,8 +6,11 @@
  *   rev 1 — 10/11/2026 16:10 — Tavola «Organigramma della sicurezza» in A3 orizzontale, sul modello del Liceo: vertice (Datore di
  *            lavoro, RLS, Medico, RSPP, ASPP) dalla Ditta, blocchi delle squadre dagli incarichi, «*» da formare, voci libere
  *            modificabili (es. registro antincendio, distribuzione DPI, custodia SDS), firme. Stampa diretta (anche «Salva come PDF»).
+ *   rev 2 — 10/11/2026 18:00 — Tavola su un unico foglio A3 orizzontale, zero salto pagina: @page A3 landscape con margine 8 mm, tavola a
+ *            404×281 mm (area utile), spazi/margini/interlinea ridotti in stampa e adattamento automatico (scala) se il contenuto eccede
+ *            il foglio (anche con Ctrl+P). Titolo aggiornato a «Carta 01 – Organigramma della sicurezza».
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Plus, Printer, Save, Trash2 } from "lucide-react";
@@ -19,6 +22,36 @@ import { getAttestati, getDipendenti } from "@/lib/api";
 import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
 import { calcolaBlocchiA3, salvaVociOrganigramma, VOCI_PREDEFINITE, type BloccoOrganigramma, type NomeBlocco } from "../organigramma-a3";
+
+/** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
+const AREA_A3_MM = { larghezza: 404, altezza: 281 };
+const PX_PER_MM = 96 / 25.4;
+
+const STILE_A3 = `
+  .tavola-a3 { width: 420mm; min-height: 297mm; }
+  @media print {
+    @page { size: A3 landscape; margin: 8mm; }
+    html, body { height: auto !important; background: #fff !important; }
+    .tavola-a3 {
+      width: ${AREA_A3_MM.larghezza}mm !important;
+      height: ${AREA_A3_MM.altezza}mm !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box;
+      break-inside: avoid; break-after: avoid; page-break-after: avoid;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .tavola-a3-interno {
+      transform: scale(var(--adatta, 1));
+      transform-origin: top left;
+      width: calc(${AREA_A3_MM.larghezza}mm / var(--adatta, 1));
+    }
+    .tavola-a3 .riquadro-a3 { padding: 1mm 1.5mm !important; }
+    .tavola-a3 li { line-height: 1.15 !important; }
+  }
+`;
 
 const annoScolastico = (d = new Date()) => {
   const y = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
@@ -38,7 +71,7 @@ function Nomi({ elenco }: { elenco: NomeBlocco[] }) {
 function Riquadro({ b, className = "" }: { b: BloccoOrganigramma; className?: string }) {
   const vuoto = !b.ata.length && !b.docenti.length;
   return (
-    <section className={`border border-foreground p-1.5 ${className}`} style={{ breakInside: "avoid" }}>
+    <section className={`riquadro-a3 border border-foreground p-1.5 ${className}`} style={{ breakInside: "avoid" }}>
       <h3 className="mb-1 text-[11px] font-bold uppercase">{b.titolo}</h3>
       <ul className="text-[10px]">
         <Nomi elenco={b.ata} />
@@ -82,6 +115,28 @@ export function OrganigrammaA3Page() {
   const d = ditta.data;
   const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading;
 
+  // Adattamento di sicurezza: se la tavola (alla larghezza di stampa) supera l'altezza utile A3, la riduce in scala per restare in un foglio solo.
+  const articolo = useRef<HTMLElement | null>(null);
+  const interno = useRef<HTMLDivElement | null>(null);
+  const adattaAlFoglio = useCallback(() => {
+    const art = articolo.current;
+    const int = interno.current;
+    if (!art || !int) return;
+    art.style.removeProperty("--adatta");
+    const altezzaPx = int.scrollHeight;
+    const maxPx = AREA_A3_MM.altezza * PX_PER_MM;
+    const scala = altezzaPx > maxPx ? Math.floor((maxPx / altezzaPx) * 97) / 100 : 1; // 3% di margine di sicurezza
+    art.style.setProperty("--adatta", String(scala));
+  }, []);
+  useEffect(() => {
+    window.addEventListener("beforeprint", adattaAlFoglio);
+    return () => window.removeEventListener("beforeprint", adattaAlFoglio);
+  }, [adattaAlFoglio]);
+  const stampa = () => {
+    adattaAlFoglio();
+    window.print();
+  };
+
   const salva = async () => {
     setSalvataggio(true);
     try {
@@ -99,14 +154,14 @@ export function OrganigrammaA3Page() {
 
   return (
     <div className="min-h-screen bg-background">
-      <style>{`@media print { @page { size: A3 landscape; margin: 8mm; } }`}</style>
+      <style>{STILE_A3}</style>
       <header className="border-b border-border bg-surface print:hidden">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3 px-5 py-3">
           <Button asChild size="sm" variant="ghost">
             <Link to="/stampe/predefinite"><ArrowLeft className="size-4" /> Stampe predefinite</Link>
           </Button>
-          <h1 className="text-lg font-semibold">Organigramma della sicurezza – A3</h1>
-          <Button size="sm" className="ml-auto" onClick={() => window.print()} disabled={carica}>
+          <h1 className="text-lg font-semibold">Carta 01 – Organigramma della sicurezza (A3)</h1>
+          <Button size="sm" className="ml-auto" onClick={stampa} disabled={carica}>
             <Printer className="size-4" /> Stampa / PDF A3
           </Button>
         </div>
@@ -139,21 +194,22 @@ export function OrganigrammaA3Page() {
 
         <div className="overflow-auto rounded-lg border border-border bg-muted/40 p-4 print:overflow-visible print:border-0 print:bg-transparent print:p-0">
           <article
-            className="mx-auto bg-card p-6 text-foreground shadow-sm print:p-0 print:shadow-none"
-            style={{ width: "420mm", minHeight: "297mm" }}
+            ref={articolo}
+            className="tavola-a3 mx-auto bg-card p-6 text-foreground shadow-sm print:p-0 print:shadow-none"
             aria-label="Tavola organigramma A3"
           >
+            <div ref={interno} className="tavola-a3-interno">
             {carica ? (
               <p className="text-sm">Caricamento…</p>
             ) : (
               <>
                 <p className="text-center text-xs uppercase">Organigramma del servizio di prevenzione e protezione della sicurezza</p>
-                <div className="mb-3 flex items-end justify-between">
+                <div className="mb-3 flex items-end justify-between print:mb-1.5">
                   <h2 className="flex-1 text-center text-xl font-bold">{d?.ragione_sociale}</h2>
                   <p className="text-right text-xs font-bold">ANNO SCOLASTICO <span className="ml-2 text-xl">{annoScolastico()}</span></p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 print:gap-2">
                   <div className="space-y-2">
                     <Figura etichetta="R.L.S." valore={d?.rls} />
                     <Figura etichetta="Medico Competente" valore={d?.medico_competente} />
@@ -171,27 +227,27 @@ export function OrganigrammaA3Page() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  <div className="space-y-3">
+                <div className="mt-3 grid grid-cols-3 gap-3 print:mt-2 print:gap-2">
+                  <div className="space-y-3 print:space-y-2">
                     <Riquadro b={b("primo-soccorso")} />
                     <Riquadro b={b("defibrillatore")} />
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-3 print:space-y-2">
                     <Riquadro b={b("evacuazione")} />
                     {voci.filter((v) => v.titolo.trim()).slice(0, Math.ceil(voci.length / 2)).map((v) => <VoceLibera key={v.titolo} v={v} />)}
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-3 print:space-y-2">
                     <Riquadro b={b("antincendio")} />
                     <Riquadro b={b("privacy")} />
                     {voci.filter((v) => v.titolo.trim()).slice(Math.ceil(voci.length / 2)).map((v) => <VoceLibera key={v.titolo} v={v} />)}
                   </div>
                 </div>
 
-                <p className="mt-3 text-[10px]"><b>*</b> da formare (nessun attestato valido per l'incarico)</p>
+                <p className="mt-3 text-[10px] print:mt-1.5"><b>*</b> da formare (nessun attestato valido per l'incarico)</p>
 
-                <div className="mt-6 grid grid-cols-3 items-end gap-6 text-[11px]" style={{ breakInside: "avoid" }}>
-                  <div>Per presa visione R.L.S. {d?.rls}<div className="mt-8 border-b border-foreground" /></div>
-                  <div className="text-center">Il Datore di lavoro<br />{d?.datore_di_lavoro}<div className="mt-8 border-b border-foreground" /></div>
+                <div className="mt-6 grid grid-cols-3 items-end gap-6 text-[11px] print:mt-3 print:gap-4" style={{ breakInside: "avoid" }}>
+                  <div>Per presa visione R.L.S. {d?.rls}<div className="mt-8 border-b border-foreground print:mt-5" /></div>
+                  <div className="text-center">Il Datore di lavoro<br />{d?.datore_di_lavoro}<div className="mt-8 border-b border-foreground print:mt-5" /></div>
                   <div className="border border-foreground p-2 text-center">
                     <p className="font-semibold">{d?.ragione_sociale}</p>
                     <p>{[d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ")}</p>
@@ -199,6 +255,7 @@ export function OrganigrammaA3Page() {
                 </div>
               </>
             )}
+            </div>
           </article>
         </div>
       </main>
@@ -208,7 +265,7 @@ export function OrganigrammaA3Page() {
 
 function VoceLibera({ v }: { v: VoceOrganigramma }) {
   return (
-    <section className="border border-foreground p-1.5" style={{ breakInside: "avoid" }}>
+    <section className="riquadro-a3 border border-foreground p-1.5" style={{ breakInside: "avoid" }}>
       <h3 className="mb-1 text-[11px] font-bold uppercase">{v.titolo}</h3>
       <ul className="text-[10px]">
         {v.nomi.filter((n) => n.trim()).map((n) => <li key={n}>{n}</li>)}
