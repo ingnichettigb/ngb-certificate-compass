@@ -369,6 +369,7 @@ export type Database = {
           medico_competente: string | null
           n_lavoratori_data_aggiornamento: string | null
           n_lavoratori_dichiarato: number | null
+          organigramma_voci: Json
           partita_iva: string | null
           pec: string | null
           presenze_contemporanee_max: number | null
@@ -400,6 +401,7 @@ export type Database = {
           medico_competente?: string | null
           n_lavoratori_data_aggiornamento?: string | null
           n_lavoratori_dichiarato?: number | null
+          organigramma_voci?: Json
           partita_iva?: string | null
           pec?: string | null
           presenze_contemporanee_max?: number | null
@@ -431,6 +433,7 @@ export type Database = {
           medico_competente?: string | null
           n_lavoratori_data_aggiornamento?: string | null
           n_lavoratori_dichiarato?: number | null
+          organigramma_voci?: Json
           partita_iva?: string | null
           pec?: string | null
           presenze_contemporanee_max?: number | null

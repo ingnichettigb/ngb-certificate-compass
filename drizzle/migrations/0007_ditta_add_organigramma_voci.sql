@@ -1,0 +1,2 @@
+ALTER TABLE public.ditta ADD COLUMN IF NOT EXISTS organigramma_voci jsonb NOT NULL DEFAULT '[]'::jsonb;
+COMMENT ON COLUMN public.ditta.organigramma_voci IS 'Voci aggiuntive della tavola Organigramma A3: [{titolo, nomi[]}]';
