@@ -18,6 +18,7 @@ import { Route as OperatoreRouteImport } from './routes/operatore'
 import { Route as ScadenzeRouteImport } from './routes/scadenze'
 import { Route as StampeRouteImport } from './routes/stampe'
 import { Route as StampeIndexRouteImport } from './routes/stampe.index'
+import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
 import { Route as StampePersonalizzataRouteImport } from './routes/stampe.personalizzata'
 import { Route as StampePredefiniteIndexRouteImport } from './routes/stampe.predefinite.index'
 import { Route as StampePredefiniteIdRouteImport } from './routes/stampe.predefinite.$id'
@@ -67,6 +68,11 @@ const StampeIndexRoute = StampeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StampeRoute,
 } as any)
+const StampeOrganigrammaA3Route = StampeOrganigrammaA3RouteImport.update({
+  id: '/organigramma-a3',
+  path: '/organigramma-a3',
+  getParentRoute: () => StampeRoute,
+} as any)
 const StampePersonalizzataRoute = StampePersonalizzataRouteImport.update({
   id: '/personalizzata',
   path: '/personalizzata',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/massivo'
     | '/operatore'
     | '/scadenze'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe'
     | '/stampe/predefinite/$id'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StampeIndexRouteImport
       parentRoute: typeof StampeRoute
     }
+    '/stampe/organigramma-a3': {
+      id: '/stampe/organigramma-a3'
+      path: '/organigramma-a3'
+      fullPath: '/stampe/organigramma-a3'
+      preLoaderRoute: typeof StampeOrganigrammaA3RouteImport
+      parentRoute: typeof StampeRoute
+    }
     '/stampe/personalizzata': {
       id: '/stampe/personalizzata'
       path: '/personalizzata'
@@ -270,6 +289,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface StampeRouteChildren {
+  StampeOrganigrammaA3Route: typeof StampeOrganigrammaA3Route
   StampePersonalizzataRoute: typeof StampePersonalizzataRoute
   StampeIndexRoute: typeof StampeIndexRoute
   StampePredefiniteIdRoute: typeof StampePredefiniteIdRoute
@@ -277,6 +297,7 @@ interface StampeRouteChildren {
 }
 
 const StampeRouteChildren: StampeRouteChildren = {
+  StampeOrganigrammaA3Route: StampeOrganigrammaA3Route,
   StampePersonalizzataRoute: StampePersonalizzataRoute,
   StampeIndexRoute: StampeIndexRoute,
   StampePredefiniteIdRoute: StampePredefiniteIdRoute,
