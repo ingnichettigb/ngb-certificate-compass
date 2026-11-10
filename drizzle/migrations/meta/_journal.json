@@ -50,6 +50,13 @@
       "when": 1794320535575,
       "tag": "0006_ditta_add_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794323086663,
+      "tag": "0007_ditta_add_organigramma_voci",
+      "breakpoints": true
     }
   ]
 }

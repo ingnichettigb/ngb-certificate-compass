@@ -1,0 +1,87 @@
+/*
+ * File:      organigramma-a3.ts
+ * Percorso:  src/features/stampe/organigramma-a3.ts
+ * Data creaz: 10/11/2026
+ * Revisioni:
+ *   rev 1 — 10/11/2026 16:10 — Dati della tavola «Organigramma A3» (come il modello del Liceo): figure di vertice dalla Ditta,
+ *            blocchi Preposti / Primo soccorso / Defibrillatore / Evacuazione / Antincendio dagli incarichi assegnati
+ *            (ATA prima, poi Docenti), «*» = da formare (nessun attestato valido del gruppo), voci libere salvate nella Ditta.
+ */
+import type { Attestato, Dipendente } from "@/lib/api";
+import { sb } from "@/lib/api/client";
+import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
+import type { VoceOrganigramma } from "@/lib/api/ditta";
+import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
+import { ruoliDelGruppo } from "./stampa-selezioni";
+
+export type NomeBlocco = { testo: string; daFormare: boolean };
+export type BloccoOrganigramma = { chiave: string; titolo: string; ata: NomeBlocco[]; docenti: NomeBlocco[] };
+
+export const BLOCCHI_A3 = [
+  { chiave: "preposti", titolo: "Preposti" },
+  { chiave: "primo-soccorso", titolo: "Addetti primo soccorso" },
+  { chiave: "defibrillatore", titolo: "Addetti defibrillatore" },
+  { chiave: "evacuazione", titolo: "Addetti all'evacuazione" },
+  { chiave: "antincendio", titolo: "Addetti antincendio" },
+  { chiave: "privacy", titolo: "Incaricati privacy" },
+] as const;
+
+/** Voci fisse proposte la prima volta (modificabili e ampliabili dalla pagina). */
+export const VOCI_PREDEFINITE: VoceOrganigramma[] = [
+  { titolo: "Evacuazione – figure di classe", nomi: ["Personale insegnante presente", "Alunni aprifila", "Alunni chiudifila", "Alunni addetti ai diversamente abili"] },
+  { titolo: "Preposti di laboratorio", nomi: ["Professori di lab. scientifico", "Professori di lab. fisica ed ed. fisica"] },
+  { titolo: "Addetti registro antincendio", nomi: [] },
+];
+
+const isoOggi = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const eDocente = (d: Dipendente) => (d.reparto ?? "").toLowerCase().startsWith("docen");
+
+/** Ruoli di squadra del gruppo (esclusi gli obblighi «per tutti» e «Lavoratore»). */
+function ruoliSquadra(chiave: string, ruoli: RuoloSicurezza[]) {
+  return ruoliDelGruppo(chiave, ruoli).filter((r) => !r.obbligatorio_tutti && r.nome.trim().toLowerCase() !== "lavoratore");
+}
+
+export function calcolaBlocchiA3(
+  dipendenti: Dipendente[],
+  attestati: Attestato[],
+  ruoli: RuoloSicurezza[],
+  assegnazioni: AssegnazioneRuolo[],
+  oggi = new Date(),
+): BloccoOrganigramma[] {
+  const oggiIso = isoOggi(oggi);
+  const perId = new Map(dipendenti.filter((d) => d.stato_lavoratore !== "cessato").map((d) => [d.id, d]));
+  return BLOCCHI_A3.map(({ chiave, titolo }) => {
+    const idRuoli = new Set(ruoliSquadra(chiave, ruoli).map((r) => r.id));
+    const ids = new Set(assegnazioni.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id));
+    const membri = [...ids].map((id) => perId.get(id)).filter(Boolean) as Dipendente[];
+    membri.sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it"));
+    const voce = (d: Dipendente): NomeBlocco => {
+      const valido = attestati.some(
+        (a) =>
+          a.dipendente_id === d.id &&
+          a.stato_validazione === "Approvato" &&
+          assegnaGruppoArgomento(a.tipi_corso ?? {}).chiave === chiave &&
+          (!a.data_scadenza_calcolata || a.data_scadenza_calcolata >= oggiIso),
+      );
+      return { testo: `${d.cognome} ${d.nome}`.trim(), daFormare: !valido };
+    };
+    return {
+      chiave,
+      titolo,
+      ata: membri.filter((d) => !eDocente(d)).map(voce),
+      docenti: membri.filter(eDocente).map(voce),
+    };
+  });
+}
+
+/** Salva solo le voci libere dell'organigramma nella riga Ditta. */
+export async function salvaVociOrganigramma(voci: VoceOrganigramma[]) {
+  const pulite = voci
+    .map((v) => ({ titolo: v.titolo.trim(), nomi: v.nomi.map((n) => n.trim()).filter(Boolean) }))
+    .filter((v) => v.titolo);
+  const { error } = await sb.from("ditta").update({ organigramma_voci: pulite }).eq("id", true);
+  if (error) throw error;
+  return pulite;
+}

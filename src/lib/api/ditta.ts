@@ -8,6 +8,7 @@
  *                              importazione una tantum dei dati ditta salvati nel browser.
  *   rev 3 — 09/11/2026 12:05 — Aggiunto campo ASPP tra le figure della sicurezza.
  *   rev 4 — 10/11/2026 15:25 — Aggiunto campo RLS tra le figure della sicurezza.
+ *   rev 5 — 10/11/2026 16:10 — Voci aggiuntive della tavola Organigramma A3 (organigramma_voci).
  */
 import { sb } from "./client";
 import {
@@ -57,9 +58,13 @@ export type DittaRecord = {
   presenze_contemporanee_max: number | null;
   presenze_data_aggiornamento: string | null;
   livello_antincendio: 1 | 2 | 3 | null;
+  organigramma_voci?: VoceOrganigramma[];
   created_at?: string;
   updated_at?: string;
 };
+
+/** Voce libera dell'organigramma A3 (es. «Addetto registro antincendio»): titolo e nominativi. */
+export type VoceOrganigramma = { titolo: string; nomi: string[] };
 
 export type SogliaDitta = {
   id: string;
@@ -118,6 +123,9 @@ export async function getDitta(): Promise<DittaRecord> {
     ...DITTA_DEFAULT,
     ...data,
     codici_ateco: Array.isArray(data.codici_ateco) ? (data.codici_ateco as CodiceAteco[]) : [],
+    organigramma_voci: Array.isArray((data as { organigramma_voci?: unknown }).organigramma_voci)
+      ? ((data as { organigramma_voci: VoceOrganigramma[] }).organigramma_voci)
+      : [],
   };
 }
 
