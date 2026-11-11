@@ -8,6 +8,8 @@
  *     sincronizzazione bidirezionale con la matrice generale.
  *   - Rev 2 (2026-11-08 11:10): Badge fabbisogno a 3 stati con indicazione data sintetica MM-AA
  *     (Verde = in regola, Arancione = entro MM-AA, Rosso = scaduto MM-AA o da svolgere).
+ *   - Rev 3 (2026-11-11 10:45): I corsi di evacuazione (EME-…) si collegano al ruolo «Addetto all'evacuazione»
+ *     tramite la mappatura ruoli-corsi, invece di creare un ruolo con il nome del corso.
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,6 +54,7 @@ import {
   CHIAVE_ASSEGNAZIONI_RUOLI,
 } from "@/lib/api";
 import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
+import { trovaRuoloPerCorso } from "../matrice/mappatura-ruoli-corsi";
 import { validitaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 export function SelettoreCorsiDipendente({
@@ -89,8 +92,16 @@ export function SelettoreCorsiDipendente({
     return map;
   }, [ruoliCatalogo]);
 
+  /** Ruolo collegato al corso: per nome esatto; per i corsi di evacuazione tramite la mappatura ruoli-corsi. */
+  const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined => {
+    const perNome = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
+    if (perNome?.attivo !== false && perNome) return perNome;
+    if ((corso.codice ?? "").toUpperCase().startsWith("EME-")) return trovaRuoloPerCorso(corso, ruoliCatalogo) ?? perNome;
+    return perNome;
+  };
+
   const haObbligoCorso = (corso: TipoCorso): boolean => {
-    const ruolo = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
+    const ruolo = ruoloDelCorso(corso);
     if (!ruolo) return false;
     if (ruolo.obbligatorio_tutti) return true;
     return assegnazioni.some((a) => a.dipendente_id === corrente.id && a.ruolo_id === ruolo.id);
@@ -101,7 +112,7 @@ export function SelettoreCorsiDipendente({
     setSalvandoCorsoId(corso.id);
 
     try {
-      let ruolo = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
+      let ruolo = ruoloDelCorso(corso);
       if (!ruolo) {
         await aggiungiRuolo({
           nome: corso.nome_corso,
