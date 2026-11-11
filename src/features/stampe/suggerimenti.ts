@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Testi dei suggerimenti (tooltip al passaggio del mouse) di filtri, selezioni e opzioni della pagina Stampe & Report.
  *                        Un solo posto per i testi: li usano i pannelli e la guida.
+ *   rev 2 — 11/11/2026 20:05 — Aggiunti suggerimenti per statoLavoratori (In forza / Solo cessati / Tutti).
  */
 import type { Modello } from "./dati-stampa";
 
@@ -28,6 +29,8 @@ export const SUGGERIMENTI = {
   classe: "Classe di concorso dei docenti (per esempio A027). Utile per distinguere un tipo di preposti da un altro.",
   lavoratore: "Limita l'elenco a una sola persona.",
   scadenza: "Mostra i corsi già scaduti più quelli che scadono entro il periodo scelto.",
+  statoLavoratori:
+    "Filtra tra personale attualmente in servizio («Solo in forza»), personale cessato (dimessi, pensionati, contratti scaduti), o l'intero archivio storico («Tutti»).",
   // Opzioni
   soloUltimo: "Nasconde i vecchi attestati superati da un rinnovo successivo dello stesso corso.",
   includiCessati: "Aggiunge agli elenchi anche chi non è più in servizio (dimessi, pensionati, contratti scaduti).",
