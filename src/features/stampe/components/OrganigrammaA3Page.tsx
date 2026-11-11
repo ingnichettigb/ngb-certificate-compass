@@ -12,11 +12,15 @@
  *   rev 3 — 11/11/2026 — Riassemblata la tavola: vertice su una fascia (Datore di lavoro in alto, sotto RLS, Medico, RSPP, ASPP) e riquadri
  *            in 3 colonne affiancate che si riempiono da sole (impagina-organigramma-a3.ts); gli elenchi lunghi (Preposti, Primo soccorso…)
  *            si dividono in due colonne dentro il riquadro. Niente più righe di griglia fisse con grandi vuoti e riduzione in scala eccessiva.
+ *   rev 4 — 11/11/2026 — Due bottoni: «Stampa» (finestra di stampa del browser, come prima) e «Genera PDF A3» (file PDF creato direttamente,
+ *            senza stampante virtuale: esporta-organigramma-a3-pdf.ts). Blocchi disposti per funzione (impaginaPerFunzione): a sinistra
+ *            primo soccorso e sotto defibrillatore, al centro evacuazione (con figure di classe, preposti e preposti di laboratorio),
+ *            a destra antincendio (con registro antincendio e privacy). Anteprima, stampa e PDF usano la stessa disposizione.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Plus, Printer, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, FileDown, Plus, Printer, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +29,8 @@ import { getAttestati, getDipendenti } from "@/lib/api";
 import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
 import { calcolaBlocchiA3, salvaVociOrganigramma, VOCI_PREDEFINITE, type BloccoOrganigramma, type NomeBlocco } from "../organigramma-a3";
-import { COLONNE_TAVOLA, impaginaColonne, type ElementoLayout } from "../impagina-organigramma-a3";
+import { COLONNE_TAVOLA, impaginaPerFunzione, type ElementoFunzionale } from "../impagina-organigramma-a3";
+import { costruisciRiquadriPdf, scaricaPdfOrganigrammaA3 } from "../esporta-organigramma-a3-pdf";
 
 /** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
 const AREA_A3_MM = { larghezza: 404, altezza: 281 };
@@ -117,17 +122,18 @@ export function OrganigrammaA3Page() {
   );
   const b = (k: string) => blocchi.find((x) => x.chiave === k)!;
   const vociVisibili = useMemo(() => voci.filter((v) => v.titolo.trim()), [voci]);
-  // Disposizione automatica dei riquadri in colonne (impagina-organigramma-a3.ts)
+  // Disposizione dei riquadri per funzione, in colonne (impagina-organigramma-a3.ts): la usano anteprima, stampa e PDF
   const colonneTavola = useMemo(() => {
-    const elementi: ElementoLayout[] = [
+    const elementi: ElementoFunzionale[] = [
       ...blocchi.map((bl) => ({
         id: bl.chiave,
+        titolo: bl.titolo,
         righe: bl.ata.length + bl.docenti.length,
         separatori: bl.ata.length > 0 && bl.docenti.length > 0 ? 1 : 0,
       })),
-      ...vociVisibili.map((v, i) => ({ id: `voce-${i}`, righe: v.nomi.filter((n) => n.trim()).length })),
+      ...vociVisibili.map((v, i) => ({ id: `voce-${i}`, titolo: v.titolo, righe: v.nomi.filter((n) => n.trim()).length })),
     ];
-    return impaginaColonne(elementi, COLONNE_TAVOLA);
+    return impaginaPerFunzione(elementi, COLONNE_TAVOLA);
   }, [blocchi, vociVisibili]);
   const d = ditta.data;
   const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading;
@@ -154,6 +160,23 @@ export function OrganigrammaA3Page() {
     window.print();
   };
 
+  const [generando, setGenerando] = useState(false);
+  const generaPdf = async () => {
+    setGenerando(true);
+    try {
+      await scaricaPdfOrganigrammaA3({
+        ditta: d,
+        annoScolastico: annoScolastico(),
+        colonne: costruisciRiquadriPdf(colonneTavola, blocchi, vociVisibili),
+      });
+      toast.success("PDF A3 generato");
+    } catch (e) {
+      toast.error(`Generazione PDF non riuscita: ${(e as Error).message}`);
+    } finally {
+      setGenerando(false);
+    }
+  };
+
   const salva = async () => {
     setSalvataggio(true);
     try {
@@ -178,9 +201,14 @@ export function OrganigrammaA3Page() {
             <Link to="/stampe/predefinite"><ArrowLeft className="size-4" /> Stampe predefinite</Link>
           </Button>
           <h1 className="text-lg font-semibold">Carta 01 – Organigramma della sicurezza (A3)</h1>
-          <Button size="sm" className="ml-auto" onClick={stampa} disabled={carica}>
-            <Printer className="size-4" /> Stampa / PDF A3
-          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" onClick={stampa} disabled={carica}>
+              <Printer className="size-4" /> Stampa
+            </Button>
+            <Button size="sm" onClick={generaPdf} disabled={carica || generando}>
+              <FileDown className="size-4" /> {generando ? "Genero…" : "Genera PDF A3"}
+            </Button>
+          </div>
         </div>
       </header>
 
