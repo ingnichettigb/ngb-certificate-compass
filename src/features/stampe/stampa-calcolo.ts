@@ -7,6 +7,7 @@
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
+ *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
  *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
@@ -21,7 +22,7 @@ import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra,
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
 
 /** Gruppi tematici della sicurezza che identificano una squadra operativa o un incarico specifico. */
-const GRUPPI_SQUADRA = new Set(["primo-soccorso", "antincendio", "defibrillatore", "preposti", "emergenze"]);
+const GRUPPI_SQUADRA = new Set(["primo-soccorso", "antincendio", "defibrillatore", "preposti", "emergenze", "evacuazione"]);
 
 /**
  * Determina se un corso/gruppo è legato a una squadra o ruolo operativo e se il dipendente ne fa parte.

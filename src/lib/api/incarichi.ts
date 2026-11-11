@@ -4,6 +4,8 @@
  * Incarichi di sicurezza e stato delle scadenze.
  * - Rev (2026-11-06 18:00): per i Preposti lo stato deriva dal motore dei cicli (regime transitorio 19/05/2026),
  *   non dal vecchio campo data_scadenza_calcolata a 5 anni.
+ * - Rev (2026-11-11 10:45): Aggiunto incarico «Addetto all'evacuazione» (EME-EVA-02 base, EME-EAA-02 aggiornamento),
+ *   riconosciuto per codice corso perché nel catalogo entrambi hanno livello «Base».
  */
 import { applicaScadenzaPreposti } from "@/features/scadenze/preposti";
 import type { Attestato } from "./attestati";
@@ -15,6 +17,8 @@ export type Incarico = {
   label: string;
   categoria: string;
   livelli: LivelloKey[];
+  /** Se presente, il livello si riconosce dal codice corso invece che da macro-categoria + livello. */
+  codiciPerLivello?: Partial<Record<LivelloKey, string[]>>;
 };
 
 export const INCARICHI: Incarico[] = [
@@ -47,6 +51,13 @@ export const INCARICHI: Incarico[] = [
     label: "Defibrillatore (BLSD)",
     categoria: "Defibrillatore",
     livelli: ["Base", "Aggiornamento"],
+  },
+  {
+    key: "evacuazione",
+    label: "Addetto all'evacuazione",
+    categoria: "Emergenze",
+    livelli: ["Base", "Aggiornamento"],
+    codiciPerLivello: { Base: ["EME-EVA-02"], Aggiornamento: ["EME-EAA-02"] },
   },
 ];
 
@@ -96,11 +107,14 @@ export function riepilogoIncarichi(attestatiGrezzi: Attestato[]): RiepilogoIncar
   return INCARICHI.map((incarico) => {
     const voci: VoceIncarico[] = incarico.livelli.map((livello) => {
       const candidati = attestati
-        .filter(
-          (a) =>
+        .filter((a) => {
+          const codici = incarico.codiciPerLivello?.[livello];
+          if (codici) return codici.includes((a.tipi_corso?.codice ?? "").toUpperCase().trim());
+          return (
             a.tipi_corso?.macro_categoria === incarico.categoria &&
-            a.tipi_corso?.livello_specifico === livello,
-        )
+            a.tipi_corso?.livello_specifico === livello
+          );
+        })
         .sort((a, b) => (a.data_corso < b.data_corso ? 1 : -1));
       const attestato = candidati[0] ?? null;
       return {
