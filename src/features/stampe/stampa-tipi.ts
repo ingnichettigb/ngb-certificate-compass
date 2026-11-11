@@ -9,12 +9,34 @@
  *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
  *   rev 4 — 09/11/2026 17:30 — Nuova colonna «inSquadra» (Sì / No / —) per le tabelle degli abilitati e per attestato; RigaStampa.inSquadra.
  *   rev 5 — 09/11/2026 20:00 — Organigramma squadre: colonne «squadra», «corsoBaseSquadra», «aggiornamentoSquadra» e relativi campi di RigaStampa.
+ *   rev 6 — 11/11/2026 20:05 — Tipo FiltroStatoLavoratore ("in_forza" | "solo_cessati" | "tutti"), helper includeLavoratorePerStato e campo statoLavoratori in FiltriStampa.
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
 export type Modello = "registro" | "gruppo" | "scadenze" | "scheda" | "reparto" | "lavoratori";
 export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
 export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza" | "manca";
+
+/** Filtro sullo stato contrattuale del lavoratore: in servizio, solo cessati o entrambi. */
+export type FiltroStatoLavoratore = "in_forza" | "solo_cessati" | "tutti";
+
+/**
+ * Stabilisce se un lavoratore deve essere incluso in base allo stato impostato nei filtri.
+ * Mantiene la piena compatibilità all'indietro con la proprietà booleana includiCessati.
+ */
+export function includeLavoratorePerStato(
+  stato: string | null | undefined,
+  filtri: Pick<FiltriStampa, "statoLavoratori" | "includiCessati">,
+): boolean {
+  const modo: FiltroStatoLavoratore = filtri.statoLavoratori ?? (filtri.includiCessati ? "tutti" : "in_forza");
+  if (modo === "solo_cessati") {
+    return stato === "cessato";
+  }
+  if (modo === "tutti") {
+    return true;
+  }
+  return stato !== "cessato";
+}
 
 /** Corsi che si possono isolare per codice (SIC-GEN = Corso base generale, SIC-SPE = Corso specifico). */
 export type SoloCorso = "corsoBase" | "corsoSpecifico";
@@ -55,7 +77,8 @@ export type FiltriStampa = {
   classe: string; // classe di concorso docente o TUTTI
   dipendenteId: string; // id o TUTTI
   finestra: Finestra;
-  includiCessati: boolean;
+  statoLavoratori: FiltroStatoLavoratore;
+  includiCessati: boolean; // conservato per retrocompatibilità test e preset
   soloUltimo: boolean; // solo l'attestato più recente per lavoratore+corso
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
@@ -77,10 +100,11 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   classe: TUTTI,
   dipendenteId: TUTTI,
   finestra: "tutti",
+  statoLavoratori: "in_forza",
+  includiCessati: false,
   soloIncarichi: false,
   soloCorso: null,
   conMancanti: false,
-  includiCessati: false,
   soloUltimo: true,
   mostraFirme: false,
   arrivi: "no",
