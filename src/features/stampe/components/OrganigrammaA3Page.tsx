@@ -9,6 +9,9 @@
  *   rev 2 — 10/11/2026 18:00 — Tavola su un unico foglio A3 orizzontale, zero salto pagina: @page A3 landscape con margine 8 mm, tavola a
  *            404×281 mm (area utile), spazi/margini/interlinea ridotti in stampa e adattamento automatico (scala) se il contenuto eccede
  *            il foglio (anche con Ctrl+P). Titolo aggiornato a «Carta 01 – Organigramma della sicurezza».
+ *   rev 3 — 11/11/2026 — Riassemblata la tavola: vertice su una fascia (Datore di lavoro in alto, sotto RLS, Medico, RSPP, ASPP) e riquadri
+ *            in 3 colonne affiancate che si riempiono da sole (impagina-organigramma-a3.ts); gli elenchi lunghi (Preposti, Primo soccorso…)
+ *            si dividono in due colonne dentro il riquadro. Niente più righe di griglia fisse con grandi vuoti e riduzione in scala eccessiva.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +25,7 @@ import { getAttestati, getDipendenti } from "@/lib/api";
 import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
 import { calcolaBlocchiA3, salvaVociOrganigramma, VOCI_PREDEFINITE, type BloccoOrganigramma, type NomeBlocco } from "../organigramma-a3";
+import { COLONNE_TAVOLA, impaginaColonne, type ElementoLayout } from "../impagina-organigramma-a3";
 
 /** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
 const AREA_A3_MM = { larghezza: 404, altezza: 281 };
@@ -62,20 +66,20 @@ function Nomi({ elenco }: { elenco: NomeBlocco[] }) {
   return (
     <>
       {elenco.map((n) => (
-        <li key={n.testo} className="leading-tight">{n.testo}{n.daFormare && <b> *</b>}</li>
+        <li key={n.testo} className="leading-tight" style={{ breakInside: "avoid" }}>{n.testo}{n.daFormare && <b> *</b>}</li>
       ))}
     </>
   );
 }
 
-function Riquadro({ b, className = "" }: { b: BloccoOrganigramma; className?: string }) {
+function Riquadro({ b, colonne = 1, className = "" }: { b: BloccoOrganigramma; colonne?: 1 | 2; className?: string }) {
   const vuoto = !b.ata.length && !b.docenti.length;
   return (
     <section className={`riquadro-a3 border border-foreground p-1.5 ${className}`} style={{ breakInside: "avoid" }}>
-      <h3 className="mb-1 text-[11px] font-bold uppercase">{b.titolo}</h3>
-      <ul className="text-[10px]">
+      <h3 className="mb-1 text-[13px] font-bold uppercase">{b.titolo}</h3>
+      <ul className="text-[12px]" style={{ columnCount: colonne, columnGap: "4mm" }}>
         <Nomi elenco={b.ata} />
-        {b.ata.length > 0 && b.docenti.length > 0 && <li className="h-2" aria-hidden />}
+        {colonne === 1 && b.ata.length > 0 && b.docenti.length > 0 && <li className="h-2" aria-hidden />}
         <Nomi elenco={b.docenti.map((n) => ({ ...n, testo: `Prof. ${n.testo}` }))} />
         {vuoto && <li className="italic text-muted-foreground">Nessun incarico assegnato</li>}
       </ul>
@@ -85,7 +89,7 @@ function Riquadro({ b, className = "" }: { b: BloccoOrganigramma; className?: st
 
 function Figura({ etichetta, valore }: { etichetta: string; valore: string | null | undefined }) {
   return (
-    <div className="border border-foreground px-2 py-1 text-[11px]">
+    <div className="border border-foreground px-2 py-1 text-[13px]">
       <b>{etichetta}</b> {valore || "—"}
     </div>
   );
@@ -112,6 +116,19 @@ export function OrganigrammaA3Page() {
     [dip.data, att.data, ruoli.data, ass.data],
   );
   const b = (k: string) => blocchi.find((x) => x.chiave === k)!;
+  const vociVisibili = useMemo(() => voci.filter((v) => v.titolo.trim()), [voci]);
+  // Disposizione automatica dei riquadri in colonne (impagina-organigramma-a3.ts)
+  const colonneTavola = useMemo(() => {
+    const elementi: ElementoLayout[] = [
+      ...blocchi.map((bl) => ({
+        id: bl.chiave,
+        righe: bl.ata.length + bl.docenti.length,
+        separatori: bl.ata.length > 0 && bl.docenti.length > 0 ? 1 : 0,
+      })),
+      ...vociVisibili.map((v, i) => ({ id: `voce-${i}`, righe: v.nomi.filter((n) => n.trim()).length })),
+    ];
+    return impaginaColonne(elementi, COLONNE_TAVOLA);
+  }, [blocchi, vociVisibili]);
   const d = ditta.data;
   const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading;
 
@@ -209,41 +226,36 @@ export function OrganigrammaA3Page() {
                   <p className="text-right text-xs font-bold">ANNO SCOLASTICO <span className="ml-2 text-xl">{annoScolastico()}</span></p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 print:gap-2">
-                  <div className="space-y-2">
-                    <Figura etichetta="R.L.S." valore={d?.rls} />
-                    <Figura etichetta="Medico Competente" valore={d?.medico_competente} />
-                  </div>
-                  <div className="self-start border-2 border-foreground px-2 py-2 text-center text-sm font-semibold">
-                    <span className="block text-[10px] font-normal uppercase">Datore di lavoro</span>
-                    {d?.datore_di_lavoro || "—"}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="border border-foreground px-2 py-1 text-[11px]">
-                      <p><b>R.S.P.P.</b> {d?.rspp || "—"}</p>
-                      <p><b>A.S.P.P.</b> {d?.aspp || "—"}</p>
+                {/* Vertice: Datore di lavoro in alto, sotto le figure del servizio di prevenzione */}
+                <div className="mx-auto w-1/3 border-2 border-foreground px-2 py-2 text-center text-sm font-semibold">
+                  <span className="block text-[10px] font-normal uppercase">Datore di lavoro</span>
+                  {d?.datore_di_lavoro || "—"}
+                </div>
+                <div className="mx-auto h-3 border-l border-foreground print:h-2" aria-hidden />
+                <div className="grid grid-cols-4 gap-3 border-t border-foreground pt-2 print:gap-2 print:pt-1">
+                  <Figura etichetta="R.L.S." valore={d?.rls} />
+                  <Figura etichetta="Medico Competente" valore={d?.medico_competente} />
+                  <Figura etichetta="R.S.P.P." valore={d?.rspp} />
+                  <Figura etichetta="A.S.P.P." valore={d?.aspp} />
+                </div>
+
+                {/* Squadre e incarichi: colonne che si riempiono da sole */}
+                <div className="mt-3 grid grid-cols-3 items-start gap-3 print:mt-2 print:gap-2">
+                  {colonneTavola.map((colonna, c) => (
+                    <div key={c} className="space-y-3 print:space-y-2">
+                      {colonna.map((posto) => {
+                        const iVoce = posto.id.startsWith("voce-") ? Number(posto.id.slice(5)) : -1;
+                        return iVoce >= 0 ? (
+                          <VoceLibera key={posto.id} v={vociVisibili[iVoce]!} colonne={posto.colonneInterne} />
+                        ) : (
+                          <Riquadro key={posto.id} b={b(posto.id)} colonne={posto.colonneInterne} />
+                        );
+                      })}
                     </div>
-                    <Riquadro b={b("preposti")} />
-                  </div>
+                  ))}
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-3 print:mt-2 print:gap-2">
-                  <div className="space-y-3 print:space-y-2">
-                    <Riquadro b={b("primo-soccorso")} />
-                    <Riquadro b={b("defibrillatore")} />
-                  </div>
-                  <div className="space-y-3 print:space-y-2">
-                    <Riquadro b={b("evacuazione")} />
-                    {voci.filter((v) => v.titolo.trim()).slice(0, Math.ceil(voci.length / 2)).map((v) => <VoceLibera key={v.titolo} v={v} />)}
-                  </div>
-                  <div className="space-y-3 print:space-y-2">
-                    <Riquadro b={b("antincendio")} />
-                    <Riquadro b={b("privacy")} />
-                    {voci.filter((v) => v.titolo.trim()).slice(Math.ceil(voci.length / 2)).map((v) => <VoceLibera key={v.titolo} v={v} />)}
-                  </div>
-                </div>
-
-                <p className="mt-3 text-[10px] print:mt-1.5"><b>*</b> da formare (nessun attestato valido per l'incarico)</p>
+                <p className="mt-3 text-[11px] print:mt-1.5"><b>*</b> da formare (nessun attestato valido per l'incarico)</p>
 
                 <div className="mt-6 grid grid-cols-3 items-end gap-6 text-[11px] print:mt-3 print:gap-4" style={{ breakInside: "avoid" }}>
                   <div>Per presa visione R.L.S. {d?.rls}<div className="mt-8 border-b border-foreground print:mt-5" /></div>
@@ -263,12 +275,12 @@ export function OrganigrammaA3Page() {
   );
 }
 
-function VoceLibera({ v }: { v: VoceOrganigramma }) {
+function VoceLibera({ v, colonne = 1 }: { v: VoceOrganigramma; colonne?: 1 | 2 }) {
   return (
     <section className="riquadro-a3 border border-foreground p-1.5" style={{ breakInside: "avoid" }}>
-      <h3 className="mb-1 text-[11px] font-bold uppercase">{v.titolo}</h3>
-      <ul className="text-[10px]">
-        {v.nomi.filter((n) => n.trim()).map((n) => <li key={n}>{n}</li>)}
+      <h3 className="mb-1 text-[13px] font-bold uppercase">{v.titolo}</h3>
+      <ul className="text-[12px]" style={{ columnCount: colonne, columnGap: "4mm" }}>
+        {v.nomi.filter((n) => n.trim()).map((n) => <li key={n} style={{ breakInside: "avoid" }}>{n}</li>)}
         {!v.nomi.some((n) => n.trim()) && <li className="italic text-muted-foreground">—</li>}
       </ul>
     </section>
