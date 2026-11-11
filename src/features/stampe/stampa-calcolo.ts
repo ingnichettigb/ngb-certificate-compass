@@ -6,17 +6,18 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
+ *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
- *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
+ *   rev 7 — 11/11/2026 20:05 — Applicato includeLavoratorePerStato in righeMancanti, calcolaRighe e calcolaRigheLavoratori per gestire «Solo cessati», «In forza» e «Tutti».
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
-import { TUTTI } from "./stampa-tipi";
-import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
+import { includeLavoratorePerStato, TUTTI } from "./stampa-tipi";
+import type { FiltriStampa, RigaStampa } from "./stampa-tipi";
 import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo, voceFormazione } from "./stampa-selezioni";
 
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
@@ -91,7 +92,7 @@ function righeMancanti(
   const conCorso = new Set(attestati.filter(haCorso).map((a) => a.dipendente_id));
   const conRuolo = filtri.ruoloId !== TUTTI ? dipendentiConRuolo(filtri.ruoloId, assegnazioni) : null;
   return obbligati
-    .filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato")
+    .filter((d) => includeLavoratorePerStato(d.stato_lavoratore, filtri))
     .filter((d) => !conCorso.has(d.id))
     .filter((d) => !soloDipendenti || soloDipendenti.has(d.id))
     .filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto)
@@ -149,7 +150,7 @@ export function calcolaRighe(
   );
   let righe = attestati
     .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
-    .filter((a) => filtri.includiCessati || a.dipendenti!.stato_lavoratore !== "cessato")
+    .filter((a) => includeLavoratorePerStato(a.dipendenti!.stato_lavoratore, filtri))
     .filter((a) => !filtri.soloCorso || (!!a.tipi_corso && voceFormazione(a.tipi_corso) === filtri.soloCorso))
     .map((a): RigaStampa => {
       const d = a.dipendenti!;
@@ -226,7 +227,7 @@ export function calcolaRighe(
   return righe.sort(ordina);
 }
 
-/** Elenco anagrafico dei lavoratori (in servizio, o anche cessati se richiesto). */
+/** Elenco anagrafico dei lavoratori (in servizio, solo cessati o entrambi in base ai filtri). */
 export function calcolaRigheLavoratori(
   dipendenti: Dipendente[],
   filtri: FiltriStampa,
@@ -263,7 +264,7 @@ export function calcolaRigheLavoratori(
 
   const formazione = formazionePerLavoratore(attestati, oggi);
   let righe = dipendenti
-    .filter((d) => filtri.includiCessati || d.stato_lavoratore !== "cessato")
+    .filter((d) => includeLavoratorePerStato(d.stato_lavoratore, filtri))
     .map((d): RigaStampa => ({
       id: d.id,
       dipendenteId: d.id,
