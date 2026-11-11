@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 09/11/2026 20:00 — Righe dell'«Organigramma squadre di sicurezza»: una riga per lavoratore e per squadra (chi è in due squadre
  *            compare in entrambe). Componente = ruolo di squadra assegnato in «Piano Fabbisogno Formativo e Ruoli».
+ *   rev 2 — 11/11/2026 20:05 — Applicato includeLavoratorePerStato per il filtro stato lavoratori nell'organigramma squadre.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -12,7 +13,7 @@ import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppament
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { ruoliDelGruppo, mansioneDi } from "./stampa-selezioni";
 import { celleSquadra, SQUADRE } from "./stampa-squadre";
-import { TUTTI } from "./stampa-tipi";
+import { includeLavoratorePerStato, TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa } from "./stampa-tipi";
 
 const isoLocale = (d: Date) =>
@@ -52,7 +53,7 @@ export function calcolaRigheOrganigramma(
     for (const d of dipendenti) {
       const nomi = componenti.get(d.id);
       if (!nomi) continue;
-      if (!filtri.includiCessati && d.stato_lavoratore === "cessato") continue;
+      if (!includeLavoratorePerStato(d.stato_lavoratore, filtri)) continue;
       if (soloDipendenti && !soloDipendenti.has(d.id)) continue;
       if (filtri.reparto !== TUTTI && d.reparto !== filtri.reparto) continue;
       if (filtri.categoria !== TUTTI && d.sottoreparto !== filtri.categoria) continue;
