@@ -11,6 +11,8 @@
  *   rev 5 — 10/11/2026 18:00 — La tavola A3 non è più un riquadro separato senza numero: è la carta 01 di «Anagrafica e organico».
  *            Nuovo ordine 01 A3, 02 Organigramma squadre, 03 Registro, 04 Per settore, 05 Per funzioni; Scadenze dalla 06 e Completati a seguire.
  *            Elenco e numeri arrivano da numerazione-carte.ts.
+ *   rev 6 — 11/11/2026 — Riquadro «Stampa globale» in testa: fascicolo completo in PDF a blocchi (copertina, organigramma A3, lavoratori con
+ *            attestati). Non è una carta numerata, così la numerazione 01–N delle altre non cambia.
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -32,11 +34,17 @@ function ContenutoCarta({ c }: { c: VoceCarta }) {
       >
         {NUMERI[c.id]}
       </span>
-      <h3 className="text-base font-semibold"><span className="sr-only">Stampa {NUMERI[c.id]}: </span>{c.titolo}</h3>
+      <h3 className="text-base font-semibold">
+        <span className="sr-only">Stampa {NUMERI[c.id]}: </span>
+        {c.titolo}
+      </h3>
       <p className="text-sm">{c.descrizione}</p>
-      <p className="flex-1 text-xs text-muted-foreground"><b>{c.tavolaA3 ? "Contiene:" : "Colonne:"}</b> {c.contiene}</p>
+      <p className="flex-1 text-xs text-muted-foreground">
+        <b>{c.tavolaA3 ? "Contiene:" : "Colonne:"}</b> {c.contiene}
+      </p>
       <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-        {c.tavolaA3 ? "Apri la tavola" : "Apri l'anteprima"} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+        {c.tavolaA3 ? "Apri la tavola" : "Apri l'anteprima"}{" "}
+        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
       </span>
     </>
   );
@@ -56,9 +64,32 @@ export function ElencoStampePredefinite() {
         </div>
       </header>
       <main className="mx-auto max-w-[1100px] space-y-8 p-6">
+        <section aria-labelledby="stampa-globale">
+          <h2 id="stampa-globale" className="mb-3 text-base font-semibold">
+            Fascicolo completo
+          </h2>
+          <Link to="/stampe/globale" className={`${CLASSI_CARTA} sm:max-w-md`}>
+            <h3 className="text-base font-semibold">Stampa globale</h3>
+            <p className="text-sm">
+              Tutti i lavoratori in un unico fascicolo PDF, diviso in file sotto un limite di
+              dimensione.
+            </p>
+            <p className="flex-1 text-xs text-muted-foreground">
+              <b>Contiene:</b> copertina con logo e indicazioni, organigramma A3, poi per ogni
+              lavoratore (in ordine alfabetico) scheda con dati anagrafici, funzioni e attestati,
+              seguita dai PDF degli attestati.
+            </p>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+              Prepara il fascicolo{" "}
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </Link>
+        </section>
         {FAMIGLIE.map((f) => (
           <section key={f.nome} aria-labelledby={`famiglia-${f.nome}`}>
-            <h2 id={`famiglia-${f.nome}`} className="mb-3 text-base font-semibold">{f.titolo}</h2>
+            <h2 id={`famiglia-${f.nome}`} className="mb-3 text-base font-semibold">
+              {f.titolo}
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {carteDellaFamiglia(f.nome).map((c) =>
                 c.tavolaA3 ? (
@@ -66,7 +97,12 @@ export function ElencoStampePredefinite() {
                     <ContenutoCarta c={c} />
                   </Link>
                 ) : (
-                  <Link key={c.id} to="/stampe/predefinite/$id" params={{ id: c.id }} className={CLASSI_CARTA}>
+                  <Link
+                    key={c.id}
+                    to="/stampe/predefinite/$id"
+                    params={{ id: c.id }}
+                    className={CLASSI_CARTA}
+                  >
                     <ContenutoCarta c={c} />
                   </Link>
                 ),

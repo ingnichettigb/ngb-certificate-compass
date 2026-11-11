@@ -19,6 +19,7 @@ import { Route as ScadenzeRouteImport } from './routes/scadenze'
 import { Route as StampeRouteImport } from './routes/stampe'
 import { Route as StampeIndexRouteImport } from './routes/stampe.index'
 import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
+import { Route as StampeGlobaleRouteImport } from './routes/stampe.globale'
 import { Route as StampePersonalizzataRouteImport } from './routes/stampe.personalizzata'
 import { Route as StampePredefiniteIndexRouteImport } from './routes/stampe.predefinite.index'
 import { Route as StampePredefiniteIdRouteImport } from './routes/stampe.predefinite.$id'
@@ -68,6 +69,11 @@ const StampeIndexRoute = StampeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StampeRoute,
 } as any)
+const StampeGlobaleRoute = StampeGlobaleRouteImport.update({
+  id: '/globale',
+  path: '/globale',
+  getParentRoute: () => StampeRoute,
+} as any)
 const StampeOrganigrammaA3Route = StampeOrganigrammaA3RouteImport.update({
   id: '/organigramma-a3',
   path: '/organigramma-a3',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
+  '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
+  '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
+  '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/scadenze'
     | '/stampe'
     | '/stampe/organigramma-a3'
+    | '/stampe/globale'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe/organigramma-a3'
+    | '/stampe/globale'
     | '/stampe/personalizzata'
     | '/stampe'
     | '/stampe/predefinite/$id'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/scadenze'
     | '/stampe'
     | '/stampe/organigramma-a3'
+    | '/stampe/globale'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StampeIndexRouteImport
       parentRoute: typeof StampeRoute
     }
+    '/stampe/globale': {
+      id: '/stampe/globale'
+      path: '/globale'
+      fullPath: '/stampe/globale'
+      preLoaderRoute: typeof StampeGlobaleRouteImport
+      parentRoute: typeof StampeRoute
+    }
     '/stampe/organigramma-a3': {
       id: '/stampe/organigramma-a3'
       path: '/organigramma-a3'
@@ -289,6 +308,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface StampeRouteChildren {
+  StampeGlobaleRoute: typeof StampeGlobaleRoute
   StampeOrganigrammaA3Route: typeof StampeOrganigrammaA3Route
   StampePersonalizzataRoute: typeof StampePersonalizzataRoute
   StampeIndexRoute: typeof StampeIndexRoute
@@ -297,6 +317,7 @@ interface StampeRouteChildren {
 }
 
 const StampeRouteChildren: StampeRouteChildren = {
+  StampeGlobaleRoute: StampeGlobaleRoute,
   StampeOrganigrammaA3Route: StampeOrganigrammaA3Route,
   StampePersonalizzataRoute: StampePersonalizzataRoute,
   StampeIndexRoute: StampeIndexRoute,
