@@ -6,6 +6,8 @@
  *   rev 1 — 10/11/2026 16:10 — Dati della tavola «Organigramma A3» (come il modello del Liceo): figure di vertice dalla Ditta,
  *            blocchi Preposti / Primo soccorso / Defibrillatore / Evacuazione / Antincendio dagli incarichi assegnati
  *            (ATA prima, poi Docenti), «*» = da formare (nessun attestato valido del gruppo), voci libere salvate nella Ditta.
+ *   rev 2 — 12/11/2026 — Riquadro Preposti con nomi oppure tolto (ModoPreposti, applicaModoPreposti). La voce «Preposti di laboratorio» diventa
+ *            «CATEGORIE DI PREPOSTI» e resta sempre in tavola (normalizzaVociOrganigramma: rinomina la vecchia voce, la aggiunge se manca).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
@@ -17,6 +19,9 @@ import { ruoliDelGruppo } from "./stampa-selezioni";
 export type NomeBlocco = { testo: string; daFormare: boolean };
 export type BloccoOrganigramma = { chiave: string; titolo: string; ata: NomeBlocco[]; docenti: NomeBlocco[] };
 
+/** Riquadro Preposti: «nomi» = con i nominativi; «categorie» = senza (restano sempre le «CATEGORIE DI PREPOSTI»). */
+export type ModoPreposti = "nomi" | "categorie";
+
 export const BLOCCHI_A3 = [
   { chiave: "preposti", titolo: "Preposti" },
   { chiave: "primo-soccorso", titolo: "Addetti primo soccorso" },
@@ -26,10 +31,32 @@ export const BLOCCHI_A3 = [
   { chiave: "privacy", titolo: "Incaricati privacy" },
 ] as const;
 
+/** Titolo della voce con le categorie di preposti (la ex «Preposti di laboratorio»). */
+export const TITOLO_CATEGORIE_PREPOSTI = "CATEGORIE DI PREPOSTI";
+
+const eCategoriePreposti = (titolo: string) => /categori\w*\s+(di\s+)?prepost|prepost\w*\s+di\s+laborator/i.test(titolo);
+
+/**
+ * Le «CATEGORIE DI PREPOSTI» restano sempre in tavola: la vecchia voce «Preposti di laboratorio» (anche se già salvata nella Ditta)
+ * prende il nuovo titolo con i suoi nominativi; se non c'è più, torna quella predefinita.
+ */
+export function normalizzaVociOrganigramma(voci: VoceOrganigramma[]): VoceOrganigramma[] {
+  const base = voci.length ? voci : VOCI_PREDEFINITE;
+  const rinominate = base.map((v) => (eCategoriePreposti(v.titolo) ? { ...v, titolo: TITOLO_CATEGORIE_PREPOSTI } : v));
+  if (rinominate.some((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)) return rinominate;
+  const predefinita = VOCI_PREDEFINITE.find((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)!;
+  return [...rinominate, predefinita];
+}
+
+/** «categorie»: toglie il riquadro Preposti con i nominativi; «nomi»: i blocchi come sono. Le categorie (voce libera) non si toccano. */
+export function applicaModoPreposti(blocchi: BloccoOrganigramma[], modo: ModoPreposti): BloccoOrganigramma[] {
+  return modo === "nomi" ? blocchi : blocchi.filter((b) => b.chiave !== "preposti");
+}
+
 /** Voci fisse proposte la prima volta (modificabili e ampliabili dalla pagina). */
 export const VOCI_PREDEFINITE: VoceOrganigramma[] = [
   { titolo: "Evacuazione – figure di classe", nomi: ["Personale insegnante presente", "Alunni aprifila", "Alunni chiudifila", "Alunni addetti ai diversamente abili"] },
-  { titolo: "Preposti di laboratorio", nomi: ["Professori di lab. scientifico", "Professori di lab. fisica ed ed. fisica"] },
+  { titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["Professori di lab. scientifico", "Professori di lab. fisica ed ed. fisica"] },
   { titolo: "Addetti registro antincendio", nomi: [] },
 ];
 
