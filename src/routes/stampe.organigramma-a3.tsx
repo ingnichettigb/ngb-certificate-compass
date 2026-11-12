@@ -4,6 +4,7 @@
  * Data creaz: 10/11/2026
  * Revisioni:
  *   rev 1 — 10/11/2026 16:10 — Rotta /stampe/organigramma-a3: tavola grafica dell'organigramma della sicurezza in A3.
+ *   rev 2 — 12/11/2026 06:53 — Metadati senza marchio personale fisso.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { OrganigrammaA3Page } from "@/features/stampe/components/OrganigrammaA3Page";
@@ -11,7 +12,7 @@ import { OrganigrammaA3Page } from "@/features/stampe/components/OrganigrammaA3P
 export const Route = createFileRoute("/stampe/organigramma-a3")({
   head: () => ({
     meta: [
-      { title: "Organigramma sicurezza A3 — Nichetti Gian Battista" },
+      { title: "Organigramma sicurezza A3 — Archivio Sicurezza" },
       { name: "description", content: "Tavola A3 dell'organigramma del servizio di prevenzione e protezione, con squadre e incarichi." },
       { property: "og:title", content: "Organigramma sicurezza A3" },
       { property: "og:description", content: "Organigramma della sicurezza stampabile in formato A3." },

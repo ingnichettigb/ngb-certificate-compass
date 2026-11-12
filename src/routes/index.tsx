@@ -1,6 +1,8 @@
 /*
  * File:      index.tsx
  * Percorso:  src/routes/index.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni: rev 1 — 12/11/2026 06:53 — Metadati senza marchio personale fisso.
  * Rotta / (home). La pagina vera è in src/features/home/.
  */
 import { createFileRoute } from "@tanstack/react-router";
@@ -9,7 +11,7 @@ import { HomePage } from "@/features/home/HomePage";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Archivio Attestati Sicurezza — Nichetti Gian Battista" },
+      { title: "Archivio Attestati Sicurezza — Gestione aziendale" },
       {
         name: "description",
         content:
@@ -17,7 +19,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "Archivio Attestati Sicurezza — Nichetti Gian Battista",
+        content: "Archivio Attestati Sicurezza — Gestione aziendale",
       },
       {
         property: "og:description",

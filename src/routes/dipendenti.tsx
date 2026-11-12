@@ -1,6 +1,8 @@
 /*
  * File:      dipendenti.tsx
  * Percorso:  src/routes/dipendenti.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni: rev 1 — 12/11/2026 06:53 — Metadati senza marchio personale fisso.
  * Rotta /dipendenti. La pagina vera è in src/features/dipendenti/ (DipendentiPage, hook e componenti).
  */
 import { createFileRoute } from "@tanstack/react-router";
@@ -9,7 +11,7 @@ import { DipendentiPage } from "@/features/dipendenti/DipendentiPage";
 export const Route = createFileRoute("/dipendenti")({
   head: () => ({
     meta: [
-      { title: "Gestione Dipendenti — Archivio Sicurezza · Nichetti Gian Battista" },
+      { title: "Gestione Dipendenti — Archivio Sicurezza" },
       {
         name: "description",
         content:
