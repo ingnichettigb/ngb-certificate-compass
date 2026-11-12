@@ -9,6 +9,8 @@
  *            fase di lavoro, suggerimento al passaggio del mouse, bottoni verde vivo, menu «Sistema» a destra.
  *   rev 4 — 07/11/2026 — Etichette dei bottoni su due righe (più corti); icona e testo centrati.
  *   rev 5 — 12/11/2026 06:53 — Identità aziendale condivisa su tutte le pagine del gestionale.
+ *   rev 6 — 12/11/2026 — Tolti logo e nome della scuola dall'interno di ogni bottone (erano ripetuti su tutti): i bottoni tornano a icona + etichetta.
+ *            L'identità resta una volta sola: sotto la barra sugli schermi stretti, nell'intestazione della Home e nelle stampe.
  */
 import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
@@ -35,7 +37,6 @@ function VoceBarra({ voce }: { voce: VoceNav }) {
           className={BASE}
           activeProps={{ className: ATTIVO }}
         >
-          <div className="hidden max-w-48 shrink-0 lg:block"><IdentitaDitta compatta /></div>
           <Icona className="size-4 shrink-0" />
           {soloIcona ? null : <span>{label}</span>}
         </Link>
