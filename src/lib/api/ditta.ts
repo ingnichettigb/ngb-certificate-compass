@@ -9,6 +9,7 @@
  *   rev 3 — 09/11/2026 12:05 — Aggiunto campo ASPP tra le figure della sicurezza.
  *   rev 4 — 10/11/2026 15:25 — Aggiunto campo RLS tra le figure della sicurezza.
  *   rev 5 — 10/11/2026 16:10 — Voci aggiuntive della tavola Organigramma A3 (organigramma_voci).
+ *   rev 6 — 12/11/2026 06:53 — Logo aziendale persistente condiviso con pagine, stampe e backup.
  */
 import { sb } from "./client";
 import {
@@ -33,6 +34,7 @@ export type CodiceAteco = {
 export type DittaRecord = {
   id: boolean;
   ragione_sociale: string;
+  logo_data_url?: string | null;
   codice_fiscale: string | null;
   partita_iva: string | null;
   indirizzo: string | null;
@@ -80,7 +82,8 @@ export type SogliaDitta = {
 
 export const DITTA_DEFAULT: DittaRecord = {
   id: true,
-  ragione_sociale: "Nichetti Gian Battista",
+  ragione_sociale: "Anagrafica ditta",
+  logo_data_url: null,
   codice_fiscale: null,
   partita_iva: null,
   indirizzo: null,
@@ -90,7 +93,7 @@ export const DITTA_DEFAULT: DittaRecord = {
   telefono: null,
   email: null,
   pec: null,
-  referente: "Gian Battista Nichetti",
+  referente: null,
   email_mittente_resend: "onboarding@resend.dev",
   datore_di_lavoro: null,
   rspp: null,

@@ -6,6 +6,7 @@
  *   rev 1 — 11/11/2026 — Pagine disegnate della «Stampa globale» (A4 verticale): copertina grande con logo e indicazioni,
  *            scheda del lavoratore (anagrafica, funzioni, attestati per funzione e data), pagina finale con indice e controlli,
  *            piè di pagina «Blocco N di M · Pagina X di Y».
+ *   rev 2 — 12/11/2026 06:53 — Copyright su tutte le pagine della stampa globale.
  */
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -13,6 +14,7 @@ import { statoScadenza } from "@/lib/api/incarichi";
 import { dataIt } from "../stampa-formati";
 import { spezzaTesto, testoPdf } from "../esporta-pdf";
 import type { GruppoAttestati } from "./ordine-attestati";
+import { COPYRIGHT_STAMPE } from "@/lib/identita-ditta";
 
 export const A4V = { l: 595.28, a: 841.89 };
 const M = 42;
@@ -355,7 +357,7 @@ export function applicaPiedeDiPagina(
   const pagine = doc.getPages();
   pagine.forEach((p, i) => {
     if (p.getRotation().angle % 360 !== 0) return;
-    const t = `Blocco ${numero} di ${totale}  ·  Pagina ${i + 1} di ${pagine.length}`;
+    const t = `Blocco ${numero} di ${totale}  ·  Pagina ${i + 1} di ${pagine.length}  ·  ${COPYRIGHT_STAMPE}`;
     const { width } = p.getSize();
     p.drawText(t, {
       x: (width - f.widthOfTextAtSize(t, 8)) / 2,

@@ -1,10 +1,12 @@
 /*
  * File:      dati-azienda.ts
  * Percorso:  src/lib/dati-azienda.ts
+ * Data creazione: 01/11/2026
  * Dati anagrafici ditta/studio per le firme e l'intestazione delle email con Resend.
  * Revisioni:
  *   - Rev 2 (2026-11-01 12:00): I dati ora stanno nel database (src/lib/api/ditta.ts). Questo file resta per il tipo DatiAzienda,
  *     i valori predefiniti e la lettura dei dati vecchi salvati nel browser, che vengono importati nel database una volta sola.
+ *   rev 3 — 12/11/2026 06:53 — Nessun marchio personale nel fallback dell'anagrafica.
  */
 import { useEffect, useState } from "react";
 
@@ -25,8 +27,8 @@ export const STORAGE_KEY = "archivio_attestati_dati_azienda_v1";
 const EVENTO_CAMBIO = "archivio_attestati_dati_azienda_cambiati";
 
 export const DATI_AZIENDA_DEFAULT: DatiAzienda = {
-  nomeAzienda: "Nichetti Gian Battista",
-  referente: "Gian Battista Nichetti",
+  nomeAzienda: "Anagrafica ditta",
+  referente: "",
   email: "",
   telefono: "",
   via: "",

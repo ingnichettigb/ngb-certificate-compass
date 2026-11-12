@@ -5,9 +5,11 @@
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Foglio A4 con intestazione ditta, regole di pagina e firme.
  *   rev 2 — 04/11/2026 10:20 — Contenitore anteprima ad altezza fissa con scorrimento verticale e barra orizzontale fissa.
+ *   rev 3 — 12/11/2026 06:53 — Logo condiviso e copyright nel piede delle stampe.
  */
 import type { ReactNode } from "react";
 import type { DittaRecord } from "@/lib/api/ditta";
+import { COPYRIGHT_STAMPE, nomeDitta, logoDitta } from "@/lib/identita-ditta";
 
 type Props = {
   titolo: string;
@@ -24,8 +26,9 @@ export function IntestazioneDitta({ ditta, titolo, sottotitolo }: { ditta: Ditta
     <header className="mb-4 border-b-2 border-foreground pb-2">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-base font-bold">{ditta?.ragione_sociale || "Nichetti Gian Battista"}</p>
-          <p className="text-[11px]">{ind || "Soresina (CR)"}</p>
+          {logoDitta(ditta) && <img src={logoDitta(ditta) ?? ""} alt={`Logo ${nomeDitta(ditta)}`} className="mb-2 h-12 max-w-40 object-contain" />}
+          <p className="text-base font-bold">{nomeDitta(ditta)}</p>
+          <p className="text-[11px]">{ind}</p>
           {ditta?.partita_iva && <p className="text-[11px]">P.IVA {ditta.partita_iva}</p>}
         </div>
         <div className="text-right text-[11px]">
@@ -66,6 +69,7 @@ export function FoglioStampa({ titolo, sottotitolo, orizzontale, ditta, mostraFi
         <IntestazioneDitta ditta={ditta} titolo={titolo} sottotitolo={sottotitolo} />
         {children}
         {mostraFirme && <Firme ditta={ditta} />}
+        <footer className="mt-6 border-t border-border pt-2 text-center text-[10px] text-muted-foreground">{COPYRIGHT_STAMPE}</footer>
       </div>
     </div>
   );

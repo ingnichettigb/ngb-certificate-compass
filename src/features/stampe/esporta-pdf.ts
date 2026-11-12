@@ -9,10 +9,12 @@
  *   rev 2 — 09/11/2026 20:00 — Colori e grassetto come in anteprima (righeCella: rosso, arancione, grassetto), righe alternate grigie,
  *            celle su due righe (data + avviso) e legenda dell'Organigramma.
  *   rev 3 — 09/11/2026 21:55 — Legenda coerente con i colori: «in grassetto» (non più «sull'anteprima») e riga «Stato» con rosso/arancione.
+ *   rev 4 — 12/11/2026 06:53 — Logo dall'anagrafica e copyright su ogni pagina PDF.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
+import { COPYRIGHT_STAMPE, byteLogoDitta, nomeDitta } from "@/lib/identita-ditta";
 import { dataIt, INTESTAZIONI, cella, raggruppa, righeCella, LEGENDA_SQUADRE, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "./dati-stampa";
 import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "./stampa-gruppi";
 import { scarica, nomeFileEsportazione } from "./esporta-file";
@@ -186,9 +188,11 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   const normale = await doc.embedFont(StandardFonts.Helvetica);
   const grassetto = await doc.embedFont(StandardFonts.HelveticaBold);
   const stampato = o.dataStampa ?? new Date();
+  const logoByte = byteLogoDitta(o.ditta);
+  const logo = logoByte ? await doc.embedPng(logoByte) : null;
 
   doc.setTitle(testoPdf(o.titolo));
-  doc.setAuthor(testoPdf(o.ditta?.ragione_sociale || "Nichetti Gian Battista"));
+  doc.setAuthor(testoPdf(nomeDitta(o.ditta)));
   doc.setSubject("Formazione D.Lgs. 81/2008");
   doc.setCreationDate(stampato);
 
@@ -227,9 +231,14 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
 
   const intestazione = () => {
     const d = o.ditta;
+    if (logo) {
+      const dimensioni = logo.scaleToFit(120, 40);
+      pagina.drawImage(logo, { x: MARGINE, y: y - dimensioni.height, ...dimensioni });
+      y -= dimensioni.height + 8;
+    }
     const ind = [d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ");
-    pagina.drawText(testoPdf(d?.ragione_sociale || "Nichetti Gian Battista"), { x: MARGINE, y: y - 11, size: 11, font: grassetto, color: nero });
-    pagina.drawText(testoPdf(ind || "Soresina (CR)"), { x: MARGINE, y: y - 22, size: 8, font: normale, color: nero });
+    pagina.drawText(testoPdf(nomeDitta(d)), { x: MARGINE, y: y - 11, size: 11, font: grassetto, color: nero });
+    pagina.drawText(testoPdf(ind), { x: MARGINE, y: y - 22, size: 8, font: normale, color: nero });
     let sotto = y - 22;
     if (d?.partita_iva) {
       sotto -= 10;
@@ -332,6 +341,7 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   }
 
   pagine.forEach((p, i) => {
+    p.drawText(COPYRIGHT_STAMPE, { x: MARGINE, y: MARGINE - 2, size: 8, font: normale, color: nero });
     const t = `Pagina ${i + 1} di ${pagine.length}`;
     const w = normale.widthOfTextAtSize(t, 8);
     p.drawText(t, { x: larghPagina - MARGINE - w, y: MARGINE - 2, size: 8, font: normale, color: nero });

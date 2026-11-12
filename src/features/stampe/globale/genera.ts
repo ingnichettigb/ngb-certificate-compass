@@ -7,12 +7,13 @@
  *            scaricarli), divide in blocchi e genera un blocco alla volta: copertina → (solo blocco 1) organigramma A3 →
  *            per ogni lavoratore scheda + PDF degli attestati → indice e controlli. Un blocco alla volta in memoria.
  *            Si può annullare in ogni momento (AbortSignal).
+ *   rev 2 — 12/11/2026 06:53 — Logo della copertina dalla stessa anagrafica aziendale dei PDF A3/A4.
  */
 import { PDFDocument } from "pdf-lib";
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { DittaRecord, VoceOrganigramma } from "@/lib/api/ditta";
 import { ruoliDelDipendente, type AssegnazioneRuolo, type RuoloSicurezza } from "@/lib/api/ruoli";
-import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
+import { byteLogoDitta } from "@/lib/identita-ditta";
 import { calcolaBlocchiA3, VOCI_PREDEFINITE } from "../organigramma-a3";
 import {
   COLONNE_TAVOLA,
@@ -173,15 +174,9 @@ async function pdfOrganigramma(dati: DatiStampaGlobale): Promise<Uint8Array> {
   });
 }
 
-async function caricaLogo(): Promise<{ bytes: Uint8Array; formato: "jpg" | "png" } | null> {
-  try {
-    const r = await fetch(logoAsset.url);
-    if (!r.ok) return null;
-    const bytes = new Uint8Array(await r.arrayBuffer());
-    return { bytes, formato: bytes[0] === 0x89 ? "png" : "jpg" };
-  } catch {
-    return null;
-  }
+function caricaLogo(d?: DittaRecord | null): { bytes: Uint8Array; formato: "png" } | null {
+  const bytes = byteLogoDitta(d);
+  return bytes ? { bytes, formato: "png" } : null;
 }
 
 export type RisultatoBlocco = {
@@ -218,7 +213,7 @@ export async function generaBlocco(
 
   await disegnaCopertina(doc, c, {
     ditta: d?.ragione_sociale || "DITTA",
-    logo: await caricaLogo(),
+    logo: caricaLogo(d),
     numero: blocco.numero,
     totale: piano.blocchi.length,
     intervallo,
