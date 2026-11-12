@@ -4,10 +4,11 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: colonne per vista, titolo e messaggi di una stampa. Nessun cambio di comportamento.
+ *   rev 2 — 11/11/2026 17:30 — Con «Solo cessati» l'elenco lavoratori e il registro mostrano in automatico la colonna «Data cessazione».
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 import { COLONNE_NUOVI_ARRIVATI, COLONNE_PREDEFINITE, COLONNE_SENZA_ATTESTATI } from "./stampa-tipi";
-import type { Colonna, FiltriStampa, ModoSenza, PeriodoArrivi, RigaStampa } from "./stampa-tipi";
+import type { Colonna, FiltriStampa, FiltroStatoLavoratore, ModoSenza, PeriodoArrivi, RigaStampa } from "./stampa-tipi";
 import { inizioPeriodoArrivi } from "./stampa-selezioni";
 import { TITOLI_MODELLO, dataIt } from "./stampa-formati";
 
@@ -22,7 +23,17 @@ const COLONNA_DEL_CAMPO: Record<CampoAnagrafica, Colonna> = {
 const COLONNE_SE_MANCANTI: Colonna[] = ["nascita", "assunzione", "mansione", "fineContratto", "cessazione"];
 
 /** Colonne da mostrare: dipendono dal modello, dalle selezioni attive e (per l'incompleta) dai dati mancanti. */
-export function colonnePerVista(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta"> & { senzaAttestati?: boolean }, righe: RigaStampa[] = []): Colonna[] {
+export function colonnePerVista(
+  f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta"> & { senzaAttestati?: boolean; statoLavoratori?: FiltroStatoLavoratore },
+  righe: RigaStampa[] = [],
+): Colonna[] {
+  const base = colonneDiBase(f, righe);
+  // «Solo cessati»: la data di cessazione è il dato che serve, quindi compare da sola (si può togliere con la «x» dell'intestazione).
+  const conCessazione = f.statoLavoratori === "solo_cessati" && (f.modello === "lavoratori" || f.modello === "registro");
+  return conCessazione && !base.includes("cessazione") ? [...base, "cessazione"] : base;
+}
+
+function colonneDiBase(f: Pick<FiltriStampa, "modello" | "arrivi" | "incompleta"> & { senzaAttestati?: boolean }, righe: RigaStampa[]): Colonna[] {
   if (f.modello !== "lavoratori") return COLONNE_PREDEFINITE[f.modello];
   if (f.incompleta) {
     const base: Colonna[] = ["lavoratore", "cf", "reparto", "mancano"];

@@ -3,6 +3,7 @@
  * Percorso:  src/features/stampe/stampe-predefinite.test.ts
  * Data creaz: 08/11/2026
  * Verifica le stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Rev 5 (11/11/2026 17:30): nuova carta 04 «Registro lavoratori cessati» nella famiglia Anagrafica.
  * Rev 4 (10/11/2026 18:00): nuovo ordine di «Anagrafica» (organigramma squadre per primo, dopo la tavola A3 che è la carta 01).
  * Rev 3 (09/11/2026 20:00): catalogo attuale (famiglie Anagrafica / Scadenze / Completati) e carta Organigramma squadre.
  * Rev 2 (08/11/2026): tre nuove scadenze (Corso base, Corso specifico, Privacy), scelta del pubblico e righe «Manca».
@@ -32,7 +33,7 @@ describe("stampe predefinite: il catalogo", () => {
   it("le famiglie sono quelle dell'elenco (Anagrafica, Scadenze, Completati): nessuna carta resta fuori", () => {
     for (const s of STAMPE_PREDEFINITE) expect(["Anagrafica", "Scadenze", "Completati"]).toContain(s.famiglia);
     expect(STAMPE_PREDEFINITE.filter((s) => s.famiglia === "Anagrafica").map((s) => s.id)).toEqual([
-      "organigramma-squadre", "anagrafica-tutti", "anagrafica-settori", "anagrafica-gruppi",
+      "organigramma-squadre", "anagrafica-tutti", "anagrafica-cessati", "anagrafica-settori", "anagrafica-gruppi",
     ]);
   });
 
@@ -78,6 +79,14 @@ describe("stampe predefinite: il catalogo", () => {
     expect(tutti.raggruppaPer).toBeUndefined();
     expect(trovaPredefinita("anagrafica-settori")?.raggruppaPer).toBe("reparto");
     expect(trovaPredefinita("anagrafica-gruppi")?.raggruppaPer).toBe("funzione");
+  });
+
+  it("registro cessati: solo cessati, con fine contratto e data di cessazione", () => {
+    const c = trovaPredefinita("anagrafica-cessati")!;
+    expect(c.filtri.modello).toBe("lavoratori");
+    expect(c.filtri.statoLavoratori).toBe("solo_cessati");
+    expect(c.colonne).toEqual(expect.arrayContaining(["lavoratore", "cf", "fineContratto", "cessazione"]));
+    expect(trovaPredefinita("anagrafica-tutti")?.filtri.statoLavoratori).toBe("in_forza");
   });
 
   it("Organigramma squadre: Docenti/ATA, squadre, colonne e righe dedicate", () => {

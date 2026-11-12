@@ -12,6 +12,8 @@
  *            risultava vuota); raggruppaPer allineato a RaggruppaPer («funzione»); campi facoltativi organigramma e messaggioVuoto.
  *   rev 7 — 10/11/2026 18:00 — Riordino della famiglia «Anagrafica»: «Organigramma squadre di sicurezza» passa in testa (carta 02, dopo la
  *            tavola A3 che è la carta 01); seguono Registro anagrafico (03), Elenco per settore (04), Stampa per funzioni e squadre (05).
+ *   rev 8 — 11/11/2026 17:30 — Nuova carta «Registro lavoratori cessati» (04, subito dopo il Registro anagrafico): solo cessati con data di cessazione.
+ *            Le carte successive scalano di uno (Elenco per settore 05, Stampa per funzioni 06, Scadenze dalla 07, Completati dalla 14).
  */
 import type { Colonna, FiltriStampa } from "./stampa-tipi";
 import { FILTRI_INIZIALI, TUTTI } from "./stampa-tipi";
@@ -171,6 +173,16 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     filtri: { ...FILTRI_INIZIALI, modello: "lavoratori" },
     colonne: ["lavoratore", "cf", "luogoNascita", "dataNascita", "reparto", "mansione", "assunzione", "ruoli"],
     filtriApplicati: ["Solo lavoratori in forza", "Tutti i dati anagrafici"],
+  },
+  {
+    id: "anagrafica-cessati",
+    famiglia: "Anagrafica",
+    titolo: "Registro lavoratori cessati",
+    descrizione: "Solo i lavoratori che non sono più in servizio (dimessi, pensionati, contratti scaduti), con dati anagrafici, data di assunzione, fine contratto e data di cessazione.",
+    contiene: "Lavoratore, codice fiscale, luogo e data di nascita, reparto, mansione/classe di concorso, data assunzione, fine contratto, data di cessazione.",
+    filtri: { ...FILTRI_INIZIALI, modello: "lavoratori", statoLavoratori: "solo_cessati", includiCessati: true },
+    colonne: ["lavoratore", "cf", "luogoNascita", "dataNascita", "reparto", "mansione", "assunzione", "fineContratto", "cessazione"],
+    filtriApplicati: ["Solo lavoratori cessati", "Tutti i dati anagrafici"],
   },
   {
     id: "anagrafica-settori",

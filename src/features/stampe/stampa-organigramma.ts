@@ -5,7 +5,7 @@
  * Revisioni:
  *   rev 1 — 09/11/2026 20:00 — Righe dell'«Organigramma squadre di sicurezza»: una riga per lavoratore e per squadra (chi è in due squadre
  *            compare in entrambe). Componente = ruolo di squadra assegnato in «Piano Fabbisogno Formativo e Ruoli».
- *   rev 2 — 11/11/2026 20:05 — Applicato includeLavoratorePerStato per il filtro stato lavoratori nell'organigramma squadre.
+ *   rev 2 — 11/11/2026 17:30 — Filtro «Stato lavoratore» (includeLavoratorePerStato) al posto della sola esclusione dei cessati.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";

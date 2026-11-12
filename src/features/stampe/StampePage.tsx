@@ -8,21 +8,23 @@
  *   rev 3 — 05/11/2026 18:30 — Selezione «Nuovi arrivati dell'anno»: limita tutte le stampe ai lavoratori assunti nel periodo.
  *   rev 4 — 05/11/2026 19:50 — Selezione «Anagrafica incompleta», striscia «Filtri attivi», titolo dinamico, messaggi di elenco vuoto.
  *   rev 5 — 06/11/2026 — Ordinamento A→Z / Z→A dalle intestazioni e pulsante «Univoco»; stampa ed esportazioni seguono la stessa vista.
- *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
  *   rev 7 — 07/11/2026 — Guida (i) con ricette «Applica questi filtri»; filtro «Classe di concorso»; «Solo incarichi attualmente assegnati»;
  *                        striscia filtri «Per attestato» / «Per incarico».
+ *   rev 6 — 06/11/2026 — Selezione «Senza attestati» (manca Corso base e/o Corso specifico), combinabile con le altre.
+ *   rev 9 — 07/11/2026 — Tolta la freccia «Home»: c'è la barra di navigazione.
  *   rev 8 — 07/11/2026 — Colonne tolte/aggiunte (+) e larghezze ridimensionabili, ricordate per ogni tipo di documento; le scelte
  *                        valgono anche per stampa, CSV ed Excel. «Ripristina colonne» azzera le scelte del documento corrente.
- *   rev 9 — 07/11/2026 — Tolta la freccia «Home»: c'è la barra di navigazione.
  *   rev 10 — 08/11/2026 — Stessa pagina anche per le stampe predefinite (prop «predefinita»): filtri e colonne di partenza già
  *                         impostati, pannello filtri nascosto, raggruppamento con salto pagina.
+ *   rev 12 — 08/11/2026 — Scelta Tutti / Solo docenti / Solo ATA nelle stampe di scadenza (carta con «destinatari»), righe «Manca»,
+ *                        colonne spostabili (trascinamento e frecce) e ricordate per ogni stampa.
  *   rev 11 — 08/11/2026 14:40 — Integrazione BarraGruppiPredefinite nella stampa predefinita per gruppi, compattazione testata (padding py-2.5)
  *                               e filtro reattivo per singolo gruppo su tabella, PDF, CSV ed Excel.
- *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
- *                         modificabile (esporta-pdf.ts), senza passare dalla stampante PDF installata.
  *   rev 13 — 09/11/2026 20:00 — Organigramma squadre: righe per lavoratore e squadra, filtro Docenti/ATA e barra delle squadre insieme,
  *                         colonne «+» dedicate, totale dei lavoratori distinti nella barra delle squadre.
- *   rev 14 — 11/11/2026 20:05 — Filtraggio anagrafica dipendenti con includeLavoratorePerStato e voce «Solo cessati» / «Inclusi cessati» nella striscia filtri attivi.
+ *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
+ *                         modificabile (esporta-pdf.ts), senza passare dalla stampante PDF installata.
+ *   rev 14 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: elenco lavoratori filtrato con includeLavoratorePerStato; badge «Solo cessati» / «Inclusi cessati».
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -35,9 +37,7 @@ import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, getAssegnazioniRuoli, getRuoli
 import { getDitta } from "@/lib/api/ditta";
 import { GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
-  calcolaRighe, calcolaRigheLavoratori, calcolaRigheOrganigramma, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne,
-  includeLavoratorePerStato, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, ordinaRighe,
-  prossimoOrdine, testoTotale, titoloStampa, TUTTI, unicoPerLavoratore,
+  calcolaRighe, calcolaRigheLavoratori, calcolaRigheOrganigramma, colonnePerVista, dataIt, FILTRI_INIZIALI, gruppiColonne, includeLavoratorePerStato, intersezioneId, lavoratoriSenzaMinimi, messaggioVuoto, nuoviArrivati, ruoliDelGruppo, statoEffettivo, ordinaRighe, prossimoOrdine, testoTotale, titoloStampa, TUTTI, unicoPerLavoratore,
   type Colonna, type FiltriStampa as Filtri, type OrdineColonna,
 } from "./dati-stampa";
 import { scaricaCsv, scaricaExcel } from "./esporta-file";
@@ -185,13 +185,6 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
   const incarichiAttivi = filtri.modello !== "lavoratori" && filtri.soloIncarichi && ruoliDelGruppo(filtri.gruppo, ruoliCatalogo).length > 0;
-  const statoEtichetta =
-    filtri.statoLavoratori === "solo_cessati"
-      ? "Solo cessati"
-      : (filtri.statoLavoratori === "tutti" || filtri.includiCessati)
-        ? "Inclusi cessati"
-        : null;
-
   const partiPersonalizzata = [
     conArrivi && `Assunti dal ${dataIt(arrivi.inizio)}`,
     filtri.incompleta && "Solo anagrafiche incomplete",
@@ -205,7 +198,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     filtri.modello !== "lavoratori" && filtri.finestra === "scaduti" && "Solo scaduti",
     filtri.modello !== "lavoratori" && filtri.finestra === "270" && "Scadenza entro 9 mesi",
     filtri.modello !== "lavoratori" && ["90", "180", "365"].includes(filtri.finestra) && `Scadenza entro ${filtri.finestra} giorni`,
-    statoEtichetta,
+    statoEffettivo(filtri) === "solo_cessati" ? "Solo cessati" : statoEffettivo(filtri) === "tutti" && "Inclusi cessati",
     univocoAttivo && "Univoco: un lavoratore per riga (scadenza più urgente)",
   ].filter(Boolean);
 

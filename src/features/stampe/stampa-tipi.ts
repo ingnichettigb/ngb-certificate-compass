@@ -9,8 +9,8 @@
  *   rev 3 — 08/11/2026 — Stato «manca» (il lavoratore non ha il corso); filtri soloCorso e conMancanti per le scadenze di Corso base / specifico.
  *   rev 4 — 09/11/2026 17:30 — Nuova colonna «inSquadra» (Sì / No / —) per le tabelle degli abilitati e per attestato; RigaStampa.inSquadra.
  *   rev 5 — 09/11/2026 20:00 — Organigramma squadre: colonne «squadra», «corsoBaseSquadra», «aggiornamentoSquadra» e relativi campi di RigaStampa.
- *   rev 6 — 11/11/2026 20:05 — Tipo FiltroStatoLavoratore ("in_forza" | "solo_cessati" | "tutti"), helper includeLavoratorePerStato e campo statoLavoratori in FiltriStampa.
- *   rev 7 — 12/11/2026 06:53 — Compatibilità dei vecchi preset «Includi cessati» con il selettore nuovo.
+ *   rev 6 — 11/11/2026 17:30 — Filtro «Stato lavoratore» (In forza / Solo cessati / Tutti): tipo FiltroStatoLavoratore, campo statoLavoratori,
+ *            helper statoEffettivo e includeLavoratorePerStato. «includiCessati» resta valido (vale «Tutti»): test e preset esistenti invariati.
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -18,26 +18,27 @@ export type Modello = "registro" | "gruppo" | "scadenze" | "scheda" | "reparto" 
 export type Finestra = "tutti" | "scaduti" | "90" | "180" | "270" | "365";
 export type StatoValidita = "valido" | "in_scadenza" | "scaduto" | "senza_scadenza" | "manca";
 
-/** Filtro sullo stato contrattuale del lavoratore: in servizio, solo cessati o entrambi. */
+/** Filtro sullo stato del lavoratore: in servizio, solo cessati oppure entrambi. */
 export type FiltroStatoLavoratore = "in_forza" | "solo_cessati" | "tutti";
 
 /**
- * Stabilisce se un lavoratore deve essere incluso in base allo stato impostato nei filtri.
- * Mantiene la piena compatibilità all'indietro con la proprietà booleana includiCessati.
+ * Stato effettivo del filtro. «Solo cessati» è la sola scelta che esclude gli in forza;
+ * «includiCessati» (casella storica, usata da test e preset) vale «Tutti» quando statoLavoratori è ancora «in_forza».
  */
+export function statoEffettivo(f: { statoLavoratori?: FiltroStatoLavoratore; includiCessati?: boolean }): FiltroStatoLavoratore {
+  if (f.statoLavoratori === "solo_cessati") return "solo_cessati";
+  if (f.statoLavoratori === "tutti" || f.includiCessati) return "tutti";
+  return "in_forza";
+}
+
+/** Dice se un lavoratore, dato il suo stato contrattuale, rientra nel filtro impostato. */
 export function includeLavoratorePerStato(
   stato: string | null | undefined,
-  filtri: Pick<FiltriStampa, "statoLavoratori" | "includiCessati">,
+  filtri: { statoLavoratori?: FiltroStatoLavoratore; includiCessati?: boolean },
 ): boolean {
-  const modo: FiltroStatoLavoratore = filtri.statoLavoratori === "solo_cessati"
-    ? "solo_cessati"
-    : filtri.includiCessati ? "tutti" : filtri.statoLavoratori ?? "in_forza";
-  if (modo === "solo_cessati") {
-    return stato === "cessato";
-  }
-  if (modo === "tutti") {
-    return true;
-  }
+  const modo = statoEffettivo(filtri);
+  if (modo === "solo_cessati") return stato === "cessato";
+  if (modo === "tutti") return true;
   return stato !== "cessato";
 }
 
@@ -80,8 +81,8 @@ export type FiltriStampa = {
   classe: string; // classe di concorso docente o TUTTI
   dipendenteId: string; // id o TUTTI
   finestra: Finestra;
-  statoLavoratori: FiltroStatoLavoratore;
-  includiCessati: boolean; // conservato per retrocompatibilità test e preset
+  statoLavoratori: FiltroStatoLavoratore; // «In forza» / «Solo cessati» / «Tutti»
+  includiCessati: boolean; // casella storica: vale «Tutti»; il selettore la tiene allineata a statoLavoratori
   soloUltimo: boolean; // solo l'attestato più recente per lavoratore+corso
   mostraFirme: boolean;
   arrivi: PeriodoArrivi; // selezione «Nuovi arrivati dell'anno»
@@ -103,11 +104,11 @@ export const FILTRI_INIZIALI: FiltriStampa = {
   classe: TUTTI,
   dipendenteId: TUTTI,
   finestra: "tutti",
-  statoLavoratori: "in_forza",
-  includiCessati: false,
   soloIncarichi: false,
   soloCorso: null,
   conMancanti: false,
+  statoLavoratori: "in_forza",
+  includiCessati: false,
   soloUltimo: true,
   mostraFirme: false,
   arrivi: "no",

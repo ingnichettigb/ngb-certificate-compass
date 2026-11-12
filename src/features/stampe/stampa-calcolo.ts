@@ -6,11 +6,10 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
- *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
- *   rev 7 — 11/11/2026 20:05 — Applicato includeLavoratorePerStato in righeMancanti, calcolaRighe e calcolaRigheLavoratori per gestire «Solo cessati», «In forza» e «Tutti».
- *   rev 8 — 12/11/2026 06:53 — Ripristinato import del tipo VoceRuolo.
+ *   rev 7 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: righeMancanti, calcolaRighe e calcolaRigheLavoratori usano includeLavoratorePerStato.
+ *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -228,7 +227,7 @@ export function calcolaRighe(
   return righe.sort(ordina);
 }
 
-/** Elenco anagrafico dei lavoratori (in servizio, solo cessati o entrambi in base ai filtri). */
+/** Elenco anagrafico dei lavoratori (in servizio, o anche cessati se richiesto). */
 export function calcolaRigheLavoratori(
   dipendenti: Dipendente[],
   filtri: FiltriStampa,

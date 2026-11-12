@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Pulsante «Guida» (i) con le istruzioni di Stampe & Report: differenza tra attestato e incarico, selezioni,
  *                        documenti, filtri, opzioni, legenda delle colonne e ricette rapide con «Applica questi filtri».
+ *   rev 2 — 11/11/2026 17:30 — Voce «Stato lavoratore» (In forza / Solo cessati / Tutti) al posto di «Includi lavoratori cessati».
  */
 import { useState } from "react";
 import { ArrowUp, Info } from "lucide-react";
@@ -160,7 +161,7 @@ export function GuidaStampe({ ruoli, onApplica }: Props) {
           <Sezione id="opzioni" titolo="Opzioni">
             <ul className="space-y-2">
               <Voce nome="Solo l'attestato più recente per corso">{SUGGERIMENTI.soloUltimo}</Voce>
-              <Voce nome="Includi lavoratori cessati">{SUGGERIMENTI.includiCessati}</Voce>
+              <Voce nome="Stato lavoratore">{SUGGERIMENTI.statoLavoratori}</Voce>
               <Voce nome="Spazio firme in fondo">{SUGGERIMENTI.mostraFirme}</Voce>
               <Voce nome="Univoco">{SUGGERIMENTI.univoco} Non è disponibile nell'elenco lavoratori e nelle schede, che hanno già una persona per riga.</Voce>
             </ul>

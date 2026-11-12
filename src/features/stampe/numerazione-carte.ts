@@ -6,6 +6,8 @@
  *   rev 1 — 10/11/2026 18:00 — Elenco ordinato delle carte della pagina «Stampe predefinite» e loro numero progressivo (01, 02, …).
  *            La tavola grafica «Organigramma della sicurezza – A3» è ora una carta a tutti gli effetti (la 01 di «Anagrafica e organico»);
  *            le altre carte scalano senza buchi: Scadenze parte dalla 06, Completati segue.
+ *   rev 2 — 11/11/2026 17:30 — Nuova carta 04 «Registro lavoratori cessati»: la numerazione resta automatica (posizione nell'elenco), le carte
+ *            successive scalano di uno: Scadenze parte dalla 07, Completati dalla 14.
  */
 import { STAMPE_PREDEFINITE, type FamigliaPredefinita } from "./stampe-predefinite";
 
