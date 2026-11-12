@@ -18,8 +18,8 @@ import { Route as OperatoreRouteImport } from './routes/operatore'
 import { Route as ScadenzeRouteImport } from './routes/scadenze'
 import { Route as StampeRouteImport } from './routes/stampe'
 import { Route as StampeIndexRouteImport } from './routes/stampe.index'
-import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
 import { Route as StampeGlobaleRouteImport } from './routes/stampe.globale'
+import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
 import { Route as StampePersonalizzataRouteImport } from './routes/stampe.personalizzata'
 import { Route as StampePredefiniteIndexRouteImport } from './routes/stampe.predefinite.index'
 import { Route as StampePredefiniteIdRouteImport } from './routes/stampe.predefinite.$id'
@@ -104,8 +104,8 @@ export interface FileRoutesByFullPath {
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
-  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/globale': typeof StampeGlobaleRoute
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -119,8 +119,8 @@ export interface FileRoutesByTo {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
-  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/globale': typeof StampeGlobaleRoute
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -136,8 +136,8 @@ export interface FileRoutesById {
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
-  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/globale': typeof StampeGlobaleRoute
+  '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -154,8 +154,8 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
-    | '/stampe/organigramma-a3'
     | '/stampe/globale'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -169,8 +169,8 @@ export interface FileRouteTypes {
     | '/massivo'
     | '/operatore'
     | '/scadenze'
-    | '/stampe/organigramma-a3'
     | '/stampe/globale'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe'
     | '/stampe/predefinite/$id'
@@ -185,8 +185,8 @@ export interface FileRouteTypes {
     | '/operatore'
     | '/scadenze'
     | '/stampe'
-    | '/stampe/organigramma-a3'
     | '/stampe/globale'
+    | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
     | '/stampe/'
     | '/stampe/predefinite/$id'
