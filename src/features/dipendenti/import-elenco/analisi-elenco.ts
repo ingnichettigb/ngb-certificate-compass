@@ -11,9 +11,12 @@
  *   rev 3 — 05/11/2026 21:30 — Nuova modalità «solo nuovi» (analizzaSoloNuovi): per ogni codice fiscale nuovo / già presente in forza /
  *            già presente cessato, con luogo e data di nascita, reparto dal file e testi in MAIUSCOLO; controllo di coerenza
  *            tra data di nascita e codice fiscale. La modalità di aggiornamento resta invariata.
+ *   rev 4 — 11/11/2026 — «Solo nuovi»: la colonna «Classe di concorso / Profilo ATA» imposta reparto, profilo ATA (CS, AA, AT, DSGA)
+ *            o classe di concorso; le colonne con la X (funzioni di sicurezza) viaggiano con la riga fino alla registrazione.
  */
 import { maiuscolo } from "@/lib/testo-maiuscolo";
 import { analizzaCodiceFiscale, normalizzaOmocodia } from "../codice-fiscale/controllo-cf";
+import type { FunzioniImport } from "./funzioni-sicurezza";
 
 export type RigaGrezza = {
   nominativo: string;
@@ -25,6 +28,8 @@ export type RigaGrezza = {
   luogoNascita?: string;
   /** Data ISO AAAA-MM-GG, vuota se assente o non riconosciuta. */
   dataNascita?: string;
+  /** Funzioni segnate con la X (presente solo se il file ha almeno una di queste colonne). */
+  funzioni?: FunzioniImport;
 };
 
 export type TipoProposta = "cessazione" | "docente" | "ata" | "da_verificare";
@@ -226,6 +231,12 @@ export type RigaNuovo = {
   luogoNascita: string;
   dataNascita: string;
   reparto: RepartoImport;
+  /** Profilo ATA riconosciuto dalla colonna Classe/Profilo (solo reparto ATA). */
+  sottorepartoAta: ProfiloAta | null;
+  /** Classe di concorso riconosciuta (solo reparto Docente). */
+  classe: string | null;
+  materia: string | null;
+  funzioni: FunzioniImport;
   categoria: CategoriaNuovo;
   /** id del lavoratore già presente (null per i nuovi). */
   dipendenteId: string | null;
@@ -268,6 +279,7 @@ export function analizzaSoloNuovi(
   righe: RigaGrezza[],
   esistenti: EsistenteCf[],
   repartoPredefinito: RepartoImport,
+  codiciClasse: string[] = [],
 ): RigaNuovo[] {
   const perCf = new Map(esistenti.map((d) => [normalizzaCf(d.codice_fiscale), d]));
   const visti = new Set<string>();
@@ -310,6 +322,32 @@ export function analizzaSoloNuovi(
       if (!luogoNascita) avvisi.push("Luogo di nascita mancante");
     }
 
+    // Colonna unica «Classe di concorso / Profilo ATA»: CS, AA, AT, DSGA → ATA; classe esistente → Docente.
+    // I 4 codici ATA si controllano per primi: «AA» (profilo) non si confonde con «AA24» (classe di concorso).
+    const testoFunzione = (riga.funzione ?? "").replace(/\u00a0/g, " ").trim();
+    let reparto: RepartoImport = repartoPredefinito;
+    let sottorepartoAta: ProfiloAta | null = null;
+    let classe: string | null = null;
+    let materia: string | null = null;
+    if (testoFunzione) {
+      const ata = trovaProfiloAta(testoFunzione);
+      const cl = ata ? null : trovaClasse(testoFunzione, codiciClasse);
+      if (ata) {
+        reparto = "ATA";
+        sottorepartoAta = ata;
+      } else if (cl) {
+        reparto = "Docente";
+        classe = cl.classe;
+        materia = cl.resto || null;
+      } else {
+        const rep = repartoDaTesto(testoFunzione);
+        if (rep) reparto = rep;
+        else if (categoria === "nuovo") {
+          avvisi.push(`Classe o profilo «${testoFunzione}» non riconosciuto: completalo dalla scheda`);
+        }
+      }
+    }
+
     out.push({
       riga,
       cf,
@@ -317,7 +355,11 @@ export function analizzaSoloNuovi(
       nome: maiuscolo(nome),
       luogoNascita,
       dataNascita,
-      reparto: repartoDaTesto(riga.funzione) ?? repartoPredefinito,
+      reparto,
+      sottorepartoAta,
+      classe,
+      materia,
+      funzioni: riga.funzioni ?? {},
       categoria,
       dipendenteId: gia?.id ?? null,
       avvisi,

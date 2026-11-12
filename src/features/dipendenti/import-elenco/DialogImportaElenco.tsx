@@ -287,6 +287,7 @@ export function DialogImportaElenco({
                 dataInizio={dataInizio}
                 dipendenti={dipendenti}
                 ruoli={ruoli}
+                codiciClasse={codiciClasse}
                 repartoIniziale={tipoPredefinito === "docente" ? "Docente" : "ATA"}
                 onEsito={setEsito}
                 onAnnulla={onClose}

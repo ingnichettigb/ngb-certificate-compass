@@ -14,7 +14,7 @@ const esito: EsitoImportazione = {
   presentiInForza: [{ id: "1", cognome: "ROSSI", nome: "MARIO", cf: "RSSMRA80A01H501U" }],
   presentiCessati: [{ id: "2", cognome: "D'ANGELO <X>", nome: "ANNA", cf: "DNGNNA80A41H501X" }],
   riabilitatiSubito: [],
-  nonValidi: [], doppioni: [], errori: [],
+  nonValidi: [], doppioni: [], errori: [], ruoliCreati: [], ruoliAggiuntiAPresenti: 0,
 };
 
 describe("elenco dei già presenti", () => {

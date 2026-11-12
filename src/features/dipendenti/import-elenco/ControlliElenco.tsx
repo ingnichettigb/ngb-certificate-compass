@@ -4,9 +4,14 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DialogImportaElenco.tsx: selettore della modalità e barra di configurazione (file, date di servizio). Nessun cambio di comportamento.
+ *   rev 2 — 11/11/2026 — Pulsante «Scarica modello Excel» sotto il campo file (modalità «Solo nuovi»).
  */
+import { useState } from "react";
+import { Download } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { scaricaModelloElenco } from "./modello-excel";
 
 export type ModalitaElenco = "nuovi" | "aggiorna";
 
@@ -64,16 +69,34 @@ export function BarraConfigurazione({
   setDataInizio: (v: string) => void;
   onFile: (f: File | undefined) => void;
 }) {
+  const [scarico, setScarico] = useState(false);
+  async function scaricaModello() {
+    setScarico(true);
+    try {
+      await scaricaModelloElenco();
+    } catch (e) {
+      toast.error(`Modello Excel non generato: ${(e as Error).message}`);
+    } finally {
+      setScarico(false);
+    }
+  }
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 rounded-lg border border-border bg-muted/30 p-3">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">File (.docx, .xlsx, .csv)</span>
-        <Input
-          type="file"
-          accept=".docx,.xlsx,.xls,.xlsm,.csv"
-          onChange={(e) => onFile(e.target.files?.[0])}
-        />
-      </label>
+      <div className="flex flex-col gap-2 text-sm">
+        <label className="flex flex-col gap-1">
+          <span className="font-medium text-foreground">File (.docx, .xlsx, .csv)</span>
+          <Input
+            type="file"
+            accept=".docx,.xlsx,.xls,.xlsm,.csv"
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+        </label>
+        {modalita === "nuovi" && (
+          <Button type="button" variant="outline" size="sm" className="h-8 w-fit gap-1.5 text-xs" disabled={scarico} onClick={scaricaModello}>
+            <Download className="size-3.5" /> {scarico ? "Preparo il modello…" : "Scarica modello Excel"}
+          </Button>
+        )}
+      </div>
       {modalita === "aggiorna" && (
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-foreground">Data fine servizio (cessati)</span>

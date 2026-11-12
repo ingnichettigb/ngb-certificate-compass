@@ -8,6 +8,7 @@
  * Revisioni:
  *   rev 1 — 05/11/2026 21:30 — Prima stesura.
  *   rev 2 — 06/11/2026 08:20 — Pulsante principale «Completa ora uno a uno (N)» che apre la finestra «Da completare».
+ *   rev 3 — 11/11/2026 — Riquadro con i ruoli creati nel catalogo e le funzioni (X) aggiunte ai già presenti.
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -94,6 +95,21 @@ export function EsitoImportazioneElenco({
           </p>
         </div>
       </div>
+
+      {(esito.ruoliCreati.length > 0 || esito.ruoliAggiuntiAPresenti > 0) && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+          {esito.ruoliCreati.length > 0 && (
+            <p>
+              Ruoli creati nel catalogo perché mancavano: <strong>{esito.ruoliCreati.join(", ")}</strong>.
+            </p>
+          )}
+          {esito.ruoliAggiuntiAPresenti > 0 && (
+            <p>
+              Funzioni (X) aggiunte ai già presenti selezionati: {esito.ruoliAggiuntiAPresenti} ruoli. Nessun ruolo è stato tolto.
+            </p>
+          )}
+        </div>
+      )}
 
       {esito.errori.length > 0 && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">

@@ -12,8 +12,11 @@
  *            luogo e data di nascita (colonne separate o cella unica), date Excel lette come date vere
  *            (niente più ambiguità giorno/mese), CSV letto come testo (UTF-8 o Windows-1252),
  *            intestazioni ripetute tra un foglio e l'altro ignorate.
+ *   rev 4 — 11/11/2026 — Colonne con la X per Preposto, Antincendio, Primo soccorso, Defibrillatore, Addetto all'evacuazione
+ *            e Privacy (modello Excel scaricabile); la colonna «Classe di concorso / Profilo ATA» resta la colonna funzione.
  */
 import type { RigaGrezza } from "./analisi-elenco";
+import { FUNZIONI, cellaSegnata, type ChiaveFunzione, type FunzioniImport } from "./funzioni-sicurezza";
 
 export type Cella = string | number | Date | null | undefined;
 
@@ -83,6 +86,8 @@ type Colonne = {
   iData: number;
   iLuogoData: number;
   iFun: number;
+  /** Colonne delle funzioni di sicurezza (X). Chiave assente = colonna non presente nel file. */
+  iFunzioni: Partial<Record<ChiaveFunzione, number>>;
   /** Ricerca vecchio stile (nome|nominativo) usata quando non ci sono cognome e nome separati. */
   iNomVecchio: number;
 };
@@ -90,13 +95,18 @@ type Colonne = {
 function trovaColonne(pulita: string[][]): Colonne {
   const intest = pulita.findIndex((r) => r.some((c) => INTEST_CF_RE.test(c)));
   const vuote: Colonne = {
-    intest, iCf: -1, iCognome: -1, iNome: -1, iNominativo: -1, iLuogo: -1, iData: -1, iLuogoData: -1, iFun: -1, iNomVecchio: -1,
+    intest, iCf: -1, iCognome: -1, iNome: -1, iNominativo: -1, iLuogo: -1, iData: -1, iLuogoData: -1, iFun: -1, iFunzioni: {}, iNomVecchio: -1,
   };
   if (intest < 0) return vuote;
   const h = pulita[intest] ?? [];
   const cerca = (re: RegExp, escludi?: RegExp) => h.findIndex((c) => re.test(c) && !(escludi && escludi.test(c)));
 
   const iNominativo = cerca(/nominativo|cognome\s*(e|\/)\s*nome|nome\s*(e|\/)\s*cognome/i);
+  const iFunzioni: Partial<Record<ChiaveFunzione, number>> = {};
+  for (const f of FUNZIONI) {
+    const i = h.findIndex((c) => f.riconosciIntestazione.test(c));
+    if (i >= 0) iFunzioni[f.chiave] = i;
+  }
   return {
     intest,
     iCf: cerca(INTEST_CF_RE),
@@ -111,6 +121,7 @@ function trovaColonne(pulita: string[][]): Colonne {
       /funzione|reparto|ruolo|classe|mansione|profilo|personale/i,
       /luogo|nascita|comune|residenza|provincia/i,
     ),
+    iFunzioni,
     iNomVecchio: cerca(/nome|nominativo/i, /fiscale/i),
   };
 }
@@ -165,6 +176,14 @@ export function tabellaInRighe(tabella: Cella[][]): RigaGrezza[] {
     if (intest >= 0) {
       riga.luogoNascita = luogoNascita;
       riga.dataNascita = dataNascita;
+    }
+    const colonneFunzioni = Object.entries(col.iFunzioni) as [ChiaveFunzione, number][];
+    if (colonneFunzioni.length > 0) {
+      const funzioni: FunzioniImport = {};
+      for (const [chiave, idx] of colonneFunzioni) {
+        if (cellaSegnata(r[idx] ?? "")) funzioni[chiave] = true;
+      }
+      riga.funzioni = funzioni;
     }
     out.push(riga);
   }

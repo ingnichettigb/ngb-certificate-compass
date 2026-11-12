@@ -10,6 +10,7 @@
  *   rev 1 — 05/11/2026 21:30 — Prima stesura.
  *   rev 2 — 06/11/2026 08:20 — Caselle di spunta singole.
  *   rev 3 — 06/11/2026 08:35 — Spunte libere per tutti, bottoni rapidi (Tutti/Nessuno/Nuovi/Archivio) e riesumazione cessati.
+ *   rev 4 — 11/11/2026 — Colonne «Classe / Profilo» e «Funzioni» (X del file): per i già presenti selezionati le funzioni si aggiungono ai ruoli.
  */
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import type { RuoloSicurezza } from "@/lib/api/ruoli";
 import { formatData } from "@/lib/api/formattazione";
 import { analizzaSoloNuovi, type CategoriaNuovo, type RepartoImport, type RigaGrezza } from "./analisi-elenco";
 import { registraNuovi, type EsitoImportazione } from "./registra-nuovi";
+import { FUNZIONI } from "./funzioni-sicurezza";
 
 const ETICHETTA: Record<CategoriaNuovo, { testo: string; classe: string }> = {
   nuovo: { testo: "nuovo", classe: "bg-amber-500/25 text-amber-800" },
@@ -37,6 +39,7 @@ export function PannelloSoloNuovi({
   dataInizio,
   dipendenti,
   ruoli,
+  codiciClasse = [],
   repartoIniziale,
   onEsito,
   onAnnulla,
@@ -46,6 +49,8 @@ export function PannelloSoloNuovi({
   dataInizio: string;
   dipendenti: Dipendente[];
   ruoli: RuoloSicurezza[];
+  /** Codici delle classi di concorso presenti in archivio (per riconoscere la colonna Classe/Profilo). */
+  codiciClasse?: string[];
   repartoIniziale: RepartoImport;
   onEsito: (e: EsitoImportazione) => void;
   onAnnulla: () => void;
@@ -54,7 +59,7 @@ export function PannelloSoloNuovi({
   const [reparto, setReparto] = useState<RepartoImport>(repartoIniziale);
   const [lavoro, setLavoro] = useState(false);
 
-  const analisi = useMemo(() => analizzaSoloNuovi(righe, dipendenti, reparto), [righe, dipendenti, reparto]);
+  const analisi = useMemo(() => analizzaSoloNuovi(righe, dipendenti, reparto, codiciClasse), [righe, dipendenti, reparto, codiciClasse]);
 
   // Di default sono selezionati i nuovi e i già presenti cessati (candidati alla riesumazione)
   const [selezionati, setSelezionati] = useState<Set<string>>(() => {
@@ -211,6 +216,8 @@ export function PannelloSoloNuovi({
                 <th className="p-2">Luogo di nascita</th>
                 <th className="p-2">Nato il</th>
                 <th className="p-2">Reparto</th>
+                <th className="p-2">Classe / Profilo</th>
+                <th className="p-2">Funzioni (X)</th>
                 <th className="p-2">Stato archivio</th>
               </tr>
             </thead>
@@ -237,6 +244,17 @@ export function PannelloSoloNuovi({
                     <td className="p-2 text-xs">{r.luogoNascita || "—"}</td>
                     <td className="p-2 text-xs">{r.dataNascita ? formatData(r.dataNascita) : "—"}</td>
                     <td className="p-2 text-xs">{r.reparto}</td>
+                    <td className="p-2 text-xs">{r.classe ?? r.sottorepartoAta ?? "—"}</td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap gap-1">
+                        {FUNZIONI.filter((f) => r.funzioni[f.chiave]).map((f) => (
+                          <span key={f.chiave} title={f.intestazione} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                            {f.breve}
+                          </span>
+                        ))}
+                        {FUNZIONI.every((f) => !r.funzioni[f.chiave]) && <span className="text-xs text-muted-foreground">—</span>}
+                      </div>
+                    </td>
                     <td className="p-2">
                       <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${ETICHETTA[r.categoria].classe}`}>
                         {ETICHETTA[r.categoria].testo}
