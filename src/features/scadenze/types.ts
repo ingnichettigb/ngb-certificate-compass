@@ -29,7 +29,7 @@ export type StatoCiclo = "completato" | "da_completare" | "scaduto" | "futuro" |
 
 export type TipoEvento = "base" | "parziale" | "completo" | "ignorato";
 
-export type MotivoIgnorato = "decaduto" | "in_eccesso" | "futuro" | "tardivo_non_ammesso";
+export type MotivoIgnorato = "decaduto" | "in_eccesso" | "futuro" | "tardivo_non_ammesso" | "oltre_tolleranza";
 
 export interface CicloVisuale {
   /** Numero del ciclo, da 1. */
@@ -93,6 +93,15 @@ export interface PosizioneCiclo {
   motivoScadenza: string | null;
   /** true se l'aggiornamento Preposto non è dovuto perché il lavoratore ha un RSPP valido. */
   esenteRspp?: boolean;
+  /**
+   * Corsi con tolleranza sul ritardo (es. Primo Soccorso, 4 mesi): ultimo giorno in cui un aggiornamento fatto in ritardo
+   * sana ancora il ciclo scaduto. Oltre, decade tutto e serve un nuovo Base. null = nessun limite (sanatoria illimitata).
+   */
+  limiteRecupero?: string | null;
+  /** Mesi di tolleranza applicati al corso; null = nessuna regola. */
+  tolleranzaRitardoMesi?: number | null;
+  /** true se il gruppo è decaduto perché è passato il limite di recupero senza un aggiornamento valido. */
+  decadutoPerRitardo?: boolean;
   /** Cicli da disegnare: dal primo al ciclo di oggi, più il successivo non ancora attivo. */
   cicli: CicloVisuale[];
   /** Base e aggiornamenti classificati dal motore (contati, parziali, completi, ignorati). */

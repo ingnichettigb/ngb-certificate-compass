@@ -14,6 +14,7 @@
  *
  * Colori per ciclo: verde = completato, arancione = da completare (in corso, oppure con ore parziali anche a ciclo concluso),
  * rosso = concluso senza alcun aggiornamento, nero = non ancora attivo, bordeaux = decaduto.
+ * Rev 12/11/2026 — Motivo «oltre il limite di recupero» per gli aggiornamenti tardivi non contati.
  */
 import { useMemo } from "react";
 import { formatData } from "@/lib/api";
@@ -47,6 +48,7 @@ const MOTIVO_IGNORATO: Record<MotivoIgnorato, string> = {
   in_eccesso: "Non contato: ciclo già coperto (ore in eccesso)",
   futuro: "Non contato: data futura",
   tardivo_non_ammesso: "Non contato: tardivo e sanatoria non ammessa",
+  oltre_tolleranza: "Non contato: oltre il limite di recupero (serve un nuovo corso base)",
 };
 
 /** Altezza (px) di un livello di etichette sopra la linea. */

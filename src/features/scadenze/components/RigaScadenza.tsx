@@ -8,6 +8,7 @@
  * - Rev 3 (2026-11-06 12:00): Riga per lavoratore + corso con ciclo già calcolato; badge di conformità e ore parziali.
  * - Rev 4 (2026-11-06 14:00): Pulsante per espandere/comprimere la linea temporale del ciclo (LineaCicloFormativo).
  * - Rev 5 (2026-11-06 16:00): Nota «termine transitorio» quando la scadenza è portata alla data di taglio (Preposti).
+ * Rev 12/11/2026 — Mostra il limite di recupero (Primo Soccorso) e «rifare il corso base» se decaduto per ritardo.
  */
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -81,6 +82,16 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
             oreAccumulate={ciclo.oreAccumulate}
             oreRichieste={ciclo.oreRichieste}
           />
+          {ciclo.stato === "scaduto_sanabile" && ciclo.limiteRecupero && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Recuperabile con aggiornamento entro il {formatData(ciclo.limiteRecupero)}
+            </div>
+          )}
+          {ciclo.decadutoPerRitardo && ciclo.limiteRecupero && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Limite di recupero scaduto il {formatData(ciclo.limiteRecupero)}: rifare il corso base
+            </div>
+          )}
           {ciclo.stato === "scaduto_sanabile" && ciclo.oreAccumulate > 0 && (
             <div className="mt-1 text-xs text-muted-foreground">
               Ore già svolte: {ciclo.oreAccumulate}/{ciclo.oreRichieste}

@@ -5,10 +5,12 @@
  * Revisioni:
  * - Rev 1 (2026-11-06 12:00): Test del motore di calcolo dei cicli formativi.
  * - Rev 2 (2026-11-07): Colore dei cicli con ore parziali, ore stimate negli eventi, annoMese.
+ * - Rev 3 (2026-11-12): Tolleranza sul ritardo (Primo Soccorso: 4 mesi) e aggiungiMesi.
  */
 import { describe, expect, it } from "vitest";
 import {
   aggiungiAnni,
+  aggiungiMesi,
   anniCompleti,
   annoMese,
   valutaCicloFormativo,
@@ -474,5 +476,66 @@ describe("eventi: ore stimate e formato AA-MM", () => {
       giorno(2024, 6, 1),
     );
     expect(r.eventi.map((e) => e.oreStimate === true)).toEqual([true, true, false]);
+  });
+});
+
+describe("tolleranza sul ritardo (Primo Soccorso: ciclo 3 anni, 4 ore, 4 mesi)", () => {
+  const ps = (attestati: AttestatoCiclo[], oggi: Date) =>
+    calcola(attestati, oggi, { durataCicloAnni: 3, oreRichiesteAggiornamento: 4, tolleranzaRitardoMesi: 4 });
+  const b = base("2020-01-10");
+
+  it("aggiungiMesi riduce il giorno all'ultimo del mese", () => {
+    expect(aggiungiMesi("2023-01-31", 1)).toBe("2023-02-28");
+    expect(aggiungiMesi("2024-01-31", 1)).toBe("2024-02-29");
+    expect(aggiungiMesi("2023-01-10", 4)).toBe("2023-05-10");
+    expect(aggiungiMesi("2023-11-30", 4)).toBe("2024-03-30");
+  });
+
+  it("aggiornamento in tempo: la scadenza passa al ciclo dopo", () => {
+    const r = ps([b, agg("2022-12-01", 4)], giorno(2024, 6, 1));
+    expect(r.stato).toBe("valido");
+    expect(r.scadenzaEffettiva).toBe("2026-01-10");
+    expect(r.decadutoPerRitardo).toBe(false);
+  });
+
+  it("aggiornamento entro 4 mesi dalla scadenza: sana il ciclo e la scadenza resta ancorata al Base", () => {
+    const r = ps([b, agg("2023-05-10", 4)], giorno(2024, 6, 1));
+    expect(r.stato).toBe("valido");
+    expect(r.scadenzaEffettiva).toBe("2026-01-10"); // non 2029: l'aggiornamento tardivo non sposta le scadenze successive
+    expect(r.eventi[1]).toMatchObject({ tipo: "completo" });
+  });
+
+  it("aggiornamento oltre 4 mesi: non conta e decade tutto (rifare il corso base)", () => {
+    const r = ps([b, agg("2023-05-11", 4)], giorno(2024, 6, 1));
+    expect(r.eventi[1]).toMatchObject({ tipo: "ignorato", motivo: "oltre_tolleranza" });
+    expect(r.stato).toBe("decaduto");
+    expect(r.decadutoPerRitardo).toBe(true);
+    expect(r.richiedeNuovoCorsoBase).toBe(true);
+    expect(r.limiteRecupero).toBe("2023-05-10");
+  });
+
+  it("scaduto ma ancora recuperabile fino al limite, poi decaduto", () => {
+    const dentro = ps([b], giorno(2023, 3, 1));
+    expect(dentro.stato).toBe("scaduto_sanabile");
+    expect(dentro.limiteRecupero).toBe("2023-05-10");
+    expect(dentro.richiedeNuovoCorsoBase).toBe(false);
+    expect(ps([b], giorno(2023, 5, 10)).stato).toBe("scaduto_sanabile"); // l'ultimo giorno utile
+    const fuori = ps([b], giorno(2023, 5, 11));
+    expect(fuori.stato).toBe("decaduto");
+    expect(fuori.decadutoPerRitardo).toBe(true);
+  });
+
+  it("un nuovo Base dopo la decadenza riparte da zero", () => {
+    const r = ps([b, agg("2023-09-01", 4), base("2023-10-02", "base2")], giorno(2024, 6, 1));
+    expect(r.stato).toBe("valido");
+    expect(r.dataAncora).toBe("2023-10-02");
+    expect(r.scadenzaEffettiva).toBe("2026-10-02");
+    expect(r.decadutoPerRitardo).toBe(false);
+  });
+
+  it("senza tolleranza resta la sanatoria illimitata (comportamento degli altri corsi)", () => {
+    const r = calcola([base("2020-01-10"), agg("2024-02-01", 6)], giorno(2024, 6, 1), { durataCicloAnni: 5 });
+    expect(r.decadutoPerRitardo).toBe(false);
+    expect(r.eventi[1]).toMatchObject({ tipo: "completo" });
   });
 });

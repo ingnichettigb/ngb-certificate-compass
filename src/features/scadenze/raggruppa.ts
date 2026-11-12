@@ -8,6 +8,7 @@
  * - Rev 3 (2026-11-06 18:00): Regime transitorio completo (cicli vecchi 5 anni troncati al taglio, poi biennali).
  * - Rev 4 (2026-11-10): I corsi ASPP e RSPP hanno un ciclo proprio (non si mescolano a quello dei lavoratori) e
  *   l'RSPP valido esonera dall'aggiornamento Preposto (vedi esenzioni-rspp.ts).
+ * - Rev 5 (2026-11-12): Tolleranza sul ritardo letta da regole-corso.ts (Primo Soccorso = 4 mesi) e passata al motore.
  */
 import type { Attestato } from "@/lib/api";
 import {
@@ -18,6 +19,7 @@ import {
 } from "./calcolo-ciclo";
 import { applicaEsenzioneRspp, famigliaAsppRspp, mappaValiditaRspp, oggiIso } from "./esenzioni-rspp";
 import type { RigaScadenzaDati } from "./types";
+import { tolleranzaRitardoMesi } from "./regole-corso";
 
 /** Accordo Stato-Regioni 17/04/2025: aggiornamento Preposti ogni 2 anni. */
 export const CICLO_PREPOSTI_ANNI = 2;
@@ -102,11 +104,19 @@ export function parametriDaGruppo(gruppoOrdinato: Attestato[]) {
       durataCicloAnni: CICLO_PREPOSTI_ANNI,
       oreRichiesteAggiornamento: oreRichiesteAggiornamento || ORE_AGGIORNAMENTO_PREPOSTI,
       decadenzaAnni,
+      tolleranzaRitardoMesi: null as number | null,
       regimeTransitorio: REGIME_TRANSITORIO_PREPOSTI as RegimeTransitorio | null,
     };
   }
 
-  return { durataCicloAnni, oreRichiesteAggiornamento, decadenzaAnni, regimeTransitorio: null as RegimeTransitorio | null };
+  return {
+    durataCicloAnni,
+    oreRichiesteAggiornamento,
+    decadenzaAnni,
+    // Primo Soccorso: l'aggiornamento oltre la tolleranza non sana più nulla (regole-corso.ts).
+    tolleranzaRitardoMesi: tolleranzaRitardoMesi(base.tipi_corso),
+    regimeTransitorio: null as RegimeTransitorio | null,
+  };
 }
 
 /**
@@ -137,6 +147,7 @@ export function costruisciRighe(
       durataCicloAnni: p.durataCicloAnni,
       oreRichiesteAggiornamento: p.oreRichiesteAggiornamento,
       decadenzaAnni: p.decadenzaAnni,
+      tolleranzaRitardoMesi: p.tolleranzaRitardoMesi,
       regimeTransitorio: p.regimeTransitorio,
       oggi,
     });

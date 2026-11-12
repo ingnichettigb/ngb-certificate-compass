@@ -8,6 +8,9 @@
  * - Rev 3 (2026-11-06 16:00): Guardia su dataCorso mancante/non valida (record storici).
  * - Rev 5 (2026-11-07): Ciclo con aggiornamenti parziali = «da completare» (arancione) anche a ciclo concluso; rosso solo senza
  *   alcun aggiornamento. Eventi con oreStimate; CicloVisuale.oreNelCiclo/parzialiNelCiclo; annoMese(). Nessun cambio a scadenze e ore.
+ * - Rev 6 (2026-11-12): Tolleranza sul ritardo (Primo Soccorso, 4 mesi): un aggiornamento fatto dopo la scadenza sana il ciclo dovuto
+ *   solo entro `tolleranzaRitardoMesi`; oltre, il gruppo è decaduto e serve un nuovo Base. L'aggiornamento tardivo sana il ciclo
+ *   dovuto e NON sposta le scadenze successive (restano ancorate al Base). Senza tolleranza resta la sanatoria illimitata.
  * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti (RegimeTransitorio): cicli vecchi di 5 anni dall'ancora,
  *   ciclo a cavallo del taglio troncato al 19/05/2026, poi cicli biennali dal taglio.
  *
@@ -27,6 +30,10 @@
  *    è troncato al taglio e da lì i cicli sono biennali. Chi non ha un aggiornamento valido entro il taglio ha
  *    scadenza tassativa il 19/05/2026 (anche se la fine teorica del vecchio ciclo era anteriore).
  *    Senza ancora anteriore alla soglia i cicli sono biennali dall'ancora (durataCicloAnni = 2).
+ * 8. Tolleranza sul ritardo (facoltativa, es. Primo Soccorso = 4 mesi): un aggiornamento fatto dopo la scadenza del ciclo dovuto
+ *    conta solo se cade entro scadenza + tolleranza; sana quel ciclo e le scadenze successive restano ancorate al Base.
+ *    Passato il limite senza un aggiornamento valido il gruppo è decaduto: gli aggiornamenti successivi non contano e serve
+ *    un nuovo Base (che riparte da zero).
  */
 import type {
   CicloVisuale,
@@ -70,6 +77,8 @@ export interface ParametriCiclo {
   decadenzaAnni?: number | null;
   giorniPreavviso?: number;
   consentiSanatoriaTardiva?: boolean;
+  /** Mesi di tolleranza sul ritardo; null/assente = nessun limite (sanatoria illimitata). 0 = nessuna tolleranza. */
+  tolleranzaRitardoMesi?: number | null;
   /** Regime transitorio (Preposti); null/assente = cicli rigidi uniformi. */
   regimeTransitorio?: RegimeTransitorio | null;
   oggi?: Date;
@@ -96,6 +105,15 @@ export function aggiungiAnni(dataIso: string, anni: number): string {
   const [y, m, d] = parti(dataIso);
   const ny = y + anni;
   return `${pad(ny, 4)}-${pad(m)}-${pad(Math.min(d, giorniNelMese(ny, m)))}`;
+}
+
+/** Somma mesi; il giorno è ridotto all'ultimo del mese se non esiste (31 gennaio + 1 mese = 28/29 febbraio). */
+export function aggiungiMesi(dataIso: string, mesi: number): string {
+  const [y, m, d] = parti(dataIso);
+  const tot = y * 12 + (m - 1) + mesi;
+  const ny = Math.floor(tot / 12);
+  const nm = (tot % 12) + 1;
+  return `${pad(ny, 4)}-${pad(nm)}-${pad(Math.min(d, giorniNelMese(ny, nm)))}`;
 }
 
 /** Giorni da `da` ad `a` (negativo se `a` precede `da`). */
@@ -134,6 +152,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     consentiSanatoriaTardiva = true,
     regimeTransitorio = null,
   } = p;
+  const tolleranza =
+    p.tolleranzaRitardoMesi !== undefined && p.tolleranzaRitardoMesi !== null && p.tolleranzaRitardoMesi >= 0
+      ? Math.round(p.tolleranzaRitardoMesi)
+      : null;
   const oggi = oggiIso(p.oggi);
   const N = Math.round(p.durataCicloAnni);
 
@@ -165,6 +187,9 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       scadenzaPortataAlTaglio: false,
       regolaPreposti: regimeTransitorio !== null,
       motivoScadenza: null,
+      limiteRecupero: null,
+      tolleranzaRitardoMesi: tolleranza,
+      decadutoPerRitardo: false,
       cicli: [],
       eventi: [],
     };
@@ -196,6 +221,9 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       scadenzaPortataAlTaglio: false,
       regolaPreposti: regimeTransitorio !== null,
       motivoScadenza: null,
+      limiteRecupero: null,
+      tolleranzaRitardoMesi: null,
+      decadutoPerRitardo: false,
       cicli: [],
       eventi: [],
     };
@@ -253,7 +281,15 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
       ignora("decaduto"); // l'abilitazione era già decaduta
       continue;
     }
-    const k = cicloDi(u.dataCorso);
+    // Tolleranza sul ritardo: oltre scadenza + tolleranza l'aggiornamento non sana più nulla.
+    const dovuto = copertoFino + 1;
+    if (tolleranza !== null && u.dataCorso > aggiungiMesi(fineCiclo(dovuto), tolleranza)) {
+      ignora("oltre_tolleranza");
+      continue;
+    }
+    let k = cicloDi(u.dataCorso);
+    // Con la tolleranza l'aggiornamento tardivo sana il ciclo dovuto e non sposta le scadenze successive (restano ancorate al Base).
+    if (tolleranza !== null) k = Math.min(k, dovuto);
     if (k <= copertoFino) {
       ignora("in_eccesso"); // ciclo già coperto: ore in eccesso, non si riportano
       continue;
@@ -294,7 +330,10 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     ? `Regime transitorio Accordo Stato-Regioni 2025: scadenza tassativa ${taglio!.slice(8, 10)}/${taglio!.slice(5, 7)}/${taglio!.slice(0, 4)}`
     : null;
   const giorniAllaScadenza = giorniTra(oggi, scadenzaEffettiva);
-  const decaduto = decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni);
+  const limiteRecupero = tolleranza !== null ? aggiungiMesi(scadenzaEffettiva, tolleranza) : null;
+  const decadutoPerRitardo = limiteRecupero !== null && oggi > limiteRecupero;
+  const decaduto =
+    (decadenzaAnni !== null && oggi > aggiungiAnni(ultimaEvidenza, decadenzaAnni)) || decadutoPerRitardo;
 
   let stato: StatoConformita;
   if (decaduto) stato = "decaduto";
@@ -304,7 +343,13 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
   else stato = "valido";
 
   // Cicli per la linea temporale: dal primo al ciclo di oggi, più il successivo non attivo.
-  const dataDecadenza = decadenzaAnni !== null ? aggiungiAnni(ultimaEvidenza, decadenzaAnni) : null;
+  const dataDecadenzaAnni = decadenzaAnni !== null ? aggiungiAnni(ultimaEvidenza, decadenzaAnni) : null;
+  const dataDecadenza =
+    decadutoPerRitardo && limiteRecupero !== null
+      ? dataDecadenzaAnni !== null && dataDecadenzaAnni < limiteRecupero
+        ? dataDecadenzaAnni
+        : limiteRecupero
+      : dataDecadenzaAnni;
   const kMax = Math.max(cicloDi(oggi), copertoFino);
   const cicli: CicloVisuale[] = [];
   for (let k = 1; k <= kMax; k++) {
@@ -364,6 +409,9 @@ export function valutaCicloFormativo(p: ParametriCiclo): PosizioneCiclo {
     scadenzaPortataAlTaglio,
     regolaPreposti: regimeTransitorio !== null,
     motivoScadenza,
+    limiteRecupero,
+    tolleranzaRitardoMesi: tolleranza,
+    decadutoPerRitardo,
     cicli,
     eventi,
   };

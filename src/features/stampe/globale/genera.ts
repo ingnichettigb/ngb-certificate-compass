@@ -8,6 +8,7 @@
  *            per ogni lavoratore scheda + PDF degli attestati → indice e controlli. Un blocco alla volta in memoria.
  *            Si può annullare in ogni momento (AbortSignal).
  *   rev 2 — 12/11/2026 06:53 — Logo della copertina dalla stessa anagrafica aziendale dei PDF A3/A4.
+ * Rev 12/11/2026 — Le schede mostrano la scadenza del ciclo del gruppo; i Base rinnovati risultano «Superato».
  */
 import { PDFDocument } from "pdf-lib";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -23,8 +24,7 @@ import {
 import { costruisciRiquadriPdf, creaPdfOrganigrammaA3 } from "../esporta-organigramma-a3-pdf";
 import { appendiAllegato, dimensioneAllegato, leggiAllegato, type EsitoAllegato } from "./allegati";
 import { raggruppaPerFunzione } from "./ordine-attestati";
-import { aggiungiLink, aggiungiSegnalibri, type Segnalibro } from "./segnalibri";
-import { dataIt } from "../stampa-formati";
+import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import {
   BYTE_SCHEDA,
   dividiInBlocchi,
@@ -40,7 +40,6 @@ import {
   disegnaCopertina,
   disegnaPaginaFinale,
   disegnaScheda,
-  rettangoloTornaIndice,
   type Problema,
   type VoceIndice,
 } from "./pagine-fisse";
@@ -77,7 +76,8 @@ export function preparaLavoratori(
   includiCessati: boolean,
 ): LavoratoreScheda[] {
   const per = new Map<string, Attestato[]>();
-  for (const a of dati.attestati)
+  // Scadenza e stato di ogni attestato dal ciclo del suo gruppo (Base + aggiornamenti), non dalla sua sola data.
+  for (const a of applicaScadenzaCicli(dati.attestati))
     per.set(a.dipendente_id, [...(per.get(a.dipendente_id) ?? []), a]);
   const dip = dati.dipendenti.filter((d) => includiCessati || d.stato_lavoratore !== "cessato");
   return ordinaLavoratori(dip).map((d) => ({ dip: d, attestati: per.get(d.id) ?? [] }));
@@ -235,10 +235,6 @@ export async function generaBlocco(
 
   const perId = new Map(piano.lavoratori.map((l) => [l.dip.id, l]));
   const indice: VoceIndice[] = [];
-  const segnalibri: Segnalibro[] = [{ titolo: "Copertina", pagina: 0 }];
-  if (blocco.numero === 1) segnalibri.push({ titolo: "Organigramma A3", pagina: 1 });
-  /** Pagine (da 0) di ogni scheda: servono per il link «Torna all'indice». */
-  const pagineSchede: number[] = [];
   const problemi: Problema[] = [];
   let fatti = 0;
 
@@ -287,27 +283,13 @@ export async function generaBlocco(
     }
 
     // …poi la scheda (che li elenca) e subito dopo i documenti.
-    const inizio = doc.getPageCount();
-    indice.push({ nome: nomeCompleto, pagina: inizio + 1 });
-    const pagineScheda = await disegnaScheda(doc, c, {
+    indice.push({ nome: nomeCompleto, pagina: doc.getPageCount() + 1 });
+    await disegnaScheda(doc, c, {
       dip: l.dip,
       funzioni: ruoliDelDipendente(l.dip.id, dati.ruoli, dati.assegnazioni).map((r) => r.nome),
       gruppi,
       esitoPerAttestato: esiti,
     });
-    for (let k = 0; k < pagineScheda; k++) pagineSchede.push(inizio + k);
-    // Segnalibro del lavoratore con, sotto, i suoi attestati (nel punto dove iniziano i loro file).
-    const figli: Segnalibro[] = [];
-    let cursore = inizio + pagineScheda;
-    for (const { attestato } of allegati) {
-      const n = paginePerAttestato.get(attestato.id) ?? 0;
-      if (n > 0) {
-        const corso = attestato.tipi_corso?.nome_corso ?? "Corso";
-        figli.push({ titolo: `${corso} (${dataIt(attestato.data_corso)})`, pagina: cursore });
-        cursore += n;
-      }
-    }
-    segnalibri.push({ titolo: nomeCompleto, pagina: inizio, figli });
     if (temp.getPageCount()) {
       const copiate = await doc.copyPages(temp, temp.getPageIndices());
       copiate.forEach((p) => doc.addPage(p));
@@ -316,20 +298,7 @@ export async function generaBlocco(
     avanzamento?.(nomeCompleto, fatti, blocco.voci.length);
   }
 
-  const finale = disegnaPaginaFinale(doc, c, indice, problemi);
-
-  // Link: ogni riga dell'indice apre la scheda; ogni scheda ha «Torna all'indice».
-  for (const r of finale.righe) {
-    const pagIndice = doc.getPage(r.paginaIndice);
-    const destinazione = doc.getPage(r.voce.pagina - 1);
-    aggiungiLink(doc, pagIndice, [42, r.y - 3, 595.28 - 42, r.y + 11], destinazione);
-  }
-  const indiceDest = doc.getPage(finale.primaPagina);
-  const areaTorna = rettangoloTornaIndice(c);
-  for (const i of pagineSchede) aggiungiLink(doc, doc.getPage(i), areaTorna, indiceDest);
-  segnalibri.push({ titolo: "Indice e controlli", pagina: finale.primaPagina });
-  aggiungiSegnalibri(doc, segnalibri);
-
+  disegnaPaginaFinale(doc, c, indice, problemi);
   applicaPiedeDiPagina(doc, c.n, blocco.numero, piano.blocchi.length);
   const bytes = await doc.save();
   return {

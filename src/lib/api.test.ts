@@ -168,12 +168,90 @@ describe("riepilogoIncarichi", () => {
     expect(ps.peggiore).toBe("scaduto");
   });
   it("a parità di livello sceglie l'attestato col corso più recente", () => {
-    const r = riepilogoIncarichi([
-      att("Preposto", "Specifico", "2021-05-01", "2026-05-01"),
-      att("Preposto", "Specifico", "2025-05-01", "2030-05-01"),
-    ]);
+    // Data fissa: il risultato non deve dipendere da quando si lancia il test.
+    const r = riepilogoIncarichi(
+      [
+        att("Preposto", "Specifico", "2021-05-01", "2026-05-01"),
+        att("Preposto", "Specifico", "2025-05-01", "2030-05-01"),
+      ],
+      new Date(2026, 0, 15),
+    );
     const preposto = r.find((x) => x.incarico.key === "preposto")!;
     expect(preposto.voci[0]!.attestato?.data_corso).toBe("2025-05-01");
     expect(preposto.voci[0]!.stato).toBe("valido");
+  });
+
+  // --- Cicli e tolleranza (12/11/2026) -------------------------------------------------------------
+  const corso = (macro: string, livello: string, id: string, data: string, ore: number, validita = 3) =>
+    ({
+      id,
+      dipendente_id: "d1",
+      data_corso: data,
+      ore_dichiarate: ore,
+      stato_validazione: "Approvato",
+      data_scadenza_calcolata: null,
+      tipi_corso: {
+        macro_categoria: macro,
+        livello_specifico: livello,
+        durata_validita_anni: validita,
+        ore_minime_legge: ore,
+      },
+    }) as unknown as Attestato;
+  const ps = (r: ReturnType<typeof riepilogoIncarichi>) => r.find((x) => x.incarico.key === "primo-soccorso")!;
+
+  it("Base scaduto ma con un aggiornamento valido: l'incarico è valido e il Base risulta «superato»", () => {
+    const r = riepilogoIncarichi(
+      [
+        corso("Primo Soccorso", "Base", "b", "2019-01-10", 12),
+        corso("Primo Soccorso", "Aggiornamento", "a1", "2021-12-01", 4),
+        corso("Primo Soccorso", "Aggiornamento", "a2", "2024-12-01", 4),
+      ],
+      new Date(2025, 5, 1),
+    );
+    const x = ps(r);
+    expect(x.peggiore).toBe("valido");
+    expect(x.daRifareBase).toBe(false);
+    expect(x.voci.find((v) => v.livello === "Base")?.stato).toBe("superato");
+    expect(x.voci.find((v) => v.livello === "Aggiornamento")?.stato).toBe("valido");
+  });
+
+  it("Primo Soccorso senza aggiornamenti dopo la scadenza e oltre 4 mesi: scaduto, da rifare il corso base", () => {
+    const r = riepilogoIncarichi([corso("Primo Soccorso", "Base", "b", "2020-01-10", 12)], new Date(2023, 5, 1));
+    expect(ps(r).peggiore).toBe("scaduto");
+    expect(ps(r).daRifareBase).toBe(true);
+  });
+
+  it("Primo Soccorso scaduto da meno di 4 mesi: scaduto ma recuperabile (non da rifare)", () => {
+    const r = riepilogoIncarichi([corso("Primo Soccorso", "Base", "b", "2020-01-10", 12)], new Date(2023, 2, 1));
+    expect(ps(r).peggiore).toBe("scaduto");
+    expect(ps(r).daRifareBase).toBe(false);
+  });
+
+  it("Primo Soccorso: aggiornamento fatto oltre 4 mesi dalla scadenza non sana nulla", () => {
+    const r = riepilogoIncarichi(
+      [corso("Primo Soccorso", "Base", "b", "2020-01-10", 12), corso("Primo Soccorso", "Aggiornamento", "a", "2023-06-01", 4)],
+      new Date(2024, 0, 1),
+    );
+    expect(ps(r).peggiore).toBe("scaduto");
+    expect(ps(r).daRifareBase).toBe(true);
+  });
+
+  it("Primo Soccorso: aggiornamento entro 4 mesi sana il ciclo e la scadenza resta ancorata al Base", () => {
+    const r = riepilogoIncarichi(
+      [corso("Primo Soccorso", "Base", "b", "2020-01-10", 12), corso("Primo Soccorso", "Aggiornamento", "a", "2023-04-01", 4)],
+      new Date(2024, 0, 1),
+    );
+    expect(ps(r).peggiore).toBe("valido");
+    expect(ps(r).voci.find((v) => v.livello === "Aggiornamento")?.attestato?.data_scadenza_calcolata).toBe("2026-01-10");
+  });
+
+  it("altri corsi (es. Antincendio): l'aggiornamento tardivo sana comunque, senza limite di mesi", () => {
+    const r = riepilogoIncarichi(
+      [corso("Antincendio", "Base", "b", "2018-01-10", 8, 5), corso("Antincendio", "Aggiornamento", "a", "2024-01-10", 5, 5)],
+      new Date(2024, 6, 1),
+    );
+    const x = r.find((y) => y.incarico.key === "antincendio")!;
+    expect(x.peggiore).not.toBe("scaduto");
+    expect(x.daRifareBase).toBe(false);
   });
 });

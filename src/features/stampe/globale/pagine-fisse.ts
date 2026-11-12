@@ -7,12 +7,11 @@
  *            scheda del lavoratore (anagrafica, funzioni, attestati per funzione e data), pagina finale con indice e controlli,
  *            piè di pagina «Blocco N di M · Pagina X di Y».
  *   rev 2 — 12/11/2026 06:53 — Copyright su tutte le pagine della stampa globale.
- *   rev 3 — 12/11/2026 — «Torna all'indice» in alto su ogni pagina della scheda (rettangoloTornaIndice, il link lo aggiunge genera.ts);
- *            la pagina finale restituisce dove ha scritto le righe dell'indice, per renderle cliccabili.
  */
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import { statoScadenza } from "@/lib/api/incarichi";
+import type { AttestatoValutato } from "@/features/scadenze/preposti";
 import { dataIt } from "../stampa-formati";
 import { spezzaTesto, testoPdf } from "../esporta-pdf";
 import type { GruppoAttestati } from "./ordine-attestati";
@@ -159,20 +158,6 @@ export async function disegnaCopertina(
 
 /* ─────────────────────────── Scheda lavoratore ─────────────────────────── */
 
-const TESTO_TORNA = "Torna all'indice";
-const BLU = rgb(0.1, 0.3, 0.7);
-
-/** Area del «Torna all'indice» in alto a destra (stessa su ogni pagina della scheda). */
-export function rettangoloTornaIndice(c: Caratteri): [number, number, number, number] {
-  const w = c.n.widthOfTextAtSize(TESTO_TORNA, 8);
-  return [A4V.l - M - w - 2, A4V.a - 30, A4V.l - M + 2, A4V.a - 18];
-}
-
-function disegnaTornaIndice(p: PDFPage, c: Caratteri) {
-  const [x1, y1] = rettangoloTornaIndice(c);
-  p.drawText(TESTO_TORNA, { x: x1 + 2, y: y1 + 3, font: c.n, size: 8, color: BLU });
-}
-
 export type RigaAllegato = { pagine: number; nota?: string };
 export type OpzioniScheda = {
   dip: Dipendente;
@@ -197,13 +182,11 @@ export async function disegnaScheda(
 ): Promise<number> {
   const prima = doc.getPageCount();
   let p = doc.addPage([A4V.l, A4V.a]);
-  disegnaTornaIndice(p, c);
   let y = A4V.a - M;
   const largh = A4V.l - 2 * M;
 
   const nuovaPagina = () => {
     p = doc.addPage([A4V.l, A4V.a]);
-    disegnaTornaIndice(p, c);
     y = A4V.a - M;
     scrivi(p, `${o.dip.cognome} ${o.dip.nome} (continua)`, M, y, c.b, 11, GRIGIO);
     y -= 26;
@@ -288,22 +271,33 @@ export async function disegnaScheda(
     for (const a of g.attestati) {
       serve(20);
       y -= 14;
-      const stato = a.data_scadenza_calcolata ? statoScadenza(a.data_scadenza_calcolata) : "senza";
+      const valutato = a as AttestatoValutato;
+      const stato = valutato.superato
+        ? "superato"
+        : valutato.daRifareBase
+          ? "da-rifare"
+          : a.data_scadenza_calcolata
+            ? statoScadenza(a.data_scadenza_calcolata)
+            : "senza";
       const [testoStato, colore] =
-        stato === "scaduto"
-          ? ["Scaduto", ROSSO]
-          : stato === "in-scadenza"
-            ? ["In scadenza", ARANCIO]
-            : stato === "senza"
-              ? ["Senza scad.", GRIGIO]
-              : ["Valido", VERDE];
+        stato === "superato"
+          ? ["Superato", GRIGIO]
+          : stato === "da-rifare"
+            ? ["Rifare base", ROSSO]
+            : stato === "scaduto"
+              ? ["Scaduto", ROSSO]
+              : stato === "in-scadenza"
+                ? ["In scadenza", ARANCIO]
+                : stato === "senza"
+                  ? ["Senza scad.", GRIGIO]
+                  : ["Valido", VERDE];
       const esito = o.esitoPerAttestato.get(a.id) ?? "—";
       const nonOk = /manc|non conv|errore/i.test(esito);
       let x = M;
       const celle: [string, PDFFont, ReturnType<typeof rgb>][] = [
         [a.tipi_corso?.nome_corso ?? "Corso", c.n, NERO],
         [dataIt(a.data_corso), c.n, NERO],
-        [dataIt(a.data_scadenza_calcolata), c.n, NERO],
+        [valutato.superato ? "—" : dataIt(a.data_scadenza_calcolata), c.n, NERO],
         [testoStato, c.b, colore],
         [esito, nonOk ? c.b : c.n, nonOk ? ROSSO : NERO],
       ];
@@ -323,18 +317,12 @@ export async function disegnaScheda(
 export type VoceIndice = { nome: string; pagina: number };
 export type Problema = { lavoratore: string; corso: string; motivo: string };
 
-/** Dove è finita ogni riga dell'indice (pagina da 0 e altezza), per aggiungervi il link. */
-export type RigaIndiceDisegnata = { voce: VoceIndice; paginaIndice: number; y: number };
-export type EsitoPaginaFinale = { primaPagina: number; righe: RigaIndiceDisegnata[] };
-
 export function disegnaPaginaFinale(
   doc: PDFDocument,
   c: Caratteri,
   indice: VoceIndice[],
   problemi: Problema[],
-): EsitoPaginaFinale {
-  const primaPagina = doc.getPageCount();
-  const righe: RigaIndiceDisegnata[] = [];
+): void {
   let p = doc.addPage([A4V.l, A4V.a]);
   let y = A4V.a - M;
   const nuova = (titolo: string) => {
@@ -344,12 +332,9 @@ export function disegnaPaginaFinale(
     y -= 26;
   };
   scrivi(p, "INDICE DEL BLOCCO", M, y, c.b, 20, VERDE);
-  y -= 18;
-  scrivi(p, "Clicca su un nome per aprire la scheda del lavoratore.", M, y, c.n, 9, GRIGIO);
-  y -= 22;
+  y -= 30;
   for (const v of indice) {
     if (y < M + 30) nuova("Indice del blocco (continua)");
-    righe.push({ voce: v, paginaIndice: doc.getPageCount() - 1, y });
     scrivi(p, tagliaAlla(c.n, v.nome, 11, A4V.l - 2 * M - 70), M, y, c.n, 11);
     const s = String(v.pagina);
     scrivi(p, s, A4V.l - M - c.b.widthOfTextAtSize(s, 11), y, c.b, 11);
@@ -361,7 +346,7 @@ export function disegnaPaginaFinale(
   y -= 22;
   if (!problemi.length) {
     scrivi(p, "Tutti gli attestati hanno il file collegato e sono stati inseriti.", M, y, c.n, 11);
-    return { primaPagina, righe };
+    return;
   }
   for (const pr of problemi) {
     if (y < M + 30) nuova("Controlli sugli allegati (continua)");
@@ -370,7 +355,6 @@ export function disegnaPaginaFinale(
     scrivi(p, tagliaAlla(c.n, pr.motivo, 10, A4V.l - 2 * M - 350), M + 350, y, c.n, 10, ROSSO);
     y -= 14;
   }
-  return { primaPagina, righe };
 }
 
 /* ─────────────────────────── Piè di pagina ─────────────────────────── */

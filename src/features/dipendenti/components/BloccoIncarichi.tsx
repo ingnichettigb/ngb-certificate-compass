@@ -2,6 +2,7 @@
  * File:      BloccoIncarichi.tsx
  * Percorso:  src/features/dipendenti/components/BloccoIncarichi.tsx
  * Integrazioni DVR aperte e stato degli incarichi di formazione.
+ * Rev 12/11/2026 — Voce «superato da un aggiornamento» e «Da rifare corso base» (Primo Soccorso oltre la tolleranza di 4 mesi).
  */
 import { Button } from "@/components/ui/button";
 import {
@@ -66,7 +67,9 @@ export function BloccoIncarichi({
                 )}`}
               >
                 {r.ricoperto
-                  ? etichettaStato(r.peggiore)
+                  ? r.daRifareBase
+                    ? "Da rifare corso base"
+                    : etichettaStato(r.peggiore)
                   : categorieRichieste.has(r.incarico.categoria)
                     ? "Da svolgere"
                     : "Non incaricato"}
@@ -87,9 +90,13 @@ export function BloccoIncarichi({
                           v.stato,
                         )}`}
                       >
-                        {v.attestato.data_scadenza_calcolata
-                          ? `scade ${formatData(v.attestato.data_scadenza_calcolata)}`
-                          : "senza scadenza"}
+                        {v.stato === "superato"
+                          ? "superato da un aggiornamento"
+                          : v.attestato.daRifareBase
+                            ? `limite di recupero scaduto${v.attestato.limiteRecupero ? ` il ${formatData(v.attestato.limiteRecupero)}` : ""}`
+                            : v.attestato.data_scadenza_calcolata
+                              ? `scade ${formatData(v.attestato.data_scadenza_calcolata)}`
+                              : "senza scadenza"}
                       </span>
                     </span>
                   ) : (

@@ -6,6 +6,8 @@
  *   - Rev 1 (2026-11-08 11:10): Calcolo dello stato di conformità del corso nel fabbisogno (valido/in_corso/scaduto/mancante)
  *     con formattazione sintetica della data MM-AA («entro MM-AA» o «scaduto MM-AA»).
  *   - Rev 2 (2026-11-10): Stato «esente» (grigio) per l'aggiornamento Preposto di chi ha un RSPP valido.
+ *   - Rev 3 (2026-11-12): La scadenza è quella del ciclo del gruppo (Base + aggiornamenti), non del singolo attestato: un Base
+ *     scaduto con un aggiornamento valido risulta valido. Primo Soccorso oltre la tolleranza: «da rifare corso base».
  */
 import { type Attestato, type TipoCorso } from "@/lib/api";
 import {
@@ -13,6 +15,7 @@ import {
   motivoEsenzioneRspp,
   type ValiditaRspp,
 } from "@/features/scadenze/esenzioni-rspp";
+import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 
 export type StatoFabbisogno = "valido" | "in_corso" | "scaduto" | "mancante" | "esente";
 
@@ -76,8 +79,9 @@ export function valutaStatoFabbisognoCorso({
   const macroC = (corso.macro_categoria || "").toLowerCase().trim();
 
   // Attestati approvati del dipendente
-  const approvati = attestati.filter(
-    (a) => a.stato_validazione === "Approvato" && a.dipendente_id === dipendenteId,
+  const approvati = applicaScadenzaCicli(
+    attestati.filter((a) => a.stato_validazione === "Approvato" && a.dipendente_id === dipendenteId),
+    oggi ? new Date(`${oggi}T12:00:00`) : new Date(),
   );
 
   // 1. Verifica se ha svolto direttamente questo specifico corso
@@ -105,11 +109,14 @@ export function valutaStatoFabbisognoCorso({
 
     if (scadenza < oggi) {
       const mmAa = formattaMeseAnno(scadenza);
+      const daRifare = (piuRecente as { daRifareBase?: boolean }).daRifareBase === true;
       return {
         stato: "scaduto",
         colore: "rosso",
-        etichettaData: `scaduto ${mmAa}`,
-        descrizione: `Corso scaduto il ${scadenza}`,
+        etichettaData: daRifare ? `da rifare dopo ${mmAa}` : `scaduto ${mmAa}`,
+        descrizione: daRifare
+          ? `Scaduto il ${scadenza}, limite di recupero superato: va rifatto il corso base`
+          : `Corso scaduto il ${scadenza}`,
       };
     }
 
