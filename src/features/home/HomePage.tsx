@@ -9,9 +9,11 @@ import { CardStatistica } from "./components/CardStatistica";
 import { CardModuloLavoratore } from "./components/CardModuloLavoratore";
 import { CardDashboardHr } from "./components/CardDashboardHr";
 import { CardPostazioneOperatore } from "./components/CardPostazioneOperatore";
+import { CardNomine } from "./components/CardNomine";
 import { useStatisticheHome } from "./hooks/useStatisticheHome";
 
 // Rev 2 (2026-10-28 10:55): sesto contatore «Senza PDF».
+// Rev 3 (2026-11-12): quarta scheda «Nomine».
 export function HomePage() {
   const { data: stats } = useStatisticheHome();
 
@@ -52,10 +54,11 @@ export function HomePage() {
           <CardStatistica label="Senza PDF" value={stats?.senzaPdf} icon={FileX} to="/hr" />
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+        <div className="mt-10 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
           <CardModuloLavoratore />
           <CardDashboardHr />
           <CardPostazioneOperatore />
+          <CardNomine />
         </div>
       </section>
     </main>
