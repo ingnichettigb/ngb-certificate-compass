@@ -6,10 +6,12 @@
  *   rev 1 — 07/11/2026 — Elenco unico delle voci della barra di navigazione, raggruppate per fase di lavoro,
  *            con la descrizione mostrata al passaggio del mouse.
  *   rev 2 — 07/11/2026 — Etichette su due righe («\n» = a capo) per accorciare i bottoni.
+ *   rev 3 — 12/11/2026 — Voce «Nomine» accanto a Stampe.
  */
 import {
   Calendar,
   CheckCircle2,
+  FileSignature,
   FolderInput,
   Home,
   Pencil,
@@ -27,7 +29,8 @@ export type RottaNav =
   | "/hr"
   | "/dipendenti"
   | "/scadenze"
-  | "/stampe";
+  | "/stampe"
+  | "/nomine";
 
 export interface VoceNav {
   to: RottaNav;
@@ -104,6 +107,12 @@ export const GRUPPI_NAV: VoceNav[][] = [
       label: "Stampe",
       descrizione: "Elenchi, schede e scadenzari da stampare o esportare in PDF, Excel e CSV.",
       Icona: Printer,
+    },
+    {
+      to: "/nomine",
+      label: "Nomine",
+      descrizione: "Lettere di nomina di primo soccorso, antincendio, evacuazione, registro antincendio, DPI e SDS: anteprima e PDF.",
+      Icona: FileSignature,
     },
   ],
 ];

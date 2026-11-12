@@ -14,9 +14,12 @@ import { Route as CaricaRouteImport } from './routes/carica'
 import { Route as DipendentiRouteImport } from './routes/dipendenti'
 import { Route as HrRouteImport } from './routes/hr'
 import { Route as MassivoRouteImport } from './routes/massivo'
+import { Route as NomineRouteImport } from './routes/nomine'
 import { Route as OperatoreRouteImport } from './routes/operatore'
 import { Route as ScadenzeRouteImport } from './routes/scadenze'
 import { Route as StampeRouteImport } from './routes/stampe'
+import { Route as NomineIndexRouteImport } from './routes/nomine.index'
+import { Route as NomineTipoRouteImport } from './routes/nomine.$tipo'
 import { Route as StampeIndexRouteImport } from './routes/stampe.index'
 import { Route as StampeGlobaleRouteImport } from './routes/stampe.globale'
 import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
@@ -49,6 +52,11 @@ const MassivoRoute = MassivoRouteImport.update({
   path: '/massivo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NomineRoute = NomineRouteImport.update({
+  id: '/nomine',
+  path: '/nomine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OperatoreRoute = OperatoreRouteImport.update({
   id: '/operatore',
   path: '/operatore',
@@ -63,6 +71,16 @@ const StampeRoute = StampeRouteImport.update({
   id: '/stampe',
   path: '/stampe',
   getParentRoute: () => rootRouteImport,
+} as any)
+const NomineIndexRoute = NomineIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => NomineRoute,
+} as any)
+const NomineTipoRoute = NomineTipoRouteImport.update({
+  id: '/$tipo',
+  path: '/$tipo',
+  getParentRoute: () => NomineRoute,
 } as any)
 const StampeIndexRoute = StampeIndexRouteImport.update({
   id: '/',
@@ -101,12 +119,15 @@ export interface FileRoutesByFullPath {
   '/dipendenti': typeof DipendentiRoute
   '/hr': typeof HrRoute
   '/massivo': typeof MassivoRoute
+  '/nomine': typeof NomineRouteWithChildren
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
+  '/nomine/$tipo': typeof NomineTipoRoute
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/nomine/': typeof NomineIndexRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
   '/stampe/predefinite/': typeof StampePredefiniteIndexRoute
@@ -119,9 +140,11 @@ export interface FileRoutesByTo {
   '/massivo': typeof MassivoRoute
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
+  '/nomine/$tipo': typeof NomineTipoRoute
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/nomine': typeof NomineIndexRoute
   '/stampe': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
   '/stampe/predefinite': typeof StampePredefiniteIndexRoute
@@ -133,12 +156,15 @@ export interface FileRoutesById {
   '/dipendenti': typeof DipendentiRoute
   '/hr': typeof HrRoute
   '/massivo': typeof MassivoRoute
+  '/nomine': typeof NomineRouteWithChildren
   '/operatore': typeof OperatoreRoute
   '/scadenze': typeof ScadenzeRoute
   '/stampe': typeof StampeRouteWithChildren
+  '/nomine/$tipo': typeof NomineTipoRoute
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/nomine/': typeof NomineIndexRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
   '/stampe/predefinite/': typeof StampePredefiniteIndexRoute
@@ -151,12 +177,15 @@ export interface FileRouteTypes {
     | '/dipendenti'
     | '/hr'
     | '/massivo'
+    | '/nomine'
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/nomine/$tipo'
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/nomine/'
     | '/stampe/'
     | '/stampe/predefinite/$id'
     | '/stampe/predefinite/'
@@ -169,9 +198,11 @@ export interface FileRouteTypes {
     | '/massivo'
     | '/operatore'
     | '/scadenze'
+    | '/nomine/$tipo'
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/nomine'
     | '/stampe'
     | '/stampe/predefinite/$id'
     | '/stampe/predefinite'
@@ -182,12 +213,15 @@ export interface FileRouteTypes {
     | '/dipendenti'
     | '/hr'
     | '/massivo'
+    | '/nomine'
     | '/operatore'
     | '/scadenze'
     | '/stampe'
+    | '/nomine/$tipo'
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/nomine/'
     | '/stampe/'
     | '/stampe/predefinite/$id'
     | '/stampe/predefinite/'
@@ -199,6 +233,7 @@ export interface RootRouteChildren {
   DipendentiRoute: typeof DipendentiRoute
   HrRoute: typeof HrRoute
   MassivoRoute: typeof MassivoRoute
+  NomineRoute: typeof NomineRouteWithChildren
   OperatoreRoute: typeof OperatoreRoute
   ScadenzeRoute: typeof ScadenzeRoute
   StampeRoute: typeof StampeRouteWithChildren
@@ -241,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MassivoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nomine': {
+      id: '/nomine'
+      path: '/nomine'
+      fullPath: '/nomine'
+      preLoaderRoute: typeof NomineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/operatore': {
       id: '/operatore'
       path: '/operatore'
@@ -261,6 +303,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/stampe'
       preLoaderRoute: typeof StampeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/nomine/': {
+      id: '/nomine/'
+      path: '/'
+      fullPath: '/nomine/'
+      preLoaderRoute: typeof NomineIndexRouteImport
+      parentRoute: typeof NomineRoute
+    }
+    '/nomine/$tipo': {
+      id: '/nomine/$tipo'
+      path: '/$tipo'
+      fullPath: '/nomine/$tipo'
+      preLoaderRoute: typeof NomineTipoRouteImport
+      parentRoute: typeof NomineRoute
     }
     '/stampe/': {
       id: '/stampe/'
@@ -307,6 +363,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface NomineRouteChildren {
+  NomineTipoRoute: typeof NomineTipoRoute
+  NomineIndexRoute: typeof NomineIndexRoute
+}
+
+const NomineRouteChildren: NomineRouteChildren = {
+  NomineTipoRoute: NomineTipoRoute,
+  NomineIndexRoute: NomineIndexRoute,
+}
+
+const NomineRouteWithChildren =
+  NomineRoute._addFileChildren(NomineRouteChildren)
+
 interface StampeRouteChildren {
   StampeGlobaleRoute: typeof StampeGlobaleRoute
   StampeOrganigrammaA3Route: typeof StampeOrganigrammaA3Route
@@ -334,6 +403,7 @@ const rootRouteChildren: RootRouteChildren = {
   DipendentiRoute: DipendentiRoute,
   HrRoute: HrRoute,
   MassivoRoute: MassivoRoute,
+  NomineRoute: NomineRouteWithChildren,
   OperatoreRoute: OperatoreRoute,
   ScadenzeRoute: ScadenzeRoute,
   StampeRoute: StampeRouteWithChildren,
