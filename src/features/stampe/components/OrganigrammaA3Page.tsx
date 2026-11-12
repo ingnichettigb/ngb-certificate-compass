@@ -18,6 +18,7 @@
  *            a destra antincendio (con registro antincendio e privacy). Anteprima, stampa e PDF usano la stessa disposizione.
  *   rev 5 — 12/11/2026 — Due bottoni esclusivi «Preposti con nomi» / «Categorie preposti»: il primo mostra il riquadro Preposti con i nominativi, il
  *            secondo lo toglie; il riquadro «CATEGORIE DI PREPOSTI» (ex «Preposti di laboratorio») resta sempre. Vale per anteprima, stampa e PDF.
+ *   rev 6 — 12/11/2026 — Nomi dei lavoratori in forma breve (COGNOME + iniziali puntate, da organigramma-a3.ts); chiavi delle righe con indice.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,8 +76,8 @@ const annoScolastico = (d = new Date()) => {
 function Nomi({ elenco }: { elenco: NomeBlocco[] }) {
   return (
     <>
-      {elenco.map((n) => (
-        <li key={n.testo} className="leading-tight" style={{ breakInside: "avoid" }}>{n.testo}{n.daFormare && <b> *</b>}</li>
+      {elenco.map((n, i) => (
+        <li key={`${n.testo}-${i}`} className="leading-tight" style={{ breakInside: "avoid" }}>{n.testo}{n.daFormare && <b> *</b>}</li>
       ))}
     </>
   );

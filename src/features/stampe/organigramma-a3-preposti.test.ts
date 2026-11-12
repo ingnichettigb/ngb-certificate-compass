@@ -4,11 +4,12 @@
  * Data creaz: 12/11/2026
  * Revisioni:
  *   rev 1 — 12/11/2026 — Test del riquadro Preposti con nomi / tolto e della voce «CATEGORIE DI PREPOSTI» (sempre presente).
+ *   rev 2 — 12/11/2026 — Nomi in forma breve (COGNOME + iniziali puntate), omonimie per esteso.
  */
 import { describe, expect, it } from "vitest";
 import type { Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
-import { applicaModoPreposti, calcolaBlocchiA3, normalizzaVociOrganigramma, TITOLO_CATEGORIE_PREPOSTI, VOCI_PREDEFINITE } from "./organigramma-a3";
+import { applicaModoPreposti, calcolaBlocchiA3, inizialiNome, nomeBreve, normalizzaVociOrganigramma, TITOLO_CATEGORIE_PREPOSTI, VOCI_PREDEFINITE } from "./organigramma-a3";
 
 const dip = (id: string, cognome: string, reparto: string): Dipendente =>
   ({ id, cognome, nome: "N", codice_fiscale: `CF${id}`, reparto, sottoreparto: null, classe_concorso: null, materia: null, stato_lavoratore: "in_forza" }) as unknown as Dipendente;
@@ -24,8 +25,8 @@ describe("Preposti con nomi / Categorie preposti", () => {
     const v = applicaModoPreposti(blocchi, "nomi");
     expect(v).toBe(blocchi);
     const p = v.find((b) => b.chiave === "preposti")!;
-    expect(p.ata.map((n) => n.testo)).toEqual(["NERI N"]);
-    expect(p.docenti.map((n) => n.testo)).toEqual(["ROSSI N"]);
+    expect(p.ata.map((n) => n.testo)).toEqual(["NERI N."]);
+    expect(p.docenti.map((n) => n.testo)).toEqual(["ROSSI N."]);
   });
 
   it("categorie: il riquadro con i nomi viene tolto, gli altri blocchi restano uguali", () => {
@@ -59,5 +60,44 @@ describe("voce «CATEGORIE DI PREPOSTI»", () => {
     const r = normalizzaVociOrganigramma([{ titolo: "Altro", nomi: ["x"] }]);
     expect(r.map((v) => v.titolo)).toEqual(["Altro", TITOLO_CATEGORIE_PREPOSTI]);
     expect(normalizzaVociOrganigramma([])).toEqual(VOCI_PREDEFINITE);
+  });
+});
+
+describe("nomi in forma breve: COGNOME + iniziali puntate", () => {
+  it("un nome → una iniziale; due nomi → due iniziali; trattino e apostrofo", () => {
+    expect(inizialiNome("Mario")).toBe("M.");
+    expect(inizialiNome("Maria Grazia")).toBe("M. G.");
+    expect(inizialiNome("Anna-Maria")).toBe("A. M.");
+    expect(inizialiNome("gian battista")).toBe("G. B.");
+    expect(inizialiNome("")).toBe("");
+    expect(nomeBreve({ cognome: "DE LUCA SANTORO", nome: "Maria Antonietta" })).toBe("DE LUCA SANTORO M. A.");
+    expect(nomeBreve({ cognome: "ROSSI", nome: "" })).toBe("ROSSI");
+  });
+
+  it("nella tavola tutti i nomi sono in forma breve, anche i docenti", () => {
+    const d = [dip("1", "BIANCHI", "Docente"), dip("2", "ESPOSITO", "ATA")];
+    d[0] = { ...d[0]!, nome: "Maria Teresa" } as Dipendente;
+    d[1] = { ...d[1]!, nome: "Luca" } as Dipendente;
+    const b = calcolaBlocchiA3(d, [], [ruolo("r", "Preposto", "Preposto")], d.map((x) => ass(x.id, "r")), new Date("2026-11-12T10:00:00")).find((x) => x.chiave === "preposti")!;
+    expect(b.ata.map((n) => n.testo)).toEqual(["ESPOSITO L."]);
+    expect(b.docenti.map((n) => n.testo)).toEqual(["BIANCHI M. T."]);
+  });
+
+  it("due persone con stesso cognome e stesse iniziali restano per esteso; le altre no", () => {
+    const d = [
+      { ...dip("1", "ROSSI", "ATA"), nome: "Mario" } as Dipendente,
+      { ...dip("2", "ROSSI", "ATA"), nome: "Marco" } as Dipendente,
+      { ...dip("3", "ROSSI", "ATA"), nome: "Anna" } as Dipendente,
+    ];
+    const b = calcolaBlocchiA3(d, [], [ruolo("r", "Preposto", "Preposto")], d.map((x) => ass(x.id, "r")), new Date("2026-11-12T10:00:00")).find((x) => x.chiave === "preposti")!;
+    expect(b.ata.map((n) => n.testo).sort()).toEqual(["ROSSI A.", "ROSSI Marco", "ROSSI Mario"]);
+  });
+
+  it("la stessa persona in più blocchi resta in forma breve (non è un'omonima)", () => {
+    const d = [{ ...dip("1", "ROSSI", "ATA"), nome: "Mario" } as Dipendente];
+    const ruoli = [ruolo("r1", "Preposto", "Preposto"), ruolo("r2", "Addetto Antincendio", "Antincendio")];
+    const bl = calcolaBlocchiA3(d, [], ruoli, [ass("1", "r1"), ass("1", "r2")], new Date("2026-11-12T10:00:00"));
+    expect(bl.find((x) => x.chiave === "preposti")!.ata[0]!.testo).toBe("ROSSI M.");
+    expect(bl.find((x) => x.chiave === "antincendio")!.ata[0]!.testo).toBe("ROSSI M.");
   });
 });

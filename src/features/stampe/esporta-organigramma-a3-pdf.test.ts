@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { costruisciRiquadriPdf, creaPdfOrganigrammaA3, scalaPerEntrare, type RiquadroPdf } from "./esporta-organigramma-a3-pdf";
+import { PDFDocument as Doc, StandardFonts } from "pdf-lib";
+import { aCapo, costruisciRiquadriPdf, creaPdfOrganigrammaA3, NOMI_PROPORZIONE_MIN, pianificaElenchi, scalaConPiano, scalaPerEntrare, type Metriche, type RiquadroPdf } from "./esporta-organigramma-a3-pdf";
 
 const nomi = (n: number, prefisso = "ROSSI") => Array.from({ length: n }, (_, i) => ({ testo: `${prefisso} Nome${i}`, daFormare: i % 7 === 0 }));
 const riquadro = (titolo: string, ata: number, docenti: number): RiquadroPdf => ({
@@ -50,5 +51,66 @@ describe("PDF A3 dell'organigramma", () => {
     expect(col[0]![0]!.docenti[0]).toEqual({ testo: "Prof. BIANCHI Luca", daFormare: true });
     expect(col[1]).toHaveLength(1); // «voce-9» inesistente: ignorata
     expect(col[1]![0]!.vuoto).toBe("—");
+  });
+});
+
+describe("un solo corpo per tutti i nomi", () => {
+  const metriche = async (): Promise<Metriche> => {
+    const doc = await Doc.create();
+    const n = await doc.embedFont(StandardFonts.Helvetica);
+    const g = await doc.embedFont(StandardFonts.HelveticaBold);
+    return { normale: (t, s) => n.widthOfTextAtSize(t, s), grassetto: (t, s) => g.widthOfTextAtSize(t, s) };
+  };
+  const lunghi = (): RiquadroPdf[][] => [
+    [{ titolo: "Primo soccorso", ata: nomi(10), docenti: [...nomi(8, "Prof. VERDI"), { testo: "Prof. CASTIGLIONE DELLA ROCCA Giovanni Battista", daFormare: false }], colonneInterne: 2 }],
+    [{ titolo: "Antincendio", ata: nomi(8), docenti: nomi(8, "Prof. NERI"), colonneInterne: 2 }],
+    [],
+  ];
+
+  it("il corpo è lo stesso per tutti i riquadri e non scende sotto l'85% del normale", async () => {
+    const met = await metriche();
+    const p = pianificaElenchi(lunghi(), 1.15, met);
+    const normale = 9.5 * 1.15;
+    expect(p.corpo).toBeLessThanOrEqual(normale);
+    expect(p.corpo).toBeGreaterThanOrEqual(normale * NOMI_PROPORZIONE_MIN - 1e-9);
+    expect(p.corpo).toBeLessThan(normale); // il nome lungo costringe a ridurre, ma per tutti insieme
+  });
+
+  it("nessun nome viene troncato: il nome troppo lungo per l'85% va a capo e non perde lettere", async () => {
+    const met = await metriche();
+    const colonne = lunghi();
+    const p = pianificaElenchi(colonne, 1.3, met);
+    const riquadro = colonne[0]![0]!;
+    const righe = p.riquadri.get(riquadro)!.colonne.flat().flatMap((v) => (v === "spazio" ? [] : v.righe));
+    expect(righe.join(" ")).toContain("CASTIGLIONE DELLA ROCCA");
+    expect(righe.join(" ")).toContain("Battista");
+    expect(righe.join("").includes("…")).toBe(false);
+  });
+
+  it("senza nomi lunghi il corpo resta quello normale", async () => {
+    const met = await metriche();
+    const p = pianificaElenchi([[riquadro("A", 3, 3)], [], []], 1, met);
+    expect(p.corpo).toBeCloseTo(9.5, 1);
+  });
+
+  it("le voci libere non abbassano il corpo dei nomi", async () => {
+    const met = await metriche();
+    const col: RiquadroPdf[][] = [[{ titolo: "Voce", ata: [{ testo: "Alunni addetti ai diversamente abili in caso di evacuazione dell'edificio", libera: true }], docenti: [], colonneInterne: 2 }], [], []];
+    expect(pianificaElenchi(col, 1, met).corpo).toBeCloseTo(9.5, 1);
+  });
+
+  it("la tavola con nomi a capo sta comunque su un solo foglio e la scala non supera quella senza a-capo", async () => {
+    const met = await metriche();
+    const colonne = lunghi();
+    expect(scalaConPiano(colonne, met)).toBeLessThanOrEqual(scalaPerEntrare(colonne));
+    const doc = await PDFDocument.load(await creaPdfOrganigrammaA3({ ditta: DITTA, annoScolastico: "2026-2027", colonne }));
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("aCapo: va a capo per parole, spezza una parola più larga dello spazio e non perde caratteri", () => {
+    const w = (t: string) => t.length * 5;
+    expect(aCapo("DE LUCA SANTORO G. B.", w, 60)).toEqual(["DE LUCA", "SANTORO", "G. B."]); // le iniziali restano insieme
+    expect(aCapo("ANTONUCCIOXXXXXXXXXX", w, 50).join("")).toBe("ANTONUCCIOXXXXXXXXXX");
+    expect(aCapo("", w, 50)).toEqual([""]);
   });
 });
