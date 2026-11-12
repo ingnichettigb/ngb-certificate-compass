@@ -366,6 +366,7 @@ export type Database = {
           id: boolean
           indirizzo: string | null
           livello_antincendio: number | null
+          logo_data_url: string | null
           medico_competente: string | null
           n_lavoratori_data_aggiornamento: string | null
           n_lavoratori_dichiarato: number | null
@@ -398,6 +399,7 @@ export type Database = {
           id?: boolean
           indirizzo?: string | null
           livello_antincendio?: number | null
+          logo_data_url?: string | null
           medico_competente?: string | null
           n_lavoratori_data_aggiornamento?: string | null
           n_lavoratori_dichiarato?: number | null
@@ -430,6 +432,7 @@ export type Database = {
           id?: boolean
           indirizzo?: string | null
           livello_antincendio?: number | null
+          logo_data_url?: string | null
           medico_competente?: string | null
           n_lavoratori_data_aggiornamento?: string | null
           n_lavoratori_dichiarato?: number | null
