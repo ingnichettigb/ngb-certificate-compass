@@ -10,6 +10,7 @@
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
  *   rev 7 — 11/11/2026 20:05 — Applicato includeLavoratorePerStato in righeMancanti, calcolaRighe e calcolaRigheLavoratori per gestire «Solo cessati», «In forza» e «Tutti».
+ *   rev 8 — 12/11/2026 06:53 — Ripristinato import del tipo VoceRuolo.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -17,7 +18,7 @@ import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { includeLavoratorePerStato, TUTTI } from "./stampa-tipi";
-import type { FiltriStampa, RigaStampa } from "./stampa-tipi";
+import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
 import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo, voceFormazione } from "./stampa-selezioni";
 
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
