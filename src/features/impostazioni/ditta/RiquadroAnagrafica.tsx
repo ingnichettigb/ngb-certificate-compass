@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: dati anagrafici e contatti della ditta. Nessun cambio di comportamento.
+ *   rev 2 — 12/11/2026 06:53 — Caricamento e cancellazione del logo nel form anagrafica.
  */
 import { Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 import type { DittaRecord } from "@/lib/api/ditta";
 import type { AggiornaCampo } from "./tipi-ditta-tab";
+import { LogoDitta } from "./LogoDitta";
 
 interface Props {
   form: DittaRecord;
@@ -23,6 +25,7 @@ export function RiquadroAnagrafica({ form, updateCampo }: Props) {
       <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
         <Building2 className="size-4 text-primary" /> Anagrafica e Recapiti
       </h3>
+      <LogoDitta form={form} updateCampo={updateCampo} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2 space-y-1">
           <Label htmlFor="ragione_sociale">Ragione Sociale / Denominazione *</Label>

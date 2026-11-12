@@ -7,6 +7,7 @@
  *   rev 14 — 07/11/2026 — Diviso in file per responsabilità (stampa-*.ts); questo file riesporta gli stessi nomi di prima.
  *   rev 15 — 09/11/2026 20:00 — Riesportati Organigramma squadre (calcolaRigheOrganigramma, LEGENDA_SQUADRE) e stile delle celle (righeCella).
  *   rev 16 — 11/11/2026 20:05 — Riesportati includeLavoratorePerStato e tipo FiltroStatoLavoratore.
+ *   rev 17 — 12/11/2026 06:53 — Ripristinati collegamenti ai moduli colonne e stile esistenti.
  */
 
 // La regola dei dati mancanti vive in dipendenti/anagrafica-completa.ts (condivisa con la coda «Da completare»).
@@ -23,5 +24,7 @@ export { ordinaRighe, prossimoOrdine, unicoPerLavoratore } from "./stampa-ordine
 export type { DirezioneOrdine, OrdineColonna } from "./stampa-ordine";
 export { calcolaRigheOrganigramma } from "./stampa-organigramma";
 export { LEGENDA_SQUADRE, SQUADRE, celleSquadra } from "./stampa-squadre";
-export type { SquadraDefinizione } from "./stampa-squadre";
-export { righeCella } from "./stampa-stile-celle";
+export type SquadraDefinizione = (typeof import("./stampa-squadre").SQUADRE)[number];
+export { righeCella } from "./stampa-stile";
+export { colonneDisponibili, gruppiColonne } from "./stampa-colonne";
+export type { GruppoColonne } from "./stampa-colonne";

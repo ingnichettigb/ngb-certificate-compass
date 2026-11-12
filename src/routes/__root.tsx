@@ -1,3 +1,10 @@
+/*
+ * File: __root.tsx
+ * Percorso: src/routes/__root.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni:
+ *   rev 1 — 12/11/2026 06:53 — Metadati senza marchio fisso; anagrafica anche nel modulo pubblico.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -13,6 +20,7 @@ import { useEffect, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { BarraNavigazioneFissa } from "@/components/layout/BarraNavigazioneFissa";
+import { IdentitaDitta } from "@/components/IdentitaDitta";
 import { mostraBarra } from "@/components/layout/voci-navigazione";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -82,11 +90,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Archivio Sicurezza · Nichetti Gian Battista" },
-      { name: "description", content: "Archivio attestati di formazione sicurezza — Nichetti Gian Battista, Soresina (CR)" },
-      { name: "author", content: "Nichetti Gian Battista" },
-      { property: "og:title", content: "Archivio Sicurezza · Nichetti Gian Battista" },
-      { property: "og:description", content: "Archivio attestati di formazione sicurezza — Nichetti Gian Battista, Soresina (CR)" },
+      { title: "Archivio Attestati Sicurezza" },
+      { name: "description", content: "Archivio aziendale degli attestati di formazione sulla sicurezza." },
+      { property: "og:title", content: "Archivio Attestati Sicurezza" },
+      { property: "og:description", content: "Archivio aziendale degli attestati di formazione sulla sicurezza." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -131,7 +138,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Barra unica del gestionale; il modulo pubblico /carica ne è escluso. */}
-      {mostraBarra(percorso) ? <BarraNavigazioneFissa /> : null}
+      {mostraBarra(percorso) ? <BarraNavigazioneFissa /> : <div className="border-b border-border bg-surface p-3 print:hidden"><IdentitaDitta /></div>}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster richColors position="top-center" />

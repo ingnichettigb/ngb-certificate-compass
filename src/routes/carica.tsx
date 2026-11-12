@@ -1,6 +1,8 @@
 /*
  * File:      carica.tsx
  * Percorso:  src/routes/carica.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni: rev 1 — 12/11/2026 06:53 — Metadati senza marchio personale fisso.
  * Rotta /carica (modulo per i lavoratori). La pagina vera è in src/features/carica/.
  */
 import { createFileRoute } from "@tanstack/react-router";
@@ -9,7 +11,7 @@ import { CaricaPage } from "@/features/carica/CaricaPage";
 export const Route = createFileRoute("/carica")({
   head: () => ({
     meta: [
-      { title: "Carica il tuo attestato — Archivio Sicurezza · Nichetti Gian Battista" },
+      { title: "Carica il tuo attestato — Archivio Sicurezza" },
       {
         name: "description",
         content:

@@ -1,0 +1,3 @@
+/* File: ditta_logo_condiviso.sql | Percorso: drizzle migrations | Data creazione: 12/11/2026 | rev 1 — 12/11/2026 06:53 — Logo aziendale condiviso, senza cambiare i dati esistenti. */
+ALTER TABLE public.ditta ADD COLUMN IF NOT EXISTS logo_data_url text;
+COMMENT ON COLUMN public.ditta.logo_data_url IS 'Logo PNG aziendale incorporato: disponibile a pagine, backup e PDF senza URL pubblici o temporanei.';

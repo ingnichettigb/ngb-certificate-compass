@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-11-01 14:00): Dati per le email dal database, importazione una tantum dei dati del browser (senza mai
  *     sovrascrivere dati già personalizzati), conteggio dei lavoratori in forza e chiavi di cache condivise.
+ *   rev 2 — 12/11/2026 06:53 — Verifica persistenza e cancellazione del logo aziendale.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -57,6 +58,8 @@ import {
   dittaADatiAzienda,
   getDatiAzienda,
   importaDatiDalBrowserUnaVolta,
+  salvaDitta,
+  getDitta,
 } from "./ditta";
 import { DATI_AZIENDA_DEFAULT, STORAGE_KEY } from "@/lib/dati-azienda";
 
@@ -70,6 +73,19 @@ beforeEach(() => {
 });
 
 describe("chiavi di cache", () => {
+  it("salva e rilegge il logo insieme all'anagrafica", async () => {
+    const logo = "data:image/png;base64,iVBORw==";
+    const salvata = await salvaDitta({ ragione_sociale: "Istituto prova", logo_data_url: logo });
+    stato.riga = salvata;
+    expect((await getDitta()).logo_data_url).toBe(logo);
+    expect(stato.scritture[0]).toMatchObject({ logo_data_url: logo });
+  });
+  it("la cancellazione salva null senza toccare il nome aziendale", async () => {
+    stato.riga = { ...DITTA_DEFAULT, ragione_sociale: "Istituto prova", logo_data_url: "data:image/png;base64,iVBORw==" };
+    const salvata = await salvaDitta({ logo_data_url: null });
+    expect(salvata.logo_data_url).toBeNull();
+    expect(salvata.ragione_sociale).toBe("Istituto prova");
+  });
   it("sono quelle usate dalla scheda Ditta, così gli avvisi in testata si aggiornano appena si salva", () => {
     expect(CHIAVE_DITTA).toEqual(["ditta_anagrafica"]);
     expect(CHIAVE_SOGLIE_DITTA).toEqual(["soglie_ditta"]);

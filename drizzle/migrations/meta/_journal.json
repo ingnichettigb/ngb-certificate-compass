@@ -57,6 +57,13 @@
       "when": 1794406935000,
       "tag": "0007_corsi_aspp_rspp",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794466499020,
+      "tag": "0008_ditta_logo_condiviso",
+      "breakpoints": true
     }
   ]
 }

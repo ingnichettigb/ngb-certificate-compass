@@ -8,9 +8,11 @@
  *            clic) e le stesse colonne dell'anteprima (impaginaPerFunzione): primo soccorso + defibrillatore a sinistra, evacuazione + preposti
  *            al centro, antincendio a destra. Se il contenuto eccede il foglio, i caratteri si riducono in automatico (minimo 55%).
  *            «*» (da formare) in rosso e grassetto, come nel sistema colori delle altre stampe.
+ *   rev 2 — 12/11/2026 06:53 — Logo aziendale e copyright nel PDF A3 diretto.
  */
 import type { PDFFont } from "pdf-lib";
 import type { DittaRecord, VoceOrganigramma } from "@/lib/api/ditta";
+import { COPYRIGHT_STAMPE, byteLogoDitta, nomeDitta } from "@/lib/identita-ditta";
 import type { BloccoOrganigramma } from "./organigramma-a3";
 import type { PostoLayout } from "./impagina-organigramma-a3";
 import { testoPdf } from "./esporta-pdf";
@@ -22,7 +24,7 @@ export type RiquadroPdf = { titolo: string; ata: RigaElenco[]; docenti: RigaElen
 
 export type DittaOrganigramma = Pick<
   DittaRecord,
-  "ragione_sociale" | "datore_di_lavoro" | "rls" | "medico_competente" | "rspp" | "aspp" | "indirizzo" | "cap" | "comune" | "provincia"
+  "ragione_sociale" | "logo_data_url" | "datore_di_lavoro" | "rls" | "medico_competente" | "rspp" | "aspp" | "indirizzo" | "cap" | "comune" | "provincia"
 >;
 
 export type OpzioniPdfOrganigrammaA3 = {
@@ -113,11 +115,17 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
   const stampato = o.dataStampa ?? new Date();
 
   doc.setTitle(testoPdf("Organigramma della sicurezza"));
-  doc.setAuthor(testoPdf(d?.ragione_sociale || "Nichetti Gian Battista"));
+  doc.setAuthor(testoPdf(nomeDitta(d)));
   doc.setSubject("Organigramma del servizio di prevenzione e protezione");
   doc.setCreationDate(stampato);
 
   const page = doc.addPage([A3.larghezza, A3.altezza]);
+  const logoByte = byteLogoDitta(d);
+  if (logoByte) {
+    const logo = await doc.embedPng(logoByte);
+    const dimensioni = logo.scaleToFit(100, 36);
+    page.drawImage(logo, { x: MARGINE, y: A3.altezza - MARGINE - dimensioni.height, ...dimensioni });
+  }
   const nero = rgb(0, 0, 0);
   const rosso = rgb(0.78, 0.1, 0.1);
   const grigio = rgb(0.9, 0.9, 0.9);
@@ -251,6 +259,7 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
   centrato(d?.ragione_sociale ?? "", xFirma(2) + wFirma / 2, yFirme + 6, 10, grassetto);
   const indirizzo = [d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ");
   centrato(indirizzo, xFirma(2) + wFirma / 2, yFirme + 21, 9);
+  centrato(COPYRIGHT_STAMPE, centro, fondo + 7, 7);
 
   return doc.save();
 }

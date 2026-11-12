@@ -4,6 +4,7 @@
  * Data creaz: 11/11/2026
  * Revisioni:
  *   rev 1 — 11/11/2026 — Rotta /stampe/globale: fascicolo completo (copertina, organigramma A3, lavoratori con attestati) in PDF a blocchi.
+ *   rev 2 — 12/11/2026 06:53 — Metadati completi senza marchio personale fisso.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { StampaGlobalePage } from "@/features/stampe/components/StampaGlobalePage";
@@ -11,7 +12,8 @@ import { StampaGlobalePage } from "@/features/stampe/components/StampaGlobalePag
 export const Route = createFileRoute("/stampe/globale")({
   head: () => ({
     meta: [
-      { title: "Stampa globale — Nichetti Gian Battista" },
+      { title: "Stampa globale — Archivio Sicurezza" },
+      { property: "og:description", content: "Fascicolo completo dei lavoratori, organigramma e attestati in PDF a blocchi." },
       {
         name: "description",
         content:

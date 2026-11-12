@@ -12,10 +12,11 @@
  *   rev 6 — 02/11/2026 11:10 — Aggiunto accesso «Stampe & Report».
  *   rev 7 — 06/11/2026 16:00 — Aggiunto accesso «Scadenze & Piano Corsi».
  *   rev 8 — 07/11/2026 — Accessi, backup ed esportazione passati alla barra di navigazione e al menu «Sistema».
+ *   rev 9 — 12/11/2026 06:53 — Logo e dati dalla stessa anagrafica Ditta delle stampe.
  */
 import { IndicatoreCartella } from "@/features/cartelle/IndicatoreCartella";
 import { AvvisoDatiDitta } from "@/features/ditta/AvvisoDatiDitta";
-import logoAsset from "@/assets/logo-ngb.jpg.asset.json";
+import { IdentitaDitta } from "@/components/IdentitaDitta";
 
 export function IntestazioneHome() {
   return (
@@ -23,16 +24,9 @@ export function IntestazioneHome() {
       <div className="mx-auto max-w-6xl px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img
-              src={logoAsset.url}
-              alt="Nichetti Gian Battista"
-              className="h-12 w-auto rounded-md bg-card"
-            />
             <div>
               <h1 className="text-lg font-semibold">Archivio Attestati Sicurezza</h1>
-              <p className="text-xs text-muted-foreground">
-                Nichetti Gian Battista · Soresina (CR) · D.Lgs. 81/2008
-              </p>
+              <IdentitaDitta />
             </div>
           </div>
 

@@ -1,6 +1,8 @@
 /*
  * File:      DatiAziendaDialog.tsx
  * Percorso:  src/components/DatiAziendaDialog.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni: rev 1 — 12/11/2026 06:53 — Esempi generici senza marchio personale fisso.
  * Dialog per la configurazione dei dati ditta/studio e firma Resend.
  */
 import { useState, useEffect } from "react";
@@ -62,7 +64,7 @@ export function DatiAziendaDialog() {
             <Label htmlFor="nomeAzienda">Nome ditta o studio *</Label>
             <Input
               id="nomeAzienda"
-              placeholder="Es. Studio Tecnico Nichetti Gian Battista"
+              placeholder="Denominazione aziendale"
               value={form.nomeAzienda}
               onChange={(e) => setForm({ ...form, nomeAzienda: e.target.value })}
               required
@@ -88,7 +90,7 @@ export function DatiAziendaDialog() {
               <Label htmlFor="referente">Nome referente / operatore</Label>
               <Input
                 id="referente"
-                placeholder="Es. Gian Battista Nichetti"
+                placeholder="Nome del referente"
                 value={form.referente}
                 onChange={(e) => setForm({ ...form, referente: e.target.value })}
               />

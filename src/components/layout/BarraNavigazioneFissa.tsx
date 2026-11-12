@@ -8,11 +8,13 @@
  *   rev 3 — 07/11/2026 — Barra unica su tutte le pagine del gestionale (montata in __root): voci raggruppate per
  *            fase di lavoro, suggerimento al passaggio del mouse, bottoni verde vivo, menu «Sistema» a destra.
  *   rev 4 — 07/11/2026 — Etichette dei bottoni su due righe (più corti); icona e testo centrati.
+ *   rev 5 — 12/11/2026 06:53 — Identità aziendale condivisa su tutte le pagine del gestionale.
  */
 import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MenuSistema } from "./MenuSistema";
+import { IdentitaDitta } from "@/components/IdentitaDitta";
 import { GRUPPI_NAV, type VoceNav } from "./voci-navigazione";
 
 // A riposo: verde chiaro con bordo verde vivo. Pagina attiva: verde scuro pieno.
@@ -33,6 +35,7 @@ function VoceBarra({ voce }: { voce: VoceNav }) {
           className={BASE}
           activeProps={{ className: ATTIVO }}
         >
+          <div className="hidden max-w-48 shrink-0 lg:block"><IdentitaDitta compatta /></div>
           <Icona className="size-4 shrink-0" />
           {soloIcona ? null : <span>{label}</span>}
         </Link>
@@ -67,6 +70,7 @@ export function BarraNavigazioneFissa() {
           </div>
           <MenuSistema />
         </div>
+        <div className="border-t border-border px-4 py-1 lg:hidden"><IdentitaDitta compatta /></div>
       </nav>
     </TooltipProvider>
   );

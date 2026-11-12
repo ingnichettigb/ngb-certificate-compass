@@ -16,6 +16,7 @@
  *            senza stampante virtuale: esporta-organigramma-a3-pdf.ts). Blocchi disposti per funzione (impaginaPerFunzione): a sinistra
  *            primo soccorso e sotto defibrillatore, al centro evacuazione (con figure di classe, preposti e preposti di laboratorio),
  *            a destra antincendio (con registro antincendio e privacy). Anteprima, stampa e PDF usano la stessa disposizione.
+ *   rev 5 — 12/11/2026 06:53 — Logo aziendale e copyright anche in anteprima/stampa A3.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,7 @@ import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
 import { calcolaBlocchiA3, salvaVociOrganigramma, VOCI_PREDEFINITE, type BloccoOrganigramma, type NomeBlocco } from "../organigramma-a3";
 import { COLONNE_TAVOLA, impaginaPerFunzione, type ElementoFunzionale } from "../impagina-organigramma-a3";
 import { costruisciRiquadriPdf, scaricaPdfOrganigrammaA3 } from "../esporta-organigramma-a3-pdf";
+import { COPYRIGHT_STAMPE, logoDitta, nomeDitta } from "@/lib/identita-ditta";
 
 /** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
 const AREA_A3_MM = { larghezza: 404, altezza: 281 };
@@ -250,6 +252,7 @@ export function OrganigrammaA3Page() {
               <>
                 <p className="text-center text-xs uppercase">Organigramma del servizio di prevenzione e protezione della sicurezza</p>
                 <div className="mb-3 flex items-end justify-between print:mb-1.5">
+                  {logoDitta(d) && <img src={logoDitta(d) ?? ""} alt={`Logo ${nomeDitta(d)}`} className="h-10 max-w-28 object-contain" />}
                   <h2 className="flex-1 text-center text-xl font-bold">{d?.ragione_sociale}</h2>
                   <p className="text-right text-xs font-bold">ANNO SCOLASTICO <span className="ml-2 text-xl">{annoScolastico()}</span></p>
                 </div>
@@ -293,6 +296,7 @@ export function OrganigrammaA3Page() {
                     <p>{[d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ")}</p>
                   </div>
                 </div>
+                <footer className="mt-2 text-center text-[10px] text-muted-foreground">{COPYRIGHT_STAMPE}</footer>
               </>
             )}
             </div>

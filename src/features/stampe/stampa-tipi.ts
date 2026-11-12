@@ -10,6 +10,7 @@
  *   rev 4 — 09/11/2026 17:30 — Nuova colonna «inSquadra» (Sì / No / —) per le tabelle degli abilitati e per attestato; RigaStampa.inSquadra.
  *   rev 5 — 09/11/2026 20:00 — Organigramma squadre: colonne «squadra», «corsoBaseSquadra», «aggiornamentoSquadra» e relativi campi di RigaStampa.
  *   rev 6 — 11/11/2026 20:05 — Tipo FiltroStatoLavoratore ("in_forza" | "solo_cessati" | "tutti"), helper includeLavoratorePerStato e campo statoLavoratori in FiltriStampa.
+ *   rev 7 — 12/11/2026 06:53 — Compatibilità dei vecchi preset «Includi cessati» con il selettore nuovo.
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -28,7 +29,9 @@ export function includeLavoratorePerStato(
   stato: string | null | undefined,
   filtri: Pick<FiltriStampa, "statoLavoratori" | "includiCessati">,
 ): boolean {
-  const modo: FiltroStatoLavoratore = filtri.statoLavoratori ?? (filtri.includiCessati ? "tutti" : "in_forza");
+  const modo: FiltroStatoLavoratore = filtri.statoLavoratori === "solo_cessati"
+    ? "solo_cessati"
+    : filtri.includiCessati ? "tutti" : filtri.statoLavoratori ?? "in_forza";
   if (modo === "solo_cessati") {
     return stato === "cessato";
   }

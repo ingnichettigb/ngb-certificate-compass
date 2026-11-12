@@ -1,6 +1,8 @@
 /*
  * File:      scadenze.tsx
  * Percorso:  src/routes/scadenze.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni: rev 1 — 12/11/2026 06:53 — Metadati senza marchio personale fisso.
  * Rotta /scadenze. La pagina vera è in src/features/scadenze/ (ScadenzePage, hook e componenti).
  */
 import { createFileRoute } from "@tanstack/react-router";
@@ -11,7 +13,7 @@ export const Route = createFileRoute("/scadenze")({
     meta: [
       {
         title:
-          "Attestati scaduti e in scadenza — Archivio Sicurezza · Nichetti Gian Battista",
+          "Attestati scaduti e in scadenza — Archivio Sicurezza",
       },
       {
         name: "description",
