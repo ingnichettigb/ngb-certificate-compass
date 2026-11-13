@@ -14,7 +14,7 @@ const SELETTORE = "button, a[href], [role='button'], input, select, textarea, [d
 export function AiutoAutomatico() {
   const [stato, setStato] = useState<{ testo: string; x: number; y: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
   const corrente = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
