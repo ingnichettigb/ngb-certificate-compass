@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 2 (2026-10-31 11:00): Chiavi di cache condivise (CHIAVE_RUOLI, CHIAVE_ASSEGNAZIONI_RUOLI) tra Matrice e Scheda.
  *   - Rev 3 (2026-11-13): creaRuoloSicurezza: crea un ruolo e restituisce la riga inserita (serve l'id per collegarlo a una voce dell'organigramma A3).
+ *   - Rev 4 (2026-11-13): Incarichi per sede (sede_id). Senza sede indicata = sede principale; per togliere senza sede = da tutte le sedi.
  */
 import { leggiTutto, sb } from "./client";
 
@@ -25,7 +26,7 @@ export type RuoloSicurezza = {
   ordine: number;
 };
 
-export type AssegnazioneRuolo = { id: string; dipendente_id: string; ruolo_id: string };
+export type AssegnazioneRuolo = { id: string; dipendente_id: string; ruolo_id: string; sede_id?: string | null };
 
 export async function getRuoliSicurezza(): Promise<RuoloSicurezza[]> {
   const { data, error } = await sb.from("ruoli_sicurezza").select("*").order("ordine").order("nome");
@@ -102,23 +103,26 @@ export async function eliminaRuolo(id: string) {
 
 export async function getAssegnazioniRuoli(): Promise<AssegnazioneRuolo[]> {
   return leggiTutto<AssegnazioneRuolo>(() =>
-    sb.from("dipendenti_ruoli").select("id, dipendente_id, ruolo_id").order("id"),
+    sb.from("dipendenti_ruoli").select("id, dipendente_id, ruolo_id, sede_id").order("id"),
   );
 }
 
-/** Assegna (true) o toglie (false) un ruolo a un dipendente. */
-export async function impostaRuoloDipendente(dipendente_id: string, ruolo_id: string, assegnato: boolean) {
+/**
+ * Assegna (true) o toglie (false) un ruolo a un dipendente.
+ * - assegna senza «sede_id»: va nella sede principale (comportamento di sempre);
+ * - toglie senza «sede_id»: toglie l'incarico da tutte le sedi; con «sede_id»: solo da quella sede.
+ */
+export async function impostaRuoloDipendente(dipendente_id: string, ruolo_id: string, assegnato: boolean, sede_id?: string) {
   if (assegnato) {
+    // Senza sede il trigger del DB (imposta_sede_default) assegna la sede principale prima del controllo di unicità
     const { error } = await sb
       .from("dipendenti_ruoli")
-      .upsert({ dipendente_id, ruolo_id }, { onConflict: "dipendente_id,ruolo_id" });
+      .upsert(sede_id ? { dipendente_id, ruolo_id, sede_id } : { dipendente_id, ruolo_id }, { onConflict: "dipendente_id,ruolo_id,sede_id" });
     if (error) throw error;
   } else {
-    const { error } = await sb
-      .from("dipendenti_ruoli")
-      .delete()
-      .eq("dipendente_id", dipendente_id)
-      .eq("ruolo_id", ruolo_id);
+    let q = sb.from("dipendenti_ruoli").delete().eq("dipendente_id", dipendente_id).eq("ruolo_id", ruolo_id);
+    if (sede_id) q = q.eq("sede_id", sede_id);
+    const { error } = await q;
     if (error) throw error;
   }
 }

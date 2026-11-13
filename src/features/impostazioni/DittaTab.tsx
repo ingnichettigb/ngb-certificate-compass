@@ -9,6 +9,7 @@
  *   rev 3 — 06/11/2026 — Secondo pulsante «Salva modifiche DB» in fondo; Invio nel campo ATECO aggiunge il codice;
  *                        controlli (isDirty/salva/scarta) esposti alla finestra Impostazioni tramite tabHandleRef.
  *   rev 4 — 07/11/2026 — Diviso in file per responsabilità (cartella ditta/): un file per riquadro, calcolo dei fabbisogni e pulsante Salva. Nessun cambio di comportamento.
+ *   rev 5 — 13/11/2026 — Riquadro «Sedi e plessi» sotto l'anagrafica.
  */
 import { useEffect } from "react";
 import { Building2, Loader2 } from "lucide-react";
@@ -17,6 +18,7 @@ import { useLavoratoriInForza } from "@/features/ditta/useDitta";
 import { calcolaFabbisogniDitta } from "./ditta/calcola-fabbisogni-ditta";
 import { BottoneSalvaDitta } from "./ditta/BottoneSalvaDitta";
 import { RiquadroAnagrafica } from "./ditta/RiquadroAnagrafica";
+import { RiquadroSedi } from "./ditta/RiquadroSedi";
 import { RiquadroFigureSicurezza } from "./ditta/RiquadroFigureSicurezza";
 import { RiquadroAtecoRischio } from "./ditta/RiquadroAtecoRischio";
 import { RiquadroOrganico } from "./ditta/RiquadroOrganico";
@@ -102,6 +104,9 @@ export function DittaTab({
 
       {/* Riquadro 1: Dati Anagrafici e Contatti */}
       <RiquadroAnagrafica form={form} updateCampo={updateCampo} />
+
+      {/* Sedi e plessi: salvano da sole (non dipendono dal pulsante Salva della Ditta) */}
+      <RiquadroSedi />
 
       {/* Riquadro 2: Figure della Sicurezza D.Lgs. 81/08 */}
       <RiquadroFigureSicurezza form={form} updateCampo={updateCampo} />

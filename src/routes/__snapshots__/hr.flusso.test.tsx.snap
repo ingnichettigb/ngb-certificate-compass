@@ -192,7 +192,7 @@ exports[`Cruscotto risorse umane: percorso d'uso completo > registra tutto quell
     "sb",
     "from.select",
     "dipendenti_ruoli",
-    "["id, dipendente_id, ruolo_id"]",
+    "["id, dipendente_id, ruolo_id, sede_id"]",
   ],
   [
     "sb",

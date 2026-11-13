@@ -10,6 +10,7 @@
  *   rev 5 — 13/11/2026 — Nuove voci sotto il registro antincendio: DPI e SDS.
  *   rev 6 — 13/11/2026 13:20 — Voci con tipo ('ruolo' azzurro collegato a ruolo_id, 'nota' marroncino descrittiva).
  *   rev 7 — 13/11/2026 13:40 — Ripristinate firme complete, salvaVociOrganigramma e supporto tipi/ruolo_id.
+ *   rev 8 — 13/11/2026 — calcolaBlocchiA3: filtro facoltativo per sede (sedeFiltroId); senza filtro tutte le sedi.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
@@ -112,14 +113,17 @@ export function calcolaBlocchiA3(
   ruoli: RuoloSicurezza[],
   assegnazioni: AssegnazioneRuolo[],
   oggi = new Date(),
+  sedeFiltroId?: string | null,
 ): BloccoOrganigramma[] {
   const oggiIso = isoOggi(oggi);
   // Scadenza del ciclo del gruppo (non del singolo attestato); i Base già rinnovati non contano.
   const correnti = attestatiCorrenti(attestati.filter((a) => a.stato_validazione === "Approvato"), oggi);
   const perId = new Map(dipendenti.filter((d) => d.stato_lavoratore !== "cessato").map((d) => [d.id, d]));
+  // Con una sede scelta contano solo gli incarichi di quella sede
+  const assegnazioniSede = sedeFiltroId ? assegnazioni.filter((a) => a.sede_id === sedeFiltroId) : assegnazioni;
   const perBlocco = BLOCCHI_A3.map(({ chiave, titolo }) => {
     const idRuoli = new Set(ruoliSquadra(chiave, ruoli).map((r) => r.id));
-    const ids = new Set(assegnazioni.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id));
+    const ids = new Set(assegnazioniSede.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id));
     const membri = [...ids].map((id) => perId.get(id)).filter(Boolean) as Dipendente[];
     membri.sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || (a.nome ?? "").localeCompare(b.nome ?? "", "it"));
     return { chiave, titolo, membri };

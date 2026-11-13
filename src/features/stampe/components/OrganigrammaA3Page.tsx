@@ -15,22 +15,27 @@
  *   rev 10 — 13/11/2026 — Il ruolo creato nel DB si collega alla voce con una copia (la voce ricevuta non viene più modificata sul posto);
  *            creaRuoloSicurezza è ora in src/lib/api/ruoli.ts.
  *   rev 11 — 13/11/2026 — «Aggiungi voce» salva subito le voci nella Ditta: il ruolo creato nel DB non resta mai senza la sua voce.
+ *   rev 12 — 13/11/2026 — Sedi: con più sedi compaiono il selettore del plesso e «Squadre per sede»; tavola, PDF e indirizzo seguono la sede scelta.
+ *            Con la sola sede principale la pagina è identica a prima (nessun selettore, nessun pulsante in più).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FileDown, Plus, Printer, Save } from "lucide-react";
+import { ArrowLeft, Building2, FileDown, Plus, Printer, Save, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAttestati, getDipendenti } from "@/lib/api";
 import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, creaRuoloSicurezza, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
+import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
 import { applicaModoPreposti, calcolaBlocchiA3, normalizzaVociOrganigramma, salvaVociOrganigramma, type BloccoOrganigramma, type ModoPreposti, type NomeBlocco } from "../organigramma-a3";
 import { COLONNE_TAVOLA, impaginaPerFunzione, type ElementoFunzionale } from "../impagina-organigramma-a3";
 import { costruisciRiquadriPdf, scaricaPdfOrganigrammaA3 } from "../esporta-organigramma-a3-pdf";
 import { PannelloVociOrganigramma } from "./PannelloVociOrganigramma";
 import { DialogAggiungiVoceOrganigramma } from "./DialogAggiungiVoceOrganigramma";
+import { DialogAssegnaRuoliSede } from "./DialogAssegnaRuoliSede";
 
 /** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
 const AREA_A3_MM = { larghezza: 404, altezza: 281 };
@@ -131,6 +136,19 @@ export function OrganigrammaA3Page() {
   const ditta = useQuery({ queryKey: CHIAVE_DITTA, queryFn: getDitta });
   const ruoli = useQuery({ queryKey: CHIAVE_RUOLI, queryFn: getRuoliSicurezza });
   const ass = useQuery({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI, queryFn: getAssegnazioniRuoli });
+  const sediQuery = useQuery({ queryKey: CHIAVE_SEDI, queryFn: getSedi });
+
+  const [sedeScelta, setSedeScelta] = useState<string>("");
+  const [dialogSquadreAperto, setDialogSquadreAperto] = useState(false);
+  const sediList = sediQuery.data ?? [];
+  const piuSedi = sediList.length > 1;
+  // Una sola sede (o sede non scelta) = principale; il filtro per sede si applica solo se ci sono plessi
+  const sedeCorrente = useMemo(
+    () => sediList.find((x) => x.id === sedeScelta) ?? sediList.find((x) => x.is_principale) ?? sediList[0] ?? null,
+    [sediList, sedeScelta],
+  );
+  const sedeFiltroId = piuSedi ? (sedeCorrente?.id ?? null) : null;
+  const sedeSecondaria = piuSedi && sedeCorrente && !sedeCorrente.is_principale ? sedeCorrente : null;
 
   const [voci, setVoci] = useState<VoceOrganigramma[]>([]);
   const [dialogAperto, setDialogAperto] = useState(false);
@@ -143,8 +161,8 @@ export function OrganigrammaA3Page() {
 
   const [modoPreposti, setModoPreposti] = useState<ModoPreposti>("nomi");
   const blocchiBase = useMemo(
-    () => calcolaBlocchiA3(dip.data ?? [], att.data ?? [], ruoli.data ?? [], ass.data ?? []),
-    [dip.data, att.data, ruoli.data, ass.data],
+    () => calcolaBlocchiA3(dip.data ?? [], att.data ?? [], ruoli.data ?? [], ass.data ?? [], new Date(), sedeFiltroId),
+    [dip.data, att.data, ruoli.data, ass.data, sedeFiltroId],
   );
   const blocchi = useMemo(() => applicaModoPreposti(blocchiBase, modoPreposti), [blocchiBase, modoPreposti]);
   const b = (k: string) => blocchi.find((x) => x.chiave === k)!;
@@ -164,7 +182,7 @@ export function OrganigrammaA3Page() {
   }, [blocchi, vociVisibili]);
 
   const d = ditta.data;
-  const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading;
+  const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading || sediQuery.isLoading;
 
   const articolo = useRef<HTMLElement | null>(null);
   const interno = useRef<HTMLDivElement | null>(null);
@@ -194,7 +212,16 @@ export function OrganigrammaA3Page() {
     setGenerando(true);
     try {
       await scaricaPdfOrganigrammaA3({
-        ditta: d,
+        // Plesso secondario: nel PDF vale il suo indirizzo (se manca un campo resta quello della Ditta)
+        ditta: sedeSecondaria && d
+          ? {
+              ...d,
+              indirizzo: sedeSecondaria.indirizzo || d.indirizzo,
+              cap: sedeSecondaria.cap || d.cap,
+              comune: sedeSecondaria.comune || d.comune,
+              provincia: sedeSecondaria.provincia || d.provincia,
+            }
+          : d,
         annoScolastico: annoScolastico(),
         colonne: costruisciRiquadriPdf(colonneTavola, blocchi, vociVisibili),
       });
@@ -269,7 +296,29 @@ export function OrganigrammaA3Page() {
               </Button>
             </Suggerimento>
             <h1 className="text-lg font-semibold">Carta 01 – Organigramma della sicurezza (A3)</h1>
-            <div className="ml-auto flex flex-wrap gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {piuSedi && (
+                <>
+                  <Building2 className="size-4 text-muted-foreground" aria-hidden />
+                  <Select value={sedeCorrente?.id ?? ""} onValueChange={setSedeScelta}>
+                    <SelectTrigger className="h-8 w-[200px] text-xs" aria-label="Sede o plesso della tavola">
+                      <SelectValue placeholder="Seleziona plesso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sediList.map((x) => (
+                        <SelectItem key={x.id} value={x.id}>
+                          {x.nome}{x.is_principale ? " (principale)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Suggerimento testo="Assegna i lavoratori alle squadre di emergenza del plesso scelto.">
+                    <Button size="sm" type="button" variant="secondary" onClick={() => setDialogSquadreAperto(true)}>
+                      <Users className="size-4" /> Squadre per sede
+                    </Button>
+                  </Suggerimento>
+                </>
+              )}
               {([["nomi", "Preposti con nomi", "Mostra il riquadro Preposti con i nominativi."], ["categorie", "Categorie preposti", "Toglie il riquadro Preposti con i nomi."]] as [ModoPreposti, string, string][]).map(([m, etichetta, aiuto]) => (
                 <Suggerimento key={m} testo={aiuto}>
                   <Button
@@ -328,6 +377,16 @@ export function OrganigrammaA3Page() {
             </div>
           </details>
 
+          {piuSedi && (
+            <DialogAssegnaRuoliSede
+              aperto={dialogSquadreAperto}
+              onChiudi={() => setDialogSquadreAperto(false)}
+              dipendenti={dip.data ?? []}
+              ruoli={ruoli.data ?? []}
+              assegnazioni={ass.data ?? []}
+              sedeIniziale={sedeCorrente?.id}
+            />
+          )}
           <DialogAggiungiVoceOrganigramma
             aperto={dialogAperto}
             onChiudi={() => setDialogAperto(false)}
@@ -346,7 +405,9 @@ export function OrganigrammaA3Page() {
                 <p className="text-sm">Caricamento…</p>
               ) : (
                 <>
-                  <p className="text-center text-xs uppercase">Organigramma del servizio di prevenzione e protezione della sicurezza</p>
+                  <p className="text-center text-xs uppercase">
+                    Organigramma del servizio di prevenzione e protezione della sicurezza{sedeSecondaria ? ` — ${sedeSecondaria.nome}` : ""}
+                  </p>
                   <div className="mb-3 flex items-end justify-between print:mb-1.5">
                     <h2 className="flex-1 text-center text-xl font-bold">{d?.ragione_sociale}</h2>
                     <p className="text-right text-xs font-bold">ANNO SCOLASTICO <span className="ml-2 text-xl">{annoScolastico()}</span></p>
@@ -392,7 +453,13 @@ export function OrganigrammaA3Page() {
                     <div className="text-center">Il Datore di lavoro<br />{d?.datore_di_lavoro}<div className="mt-8 border-b border-foreground print:mt-5" /></div>
                     <div className="border border-foreground p-2 text-center">
                       <p className="font-semibold">{d?.ragione_sociale}</p>
-                      <p>{[d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ")}</p>
+                      <p>
+                        {[
+                          sedeSecondaria?.indirizzo || d?.indirizzo,
+                          [sedeSecondaria?.cap || d?.cap, sedeSecondaria?.comune || d?.comune].filter(Boolean).join(" "),
+                          (sedeSecondaria?.provincia || d?.provincia) && `(${sedeSecondaria?.provincia || d?.provincia})`,
+                        ].filter(Boolean).join(" ")}
+                      </p>
                     </div>
                   </div>
                 </>

@@ -192,7 +192,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     "sb",
     "from.select",
     "dipendenti_ruoli",
-    "["id, dipendente_id, ruolo_id"]",
+    "["id, dipendente_id, ruolo_id, sede_id"]",
   ],
   [
     "sb",
@@ -613,7 +613,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     "sb",
     "from.select",
     "dipendenti_ruoli",
-    "["id, dipendente_id, ruolo_id"]",
+    "["id, dipendente_id, ruolo_id, sede_id"]",
   ],
   [
     "sb",
@@ -661,7 +661,7 @@ exports[`Dipendenti: percorso d'uso completo > registra tutto quello che la pagi
     "sb",
     "from.select",
     "dipendenti_ruoli",
-    "["id, dipendente_id, ruolo_id"]",
+    "["id, dipendente_id, ruolo_id, sede_id"]",
   ],
   [
     "sb",
