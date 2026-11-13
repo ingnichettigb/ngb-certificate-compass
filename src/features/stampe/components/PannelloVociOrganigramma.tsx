@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 13/11/2026 13:20 — Griglia delle schede voci aggiuntive: schede azzurre per ruoli DB
  *            e marroncine per note descrittive, con selezione nominativi del personale e cancellazione collegata.
+ *   rev 2 — 13/11/2026 13:40 — Corretto filtro stato_lavoratore dei dipendenti in forza.
  */
 import { ShieldCheck, FileText, Trash2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ type Props = {
 
 export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onEliminaVoce }: Props) {
   const inForza = dipendenti
-    .filter((d) => d.stato === "in_forza")
+    .filter((d) => d.stato_lavoratore !== "cessato")
     .sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || (a.nome ?? "").localeCompare(b.nome ?? "", "it"));
 
   return (
@@ -89,7 +90,7 @@ export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onE
                     className="text-xs bg-card/90 leading-relaxed font-mono"
                   />
                   <div className="text-[10px] text-sky-800">
-                    I nomi qui inseriti riceveranno l&apos;incarico e saranno disponibili nelle Nomine.
+                    I nomi inseriti riflettono l&apos;incarico e sono disponibili nelle Nomine.
                   </div>
                 </div>
               ) : (
@@ -110,7 +111,7 @@ export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onE
                     className="text-xs bg-card/90 leading-relaxed"
                   />
                   <div className="text-[10px] text-amber-800">
-                    Testo libero stampato sulla tavola A3 (nessun legame con anagrafiche o nomine).
+                    Testo libero stampato sulla tavola A3 (senza legame con ruoli o nomine).
                   </div>
                 </div>
               )}
