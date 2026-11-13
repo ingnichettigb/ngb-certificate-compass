@@ -21,7 +21,7 @@ export function AiutoAutomatico() {
     const nascondi = () => {
       window.clearTimeout(timer.current);
       const el = corrente.current;
-      if (el?.dataset.aiutoTitolo) { el.setAttribute("title", el.dataset.aiutoTitolo); delete el.dataset.aiutoTitolo; }
+      if (el?.dataset["aiutoTitolo"]) { el.setAttribute("title", el.dataset["aiutoTitolo"]); delete el.dataset["aiutoTitolo"]; }
       corrente.current = null;
       setStato(null);
     };
@@ -30,11 +30,11 @@ export function AiutoAutomatico() {
       if (!el || el === corrente.current) return;
       nascondi();
       // Rispetta i fumetti già esistenti (Radix) e le esclusioni esplicite.
-      if (el.closest("[data-aiuto-off]") || (el.hasAttribute("data-state") && !el.title && !el.dataset.aiuto)) return;
+      if (el.closest("[data-aiuto-off]") || (el.hasAttribute("data-state") && !el.title && !el.dataset["aiuto"])) return;
       const testo = testoAiuto(el);
       if (!testo) return;
       corrente.current = el;
-      if (el.title) { el.dataset.aiutoTitolo = el.title; el.removeAttribute("title"); }
+      if (el.title) { el.dataset["aiutoTitolo"] = el.title; el.removeAttribute("title"); }
       timer.current = window.setTimeout(() => {
         const r = el.getBoundingClientRect();
         setStato({ testo, x: r.left + r.width / 2, y: r.bottom });

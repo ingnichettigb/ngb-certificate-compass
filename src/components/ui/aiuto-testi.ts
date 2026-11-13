@@ -39,7 +39,7 @@ function pulisci(t: string | null | undefined) {
 
 /** Ricava il testo del fumetto per un elemento; stringa vuota se non c'è nulla di utile. */
 export function testoAiuto(el: HTMLElement): string {
-  const esplicito = pulisci(el.dataset.aiuto) || pulisci(el.title) || pulisci(el.dataset.aiutoTitolo);
+  const esplicito = pulisci(el.dataset["aiuto"]) || pulisci(el.title) || pulisci(el.dataset["aiutoTitolo"]);
   if (esplicito) return esplicito;
   const etichetta = pulisci(el.getAttribute("aria-label"));
   const testo = pulisci(el.innerText);
