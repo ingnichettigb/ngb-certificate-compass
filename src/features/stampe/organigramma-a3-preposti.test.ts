@@ -120,7 +120,10 @@ describe("mini categorie sotto il registro antincendio", () => {
 
   it("se mancano vengono aggiunte vuote, senza toccare le altre voci", () => {
     const r = normalizzaVociOrganigramma([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["x"] }, { titolo: "Addetti registro antincendio", nomi: ["Bardelli Mariacristina"] }]);
-    expect(r.slice(-2)).toEqual([{ titolo: TITOLO_RESPONSABILE_DPI, nomi: [] }, { titolo: TITOLO_RESPONSABILE_SDS, nomi: [] }]);
+    expect(r.slice(-2)).toEqual([
+      { titolo: TITOLO_RESPONSABILE_DPI, nomi: [], tipo: "ruolo" },
+      { titolo: TITOLO_RESPONSABILE_SDS, nomi: [], tipo: "ruolo" },
+    ]);
     expect(r[1]!.nomi).toEqual(["Bardelli Mariacristina"]);
   });
 });

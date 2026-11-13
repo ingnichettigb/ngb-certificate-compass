@@ -4,6 +4,7 @@
  * Ruoli di sicurezza (Preposto, Antincendio, …).
  * Revisioni:
  *   - Rev 2 (2026-10-31 11:00): Chiavi di cache condivise (CHIAVE_RUOLI, CHIAVE_ASSEGNAZIONI_RUOLI) tra Matrice e Scheda.
+ *   - Rev 3 (2026-11-13): creaRuoloSicurezza: crea un ruolo e restituisce la riga inserita (serve l'id per collegarlo a una voce dell'organigramma A3).
  */
 import { leggiTutto, sb } from "./client";
 
@@ -50,6 +51,40 @@ export async function aggiungiRuolo(input: {
     if (error.code === "23505") throw new Error(`"${nome}" è già presente`);
     throw error;
   }
+}
+
+/** Crea un ruolo di sicurezza e ne restituisce la riga (con l'id); «ordine» è l'ultimo + 1. */
+export async function creaRuoloSicurezza(input: {
+  nome: string;
+  macro_categoria?: string | null;
+  descrizione?: string | null;
+  obbligatorio_tutti?: boolean;
+}): Promise<RuoloSicurezza> {
+  const nome = input.nome.trim();
+  if (!nome) throw new Error("Scrivi il nome del ruolo");
+  const { data: ultimo, error: errOrdine } = await sb
+    .from("ruoli_sicurezza")
+    .select("ordine")
+    .order("ordine", { ascending: false })
+    .limit(1);
+  if (errOrdine) throw errOrdine;
+  const ordine = ((ultimo?.[0] as { ordine?: number } | undefined)?.ordine ?? 0) + 1;
+  const { data, error } = await sb
+    .from("ruoli_sicurezza")
+    .insert({
+      nome,
+      macro_categoria: input.macro_categoria?.trim() || null,
+      descrizione: input.descrizione?.trim() || null,
+      obbligatorio_tutti: input.obbligatorio_tutti ?? false,
+      ordine,
+    })
+    .select("*")
+    .single();
+  if (error) {
+    if (error.code === "23505") throw new Error(`"${nome}" è già presente`);
+    throw error;
+  }
+  return data as RuoloSicurezza;
 }
 
 export async function aggiornaRuolo(
