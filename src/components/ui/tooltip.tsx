@@ -1,4 +1,11 @@
 "use client";
+/*
+ * File: tooltip.tsx
+ * Percorso: src/components/ui/tooltip.tsx
+ * Data creazione: non registrata nel file originale
+ * Revisioni:
+ *   rev 1 — 13/11/2026 09:55 — Fumetto sempre dentro lo schermo (collisionPadding, ribaltamento, larghezza adattiva).
+ */
 
 import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -14,13 +21,15 @@ const TooltipTrigger = TooltipPrimitive.Trigger;
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
+>(({ className, sideOffset = 4, collisionPadding = 12, avoidCollisions = true, ...props }, ref) => (
   <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
+      collisionPadding={collisionPadding}
+      avoidCollisions={avoidCollisions}
       className={cn(
-        "z-50 overflow-hidden rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-tooltip-content-transform-origin)",
+        "z-[100] max-w-[min(20rem,calc(100vw-1.5rem))] whitespace-normal break-words leading-snug overflow-hidden rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-tooltip-content-transform-origin)",
         className,
       )}
       {...props}

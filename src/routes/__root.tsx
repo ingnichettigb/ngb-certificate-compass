@@ -4,6 +4,7 @@
  * Data creazione: non registrata nel file originale
  * Revisioni:
  *   rev 1 — 12/11/2026 06:53 — Metadati senza marchio fisso; anagrafica anche nel modulo pubblico.
+ *   rev 2 — 13/11/2026 09:55 — Fumetti informativi globali (TooltipProvider + AiutoAutomatico).
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -19,6 +20,8 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AiutoAutomatico } from "@/components/ui/aiuto-automatico";
 import { BarraNavigazioneFissa } from "@/components/layout/BarraNavigazioneFissa";
 import { IdentitaDitta } from "@/components/IdentitaDitta";
 import { mostraBarra } from "@/components/layout/voci-navigazione";
@@ -137,11 +140,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={250}>
       {/* Barra unica del gestionale; il modulo pubblico /carica ne è escluso. */}
       {mostraBarra(percorso) ? <BarraNavigazioneFissa /> : <div className="border-b border-border bg-surface p-3 print:hidden"><IdentitaDitta /></div>}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster richColors position="top-center" />
+      <AiutoAutomatico />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
