@@ -145,7 +145,7 @@ export function DialogAggiungiVoceOrganigramma({ aperto, onChiudi, ruoliEsistent
                     className="bg-card text-sm"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Verrà creato in <code>ruoli_sicurezza</code> e comparirà nella Matrice per assegnarlo al personale.
+                    Verrà inserito in <code>ruoli_sicurezza</code> e comparirà nella Matrice per le assegnazioni.
                   </p>
                 </div>
               ) : (
