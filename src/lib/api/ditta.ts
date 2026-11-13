@@ -10,6 +10,7 @@
  *   rev 4 — 10/11/2026 15:25 — Aggiunto campo RLS tra le figure della sicurezza.
  *   rev 5 — 10/11/2026 16:10 — Voci aggiuntive della tavola Organigramma A3 (organigramma_voci).
  *   rev 6 — 12/11/2026 06:53 — Logo aziendale persistente condiviso con pagine, stampe e backup.
+ *   rev 7 — 13/11/2026 11:40 — TipoVoceOrganigramma ('ruolo' azzurro | 'nota' marroncino) e ruolo_id collegato.
  */
 import { sb } from "./client";
 import {
@@ -29,6 +30,16 @@ export type CodiceAteco = {
   codice: string;
   descrizione: string;
   rischio?: "basso" | "medio" | "alto";
+};
+
+export type TipoVoceOrganigramma = "ruolo" | "nota";
+
+/** Voce dell'organigramma A3: azzurra (ruolo DB con spunta) oppure marroncina (nota descrittiva a sé stante). */
+export type VoceOrganigramma = {
+  titolo: string;
+  nomi: string[];
+  tipo?: TipoVoceOrganigramma;
+  ruolo_id?: string | null;
 };
 
 export type DittaRecord = {
@@ -68,9 +79,6 @@ export type DittaRecord = {
   created_at?: string;
   updated_at?: string;
 };
-
-/** Voce libera dell'organigramma A3 (es. «Addetto registro antincendio»): titolo e nominativi. */
-export type VoceOrganigramma = { titolo: string; nomi: string[] };
 
 export type SogliaDitta = {
   id: string;
