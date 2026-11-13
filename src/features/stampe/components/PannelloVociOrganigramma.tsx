@@ -44,9 +44,9 @@ export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onE
               <div className="flex items-center justify-between gap-2 border-b pb-2">
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   {eRuolo ? (
-                    <ShieldCheck className="h-4 w-4 text-sky-600 shrink-0" title="Ruolo collegato al DB" />
+                    <span title="Ruolo collegato al DB" className="shrink-0"><ShieldCheck className="h-4 w-4 text-sky-600" /></span>
                   ) : (
-                    <FileText className="h-4 w-4 text-amber-700 shrink-0" title="Nota descrittiva organigramma" />
+                    <span title="Nota descrittiva organigramma" className="shrink-0"><FileText className="h-4 w-4 text-amber-700" /></span>
                   )}
                   <Input
                     value={voce.titolo}
