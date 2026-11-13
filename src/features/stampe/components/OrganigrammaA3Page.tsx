@@ -14,6 +14,7 @@
  *   rev 9 — 13/11/2026 13:40 — Integrazione finestra di aggiunta voce (ruolo DB azzurro / nota marroncina) e griglia schede colorate.
  *   rev 10 — 13/11/2026 — Il ruolo creato nel DB si collega alla voce con una copia (la voce ricevuta non viene più modificata sul posto);
  *            creaRuoloSicurezza è ora in src/lib/api/ruoli.ts.
+ *   rev 11 — 13/11/2026 — «Aggiungi voce» salva subito le voci nella Ditta: il ruolo creato nel DB non resta mai senza la sua voce.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -243,7 +244,17 @@ export function OrganigrammaA3Page() {
         return;
       }
     }
-    setVoci((vv) => [...vv, voce]);
+    // La voce si salva subito (insieme a quelle già presenti): così un ruolo appena creato nel DB non resta senza voce.
+    const aggiornate = [...voci, voce];
+    try {
+      const pulite = await salvaVociOrganigramma(aggiornate);
+      setVoci(pulite);
+      await qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
+      toast.success(`Voce «${voce.titolo}» aggiunta e salvata`);
+    } catch (err) {
+      setVoci(aggiornate);
+      toast.error(`Voce aggiunta ma non salvata (${(err as Error).message}): premi «Salva voci»`);
+    }
   };
 
   return (
