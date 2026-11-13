@@ -30,7 +30,7 @@ export function AiutoAutomatico() {
       if (!el || el === corrente.current) return;
       nascondi();
       // Rispetta i fumetti già esistenti (Radix) e le esclusioni esplicite.
-      if (el.closest("[data-aiuto-off]") || /open|closed/.test(el.getAttribute("data-state") ?? "") && el.hasAttribute("data-radix-collection-item") === false && !el.title && !el.dataset.aiuto && el.matches("[data-state][aria-describedby], a[data-state]")) return;
+      if (el.closest("[data-aiuto-off]") || (el.hasAttribute("data-state") && !el.title && !el.dataset.aiuto)) return;
       const testo = testoAiuto(el);
       if (!testo) return;
       corrente.current = el;
