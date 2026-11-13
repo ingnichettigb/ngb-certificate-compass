@@ -18,3 +18,14 @@ Stessa Ditta, stesso Datore di Lavoro, stesso RSPP: la formazione è unica, le *
 - nuovi: `src/lib/api/sedi.ts`, `src/features/impostazioni/ditta/RiquadroSedi.tsx`, `src/features/stampe/components/DialogAssegnaRuoliSede.tsx`, test `organigramma-a3-sedi.test.ts`
 - modificati: `src/lib/api/ruoli.ts`, `src/lib/api/index.ts`, `src/features/stampe/organigramma-a3.ts`, `src/features/stampe/components/OrganigrammaA3Page.tsx`, `src/features/impostazioni/DittaTab.tsx`
 - snapshot aggiornati (solo la colonna `sede_id` nella select): `src/routes/__snapshots__/dipendenti.flusso…snap`, `hr.flusso…snap`
+
+## Backup completo (rev 2)
+Il backup salvava solo 10 tabelle su 19 e leggeva al massimo 1000 righe per tabella. Ora (versione 5) salva **tutte** le tabelle,
+comprese sedi, incarichi (`dipendenti_ruoli`), `ruoli_sicurezza`, `modelli_nomina`, `documenti_attestati`, `integrazioni_dvr`,
+`coda_valutazioni`, `argomenti_corso`, `note_valutazione`, `opzioni_integrazione`.
+- Ripristino nell'ordine delle dipendenze, solo aggiunta/aggiornamento (non cancella nulla); id di sedi/ruoli/lavoratori ricondotti a quelli del database.
+- Un errore di ripristino ora nomina la tabella (prima molti errori erano ignorati).
+- Backup vecchi (versione ≤ 4) si ripristinano come prima.
+- `src/lib/api/backup-copertura.test.ts` fallisce se una tabella nuova delle migrazioni non è nel backup.
+- Restano FUORI dal file JSON i file veri degli attestati (bucket «attestati»): vedi sotto.
+- Limite noto: i file veri degli attestati (PDF/immagini nel bucket «attestati») non stanno nel JSON; il JSON ha solo i riferimenti (`percorso_file`). Per quelli serve la copia della cartella archivio.

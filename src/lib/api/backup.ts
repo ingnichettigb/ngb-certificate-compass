@@ -6,13 +6,47 @@
  *   rev 1 — 20/10/2026 14:00 — Esportazione e importazione database JSON.
  *   rev 2 — 26/10/2026 17:30 — Naming 030ArchAttestati_AAMMGGhhmm_ e lettura selettiva backup.
  *   rev 3 — 01/11/2026 12:35 — Salvataggio automatico diretto nella sottocartella "Backup DB" della cartella archivio.
+ *   rev 4 — 13/11/2026 — Backup COMPLETO (versione 5): tutte le tabelle (prima 10 su 19: mancavano incarichi, ruoli, sedi, nomine,
+ *            documenti, integrazioni DVR, coda valutazioni…), lettura a blocchi senza il limite di 1000 righe, ripristino nell'ordine
+ *            delle dipendenze con rimappatura degli id (sedi, ruoli, lavoratori) e errori che nominano la tabella.
  */
-import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
 import { getCartellaArchivio, leggiPercorsoTestuale } from "./cartella-locale";
 
 export const PREFISSO_BACKUP = "030ArchAttestati_";
 export const SOTTOCARTELLA_BACKUP_DB = "Backup DB";
+export const VERSIONE_BACKUP = 5;
+
+/**
+ * TUTTE le tabelle dell'archivio, nell'ordine di ripristino (prima le tabelle da cui dipendono le altre).
+ * «chiave» = colonna usata per ordinare la lettura a blocchi. Una tabella nuova nelle migrazioni va aggiunta qui:
+ * il test backup-copertura.test.ts fallisce se manca.
+ */
+export const TABELLE_BACKUP = [
+  { tabella: "tipi_corso", chiave: "id" },
+  { tabella: "categorie_corso", chiave: "macro_categoria" },
+  { tabella: "argomenti_corso", chiave: "id" },
+  { tabella: "reparti", chiave: "id" },
+  { tabella: "sottoreparti", chiave: "id" },
+  { tabella: "classi_concorso", chiave: "id" },
+  { tabella: "materie", chiave: "id" },
+  { tabella: "note_valutazione", chiave: "id" },
+  { tabella: "opzioni_integrazione", chiave: "id" },
+  { tabella: "modelli_nomina", chiave: "tipo" },
+  { tabella: "ditta", chiave: "id" },
+  { tabella: "soglie_ditta", chiave: "id" },
+  { tabella: "ruoli_sicurezza", chiave: "id" },
+  { tabella: "sedi", chiave: "id" },
+  { tabella: "dipendenti", chiave: "id" },
+  { tabella: "dipendenti_ruoli", chiave: "id" },
+  { tabella: "attestati_caricati", chiave: "id" },
+  { tabella: "documenti_attestati", chiave: "id" },
+  { tabella: "integrazioni_dvr", chiave: "id" },
+  { tabella: "coda_valutazioni", chiave: "id" },
+] as const;
+
+type Riga = Record<string, unknown>;
+export type DumpBackup = { esportato_il: string; versione: number } & Record<string, unknown>;
 
 export interface InfoFileBackup {
   nome: string;
@@ -23,10 +57,7 @@ export interface InfoFileBackup {
 }
 
 export interface EsitoEsportazioneDb {
-  dump: {
-    dipendenti: unknown[];
-    attestati_caricati: unknown[];
-  };
+  dump: DumpBackup & { dipendenti: unknown[]; attestati_caricati: unknown[] };
   nomeFile: string;
   percorsoSalvataggio: string;
   salvatoInCartellaLocale: boolean;
@@ -96,36 +127,29 @@ export async function elencaBackupDaCartella(dirHandle: FileSystemDirectoryHandl
   return risultati.sort((a, b) => b.dataCreazione.getTime() - a.dataCreazione.getTime());
 }
 
+/** Legge TUTTE le tabelle (a blocchi da 1000) e costruisce il dump. Se una tabella non si legge, fallisce nominandola. */
+export async function costruisciDump(): Promise<DumpBackup & { dipendenti: unknown[]; attestati_caricati: unknown[] }> {
+  const lette = await Promise.all(
+    TABELLE_BACKUP.map(async ({ tabella, chiave }) => {
+      try {
+        return [tabella, await leggiTutto<Riga>(() => sb.from(tabella).select("*").order(chiave))] as const;
+      } catch (e) {
+        throw new Error(`Backup non riuscito: tabella «${tabella}» non leggibile (${(e as { message?: string })?.message ?? e})`);
+      }
+    }),
+  );
+  return {
+    esportato_il: new Date().toISOString(),
+    versione: VERSIONE_BACKUP,
+    ...Object.fromEntries(lette),
+    dipendenti: lette.find(([t]) => t === "dipendenti")![1],
+    attestati_caricati: lette.find(([t]) => t === "attestati_caricati")![1],
+  };
+}
+
 /** Esporta l'intero database in formato JSON, salvandolo direttamente nella sottocartella "Backup DB". */
 export async function esportaDb(): Promise<EsitoEsportazioneDb | null> {
-  const [dipTutti, attTutti] = await Promise.all([
-    leggiTutto(() => sb.from("dipendenti").select("*").order("id")),
-    leggiTutto(() => sb.from("attestati_caricati").select("*").order("id")),
-  ]);
-  const [tipi, rep, sot, cat, classi, mat, ditta, soglie] = await Promise.all([
-    supabase.from("tipi_corso").select("*"),
-    sb.from("reparti").select("*"),
-    sb.from("sottoreparti").select("*"),
-    sb.from("categorie_corso").select("*"),
-    sb.from("classi_concorso").select("*"),
-    sb.from("materie").select("*"),
-    sb.from("ditta").select("*"),
-    sb.from("soglie_ditta").select("*"),
-  ]);
-  const dump = {
-    esportato_il: new Date().toISOString(),
-    versione: 4,
-    dipendenti: dipTutti ?? [],
-    tipi_corso: tipi.data ?? [],
-    attestati_caricati: attTutti ?? [],
-    reparti: rep.data ?? [],
-    sottoreparti: sot.data ?? [],
-    categorie_corso: cat.data ?? [],
-    classi_concorso: classi.data ?? [],
-    materie: mat.data ?? [],
-    ditta: ditta.data ?? [],
-    soglie_ditta: soglie.data ?? [],
-  };
+  const dump = await costruisciDump();
   const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
   const nome = generaNomeFileBackup();
 
@@ -189,54 +213,152 @@ export async function esportaDb(): Promise<EsitoEsportazioneDb | null> {
   };
 }
 
-/** Ripristina un backup JSON nel database previa verifica del prefisso 030ArchAttestati_. */
+const righeDi = (dump: Record<string, unknown>, tabella: string): Riga[] => (Array.isArray(dump[tabella]) ? (dump[tabella] as Riga[]) : []);
+
+/** Scrive a blocchi da 200; in caso di errore dice QUALE tabella ha fallito (prima gli errori venivano ignorati). */
+async function scrivi(tabella: string, righe: Riga[], onConflict: string) {
+  for (let i = 0; i < righe.length; i += 200) {
+    const { error } = await sb.from(tabella).upsert(righe.slice(i, i + 200), { onConflict });
+    if (error) throw new Error(`Ripristino interrotto sulla tabella «${tabella}»: ${(error as { message?: string }).message ?? error}`);
+  }
+}
+
+/**
+ * Ripristina un backup JSON (solo aggiunta/aggiornamento: non cancella nulla) previa verifica del prefisso 030ArchAttestati_.
+ * Gli id di sedi, ruoli e lavoratori del file vengono ricondotti a quelli presenti nel database (stessa sede principale,
+ * stesso nome ruolo, stesso codice fiscale), così gli incarichi restano agganciati anche su un database ricreato.
+ */
 export async function importaDb(file: File) {
   if (!file.name.startsWith(PREFISSO_BACKUP)) {
     throw new Error(`Il file deve iniziare con '${PREFISSO_BACKUP}'. Scelto: '${file.name}'`);
   }
-  const dump = JSON.parse(await file.text());
-  let dipCount = 0;
-  let attCount = 0;
+  const dump = JSON.parse(await file.text()) as Record<string, unknown>;
+  const conteggi: Record<string, number> = {};
+  const conta = (tabella: string, n: number) => {
+    conteggi[tabella] = n;
+  };
+  const semplice = async (tabella: string, onConflict: string) => {
+    const righe = righeDi(dump, tabella);
+    if (righe.length) await scrivi(tabella, righe, onConflict);
+    conta(tabella, righe.length);
+  };
 
-  if (Array.isArray(dump.tipi_corso) && dump.tipi_corso.length) {
-    await supabase.from("tipi_corso").upsert(dump.tipi_corso, { onConflict: "id" });
+  // 1. Anagrafiche di base
+  await semplice("tipi_corso", "id");
+  await semplice("categorie_corso", "macro_categoria");
+  await semplice("argomenti_corso", "id");
+  await semplice("reparti", "nome");
+  await semplice("sottoreparti", "id");
+  await semplice("classi_concorso", "codice");
+  await semplice("materie", "id");
+  await semplice("note_valutazione", "id");
+  await semplice("opzioni_integrazione", "id");
+  await semplice("modelli_nomina", "tipo");
+  await semplice("ditta", "id");
+  await semplice("soglie_ditta", "id");
+
+  // 2. Ruoli: stesso nome = stesso ruolo (si aggiorna), altrimenti si inserisce
+  const mappaRuoli = new Map<string, string>();
+  const ruoliDump = righeDi(dump, "ruoli_sicurezza");
+  if (ruoliDump.length) {
+    const esistenti = await leggiTutto<{ id: string; nome: string }>(() => sb.from("ruoli_sicurezza").select("id, nome").order("id"));
+    const perNome = new Map(esistenti.map((r) => [r["nome"], r["id"]]));
+    const nuovi: Riga[] = [];
+    for (const r of ruoliDump) {
+      const idDb = perNome.get(String(r["nome"]));
+      if (idDb) {
+        mappaRuoli.set(String(r["id"]), idDb);
+        const { id: _id, ...resto } = r;
+        const { error } = await sb.from("ruoli_sicurezza").update(resto).eq("id", idDb);
+        if (error) throw new Error(`Ripristino interrotto sulla tabella «ruoli_sicurezza»: ${(error as { message?: string }).message ?? error}`);
+      } else {
+        mappaRuoli.set(String(r["id"]), String(r["id"]));
+        nuovi.push(r);
+      }
+    }
+    if (nuovi.length) await scrivi("ruoli_sicurezza", nuovi, "id");
   }
-  if (Array.isArray(dump.dipendenti)) {
-    for (let i = 0; i < dump.dipendenti.length; i += 200) {
-      const chunk = dump.dipendenti.slice(i, i + 200);
-      const { error } = await supabase.from("dipendenti").upsert(chunk, { onConflict: "codice_fiscale" });
-      if (error) throw error;
-      dipCount += chunk.length;
+  conta("ruoli_sicurezza", ruoliDump.length);
+
+  // 3. Sedi: la principale è una sola e già presente nel database; le sedi del file puntano a quella
+  const mappaSedi = new Map<string, string>();
+  const sediDump = righeDi(dump, "sedi");
+  if (sediDump.length) {
+    const { data, error } = await sb.from("sedi").select("id").eq("is_principale", true).limit(1);
+    if (error) throw new Error(`Ripristino interrotto sulla tabella «sedi»: ${(error as { message?: string }).message ?? error}`);
+    const principaleDb = (data?.[0] as { id?: string } | undefined)?.id;
+    const secondarie: Riga[] = [];
+    for (const sd of sediDump) {
+      if (sd["is_principale"] && principaleDb) {
+        mappaSedi.set(String(sd["id"]), principaleDb);
+        const { id: _id, is_principale: _p, ...resto } = sd;
+        const { error: e2 } = await sb.from("sedi").update(resto).eq("id", principaleDb);
+        if (e2) throw new Error(`Ripristino interrotto sulla tabella «sedi»: ${(e2 as { message?: string }).message ?? e2}`);
+      } else {
+        mappaSedi.set(String(sd["id"]), String(sd["id"]));
+        secondarie.push(sd);
+      }
+    }
+    if (secondarie.length) await scrivi("sedi", secondarie, "id");
+  }
+  conta("sedi", sediDump.length);
+
+  // 4. Lavoratori: stesso codice fiscale = stessa persona (si mantiene l'id già presente nel database)
+  const dipDump = righeDi(dump, "dipendenti");
+  const cfDiDump = new Map(dipDump.map((d) => [String(d["id"]), String(d["codice_fiscale"])]));
+  if (dipDump.length) {
+    const esistenti = await leggiTutto<{ id: string; codice_fiscale: string }>(() => sb.from("dipendenti").select("id, codice_fiscale").order("id"));
+    const idPerCf = new Map(esistenti.map((d) => [d["codice_fiscale"], d["id"]]));
+    const righe = dipDump.map((d) => {
+      const { id, sede_id, ...resto } = d;
+      const riga: Riga = { ...resto };
+      const idDb = idPerCf.get(String(d["codice_fiscale"]));
+      if (!idDb) riga["id"] = id; // nuovo: mantiene l'id del file
+      const sede = sede_id ? (mappaSedi.get(String(sede_id)) ?? String(sede_id)) : null;
+      if (sede) riga["sede_id"] = sede; // senza sede ci pensa il database (sede principale)
+      return riga;
+    });
+    await scrivi("dipendenti", righe, "codice_fiscale");
+  }
+  conta("dipendenti", dipDump.length);
+
+  // id lavoratore del file → id nel database (tramite codice fiscale)
+  const mappaDip = new Map<string, string>();
+  if (cfDiDump.size) {
+    const ora = await leggiTutto<{ id: string; codice_fiscale: string }>(() => sb.from("dipendenti").select("id, codice_fiscale").order("id"));
+    const idPerCf = new Map(ora.map((d) => [d["codice_fiscale"], d["id"]]));
+    for (const [idDump, cf] of cfDiDump) {
+      const idDb = idPerCf.get(cf);
+      if (idDb) mappaDip.set(idDump, idDb);
     }
   }
-  if (Array.isArray(dump.reparti) && dump.reparti.length) {
-    await sb.from("reparti").upsert(dump.reparti, { onConflict: "nome" });
-  }
-  if (Array.isArray(dump.sottoreparti) && dump.sottoreparti.length) {
-    await sb.from("sottoreparti").upsert(dump.sottoreparti, { onConflict: "id" });
-  }
-  if (Array.isArray(dump.classi_concorso) && dump.classi_concorso.length) {
-    await sb.from("classi_concorso").upsert(dump.classi_concorso, { onConflict: "codice" });
-  }
-  if (Array.isArray(dump.materie) && dump.materie.length) {
-    await sb.from("materie").upsert(dump.materie, { onConflict: "id" });
-  }
-  if (Array.isArray(dump.categorie_corso) && dump.categorie_corso.length) {
-    await sb.from("categorie_corso").upsert(dump.categorie_corso, { onConflict: "macro_categoria" });
-  }
-  if (Array.isArray(dump.ditta) && dump.ditta.length) {
-    await sb.from("ditta").upsert(dump.ditta, { onConflict: "id" });
-  }
-  if (Array.isArray(dump.soglie_ditta) && dump.soglie_ditta.length) {
-    await sb.from("soglie_ditta").upsert(dump.soglie_ditta, { onConflict: "id" });
-  }
-  if (Array.isArray(dump.attestati_caricati)) {
-    for (let i = 0; i < dump.attestati_caricati.length; i += 200) {
-      const chunk = dump.attestati_caricati.slice(i, i + 200);
-      const { error } = await supabase.from("attestati_caricati").upsert(chunk, { onConflict: "id" });
-      if (error) throw error;
-      attCount += chunk.length;
+  const conDip = (r: Riga): Riga => (r["dipendente_id"] ? { ...r, dipendente_id: mappaDip.get(String(r["dipendente_id"])) ?? r["dipendente_id"] } : r);
+
+  // 5. Incarichi per sede
+  const incDump = righeDi(dump, "dipendenti_ruoli");
+  if (incDump.length) {
+    const viste = new Set<string>();
+    const righe: Riga[] = [];
+    for (const r of incDump) {
+      const { id: _id, ...resto } = conDip(r);
+      const riga: Riga = { ...resto, ruolo_id: mappaRuoli.get(String(r["ruolo_id"])) ?? r["ruolo_id"] };
+      if (r["sede_id"]) riga["sede_id"] = mappaSedi.get(String(r["sede_id"])) ?? r["sede_id"];
+      const k = `${riga["dipendente_id"]}|${riga["ruolo_id"]}|${riga["sede_id"] ?? ""}`;
+      if (viste.has(k)) continue;
+      viste.add(k);
+      righe.push(riga);
     }
+    await scrivi("dipendenti_ruoli", righe, "dipendente_id,ruolo_id,sede_id");
   }
-  return { dipCount, attCount };
+  conta("dipendenti_ruoli", incDump.length);
+
+  // 6. Attestati, documenti, integrazioni, coda di valutazione
+  for (const tabella of ["attestati_caricati", "documenti_attestati", "integrazioni_dvr"] as const) {
+    const righe = righeDi(dump, tabella).map(conDip);
+    if (righe.length) await scrivi(tabella, righe, "id");
+    conta(tabella, righe.length);
+  }
+  await semplice("coda_valutazioni", "id");
+
+  return { dipCount: conteggi["dipendenti"] ?? 0, attCount: conteggi["attestati_caricati"] ?? 0, incarichiCount: incDump.length, sediCount: sediDump.length, conteggi };
 }

@@ -101,7 +101,7 @@ export function DialogCaricaBackup({ aperto, onOpenChange, onImported }: Props) 
     try {
       const res = await importaDb(file);
       toast.success("Backup ripristinato con successo", {
-        description: `${res.dipCount} dipendenti e ${res.attCount} attestati importati.`,
+        description: `${res.dipCount} dipendenti, ${res.attCount} attestati, ${res.incarichiCount} incarichi e ${res.sediCount} sedi importati.`,
       });
       onImported?.();
       onOpenChange(false);
