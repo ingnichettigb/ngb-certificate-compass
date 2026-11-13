@@ -9,6 +9,8 @@
  *   rev 4 — 12/11/2026 21:15 — Ripristinate funzioni rev 2–3; «valido» = ciclo del gruppo in regola.
  *   rev 5 — 13/11/2026 — Nuove voci sotto il registro antincendio: DPI e SDS.
  *   rev 6 — 13/11/2026 13:20 — Voci con tipo ('ruolo' azzurro collegato a ruolo_id, 'nota' marroncino descrittiva).
+ *   rev 7 — 13/11/2026 — Ripristinati calcolaBlocchiA3 (parametro «oggi», lavoratori in forza = stato_lavoratore, «valido» = ciclo del gruppo
+ *            in regola) e salvaVociOrganigramma, ora con tipo e ruolo_id delle voci.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
@@ -114,48 +116,54 @@ export function calcolaBlocchiA3(
   attestati: Attestato[],
   ruoli: RuoloSicurezza[],
   assegnazioni: AssegnazioneRuolo[],
+  oggi = new Date(),
 ): BloccoOrganigramma[] {
-  const oggiIso = isoOggi(new Date());
-  const inForza = dipendenti.filter((d) => d.stato === "in_forza");
-  const idInForza = new Set(inForza.map((d) => d.id));
-  const mappaDipendenti = new Map(inForza.map((d) => [d.id, d]));
-
-  const assegnati = assegnazioni.filter((a) => idInForza.has(a.dipendente_id));
-  const mappaRuoli = new Map(ruoli.map((r) => [r.id, r]));
-
-  const conteggiBrevi = new Map<string, number>();
-  for (const d of inForza) {
-    const b = nomeBreve(d);
-    conteggiBrevi.set(b, (conteggiBrevi.get(b) ?? 0) + 1);
-  }
-  const etichettaNome = (d: Dipendente) => ((conteggiBrevi.get(nomeBreve(d)) ?? 0) > 1 ? nomeEsteso(d) : nomeBreve(d));
-
-  return BLOCCHI_A3.map(({ chiave, titolo }) => {
+  const oggiIso = isoOggi(oggi);
+  // Scadenza del ciclo del gruppo (non del singolo attestato); i Base già rinnovati non contano.
+  const correnti = attestatiCorrenti(attestati.filter((a) => a.stato_validazione === "Approvato"), oggi);
+  const perId = new Map(dipendenti.filter((d) => d.stato_lavoratore !== "cessato").map((d) => [d.id, d]));
+  const perBlocco = BLOCCHI_A3.map(({ chiave, titolo }) => {
     const idRuoli = new Set(ruoliSquadra(chiave, ruoli).map((r) => r.id));
-    const idDip = Array.from(new Set(assegnati.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id)));
-
-    const persone = idDip
-      .map((id) => mappaDipendenti.get(id)!)
-      .filter(Boolean)
-      .sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || (a.nome ?? "").localeCompare(b.nome ?? "", "it"));
-
-    const creaNomeBlocco = (d: Dipendente): NomeBlocco => {
-      const attValidi = attestatiCorrenti(
-        attestati.filter((att) => att.dipendente_id === d.id),
-        oggiIso,
-      ).filter((att) => {
-        const r = att.tipo_corso_id ? mappaRuoli.get(att.tipo_corso_id) : undefined;
-        const arg = r?.macro_categoria ?? assegnaGruppoArgomento(att.tipo_corso_id ?? att.corso_nome ?? "");
-        return ruoliDelGruppo(chiave, [{ id: "", nome: arg, descrizione: null, macro_categoria: arg, obbligatorio_tutti: false }]).length > 0;
-      });
-      return { testo: etichettaNome(d), daFormare: attValidi.length === 0 };
+    const ids = new Set(assegnazioni.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id));
+    const membri = [...ids].map((id) => perId.get(id)).filter(Boolean) as Dipendente[];
+    membri.sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it"));
+    return { chiave, titolo, membri };
+  });
+  // Forma breve uguale per due persone diverse della tavola (stesso cognome e stesse iniziali): queste restano per esteso
+  const persone = new Map<string, Set<string>>();
+  for (const { membri } of perBlocco) for (const d of membri) persone.set(nomeBreve(d), (persone.get(nomeBreve(d)) ?? new Set()).add(d.id));
+  const etichetta = (d: Dipendente) => ((persone.get(nomeBreve(d))?.size ?? 0) > 1 ? nomeEsteso(d) : nomeBreve(d));
+  return perBlocco.map(({ chiave, titolo, membri }) => {
+    const voce = (d: Dipendente): NomeBlocco => {
+      const valido = correnti.some(
+        (a) =>
+          a.dipendente_id === d.id &&
+          a.stato_validazione === "Approvato" &&
+          assegnaGruppoArgomento(a.tipi_corso ?? {}).chiave === chiave &&
+          (!a.data_scadenza_calcolata || a.data_scadenza_calcolata >= oggiIso),
+      );
+      return { testo: etichetta(d), daFormare: !valido };
     };
-
     return {
       chiave,
       titolo,
-      ata: persone.filter((d) => !eDocente(d)).map(creaNomeBlocco),
-      docenti: persone.filter(eDocente).map(creaNomeBlocco),
+      ata: membri.filter((d) => !eDocente(d)).map(voce),
+      docenti: membri.filter(eDocente).map(voce),
     };
   });
+}
+
+/** Salva le voci dell'organigramma nella riga Ditta, conservando tipo (ruolo azzurro / nota marroncina) e ruolo collegato. */
+export async function salvaVociOrganigramma(voci: VoceOrganigramma[]) {
+  const pulite = voci
+    .map((v): VoceOrganigramma => ({
+      titolo: v.titolo.trim(),
+      nomi: v.nomi.map((n) => n.trim()).filter(Boolean),
+      ...(v.tipo ? { tipo: v.tipo } : {}),
+      ...(v.ruolo_id ? { ruolo_id: v.ruolo_id } : {}),
+    }))
+    .filter((v) => v.titolo);
+  const { error } = await sb.from("ditta").update({ organigramma_voci: pulite }).eq("id", true);
+  if (error) throw error;
+  return pulite;
 }

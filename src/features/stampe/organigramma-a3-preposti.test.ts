@@ -53,7 +53,7 @@ describe("voce «CATEGORIE DI PREPOSTI»", () => {
 
   it("anche «Categorie preposti» scritto a mano viene riportato al titolo giusto, senza doppioni", () => {
     const r = normalizzaVociOrganigramma([{ titolo: "Categorie preposti", nomi }]);
-    expect(r.filter((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)).toEqual([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi }]);
+    expect(r.filter((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)).toEqual([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi, tipo: "nota" }]);
   });
 
   it("resta sempre: se manca viene aggiunta quella predefinita; senza voci salvate partono le predefinite", () => {
@@ -105,7 +105,7 @@ describe("nomi in forma breve: COGNOME + iniziali puntate", () => {
 describe("mini categorie sotto il registro antincendio", () => {
   it("le voci predefinite hanno «Responsabile distribuzione D.P.I.» e «Responsabile custodia SDS» dopo il registro antincendio", () => {
     const t = VOCI_PREDEFINITE.map((v) => v.titolo);
-    expect(t.indexOf(TITOLO_RESPONSABILE_DPI)).toBe(t.indexOf("Addetti registro antincendio") + 1);
+    expect(t.indexOf(TITOLO_RESPONSABILE_DPI)).toBe(t.findIndex((x) => /registro\s+antincendio/i.test(x)) + 1);
     expect(t.indexOf(TITOLO_RESPONSABILE_SDS)).toBe(t.indexOf(TITOLO_RESPONSABILE_DPI) + 1);
   });
 
@@ -115,12 +115,17 @@ describe("mini categorie sotto il registro antincendio", () => {
       { titolo: "Responsabile distribuzione DPI", nomi: ["Rossi Mario"] },
       { titolo: "Responsabile custodia S.D.S.? sds", nomi: ["Bianchi Luca"] },
     ];
-    expect(normalizzaVociOrganigramma(salvate)).toEqual(salvate);
+    const r = normalizzaVociOrganigramma(salvate);
+    expect(r.map(({ titolo, nomi }) => ({ titolo, nomi }))).toEqual(salvate); // nessun doppione, titoli e nominativi invariati
+    expect(r.every((v) => v.tipo)).toBe(true); // ogni voce riceve il suo tipo (ruolo azzurro / nota marroncina)
   });
 
   it("se mancano vengono aggiunte vuote, senza toccare le altre voci", () => {
     const r = normalizzaVociOrganigramma([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["x"] }, { titolo: "Addetti registro antincendio", nomi: ["Bardelli Mariacristina"] }]);
-    expect(r.slice(-2)).toEqual([{ titolo: TITOLO_RESPONSABILE_DPI, nomi: [] }, { titolo: TITOLO_RESPONSABILE_SDS, nomi: [] }]);
+    expect(r.slice(-2)).toEqual([
+      { titolo: TITOLO_RESPONSABILE_DPI, nomi: [], tipo: "ruolo" },
+      { titolo: TITOLO_RESPONSABILE_SDS, nomi: [], tipo: "ruolo" },
+    ]);
     expect(r[1]!.nomi).toEqual(["Bardelli Mariacristina"]);
   });
 });

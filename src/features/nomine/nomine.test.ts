@@ -161,6 +161,26 @@ describe("nominativi dall'organigramma", () => {
     expect(n[0]?.origine).toBe("voce");
   });
 
+  it("voci libere: se il nome coincide con un lavoratore in forza si usa la sua anagrafica", () => {
+    const v = [{ titolo: "Addetti registro antincendio", nomi: ["Bianchi Anna", "Cessato Gino", "Esterno Mario"] }];
+    const n = nominatiDaOrganigramma(voceElenco("registro-antincendio")!, { ...base, voci: v });
+    expect(n.map((x) => [x.nome, x.id])).toEqual([
+      ["Bianchi Anna", "2"], // lavoratore in forza: id e reparto dal DB
+      ["Cessato Gino", "voce:Cessato Gino"], // cessato: resta una voce libera
+      ["Esterno Mario", "voce:Esterno Mario"],
+    ]);
+    expect(n[0]?.dettaglio).toBe("ATA");
+  });
+
+  it("DPI: se nel DB c'è un ruolo con quel nome assegnato, vale più della voce scritta", () => {
+    const ruoliConDpi = [...ruoli, ruolo("r9", "Responsabile distribuzione DPI")];
+    const ass = [...assegnazioni, { id: "a9", dipendente_id: "4", ruolo_id: "r9" }];
+    const v = [{ titolo: "Responsabile distribuzione D.P.I.", nomi: ["Qualcun Altro"] }];
+    const n = nominatiDaOrganigramma(voceElenco("dpi")!, { dipendenti, ruoli: ruoliConDpi, assegnazioni: ass, voci: v });
+    expect(n.map((x) => x.nome)).toEqual(["Neri Paolo"]);
+    expect(n[0]?.origine).toBe("ruolo");
+  });
+
   it("senza voce o ruolo collegati l'elenco è vuoto", () => {
     expect(nominatiDaOrganigramma(voceElenco("dpi")!, base)).toEqual([]);
     expect(nominatiDaOrganigramma(voceElenco("evacuazione")!, base)).toEqual([]);
