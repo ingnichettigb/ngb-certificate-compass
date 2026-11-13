@@ -18,6 +18,7 @@
  *            a destra antincendio (con registro antincendio e privacy). Anteprima, stampa e PDF usano la stessa disposizione.
  *   rev 5 — 12/11/2026 — Due bottoni esclusivi «Preposti con nomi» / «Categorie preposti»: il primo mostra il riquadro Preposti con i nominativi, il
  *            secondo lo toglie; il riquadro «CATEGORIE DI PREPOSTI» (ex «Preposti di laboratorio») resta sempre. Vale per anteprima, stampa e PDF.
+ *   rev 7 — 13/11/2026 — Legenda «* da formare» a destra e senza parentesi.
  *   rev 6 — 12/11/2026 — Nomi dei lavoratori in forma breve (COGNOME + iniziali puntate, da organigramma-a3.ts); chiavi delle righe con indice.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -304,7 +305,7 @@ export function OrganigrammaA3Page() {
                   ))}
                 </div>
 
-                <p className="mt-3 text-[11px] print:mt-1.5"><b>*</b> da formare (nessun attestato valido per l'incarico)</p>
+                <p className="mt-3 text-right text-[11px] print:mt-1.5"><b>*</b> da formare</p>
 
                 <div className="mt-6 grid grid-cols-3 items-end gap-6 text-[11px] print:mt-3 print:gap-4" style={{ breakInside: "avoid" }}>
                   <div>Per presa visione R.L.S. {d?.rls}<div className="mt-8 border-b border-foreground print:mt-5" /></div>

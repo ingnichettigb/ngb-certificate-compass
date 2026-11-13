@@ -11,6 +11,8 @@
  *   rev 3 — 12/11/2026 — Nomi in forma breve per tutti: COGNOME + iniziali puntate (Mario → «M.», Maria Grazia → «M. G.»). Se due persone della tavola
  *            avrebbero lo stesso testo (stesso cognome e stesse iniziali) restano scritte per esteso, così non ci si confonde.
  *   rev 4 — 12/11/2026 21:15 — Ripristinate le funzioni rev 2–3 perse; mantenuto «valido» = ciclo del gruppo in regola (attestatiCorrenti, tolleranza Primo Soccorso).
+ *   rev 5 — 13/11/2026 — Nuove voci sotto il registro antincendio: «Responsabile distribuzione D.P.I.» e «Responsabile custodia SDS» (nominativo da
+ *            scrivere tra le voci, come il registro antincendio). Compaiono sempre (normalizzaVociOrganigramma le aggiunge se mancano).
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
@@ -38,18 +40,29 @@ export const BLOCCHI_A3 = [
 /** Titolo della voce con le categorie di preposti (la ex «Preposti di laboratorio»). */
 export const TITOLO_CATEGORIE_PREPOSTI = "CATEGORIE DI PREPOSTI";
 
+/** Mini categorie sotto il registro antincendio: il responsabile si scrive tra le voci libere, come per il registro. */
+export const TITOLO_RESPONSABILE_DPI = "Responsabile distribuzione D.P.I.";
+export const TITOLO_RESPONSABILE_SDS = "Responsabile custodia SDS";
+const eResponsabileDpi = (titolo: string) => /\bd\.?\s?p\.?\s?i\b/i.test(titolo);
+const eResponsabileSds = (titolo: string) => /\bsds\b/i.test(titolo);
+
 const eCategoriePreposti = (titolo: string) => /categori\w*\s+(di\s+)?prepost|prepost\w*\s+di\s+laborator/i.test(titolo);
 
 /**
  * Le «CATEGORIE DI PREPOSTI» restano sempre in tavola: la vecchia voce «Preposti di laboratorio» (anche se già salvata nella Ditta)
- * prende il nuovo titolo con i suoi nominativi; se non c'è più, torna quella predefinita.
+ * prende il nuovo titolo con i suoi nominativi; se non c'è più, torna quella predefinita. Lo stesso per «Responsabile distribuzione
+ * D.P.I.» e «Responsabile custodia SDS» (se la voce c'è già, con qualsiasi nominativo, resta com'è).
  */
 export function normalizzaVociOrganigramma(voci: VoceOrganigramma[]): VoceOrganigramma[] {
   const base = voci.length ? voci : VOCI_PREDEFINITE;
   const rinominate = base.map((v) => (eCategoriePreposti(v.titolo) ? { ...v, titolo: TITOLO_CATEGORIE_PREPOSTI } : v));
-  if (rinominate.some((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)) return rinominate;
-  const predefinita = VOCI_PREDEFINITE.find((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)!;
-  return [...rinominate, predefinita];
+  const fisse: Array<[(t: string) => boolean, VoceOrganigramma]> = [
+    [(t) => t === TITOLO_CATEGORIE_PREPOSTI, VOCI_PREDEFINITE.find((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)!],
+    [eResponsabileDpi, { titolo: TITOLO_RESPONSABILE_DPI, nomi: [] }],
+    [eResponsabileSds, { titolo: TITOLO_RESPONSABILE_SDS, nomi: [] }],
+  ];
+  const mancanti = fisse.filter(([riconosce]) => !rinominate.some((v) => riconosce(v.titolo))).map(([, v]) => v);
+  return mancanti.length ? [...rinominate, ...mancanti] : rinominate;
 }
 
 /** «categorie»: toglie il riquadro Preposti con i nominativi; «nomi»: i blocchi come sono. Le categorie (voce libera) non si toccano. */
@@ -62,6 +75,8 @@ export const VOCI_PREDEFINITE: VoceOrganigramma[] = [
   { titolo: "Evacuazione – figure di classe", nomi: ["Personale insegnante presente", "Alunni aprifila", "Alunni chiudifila", "Alunni addetti ai diversamente abili"] },
   { titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["Professori di lab. scientifico", "Professori di lab. fisica ed ed. fisica"] },
   { titolo: "Addetti registro antincendio", nomi: [] },
+  { titolo: TITOLO_RESPONSABILE_DPI, nomi: [] },
+  { titolo: TITOLO_RESPONSABILE_SDS, nomi: [] },
 ];
 
 const isoOggi = (d: Date) =>

@@ -79,12 +79,20 @@ describe("disposizione funzionale (sinistra primo soccorso, centro evacuazione, 
     expect(impaginaPerFunzione([...FUNZ].reverse())).toEqual(impaginaPerFunzione(FUNZ));
   });
   it("una voce libera nuova, senza parole chiave note, va in fondo alla colonna più bassa", () => {
-    const nuova: ElementoFunzionale = { id: "voce-3", titolo: "Custodia SDS", righe: 2 };
+    const nuova: ElementoFunzionale = { id: "voce-3", titolo: "Altra funzione", righe: 2 };
     const col = impaginaPerFunzione([...FUNZ, nuova]);
     expect(col.flat().map((p) => p.id)).toContain("voce-3");
     const dove = col.findIndex((c) => ids(c).includes("voce-3"));
     expect(ids(col[dove]!).at(-1)).toBe("voce-3");
     expect(dove).toBe(2); // la destra è la colonna più bassa con i numeri reali
+  });
+  it("«Responsabile distribuzione D.P.I.» e «Responsabile custodia SDS» vanno a destra, sotto il registro antincendio e prima della privacy", () => {
+    const nuove: ElementoFunzionale[] = [
+      { id: "voce-3", titolo: "Responsabile distribuzione D.P.I.", righe: 1 },
+      { id: "voce-4", titolo: "Responsabile custodia SDS", righe: 1 },
+    ];
+    expect(ids(impaginaPerFunzione([...FUNZ, ...nuove])[2]!)).toEqual(["antincendio", "voce-2", "voce-3", "voce-4", "privacy"]);
+    expect(ids(impaginaPerFunzione([...FUNZ, ...nuove].reverse())[2]!)).toEqual(["antincendio", "voce-2", "voce-3", "voce-4", "privacy"]);
   });
   it("ogni riquadro compare una sola volta e con i numeri reali sta nell'area utile", () => {
     const col = impaginaPerFunzione(FUNZ);

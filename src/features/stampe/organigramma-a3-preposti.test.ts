@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import type { Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
-import { applicaModoPreposti, calcolaBlocchiA3, inizialiNome, nomeBreve, normalizzaVociOrganigramma, TITOLO_CATEGORIE_PREPOSTI, VOCI_PREDEFINITE } from "./organigramma-a3";
+import { applicaModoPreposti, calcolaBlocchiA3, inizialiNome, nomeBreve, normalizzaVociOrganigramma, TITOLO_CATEGORIE_PREPOSTI, TITOLO_RESPONSABILE_DPI, TITOLO_RESPONSABILE_SDS, VOCI_PREDEFINITE } from "./organigramma-a3";
 
 const dip = (id: string, cognome: string, reparto: string): Dipendente =>
   ({ id, cognome, nome: "N", codice_fiscale: `CF${id}`, reparto, sottoreparto: null, classe_concorso: null, materia: null, stato_lavoratore: "in_forza" }) as unknown as Dipendente;
@@ -47,18 +47,18 @@ describe("voce «CATEGORIE DI PREPOSTI»", () => {
 
   it("la vecchia voce «Preposti di laboratorio» già salvata viene rinominata e tiene i suoi nominativi", () => {
     const r = normalizzaVociOrganigramma([{ titolo: "Preposti di laboratorio", nomi }, { titolo: "Addetti registro antincendio", nomi: [] }]);
-    expect(r.map((v) => v.titolo)).toEqual([TITOLO_CATEGORIE_PREPOSTI, "Addetti registro antincendio"]);
+    expect(r.map((v) => v.titolo)).toEqual([TITOLO_CATEGORIE_PREPOSTI, "Addetti registro antincendio", TITOLO_RESPONSABILE_DPI, TITOLO_RESPONSABILE_SDS]);
     expect(r[0]!.nomi).toEqual(nomi);
   });
 
   it("anche «Categorie preposti» scritto a mano viene riportato al titolo giusto, senza doppioni", () => {
     const r = normalizzaVociOrganigramma([{ titolo: "Categorie preposti", nomi }]);
-    expect(r).toEqual([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi }]);
+    expect(r.filter((v) => v.titolo === TITOLO_CATEGORIE_PREPOSTI)).toEqual([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi }]);
   });
 
   it("resta sempre: se manca viene aggiunta quella predefinita; senza voci salvate partono le predefinite", () => {
     const r = normalizzaVociOrganigramma([{ titolo: "Altro", nomi: ["x"] }]);
-    expect(r.map((v) => v.titolo)).toEqual(["Altro", TITOLO_CATEGORIE_PREPOSTI]);
+    expect(r.map((v) => v.titolo)).toEqual(["Altro", TITOLO_CATEGORIE_PREPOSTI, TITOLO_RESPONSABILE_DPI, TITOLO_RESPONSABILE_SDS]);
     expect(normalizzaVociOrganigramma([])).toEqual(VOCI_PREDEFINITE);
   });
 });
@@ -99,5 +99,28 @@ describe("nomi in forma breve: COGNOME + iniziali puntate", () => {
     const bl = calcolaBlocchiA3(d, [], ruoli, [ass("1", "r1"), ass("1", "r2")], new Date("2026-11-12T10:00:00"));
     expect(bl.find((x) => x.chiave === "preposti")!.ata[0]!.testo).toBe("ROSSI M.");
     expect(bl.find((x) => x.chiave === "antincendio")!.ata[0]!.testo).toBe("ROSSI M.");
+  });
+});
+
+describe("mini categorie sotto il registro antincendio", () => {
+  it("le voci predefinite hanno «Responsabile distribuzione D.P.I.» e «Responsabile custodia SDS» dopo il registro antincendio", () => {
+    const t = VOCI_PREDEFINITE.map((v) => v.titolo);
+    expect(t.indexOf(TITOLO_RESPONSABILE_DPI)).toBe(t.indexOf("Addetti registro antincendio") + 1);
+    expect(t.indexOf(TITOLO_RESPONSABILE_SDS)).toBe(t.indexOf(TITOLO_RESPONSABILE_DPI) + 1);
+  });
+
+  it("se sono già salvate (anche con un nominativo o scritte un po' diversamente) non si duplicano e non cambiano", () => {
+    const salvate = [
+      { titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["x"] },
+      { titolo: "Responsabile distribuzione DPI", nomi: ["Rossi Mario"] },
+      { titolo: "Responsabile custodia S.D.S.? sds", nomi: ["Bianchi Luca"] },
+    ];
+    expect(normalizzaVociOrganigramma(salvate)).toEqual(salvate);
+  });
+
+  it("se mancano vengono aggiunte vuote, senza toccare le altre voci", () => {
+    const r = normalizzaVociOrganigramma([{ titolo: TITOLO_CATEGORIE_PREPOSTI, nomi: ["x"] }, { titolo: "Addetti registro antincendio", nomi: ["Bardelli Mariacristina"] }]);
+    expect(r.slice(-2)).toEqual([{ titolo: TITOLO_RESPONSABILE_DPI, nomi: [] }, { titolo: TITOLO_RESPONSABILE_SDS, nomi: [] }]);
+    expect(r[1]!.nomi).toEqual(["Bardelli Mariacristina"]);
   });
 });

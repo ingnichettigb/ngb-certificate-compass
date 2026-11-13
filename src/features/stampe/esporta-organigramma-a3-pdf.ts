@@ -11,6 +11,7 @@
  *   rev 2 — 12/11/2026 — Un solo carattere e un solo corpo per tutti i nomi (pianificaElenchi): il corpo è quello con cui sta il nome più lungo,
  *            mai sotto l'85% del normale; se anche così non sta, il nome va a capo con lo stesso corpo (aCapo). Niente più nomi rimpiccioliti
  *            uno a uno né troncati con «…». Le voci libere (non nomi) seguono lo stesso corpo ma non lo abbassano.
+ *   rev 3 — 13/11/2026 — Legenda «* da formare» spostata a destra (allineata al margine destro) e senza la parentesi esplicativa.
  */
 import type { PDFFont } from "pdf-lib";
 import type { DittaRecord, VoceOrganigramma } from "@/lib/api/ditta";
@@ -342,8 +343,10 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
   /* ---- Piede: legenda e firme (ancorati al fondo del foglio) ---- */
   const fondo = A3.altezza - MARGINE;
   const yLegenda = fondo - ALTEZZA_PIEDE + 4;
-  testo("*", X0, yLegenda, 9, grassetto, rosso);
-  testo("da formare (nessun attestato valido per l'incarico)", X0 + larghezza("*", grassetto, 9) + 4, yLegenda, 9);
+  const wStella = larghezza("*", grassetto, 9) + 4;
+  const xLegenda = X0 + utile - wStella - larghezza("da formare", normale, 9); // a destra, sul margine
+  testo("*", xLegenda, yLegenda, 9, grassetto, rosso);
+  testo("da formare", xLegenda + wStella, yLegenda, 9);
 
   const gapFirme = 28;
   const wFirma = (utile - gapFirme * 2) / 3;

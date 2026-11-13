@@ -11,6 +11,8 @@
  *            Evacuazione (poi figure di classe, Preposti, Preposti di laboratorio), a destra Antincendio (poi registro antincendio,
  *            Incaricati privacy). Le voci libere si collocano per parola chiave del titolo; quelle non riconosciute vanno nella
  *            colonna più bassa. Aggiunta soltanto: impaginaColonne e le altre funzioni restano invariate.
+ *   rev 3 — 13/11/2026 — Voci «Responsabile distribuzione D.P.I.» e «Responsabile custodia SDS»: colonna di destra, subito sotto il registro antincendio
+ *            e prima degli Incaricati privacy.
  */
 
 export type ElementoLayout = {
@@ -99,6 +101,8 @@ const POSIZIONI_VOCI: Array<[RegExp, Posizione]> = [
   [/defibrill/i, { colonna: 0, ordine: 25 }],
   [/soccorso/i, { colonna: 0, ordine: 15 }],
   [/privacy/i, { colonna: 2, ordine: 35 }],
+  [/\bd\.?\s?p\.?\s?i\b/i, { colonna: 2, ordine: 22 }],
+  [/\bsds\b/i, { colonna: 2, ordine: 24 }],
 ];
 
 function posizioneDi(e: ElementoFunzionale): Posizione | undefined {
