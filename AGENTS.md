@@ -13,3 +13,4 @@
 - App ported from a colleague project; keep its code intact and change only branding unless asked — why: owner wants the working app as-is.
 - Files live in private storage bucket "attestati" read via signed URLs — why: public buckets are blocked in this workspace.
 - Store the normalized PNG logo on the Ditta record and use shared identity helpers and its query key for screens and PDFs — why: saved changes and removal propagate without expiring URLs or public storage.
+- Tooltip informativi: un solo fumetto globale (`src/components/ui/aiuto-automatico.tsx`, testi in `aiuto-testi.ts`) letto da data-aiuto/title/aria-label/placeholder; per testi specifici aggiungere `data-aiuto` sull elemento — why: comportamento omogeneo e sempre dentro lo schermo.
