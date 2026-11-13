@@ -7,6 +7,7 @@
  *   - Rev 4 (2026-10-31 09:00): Stato cartella locale in alto a destra.
  *   - Rev 5 (2026-11-03 14:30): Bottone «Importa elenco Word/Excel».
  *   - Rev 6 (2026-11-06 08:20): Prop onCompletaUnoAUno: dall'esito dell'importazione si apre la finestra «Da completare».
+ *   - Rev 8 (2026-11-12): Bottone rinominato «Importazione massiva elenco lavoratori da Word o Excel» (stessa finestra raggiungibile da «Inserimento massivo»).
  *   - Rev 7 (2026-11-07): Backup, impostazioni, stato cartella e avviso ditta sono nel menu «Sistema» della barra; tolta la freccia «Home».
  */
 import { useState } from "react";
@@ -50,7 +51,7 @@ export function IntestazioneDipendenti({
               <Table className="size-4 text-emerald-600" /> Matrice Abilitazioni e Ruoli
             </Button>
             <Button variant="outline" size="sm" onClick={() => setApriImport(true)} className="gap-1.5">
-              <FileUp className="size-4" /> Importa elenco Word/Excel
+              <FileUp className="size-4" /> Importazione massiva elenco lavoratori da Word o Excel
             </Button>
           </div>
         </div>

@@ -6,16 +6,20 @@
  *   rev 1 — 07/11/2026 — Testata della pagina «Inserimento massivo»: titolo e comandi di carico in blocco
  *            («Importa da cartella», «Aggancia attestato come allegato», «Aggiungi attestato»).
  *            Provengono dalla vecchia sezione «Gestione attestati archiviati» del Cruscotto HR.
+ *   rev 2 — 12/11/2026 — Aggiunto «Importazione massiva elenco lavoratori da Word o Excel» (stessa finestra della pagina Dipendenti, con modello Excel
+ *            scaricabile); «Importa da cartella» rinominato «Importa attestati da cartella» per distinguerlo.
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FolderInput, Layers } from "lucide-react";
+import { FileSpreadsheet, FolderInput, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogImportaCartellaHr } from "@/features/hr/components/DialogImportaCartellaHr";
+import { DialogImportaElenco } from "@/features/dipendenti/import-elenco/DialogImportaElenco";
 import { AzioniAttestatiBarra } from "@/features/hr/components/AzioniAttestatiBarra";
 
 export function IntestazioneMassivo() {
   const [apriImport, setApriImport] = useState(false);
+  const [apriElenco, setApriElenco] = useState(false);
   const qc = useQueryClient();
 
   // Gli attestati importati finiscono tra quelli da validare: si aggiornano elenco e contatori.
@@ -38,7 +42,7 @@ export function IntestazioneMassivo() {
             <div>
               <h1 className="font-display text-base font-semibold">Inserimento massivo</h1>
               <p className="text-xs text-muted-foreground">
-                Avvio a regime e arrivi in blocco dopo un corso: importa da cartella e aggancia i file
+                Avvio a regime e arrivi in blocco: importa l'elenco dei lavoratori da Excel o Word, poi gli attestati da cartella
               </p>
             </div>
           </div>
@@ -47,16 +51,25 @@ export function IntestazioneMassivo() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setApriElenco(true)}
+              className="gap-1.5 border-2 border-primary bg-primary/15 font-medium text-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              <FileSpreadsheet className="size-4" /> Importazione massiva elenco lavoratori da Word o Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setApriImport(true)}
               className="gap-1.5 border-2 border-primary bg-primary/15 font-medium text-primary hover:bg-primary hover:text-primary-foreground"
             >
-              <FolderInput className="size-4" /> Importa da cartella
+              <FolderInput className="size-4" /> Importa attestati da cartella
             </Button>
             <AzioniAttestatiBarra />
           </div>
         </div>
       </div>
 
+      <DialogImportaElenco open={apriElenco} onClose={() => setApriElenco(false)} />
       <DialogImportaCartellaHr open={apriImport} onClose={() => setApriImport(false)} onImported={aggiorna} />
     </>
   );

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/massivo")({
       {
         name: "description",
         content:
-          "Importa da cartella e aggancia in blocco gli attestati: avvio a regime dell'archivio e arrivi dopo un corso di formazione.",
+          "Importa l'elenco dei lavoratori da Excel o Word (con modello da scaricare) e aggancia in blocco gli attestati: avvio a regime dell'archivio e arrivi dopo un corso di formazione.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

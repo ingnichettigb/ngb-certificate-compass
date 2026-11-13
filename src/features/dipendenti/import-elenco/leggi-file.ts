@@ -14,8 +14,10 @@
  *            intestazioni ripetute tra un foglio e l'altro ignorate.
  *   rev 4 — 11/11/2026 — Colonne con la X per Preposto, Antincendio, Primo soccorso, Defibrillatore, Addetto all'evacuazione
  *            e Privacy (modello Excel scaricabile); la colonna «Classe di concorso / Profilo ATA» resta la colonna funzione.
+ *   rev 5 — 12/11/2026 — Le 3 righe di esempio del modello (ROSSI, BIANCHI, VERDI) vengono ignorate nel file caricato.
  */
 import type { RigaGrezza } from "./analisi-elenco";
+import { scartaRigheEsempio } from "./righe-esempio";
 import { FUNZIONI, cellaSegnata, type ChiaveFunzione, type FunzioniImport } from "./funzioni-sicurezza";
 
 export type Cella = string | number | Date | null | undefined;
@@ -256,8 +258,8 @@ export function csvInTabella(contenuto: string): string[][] {
 
 export async function leggiElenco(file: File): Promise<RigaGrezza[]> {
   const ext = file.name.toLowerCase().split(".").pop() ?? "";
-  if (ext === "docx") return tabellaInRighe(await leggiDocx(file));
-  if (ext === "csv") return tabellaInRighe(csvInTabella(await testoCsv(file)));
-  if (["xlsx", "xls", "xlsm"].includes(ext)) return tabellaInRighe(await leggiFoglio(file));
+  if (ext === "docx") return scartaRigheEsempio(tabellaInRighe(await leggiDocx(file)));
+  if (ext === "csv") return scartaRigheEsempio(tabellaInRighe(csvInTabella(await testoCsv(file))));
+  if (["xlsx", "xls", "xlsm"].includes(ext)) return scartaRigheEsempio(tabellaInRighe(await leggiFoglio(file)));
   throw new Error("Formato non supportato: usa .docx, .xlsx, .xls, .xlsm o .csv");
 }

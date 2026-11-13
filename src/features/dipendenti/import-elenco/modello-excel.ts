@@ -7,8 +7,11 @@
  * funzioni-sicurezza.ts, le stesse che legge l'importazione. Nessun invio a server esterni.
  * Revisioni:
  *   rev 1 — 11/11/2026 — Prima stesura.
+ *   rev 2 — 12/11/2026 — Righe di esempio spostate in righe-esempio.ts (all'importazione vengono ignorate); riga intera in giallo;
+ *            istruzioni più semplici.
  */
 import { FUNZIONI, INTESTAZIONE_CLASSE_PROFILO } from "./funzioni-sicurezza";
+import { ESEMPI_MODELLO } from "./righe-esempio";
 
 export const NOME_FILE_MODELLO = "modello_inserimento_massivo.xlsx";
 
@@ -25,16 +28,15 @@ const INTESTAZIONI = [
 const PRIMA_COL_FUNZIONI = 7; // colonna G
 const RIGHE_TOTALI = 300;
 
-/** Righe di esempio: nomi di fantasia, codici fiscali formalmente validi. Da cancellare prima di caricare il file. */
-const ESEMPI: { dati: (string | Date)[]; x: boolean[] }[] = [
-  { dati: ["ROSSI", "MARIO", "RSSMRA80A01H501U", "ROMA", new Date(Date.UTC(1980, 0, 1)), "A027"], x: [true, false, true, false, true, false] },
-  { dati: ["BIANCHI", "LAURA", "BNCLRA85M41F205C", "MILANO", new Date(Date.UTC(1985, 7, 1)), "CS"], x: [false, true, true, false, true, true] },
-  { dati: ["VERDI", "PAOLO", "VRDPLA70T10L219U", "TORINO", new Date(Date.UTC(1970, 11, 10)), "DSGA"], x: [true, true, false, true, false, true] },
-];
+/** Righe di esempio: nomi di fantasia, codici fiscali formalmente validi. All'importazione vengono ignorate. */
+const ESEMPI: { dati: (string | Date)[]; x: boolean[] }[] = ESEMPI_MODELLO.map((e) => ({
+  dati: [e.cognome, e.nome, e.cf, e.luogo, e.nascita, e.classeProfilo],
+  x: e.x,
+}));
 
 const ISTRUZIONI: [string, boolean][] = [
   ["COME COMPILARE IL MODELLO", true],
-  ["Compila il foglio «Elenco» dalla riga 2. Le 3 righe gialle (colonna Cognome) sono ESEMPI inventati: cancellale prima di caricare.", false],
+  ["Compila il foglio «Elenco» dalla riga 2, una riga per lavoratore. Le 3 righe gialle sono ESEMPI inventati: servono solo a capire come abbinare le colonne. Puoi cancellarle oppure lasciarle: l'importazione le ignora.", false],
   ["", false],
   ["Colonne obbligatorie", true],
   ["Cognome, Nome, Codice fiscale (16 caratteri), Luogo di nascita, Data di nascita (gg/mm/aaaa).", false],
@@ -42,7 +44,7 @@ const ISTRUZIONI: [string, boolean][] = [
   ["Classe di concorso / Profilo ATA (colonna unica)", true],
   ["ATA → scrivi uno di: CS (Collaboratore scolastico), AA (Assistente amministrativo), AT (Assistente tecnico), DSGA.", false],
   ["Docenti → scrivi il codice della classe di concorso già presente in archivio (es. A027, AB24, IRC).", false],
-  ["Se vuota, il programma usa il «Reparto predefinito» scelto a video e il dato si completa dalla scheda.", false],
+  ["Se la classe manca o è scritta in modo diverso da quelle in archivio, il programma ti chiede a video cosa fare: sceglierne una, lasciare vuoto o crearla.", false],
   ["", false],
   ["Colonne con X (facoltative)", true],
   [`Scrivi X se il lavoratore ha la funzione, altrimenti lascia vuoto: ${FUNZIONI.map((f) => f.intestazione).join(", ")}.`, false],
@@ -80,13 +82,13 @@ export async function scaricaModelloElenco(): Promise<void> {
       esempio.x.forEach((on, i) => {
         if (on) riga.getCell(PRIMA_COL_FUNZIONI + i).value = "X";
       });
-      riga.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
     }
     riga.getCell(3).numFmt = "@";
     riga.getCell(5).numFmt = "DD/MM/YYYY";
     for (let c = 1; c <= INTESTAZIONI.length; c++) {
       const cell = riga.getCell(c);
       cell.font = { name: "Arial" };
+      if (esempio) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
       if (c >= PRIMA_COL_FUNZIONI) {
         cell.alignment = { horizontal: "center" };
         cell.dataValidation = {

@@ -11,6 +11,8 @@
  *   rev 2 — 06/11/2026 08:20 — Caselle di spunta singole.
  *   rev 3 — 06/11/2026 08:35 — Spunte libere per tutti, bottoni rapidi (Tutti/Nessuno/Nuovi/Archivio) e riesumazione cessati.
  *   rev 4 — 11/11/2026 — Colonne «Classe / Profilo» e «Funzioni» (X del file): per i già presenti selezionati le funzioni si aggiungono ai ruoli.
+ *   rev 5 — 12/11/2026 — Scelta guidata: per i nuovi senza classe/profilo (o con classe non in archivio) una tendina propone le classi simili,
+ *            «Lascia vuoto» o «Crea nuova classe»; la registrazione resta ferma finché non si è deciso. Come materia si usa il nome in archivio.
  */
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,10 +20,20 @@ import { toast } from "sonner";
 import { CheckSquare, FileUp, GraduationCap, Square, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CHIAVE_ASSEGNAZIONI_RUOLI, type Dipendente } from "@/lib/api";
+import { CHIAVE_ASSEGNAZIONI_RUOLI, aggiungiClasseConcorso, type Dipendente } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
 import { formatData } from "@/lib/api/formattazione";
-import { analizzaSoloNuovi, type CategoriaNuovo, type RepartoImport, type RigaGrezza } from "./analisi-elenco";
+import { PROFILI_ATA, analizzaSoloNuovi, type CategoriaNuovo, type RepartoImport, type RigaGrezza, type RigaNuovo } from "./analisi-elenco";
+import {
+  applicaSceltaRiga,
+  sceltaDaValore,
+  sembraCodiceClasse,
+  serveDecisione,
+  suggerisciClassi,
+  valoreDaScelta,
+  type ClasseArchivio,
+  type SceltaRiga,
+} from "./scelta-classe";
 import { registraNuovi, type EsitoImportazione } from "./registra-nuovi";
 import { FUNZIONI } from "./funzioni-sicurezza";
 
@@ -40,6 +52,7 @@ export function PannelloSoloNuovi({
   dipendenti,
   ruoli,
   codiciClasse = [],
+  classi = [],
   repartoIniziale,
   onEsito,
   onAnnulla,
@@ -51,6 +64,8 @@ export function PannelloSoloNuovi({
   ruoli: RuoloSicurezza[];
   /** Codici delle classi di concorso presenti in archivio (per riconoscere la colonna Classe/Profilo). */
   codiciClasse?: string[];
+  /** Classi di concorso attive in archivio con il loro nome (per proporre le più simili e usare il nome già presente). */
+  classi?: ClasseArchivio[];
   repartoIniziale: RepartoImport;
   onEsito: (e: EsitoImportazione) => void;
   onAnnulla: () => void;
@@ -59,12 +74,16 @@ export function PannelloSoloNuovi({
   const [reparto, setReparto] = useState<RepartoImport>(repartoIniziale);
   const [lavoro, setLavoro] = useState(false);
 
-  const analisi = useMemo(() => analizzaSoloNuovi(righe, dipendenti, reparto, codiciClasse), [righe, dipendenti, reparto, codiciClasse]);
+  const [scelte, setScelte] = useState<Record<string, SceltaRiga>>({});
+
+  const analisiBase = useMemo(() => analizzaSoloNuovi(righe, dipendenti, reparto, codiciClasse), [righe, dipendenti, reparto, codiciClasse]);
+  // Analisi con le decisioni dell'utente (classe scelta, profilo, classe nuova) e il nome della classe preso dall'archivio
+  const analisi = useMemo(() => analisiBase.map((r) => applicaSceltaRiga(r, scelte[r.cf], classi)), [analisiBase, scelte, classi]);
 
   // Di default sono selezionati i nuovi e i già presenti cessati (candidati alla riesumazione)
   const [selezionati, setSelezionati] = useState<Set<string>>(() => {
     const init = new Set<string>();
-    analisi.forEach((r) => {
+    analisiBase.forEach((r) => {
       if (r.categoria === "nuovo" || r.categoria === "presente_cessato") init.add(r.cf);
     });
     return init;
@@ -76,6 +95,23 @@ export function PannelloSoloNuovi({
   const righeSelezionate = analisi.filter((r) => selezionati.has(r.cf));
   const nNuovi = righeSelezionate.filter((r) => r.categoria === "nuovo").length;
   const nCessatiDaRiesumare = righeSelezionate.filter((r) => r.categoria === "presente_cessato").length;
+
+  // Righe selezionate su cui bisogna ancora decidere (classe/profilo mancante o non in archivio)
+  const daDecidere = analisiBase.filter((r) => selezionati.has(r.cf) && serveDecisione(r) && !scelte[r.cf]);
+  const scegli = (cf: string, valore: string) =>
+    setScelte((prima) => {
+      const dopo = { ...prima };
+      const nuova = sceltaDaValore(valore);
+      if (nuova) dopo[cf] = nuova;
+      else delete dopo[cf];
+      return dopo;
+    });
+  const lasciaVuoteTutte = () =>
+    setScelte((prima) => {
+      const dopo = { ...prima };
+      daDecidere.forEach((r) => (dopo[r.cf] = { tipo: "vuoto" }));
+      return dopo;
+    });
 
   const alterna = (cf: string) =>
     setSelezionati((prima) => {
@@ -121,6 +157,17 @@ export function PannelloSoloNuovi({
       .map((r) => r.dipendenteId!);
 
     try {
+      // Le classi scelte come «Crea nuova» vengono aggiunte all'archivio prima di registrare i lavoratori
+      const daCreare = [...new Set(righeSelezionate.flatMap((r) => (scelte[r.cf]?.tipo === "nuova" ? [r.classe ?? ""] : [])))].filter(Boolean);
+      for (const codice of daCreare) {
+        try {
+          await aggiungiClasseConcorso(codice);
+        } catch (e) {
+          if (!(e as Error).message.includes("già presente")) throw e;
+        }
+      }
+      if (daCreare.length > 0) await qc.invalidateQueries({ queryKey: ["classi-concorso"] });
+
       const esito = await registraNuovi({
         righe: righeSelezionate,
         dataInizio,
@@ -244,7 +291,16 @@ export function PannelloSoloNuovi({
                     <td className="p-2 text-xs">{r.luogoNascita || "—"}</td>
                     <td className="p-2 text-xs">{r.dataNascita ? formatData(r.dataNascita) : "—"}</td>
                     <td className="p-2 text-xs">{r.reparto}</td>
-                    <td className="p-2 text-xs">{r.classe ?? r.sottorepartoAta ?? "—"}</td>
+                    <td className="p-2 text-xs">
+                      {analisiBase[n] && serveDecisione(analisiBase[n]!) ? (
+                        <TendinaDecisione riga={analisiBase[n]!} valore={valoreDaScelta(scelte[r.cf])} classi={classi} onScegli={(v) => scegli(r.cf, v)} />
+                      ) : (
+                        <>
+                          {r.classe ?? r.sottorepartoAta ?? "—"}
+                          {r.classe && r.materia && <div className="text-[11px] text-muted-foreground">{r.materia}</div>}
+                        </>
+                      )}
+                    </td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-1">
                         {FUNZIONI.filter((f) => r.funzioni[f.chiave]).map((f) => (
@@ -271,12 +327,81 @@ export function PannelloSoloNuovi({
         </div>
       )}
 
+      {daDecidere.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+          <span>
+            <strong>{daDecidere.length}</strong> {daDecidere.length === 1 ? "lavoratore ha" : "lavoratori hanno"} la classe di concorso o il profilo ATA mancante o
+            non riconosciuto: scegli cosa fare dalla tendina nella colonna «Classe / Profilo».
+          </span>
+          <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={lasciaVuoteTutte}>
+            Lascia vuote tutte ({daDecidere.length}): le completo dopo dalla scheda
+          </Button>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 border-t border-border pt-2">
         <Button variant="outline" onClick={onAnnulla}>Annulla</Button>
-        <Button disabled={lavoro || righeSelezionate.length === 0} onClick={conferma} className="gap-1.5">
+        <Button disabled={lavoro || righeSelezionate.length === 0 || daDecidere.length > 0} onClick={conferma} className="gap-1.5">
           <FileUp className="size-4" /> Registra e riesuma {righeSelezionate.length} nominativi
         </Button>
       </div>
     </>
+  );
+}
+
+/** Tendina «cosa faccio?» per classe di concorso o profilo ATA mancante o non riconosciuto. */
+function TendinaDecisione({
+  riga,
+  valore,
+  classi,
+  onScegli,
+}: {
+  riga: RigaNuovo;
+  valore: string;
+  classi: ClasseArchivio[];
+  onScegli: (v: string) => void;
+}) {
+  const testo = riga.riga.funzione.trim();
+  const simili = suggerisciClassi(testo, classi);
+  const codiciSimili = new Set(simili.map((c) => c.codice));
+  const puoCreare = !!testo && sembraCodiceClasse(testo) && !classi.some((c) => c.codice.toUpperCase() === testo.toUpperCase().replace(/\s+/g, ""));
+  const nonDecisa = valore === "";
+  return (
+    <div className="flex flex-col gap-0.5">
+      {testo && <span className="text-[11px] text-muted-foreground">nel file: «{testo}»</span>}
+      <select
+        aria-label={`Classe o profilo per ${riga.cognome} ${riga.nome}`}
+        className={`block max-w-[16rem] rounded border px-2 py-1 text-xs ${nonDecisa ? "border-amber-500 bg-amber-500/10 font-semibold" : "border-border bg-background"}`}
+        value={valore}
+        onChange={(e) => onScegli(e.target.value)}
+      >
+        <option value="">— scegli cosa fare —</option>
+        {simili.length > 0 && (
+          <optgroup label={`Classi simili a «${testo}»`}>
+            {simili.map((c) => (
+              <option key={c.codice} value={`c:${c.codice}`}>
+                {c.codice}{c.denominazione ? ` — ${c.denominazione}` : ""}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {puoCreare && <option value={`n:${testo.toUpperCase().replace(/\s+/g, "")}`}>Crea la nuova classe «{testo.toUpperCase()}»</option>}
+        <option value="__vuoto">Lascia vuoto (completo dopo dalla scheda)</option>
+        <optgroup label="Personale ATA">
+          {PROFILI_ATA.map((p) => (
+            <option key={p.codice} value={`p:${p.nome}`}>
+              {p.codice} — {p.nome}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Tutte le classi di concorso">
+          {classi.filter((c) => !codiciSimili.has(c.codice)).map((c) => (
+            <option key={c.codice} value={`c:${c.codice}`}>
+              {c.codice}{c.denominazione ? ` — ${c.denominazione}` : ""}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </div>
   );
 }

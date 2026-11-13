@@ -12,6 +12,8 @@
  *   rev 5 — 06/11/2026 08:20 — Collegamento esito a finestra «Da completare».
  *   rev 6 — 06/11/2026 08:35 — Caselle sbloccate in entrambe le modalità e pulsanti rapidi (Tutti/Nessuno/Nuovi/Archivio).
  *   rev 7 — 07/11/2026 — Diviso in file per responsabilità (applica-aggiornamento, ControlliElenco, BarreAggiornamento, TabellaProposte). Nessun cambio di comportamento.
+ *   rev 8 — 12/11/2026 — Titolo «Importazione massiva elenco lavoratori da Word o Excel» (raggiungibile anche da «Inserimento massivo»), spiegazione in due passi,
+ *            classi con il loro nome passate al pannello per la scelta guidata.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -77,7 +79,8 @@ export function DialogImportaElenco({
     enabled: open,
   });
 
-  const codiciClasse = useMemo(() => classi.filter((c) => c.attivo).map((c) => c.codice), [classi]);
+  const classiAttive = useMemo(() => classi.filter((c) => c.attivo), [classi]);
+  const codiciClasse = useMemo(() => classiAttive.map((c) => c.codice), [classiAttive]);
 
   const [nomeFile, setNomeFile] = useState("");
   const [proposte, setProposte] = useState<Proposta[]>([]);
@@ -243,10 +246,10 @@ export function DialogImportaElenco({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importa elenco da Word o Excel</DialogTitle>
+          <DialogTitle>Importazione massiva elenco lavoratori da Word o Excel</DialogTitle>
           <DialogDescription>
-            Abbinamento per codice fiscale. I nuovi ingressi hanno di default spuntati i corsi base
-            e specifica rischio medio 8h.
+            Scarica il modello, compilalo e ricaricalo: i lavoratori si abbinano per codice fiscale. Dove trovi la X il lavoratore
+            viene associato alla funzione (preposto, primo soccorso…). I nuovi ingressi hanno di default i corsi base e specifica rischio medio 8h.
           </DialogDescription>
         </DialogHeader>
 
@@ -288,6 +291,7 @@ export function DialogImportaElenco({
                 dipendenti={dipendenti}
                 ruoli={ruoli}
                 codiciClasse={codiciClasse}
+                classi={classiAttive}
                 repartoIniziale={tipoPredefinito === "docente" ? "Docente" : "ATA"}
                 onEsito={setEsito}
                 onAnnulla={onClose}
