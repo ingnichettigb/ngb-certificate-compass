@@ -13,6 +13,7 @@ import type { VoceOrganigramma } from "@/lib/api/ditta";
 import { normalizzaVociOrganigramma } from "@/features/stampe/organigramma-a3";
 import { ruoliDelGruppo } from "@/features/stampe/stampa-selezioni";
 import type { VoceElencoNomine } from "./tipi";
+import { titoloNominato } from "./titolo-nominato";
 
 export type Nominato = {
   /** Identificativo stabile: id del lavoratore, oppure «voce:<nome>» / «manuale:<nome>». */
@@ -22,7 +23,13 @@ export type Nominato = {
   origine: "ruolo" | "voce" | "manuale";
   /** Reparto del lavoratore (se noto), mostrato nell'indice. */
   dettaglio?: string;
+  /** «Prof.» / «Prof.ssa» per i docenti: sulla lettera precede il nome. */
+  titolo?: string;
 };
+
+/** Come compare il nominato sulla lettera: titolo (se c'è) e poi cognome e nome. */
+export const nomeLettera = (n: Pick<Nominato, "nome" | "titolo">, conTitolo = true) =>
+  conTitolo && n.titolo ? `${n.titolo} ${n.nome}` : n.nome;
 
 export const nomeCompleto = (d: Pick<Dipendente, "cognome" | "nome">) =>
   `${d.cognome} ${d.nome ?? ""}`.trim();
@@ -65,6 +72,7 @@ export function nominatiDaOrganigramma(voce: VoceElencoNomine, dati: DatiOrganig
           nome: nomeCompleto(d),
           origine: "ruolo",
           ...(d.reparto ? { dettaglio: d.reparto } : {}),
+          ...(titoloNominato(d) ? { titolo: titoloNominato(d) } : {}),
         });
     }
   } else {
@@ -89,6 +97,7 @@ export function candidatiManuali(dipendenti: Dipendente[], gia: Nominato[]): Nom
       nome: nomeCompleto(d),
       origine: "manuale",
       ...(d.reparto ? { dettaglio: d.reparto } : {}),
+      ...(titoloNominato(d) ? { titolo: titoloNominato(d) } : {}),
     }))
     .filter((n) => !presenti.has(n.nome.toLocaleLowerCase("it")))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));

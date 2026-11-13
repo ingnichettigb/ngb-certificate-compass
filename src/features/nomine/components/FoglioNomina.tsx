@@ -55,7 +55,9 @@ function Riga({ b }: { b: Blocco }) {
     case "protocollo":
       return (
         <p className="flex justify-between text-[11px]">
-          <span>prot. N° {b.protocollo}</span>
+          <span>
+            {b.numero ? <strong>N° {b.numero} · </strong> : null}prot. N° {b.protocollo}
+          </span>
           <span>{b.anno}</span>
         </p>
       );
@@ -131,7 +133,10 @@ function Riga({ b }: { b: Blocco }) {
             <span>Nome Cognome</span>
             <span>data</span>
             <span>Firma</span>
-            <strong className="text-[13px]">{b.nome}</strong>
+            <strong className="text-[13px]">
+              {b.nome}
+              {b.numero ? <span className="font-normal text-[11px]"> · N° {b.numero}</span> : null}
+            </strong>
             <span className="border-b border-neutral-500" />
             <span className="border-b border-neutral-500" />
           </div>

@@ -44,6 +44,10 @@ export type DittaRecord = {
   telefono: string | null;
   email: string | null;
   pec: string | null;
+  /** Sito web, stampato nell'intestazione delle nomine (migration 0011). */
+  sito_web?: string | null;
+  /** Riga istituzionale sopra il nome, es. «MINISTERO DELL'ISTRUZIONE E DEL MERITO» (migration 0011). */
+  intestazione_ufficiale?: string | null;
   referente: string | null;
   email_mittente_resend: string | null;
   datore_di_lavoro: string | null;

@@ -24,7 +24,7 @@ import {
 import { annoScolastico, costruisciDocumento, dataItaliana } from "./documento";
 import { generaPdfNomine } from "./genera-pdf";
 import { useDatiNomine } from "./hooks/useDatiNomine";
-import { candidatiManuali, nominatiDaOrganigramma, type Nominato } from "./nominativi";
+import { candidatiManuali, nomeLettera, nominatiDaOrganigramma, type Nominato } from "./nominativi";
 import { modelloDefault } from "./modelli-default";
 import { voceElenco, type ModelloNomina } from "./tipi";
 import { EditorModello } from "./components/EditorModello";
@@ -49,6 +49,9 @@ export function NominaPage({ tipo }: { tipo: string }) {
 
   const [bozza, setBozza] = useState<ModelloNomina | null>(null);
   const [protocollo, setProtocollo] = useState("");
+  /** Numero della prima lettera (es. 167): le altre proseguono 168, 169… Vuoto = nessun numero sulla lettera. */
+  const [numeroIniziale, setNumeroIniziale] = useState("");
+  const [senzaTitolo, setSenzaTitolo] = useState(false);
   const [anno, setAnno] = useState(() => annoScolastico());
   const [data, setData] = useState(() => dataItaliana());
   const [extra, setExtra] = useState<Nominato[]>([]);
@@ -75,6 +78,12 @@ export function NominaPage({ tipo }: { tipo: string }) {
     [nominati, esclusi],
   );
   const attivo = nominati.find((n) => n.id === attivoId) ?? nominati[0] ?? null;
+  const numeroDi = (id: string | undefined): string | undefined => {
+    const base = Number.parseInt(numeroIniziale, 10);
+    if (!Number.isFinite(base) || base < 0 || !id) return undefined;
+    const pos = nominati.filter((n) => selezionati.has(n.id)).findIndex((n) => n.id === id);
+    return String(base + Math.max(0, pos));
+  };
 
   if (!voce) {
     return (
@@ -94,7 +103,8 @@ export function NominaPage({ tipo }: { tipo: string }) {
       JSON.stringify({ ...salvato, updated_at: null });
   const blocchi = bozza
     ? costruisciDocumento(bozza, ditta, {
-        nome: attivo?.nome ?? "Cognome Nome",
+        nome: attivo ? nomeLettera(attivo, !senzaTitolo) : "Cognome Nome",
+        ...(numeroDi(attivo?.id) ? { numero: numeroDi(attivo?.id)! } : {}),
         protocollo,
         anno,
         data,
@@ -109,7 +119,7 @@ export function NominaPage({ tipo }: { tipo: string }) {
       toast.success("Testo della nomina salvato");
     } catch (e) {
       toast.error(
-        `Salvataggio non riuscito: ${e instanceof Error ? e.message : "errore del database"}. Se la tabella non esiste, applica la migration 0009.`,
+        `Salvataggio non riuscito: ${e instanceof Error ? e.message : "errore del database"}. Se la tabella non esiste, applica la migration 0010.`,
       );
     }
   };
@@ -130,7 +140,11 @@ export function NominaPage({ tipo }: { tipo: string }) {
       const bytes = await generaPdfNomine(
         bozza,
         ditta,
-        elenco.map((n) => ({ nome: n.nome, protocollo })),
+        elenco.map((n) => ({
+          nome: nomeLettera(n, !senzaTitolo),
+          protocollo,
+          ...(numeroDi(n.id) ? { numero: numeroDi(n.id)! } : {}),
+        })),
         { anno, data },
       );
       scaricaBlob(
@@ -211,6 +225,26 @@ export function NominaPage({ tipo }: { tipo: string }) {
               </Label>
               <Input id="n-data" value={data} onChange={(e) => setData(e.target.value)} />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="n-num" className="text-xs">
+                N° prima lettera
+              </Label>
+              <Input
+                id="n-num"
+                inputMode="numeric"
+                placeholder="es. 167"
+                value={numeroIniziale}
+                onChange={(e) => setNumeroIniziale(e.target.value.replace(/[^0-9]/g, ""))}
+              />
+            </div>
+            <label className="col-span-2 flex items-end gap-2 pb-2 text-xs">
+              <input
+                type="checkbox"
+                checked={senzaTitolo}
+                onChange={(e) => setSenzaTitolo(e.target.checked)}
+              />
+              Senza «Prof.» / «Prof.ssa» davanti al nome
+            </label>
           </section>
           <IndiceNominati
             nominati={nominati}

@@ -4,7 +4,7 @@
  * Data creaz: 12/11/2026
  * Revisioni:
  *   rev 1 — 12/11/2026 — Lettura e salvataggio dei testi delle nomine (tabella modelli_nomina). Se la tabella non c'è ancora
- *            (migration 0009 non applicata) o la riga manca, si usano i testi di default: la pagina funziona comunque.
+ *            (migration 0010 non applicata) o la riga manca, si usano i testi di default: la pagina funziona comunque.
  */
 import { sb } from "./client";
 import { MODELLI_DEFAULT, modelloDefault } from "@/features/nomine/modelli-default";

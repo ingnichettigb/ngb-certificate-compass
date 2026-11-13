@@ -15,11 +15,13 @@ export type DatiNomina = {
   protocollo: string;
   /** Data già formattata gg/mm/aaaa. */
   data: string;
+  /** Numero progressivo della lettera (il «167» in alto sulle nomine del Liceo). Vuoto = non stampato. */
+  numero?: string;
 };
 
 export type Blocco =
   | { t: "titolo"; testo: string }
-  | { t: "protocollo"; protocollo: string; anno: string }
+  | { t: "protocollo"; protocollo: string; anno: string; numero?: string }
   | { t: "destinatario"; nome: string }
   | { t: "oggetto"; testo: string }
   | { t: "paragrafo"; testo: string }
@@ -35,7 +37,7 @@ export type Blocco =
       nome: string;
       note: string[];
     }
-  | { t: "presa-visione"; etichetta: string; nome: string }
+  | { t: "presa-visione"; etichetta: string; nome: string; numero?: string }
   | { t: "formazione"; figura: string; nome: string; data: string };
 
 /** Anno scolastico/di lavoro: da settembre in poi «2026-2027», prima «2025-2026». */
@@ -106,7 +108,7 @@ export function costruisciDocumento(
   const s = (t: string) => sostituisciSegnaposto(t, valori);
   const out: Blocco[] = [
     { t: "titolo", testo: s(modello.titolo) },
-    { t: "protocollo", protocollo: dati.protocollo, anno: dati.anno },
+    { t: "protocollo", protocollo: dati.protocollo, anno: dati.anno, ...(dati.numero ? { numero: dati.numero } : {}) },
     { t: "destinatario", nome: dati.nome },
     { t: "oggetto", testo: s(modello.oggetto) },
     ...paragrafi(modello.introduzione).map((testo): Blocco => ({
@@ -133,7 +135,12 @@ export function costruisciDocumento(
   });
   if (modello.formazione.trim())
     out.push({ t: "formazione", figura: s(modello.formazione), nome: dati.nome, data: dati.data });
-  out.push({ t: "presa-visione", etichetta: s(modello.etichetta_firma), nome: dati.nome });
+  out.push({
+    t: "presa-visione",
+    etichetta: s(modello.etichetta_firma),
+    nome: dati.nome,
+    ...(dati.numero ? { numero: dati.numero } : {}),
+  });
   return out;
 }
 
@@ -152,13 +159,13 @@ export function testoDocumento(blocchi: Blocco[]): string {
         case "voce":
           return `${b.numero}. ${b.testo}`;
         case "protocollo":
-          return `prot. N° ${b.protocollo} ${b.anno}`;
+          return `${b.numero ? `N° ${b.numero} ` : ""}prot. N° ${b.protocollo} ${b.anno}`;
         case "destinatario":
           return `Spett.le ${b.nome}`;
         case "firma-dirigente":
           return [b.luogo, b.data, b.qualifica, b.nome, ...b.note].join(" ");
         case "presa-visione":
-          return `${b.etichetta} ${b.nome}`;
+          return `${b.etichetta} ${b.nome}${b.numero ? ` N° ${b.numero}` : ""}`;
         case "formazione":
           return `${b.figura} ${b.nome}`;
       }

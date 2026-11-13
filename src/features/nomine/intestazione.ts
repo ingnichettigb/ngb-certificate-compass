@@ -17,6 +17,7 @@ export function righeIntestazione(
   const contatti = [
     ditta?.telefono && `Telefono: ${ditta.telefono}`,
     ditta?.email && `e-mail: ${ditta.email}`,
+    ditta?.sito_web && `Sito: ${ditta.sito_web}`,
   ]
     .filter(Boolean)
     .join("   ");
@@ -27,7 +28,10 @@ export function righeIntestazione(
   ]
     .filter(Boolean)
     .join("   ");
-  const righe: RigaIntestazione[] = [{ testo: nomeDitta(ditta), grassetto: true }];
+  const righe: RigaIntestazione[] = [];
+  // Riga istituzionale sopra il nome (es. «MINISTERO DELL'ISTRUZIONE E DEL MERITO»), se compilata nei dati della ditta
+  if (ditta?.intestazione_ufficiale?.trim()) righe.push({ testo: ditta.intestazione_ufficiale.trim() });
+  righe.push({ testo: nomeDitta(ditta), grassetto: true });
   for (const t of [indirizzoDitta(ditta), contatti, fiscali]) if (t) righe.push({ testo: t });
   return righe;
 }

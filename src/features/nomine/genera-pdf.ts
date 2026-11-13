@@ -19,7 +19,7 @@ const LARGHEZZA = A4.w - MARGINE * 2;
 const CORPO = 9.5;
 const INTERLINEA = 1.28;
 
-export type NominaPerPdf = { nome: string; protocollo: string };
+export type NominaPerPdf = { nome: string; protocollo: string; numero?: string };
 
 /** Spezza il testo in righe che stanno nella larghezza data. */
 export function spezzaRighe(
@@ -159,7 +159,7 @@ export async function generaPdfNomine(
       }
       case "protocollo": {
         serve(16);
-        scrivi(`prot. N° ${b.protocollo}`, MARGINE, normale, 8.5);
+        scrivi(`${b.numero ? `N° ${b.numero}  ·  ` : ""}prot. N° ${b.protocollo}`, MARGINE, normale, 8.5);
         const a = pulisci(b.anno);
         scrivi(a, MARGINE + LARGHEZZA - normale.widthOfTextAtSize(a, 8.5), normale, 8.5);
         y -= 18;
@@ -284,6 +284,7 @@ export async function generaPdfNomine(
         scrivi("Firma", MARGINE + LARGHEZZA * 0.65, normale, 8);
         y -= 13;
         scrivi(b.nome, MARGINE, grassetto, CORPO);
+        if (b.numero) scrivi(`N° ${b.numero}`, MARGINE + LARGHEZZA * 0.45, normale, 8);
         pagina.drawLine({
           start: { x: MARGINE + LARGHEZZA * 0.45, y: riga - 6 },
           end: { x: MARGINE + LARGHEZZA * 0.6, y: riga - 6 },
@@ -308,6 +309,7 @@ export async function generaPdfNomine(
     for (const b of costruisciDocumento(modello, ditta, {
       nome: n.nome,
       protocollo: n.protocollo,
+      ...(n.numero ? { numero: n.numero } : {}),
       anno: comuni.anno,
       data: comuni.data,
     }))

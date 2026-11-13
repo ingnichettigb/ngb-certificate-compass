@@ -64,6 +64,27 @@
       "when": 1794466499020,
       "tag": "0008_ditta_logo_condiviso",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794466559020,
+      "tag": "0009_tipi_corso_tolleranza_ritardo",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794466619020,
+      "tag": "0010_modelli_nomina",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794466679020,
+      "tag": "0011_ditta_intestazione_sito",
+      "breakpoints": true
     }
   ]
 }

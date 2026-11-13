@@ -131,6 +131,23 @@ export function RiquadroAnagrafica({ form, updateCampo }: Props) {
           />
         </div>
         <div className="space-y-1">
+          <Label htmlFor="sito_web">Sito web</Label>
+          <Input
+            id="sito_web"
+            value={form.sito_web || ""}
+            onChange={(e) => updateCampo("sito_web", e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="intestazione_ufficiale">Riga istituzionale (intestazione nomine)</Label>
+          <Input
+            id="intestazione_ufficiale"
+            placeholder="es. MINISTERO DELL'ISTRUZIONE E DEL MERITO"
+            value={form.intestazione_ufficiale || ""}
+            onChange={(e) => updateCampo("intestazione_ufficiale", e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
           <Label htmlFor="email_mittente_resend">Mittente Resend (From)</Label>
           <Input
             id="email_mittente_resend"

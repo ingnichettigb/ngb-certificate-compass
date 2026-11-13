@@ -3,6 +3,8 @@
  * Percorso:  src/features/nomine/modelli-default.ts
  * Data creaz: 12/11/2026
  * Revisioni:
+ *   rev 2 — 13/11/2026 — DAE: dichiarazione sulla formazione riferita all'addetto all'uso del defibrillatore (nell'originale era «primo soccorso»).
+ *            Evacuazione: bozza ripulita (numero unico 112; tolto il punto sulle «cassette per l'evacuazione», non pertinente). Da far rivedere all'RSPP.
  *   rev 1 — 12/11/2026 — Testi di partenza delle nomine, ricavati dalle lettere del Liceo «G. Aselli» 2026-2027.
  *            Nome dell'istituto, luogo, data, protocollo e firmatario sono segnaposto: cambiando ditta cambiano da soli.
  *            Le righe numerate si numerano da sole (la numerazione ripetuta nei PDF originali è stata sistemata).
@@ -89,7 +91,7 @@ export const MODELLI_DEFAULT: Record<TipoNomina, ModelloNomina> = {
     corpo: [
       "portarsi rapidamente sul luogo dell’emergenza, segnalando tempestivamente (sistema porta a porta) lo stato di pericolo alle persone presenti nei locali ubicati nelle vicinanze della fonte di pericolo;",
       "segnalare o fa segnalare l’emergenza (se necessario) a tutta la scuola con il sistema di allarme;",
-      "su indicazione del coordinatore dell’emergenza o in sua assenza allertare il (112);",
+      "su indicazione del coordinatore dell’emergenza o in sua assenza allertare il Numero Unico di Emergenza (112);",
       "controllare (dopo essersi disposti in punti strategici per il controllo della evacuazione delle classi) che il personale attui l’evacuazione nel rispetto di quanto stabilito dal piano di emergenza;",
       "ispezionare, se le condizioni ambientali lo consentono, i locali di piano (raggiungendo p. es. i locali tecnici defilati, i servizi igienici, ecc. oppure eventuali prestatori d’opera occasionali) prima di abbandonare la sezione di edificio di propria competenza, controllando che l’area sia stata interamente evacuata, chiudendo le porte lasciate aperte;",
       "disattivare gli impianti, in particolare i quadri elettrici.",
@@ -97,7 +99,6 @@ export const MODELLI_DEFAULT: Record<TipoNomina, ModelloNomina> = {
       "eseguire i compiti indicati nel piano di evacuazione.",
       "sorvegliare quotidianamente nella rispettiva zona di competenza che le disposizione e i cartelli destinati all'evacuazione siano posizionati correttamente e perfettamente visibili.",
       "sorvegliare quotidianamente che l'attrezzatura destinata all'uso durante le fasi di evacuazione sia posizionata correttamente, perfettamente funzionante e fruibile.",
-      "che il materiale contenuto nelle cassette per l'evacuazione sia completo e funzionante.",
       "coordinamento della squadra di evacuazione.",
     ].join("\n"),
     chiusura: [ART_43, ART_37, SALUTI].join("\n\n"),
@@ -271,7 +272,7 @@ export const MODELLI_DEFAULT: Record<TipoNomina, ModelloNomina> = {
     ].join("\n\n"),
     nota_firma: NOTA_FIRMA,
     etichetta_firma: "Per presa visione",
-    formazione: "ADDETTO AL PRIMO SOCCORSO",
+    formazione: "ADDETTO ALL'USO DEL DEFIBRILLATORE",
   },
 
   preposto: {
