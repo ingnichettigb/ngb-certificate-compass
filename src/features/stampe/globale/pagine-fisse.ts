@@ -7,6 +7,9 @@
  *            scheda del lavoratore (anagrafica, funzioni, attestati per funzione e data), pagina finale con indice e controlli,
  *            piè di pagina «Blocco N di M · Pagina X di Y».
  *   rev 2 — 12/11/2026 06:53 — Copyright su tutte le pagine della stampa globale.
+ *   rev 3 — 12/11/2026 — «Torna all'indice» in alto su ogni pagina della scheda (rettangoloTornaIndice, il link lo aggiunge genera.ts);
+ *            la pagina finale restituisce dove ha scritto le righe dell'indice, per renderle cliccabili.
+ *   rev 4 — 12/11/2026 — Colonna stato dalla scadenza del ciclo del gruppo: «Superato» (Base rinnovato) e «Rifare base» (Primo Soccorso oltre la tolleranza).
  */
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -158,6 +161,20 @@ export async function disegnaCopertina(
 
 /* ─────────────────────────── Scheda lavoratore ─────────────────────────── */
 
+const TESTO_TORNA = "Torna all'indice";
+const BLU = rgb(0.1, 0.3, 0.7);
+
+/** Area del «Torna all'indice» in alto a destra (stessa su ogni pagina della scheda). */
+export function rettangoloTornaIndice(c: Caratteri): [number, number, number, number] {
+  const w = c.n.widthOfTextAtSize(TESTO_TORNA, 8);
+  return [A4V.l - M - w - 2, A4V.a - 30, A4V.l - M + 2, A4V.a - 18];
+}
+
+function disegnaTornaIndice(p: PDFPage, c: Caratteri) {
+  const [x1, y1] = rettangoloTornaIndice(c);
+  p.drawText(TESTO_TORNA, { x: x1 + 2, y: y1 + 3, font: c.n, size: 8, color: BLU });
+}
+
 export type RigaAllegato = { pagine: number; nota?: string };
 export type OpzioniScheda = {
   dip: Dipendente;
@@ -182,11 +199,13 @@ export async function disegnaScheda(
 ): Promise<number> {
   const prima = doc.getPageCount();
   let p = doc.addPage([A4V.l, A4V.a]);
+  disegnaTornaIndice(p, c);
   let y = A4V.a - M;
   const largh = A4V.l - 2 * M;
 
   const nuovaPagina = () => {
     p = doc.addPage([A4V.l, A4V.a]);
+    disegnaTornaIndice(p, c);
     y = A4V.a - M;
     scrivi(p, `${o.dip.cognome} ${o.dip.nome} (continua)`, M, y, c.b, 11, GRIGIO);
     y -= 26;
@@ -317,12 +336,18 @@ export async function disegnaScheda(
 export type VoceIndice = { nome: string; pagina: number };
 export type Problema = { lavoratore: string; corso: string; motivo: string };
 
+/** Dove è finita ogni riga dell'indice (pagina da 0 e altezza), per aggiungervi il link. */
+export type RigaIndiceDisegnata = { voce: VoceIndice; paginaIndice: number; y: number };
+export type EsitoPaginaFinale = { primaPagina: number; righe: RigaIndiceDisegnata[] };
+
 export function disegnaPaginaFinale(
   doc: PDFDocument,
   c: Caratteri,
   indice: VoceIndice[],
   problemi: Problema[],
-): void {
+): EsitoPaginaFinale {
+  const primaPagina = doc.getPageCount();
+  const righe: RigaIndiceDisegnata[] = [];
   let p = doc.addPage([A4V.l, A4V.a]);
   let y = A4V.a - M;
   const nuova = (titolo: string) => {
@@ -332,9 +357,12 @@ export function disegnaPaginaFinale(
     y -= 26;
   };
   scrivi(p, "INDICE DEL BLOCCO", M, y, c.b, 20, VERDE);
-  y -= 30;
+  y -= 18;
+  scrivi(p, "Clicca su un nome per aprire la scheda del lavoratore.", M, y, c.n, 9, GRIGIO);
+  y -= 22;
   for (const v of indice) {
     if (y < M + 30) nuova("Indice del blocco (continua)");
+    righe.push({ voce: v, paginaIndice: doc.getPageCount() - 1, y });
     scrivi(p, tagliaAlla(c.n, v.nome, 11, A4V.l - 2 * M - 70), M, y, c.n, 11);
     const s = String(v.pagina);
     scrivi(p, s, A4V.l - M - c.b.widthOfTextAtSize(s, 11), y, c.b, 11);
@@ -346,7 +374,7 @@ export function disegnaPaginaFinale(
   y -= 22;
   if (!problemi.length) {
     scrivi(p, "Tutti gli attestati hanno il file collegato e sono stati inseriti.", M, y, c.n, 11);
-    return;
+    return { primaPagina, righe };
   }
   for (const pr of problemi) {
     if (y < M + 30) nuova("Controlli sugli allegati (continua)");
@@ -355,6 +383,7 @@ export function disegnaPaginaFinale(
     scrivi(p, tagliaAlla(c.n, pr.motivo, 10, A4V.l - 2 * M - 350), M + 350, y, c.n, 10, ROSSO);
     y -= 14;
   }
+  return { primaPagina, righe };
 }
 
 /* ─────────────────────────── Piè di pagina ─────────────────────────── */

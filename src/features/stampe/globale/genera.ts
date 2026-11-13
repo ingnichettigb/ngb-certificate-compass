@@ -25,6 +25,8 @@ import { costruisciRiquadriPdf, creaPdfOrganigrammaA3 } from "../esporta-organig
 import { appendiAllegato, dimensioneAllegato, leggiAllegato, type EsitoAllegato } from "./allegati";
 import { raggruppaPerFunzione } from "./ordine-attestati";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
+import { aggiungiLink, aggiungiSegnalibri, type Segnalibro } from "./segnalibri";
+import { dataIt } from "../stampa-formati";
 import {
   BYTE_SCHEDA,
   dividiInBlocchi,
@@ -40,6 +42,7 @@ import {
   disegnaCopertina,
   disegnaPaginaFinale,
   disegnaScheda,
+  rettangoloTornaIndice,
   type Problema,
   type VoceIndice,
 } from "./pagine-fisse";
@@ -235,6 +238,10 @@ export async function generaBlocco(
 
   const perId = new Map(piano.lavoratori.map((l) => [l.dip.id, l]));
   const indice: VoceIndice[] = [];
+  const segnalibri: Segnalibro[] = [{ titolo: "Copertina", pagina: 0 }];
+  if (blocco.numero === 1) segnalibri.push({ titolo: "Organigramma A3", pagina: 1 });
+  /** Pagine (da 0) di ogni scheda: servono per il link «Torna all'indice». */
+  const pagineSchede: number[] = [];
   const problemi: Problema[] = [];
   let fatti = 0;
 
@@ -283,13 +290,27 @@ export async function generaBlocco(
     }
 
     // …poi la scheda (che li elenca) e subito dopo i documenti.
-    indice.push({ nome: nomeCompleto, pagina: doc.getPageCount() + 1 });
-    await disegnaScheda(doc, c, {
+    const inizio = doc.getPageCount();
+    indice.push({ nome: nomeCompleto, pagina: inizio + 1 });
+    const pagineScheda = await disegnaScheda(doc, c, {
       dip: l.dip,
       funzioni: ruoliDelDipendente(l.dip.id, dati.ruoli, dati.assegnazioni).map((r) => r.nome),
       gruppi,
       esitoPerAttestato: esiti,
     });
+    for (let k = 0; k < pagineScheda; k++) pagineSchede.push(inizio + k);
+    // Segnalibro del lavoratore con, sotto, i suoi attestati (nel punto dove iniziano i loro file).
+    const figli: Segnalibro[] = [];
+    let cursore = inizio + pagineScheda;
+    for (const { attestato } of allegati) {
+      const n = paginePerAttestato.get(attestato.id) ?? 0;
+      if (n > 0) {
+        const corso = attestato.tipi_corso?.nome_corso ?? "Corso";
+        figli.push({ titolo: `${corso} (${dataIt(attestato.data_corso)})`, pagina: cursore });
+        cursore += n;
+      }
+    }
+    segnalibri.push({ titolo: nomeCompleto, pagina: inizio, figli });
     if (temp.getPageCount()) {
       const copiate = await doc.copyPages(temp, temp.getPageIndices());
       copiate.forEach((p) => doc.addPage(p));
@@ -298,7 +319,20 @@ export async function generaBlocco(
     avanzamento?.(nomeCompleto, fatti, blocco.voci.length);
   }
 
-  disegnaPaginaFinale(doc, c, indice, problemi);
+  const finale = disegnaPaginaFinale(doc, c, indice, problemi);
+
+  // Link: ogni riga dell'indice apre la scheda; ogni scheda ha «Torna all'indice».
+  for (const r of finale.righe) {
+    const pagIndice = doc.getPage(r.paginaIndice);
+    const destinazione = doc.getPage(r.voce.pagina - 1);
+    aggiungiLink(doc, pagIndice, [42, r.y - 3, 595.28 - 42, r.y + 11], destinazione);
+  }
+  const indiceDest = doc.getPage(finale.primaPagina);
+  const areaTorna = rettangoloTornaIndice(c);
+  for (const i of pagineSchede) aggiungiLink(doc, doc.getPage(i), areaTorna, indiceDest);
+  segnalibri.push({ titolo: "Indice e controlli", pagina: finale.primaPagina });
+  aggiungiSegnalibri(doc, segnalibri);
+
   applicaPiedeDiPagina(doc, c.n, blocco.numero, piano.blocchi.length);
   const bytes = await doc.save();
   return {

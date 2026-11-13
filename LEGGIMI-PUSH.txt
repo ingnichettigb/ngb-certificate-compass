@@ -1,25 +1,23 @@
-ngb-certificate-compass — Tavola A3 su un foglio + riordino e rinumerazione carte (rev 10/11/2026 18:00)
+ngb-certificate-compass — Ripristino Stampa globale (segnalibri e link) + calcolo scadenze (rev 12/11/2026)
 
-FILE (le cartelle rispecchiano il deposito: decomprimi nella radice del progetto, sovrascrivendo)
-  MODIFICATI
-    src/features/stampe/components/OrganigrammaA3Page.tsx      rev 2  tavola A3 su un solo foglio, zero salto pagina
-    src/features/stampe/components/ElencoStampePredefinite.tsx rev 5  tavola A3 = carta 01, numeri da numerazione-carte.ts
-    src/features/stampe/stampe-predefinite.ts                  rev 7  nuovo ordine della famiglia Anagrafica
-    src/features/stampe/stampe-predefinite.test.ts             rev 4  test sul nuovo ordine
-  NUOVI
-    src/features/stampe/numerazione-carte.ts                   rev 1  elenco carte e numeri progressivi
-    src/features/stampe/numerazione-carte.test.ts              rev 1  test sequenza 01-05 e numeri senza buchi
+COSA È SUCCESSO
+Lo zip «scadenze-tolleranza» partiva da una copia del deposito precedente alla modifica «segnalibri e link» della Stampa globale
+(commit 8b5e51f) e ha sovrascritto due file, perdendo quelle funzioni:
+  src/features/stampe/globale/genera.ts
+  src/features/stampe/globale/pagine-fisse.ts
+Il test «indice cliccabile, torna all'indice e segnalibri» (genera.test.ts) per questo risultava rosso.
 
-NUMERAZIONE RISULTANTE
-  Anagrafica e organico: 01 Organigramma A3 | 02 Organigramma squadre | 03 Registro anagrafico | 04 Elenco per settore | 05 Per funzioni e squadre
-  Scadenze: 06-12   Completati: 13-18
+COSA FA QUESTO ZIP
+Sostituisce solo quei due file con la versione 8b5e51f + le sole righe del calcolo scadenze («Superato», «Rifare base»).
+Segnalibri, link dell'indice e «Torna all'indice» tornano come prima. Nessun altro file.
 
-PUSH UNICO
+PUSH
   cd ngb-certificate-compass
-  unzip -o ../ngb-a3-carte-rev7.zip
+  unzip -o ../ngb-ripristino-stampa-globale-rev1.zip
   git add -A
-  git commit -m "Stampe: tavola A3 su un foglio, carta 01; riordino e rinumerazione carte Anagrafica (06+ Scadenze)"
+  git commit -m "Ripristina segnalibri e link della Stampa globale, mantenendo il calcolo scadenze per gruppo"
   git push origin main
 
-Nota: ho verificato tipi e test (nuovi + organigramma + predefinite passano). Prova comunque una stampa/PDF reale da Chrome
-con «Scala 100%» e margini «Predefiniti» (il CSS imposta già A3 orizzontale 8 mm).
+CONTROLLO
+Tipi dei file non di test OK; test di stampe/scadenze/lib: 403 passati (genera.test e segnalibri.test compresi).
+Controllo fatto anche sugli altri file dello zip precedente: l'unico altro caso era organigramma-a3.ts, già ripristinato nel deposito.
