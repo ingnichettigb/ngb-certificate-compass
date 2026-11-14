@@ -521,6 +521,87 @@ export type Database = {
           },
         ]
       }
+      gruppi_primo_soccorso: {
+        Row: {
+          applica: boolean
+          created_at: string
+          gruppo: string
+          id: string
+          indice_inail: string
+          lavoratori: string
+          nota: string | null
+          ordine: number
+          updated_at: string
+        }
+        Insert: {
+          applica?: boolean
+          created_at?: string
+          gruppo: string
+          id?: string
+          indice_inail?: string
+          lavoratori: string
+          nota?: string | null
+          ordine?: number
+          updated_at?: string
+        }
+        Update: {
+          applica?: boolean
+          created_at?: string
+          gruppo?: string
+          id?: string
+          indice_inail?: string
+          lavoratori?: string
+          nota?: string | null
+          ordine?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gruppi_tariffa_inail: {
+        Row: {
+          anno: number | null
+          applica: boolean
+          created_at: string
+          descrizione: string
+          gestione: string | null
+          id: string
+          indice_inabilita: number | null
+          oltre_4: boolean
+          ordine: number
+          tasso: number | null
+          updated_at: string
+          voce: string
+        }
+        Insert: {
+          anno?: number | null
+          applica?: boolean
+          created_at?: string
+          descrizione?: string
+          gestione?: string | null
+          id?: string
+          indice_inabilita?: number | null
+          oltre_4?: boolean
+          ordine?: number
+          tasso?: number | null
+          updated_at?: string
+          voce: string
+        }
+        Update: {
+          anno?: number | null
+          applica?: boolean
+          created_at?: string
+          descrizione?: string
+          gestione?: string | null
+          id?: string
+          indice_inabilita?: number | null
+          oltre_4?: boolean
+          ordine?: number
+          tasso?: number | null
+          updated_at?: string
+          voce?: string
+        }
+        Relationships: []
+      }
       integrazioni_dvr: {
         Row: {
           argomenti_mancanti: string[]
@@ -696,6 +777,45 @@ export type Database = {
         }
         Relationships: []
       }
+      regole_ruolo_corso: {
+        Row: {
+          applica: boolean
+          corso_aggiornamento: string | null
+          corso_base: string | null
+          created_at: string
+          id: string
+          ordine: number
+          parametro: string
+          ruolo: string
+          updated_at: string
+          valore: string
+        }
+        Insert: {
+          applica?: boolean
+          corso_aggiornamento?: string | null
+          corso_base?: string | null
+          created_at?: string
+          id?: string
+          ordine?: number
+          parametro?: string
+          ruolo: string
+          updated_at?: string
+          valore?: string
+        }
+        Update: {
+          applica?: boolean
+          corso_aggiornamento?: string | null
+          corso_base?: string | null
+          created_at?: string
+          id?: string
+          ordine?: number
+          parametro?: string
+          ruolo?: string
+          updated_at?: string
+          valore?: string
+        }
+        Relationships: []
+      }
       reparti: {
         Row: {
           attivo: boolean
@@ -726,9 +846,50 @@ export type Database = {
         }
         Relationships: []
       }
+      rischio_ateco: {
+        Row: {
+          applica: boolean
+          codice: string
+          created_at: string
+          descrizione: string
+          fonte: string | null
+          id: string
+          ordine: number
+          rischio: string
+          updated_at: string
+          versione_ateco: string
+        }
+        Insert: {
+          applica?: boolean
+          codice: string
+          created_at?: string
+          descrizione?: string
+          fonte?: string | null
+          id?: string
+          ordine?: number
+          rischio: string
+          updated_at?: string
+          versione_ateco?: string
+        }
+        Update: {
+          applica?: boolean
+          codice?: string
+          created_at?: string
+          descrizione?: string
+          fonte?: string | null
+          id?: string
+          ordine?: number
+          rischio?: string
+          updated_at?: string
+          versione_ateco?: string
+        }
+        Relationships: []
+      }
       ruoli_sicurezza: {
         Row: {
+          applica: boolean
           attivo: boolean
+          codice: string | null
           created_at: string
           descrizione: string | null
           id: string
@@ -736,9 +897,13 @@ export type Database = {
           nome: string
           obbligatorio_tutti: boolean
           ordine: number
+          richiede: string | null
+          tipo: string
         }
         Insert: {
+          applica?: boolean
           attivo?: boolean
+          codice?: string | null
           created_at?: string
           descrizione?: string | null
           id?: string
@@ -746,9 +911,13 @@ export type Database = {
           nome: string
           obbligatorio_tutti?: boolean
           ordine?: number
+          richiede?: string | null
+          tipo?: string
         }
         Update: {
+          applica?: boolean
           attivo?: boolean
+          codice?: string | null
           created_at?: string
           descrizione?: string | null
           id?: string
@@ -756,6 +925,8 @@ export type Database = {
           nome?: string
           obbligatorio_tutti?: boolean
           ordine?: number
+          richiede?: string | null
+          tipo?: string
         }
         Relationships: []
       }
@@ -805,6 +976,7 @@ export type Database = {
         Row: {
           a: number | null
           ambito: string
+          applica: boolean
           attiva: boolean
           da: number
           esito: string
@@ -816,6 +988,7 @@ export type Database = {
         Insert: {
           a?: number | null
           ambito: string
+          applica?: boolean
           attiva?: boolean
           da: number
           esito: string
@@ -827,6 +1000,7 @@ export type Database = {
         Update: {
           a?: number | null
           ambito?: string
+          applica?: boolean
           attiva?: boolean
           da?: number
           esito?: string
