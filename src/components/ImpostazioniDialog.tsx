@@ -128,18 +128,15 @@ export function ImpostazioniDialog() {
                   </p>
                 </div>
 
-                <Button
-                  onClick={richiediChiusura}
-                  className="border-2 border-primary bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-semibold px-4"
-                >
-                  <ArrowLeft className="size-4 mr-2" /> Torna
+                <Button onClick={richiediChiusura}>
+                  <ArrowLeft /> Torna
                 </Button>
               </header>
 
               {/* Area contenuti a tutto schermo con scroll indipendente */}
               <main className="flex-1 overflow-y-auto px-6 py-6 max-w-7xl w-full mx-auto">
                 <Tabs value={scheda} onValueChange={cambiaScheda} className="w-full">
-                  <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-8 mb-6">
+                  <TabsList className="grid w-full grid-cols-3 sm:grid-cols-8 mb-6">
                     <TabsTrigger value="ditta">Ditta</TabsTrigger>
                     <TabsTrigger value="corsi">Corsi</TabsTrigger>
                     <TabsTrigger value="reparti">Reparti</TabsTrigger>
@@ -147,7 +144,7 @@ export function ImpostazioniDialog() {
                     <TabsTrigger value="categorie">Categorie</TabsTrigger>
                     <TabsTrigger value="ruoli">Ruoli</TabsTrigger>
                     <TabsTrigger value="archivio">Archivio</TabsTrigger>
-                    <TabsTrigger value="raccordo" className="whitespace-normal text-center">Tabelle di raccordo</TabsTrigger>
+                    <TabsTrigger value="raccordo" className="h-auto whitespace-normal text-center">Tabelle di raccordo</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="ditta">

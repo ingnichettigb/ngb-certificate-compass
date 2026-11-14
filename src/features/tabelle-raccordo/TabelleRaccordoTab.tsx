@@ -4,8 +4,10 @@
  * Data creaz: 14/11/2026
  * Revisioni:
  *   rev 1 — 14/11/2026 — Scheda «Tabelle di raccordo» di Impostazioni generali: un pulsante numerato per ognuna delle 9 tabelle.
+ *   rev 2 — 14/11/2026 21:50 — Pulsanti delle 9 tabelle con il bottone standard (variante «selezione»).
  */
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
 import { TABELLE_RACCORDO } from "./definizioni";
 import { TabellaRaccordo } from "./TabellaRaccordo";
@@ -18,17 +20,17 @@ export function TabelleRaccordoTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tabelle di raccordo">
         {TABELLE_RACCORDO.map((t) => (
-          <button
+          <Button
             key={t.id}
             type="button"
+            variant="selezione"
             role="tab"
             aria-selected={t.id === corrente}
             aria-pressed={t.id === corrente}
-            className="btn-raccordo"
             onClick={() => setCorrente(t.id)}
           >
             {t.numero} – {t.titolo}
-          </button>
+          </Button>
         ))}
       </div>
 
