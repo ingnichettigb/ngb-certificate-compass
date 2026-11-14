@@ -136,7 +136,7 @@ export function RiquadroSedi() {
           <Input id="nuova-sede-prov" maxLength={2} value={provincia} onChange={(e) => setProvincia(e.target.value)} onKeyDown={invio} />
         </div>
         <Button type="button" onClick={aggiungi} disabled={saving} className="col-span-2 md:col-span-1">
-          <Plus className="mr-1 size-4" /> Aggiungi plesso
+          <Plus className="mr-1 size-4" /> Crea plesso
         </Button>
       </div>
     </div>

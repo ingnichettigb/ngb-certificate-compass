@@ -17,11 +17,13 @@
  *   rev 11 — 13/11/2026 — «Aggiungi voce» salva subito le voci nella Ditta: il ruolo creato nel DB non resta mai senza la sua voce.
  *   rev 12 — 13/11/2026 — Sedi: con più sedi compaiono il selettore del plesso e «Squadre per sede»; tavola, PDF e indirizzo seguono la sede scelta.
  *            Con la sola sede principale la pagina è identica a prima (nessun selettore, nessun pulsante in più).
+ *   rev 13 — 14/11/2026 — Con più sedi il nome della sede (anche la principale) compare nella testata della tavola e nel PDF; avviso se primo soccorso
+ *            o antincendio della sede scelta non hanno addetti formati.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Building2, FileDown, Plus, Printer, Save, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Building2, FileDown, Plus, Printer, Save, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,6 +38,7 @@ import { costruisciRiquadriPdf, scaricaPdfOrganigrammaA3 } from "../esporta-orga
 import { PannelloVociOrganigramma } from "./PannelloVociOrganigramma";
 import { DialogAggiungiVoceOrganigramma } from "./DialogAggiungiVoceOrganigramma";
 import { DialogAssegnaRuoliSede } from "./DialogAssegnaRuoliSede";
+import { squadreScoperte } from "../copertura-squadre";
 
 /** Area utile A3 orizzontale con margine 8 mm: 420−16 = 404 mm di larghezza, 297−16 = 281 mm di altezza. */
 const AREA_A3_MM = { larghezza: 404, altezza: 281 };
@@ -182,6 +185,7 @@ export function OrganigrammaA3Page() {
   }, [blocchi, vociVisibili]);
 
   const d = ditta.data;
+  const avvisiCopertura = piuSedi && sedeCorrente ? squadreScoperte(blocchi) : [];
   const carica = att.isLoading || dip.isLoading || ditta.isLoading || ruoli.isLoading || ass.isLoading || sediQuery.isLoading;
 
   const articolo = useRef<HTMLElement | null>(null);
@@ -224,6 +228,7 @@ export function OrganigrammaA3Page() {
           : d,
         annoScolastico: annoScolastico(),
         colonne: costruisciRiquadriPdf(colonneTavola, blocchi, vociVisibili),
+        ...(piuSedi && sedeCorrente ? { sede: sedeCorrente.nome } : {}),
       });
       toast.success("PDF A3 generato");
     } catch (e) {
@@ -348,6 +353,22 @@ export function OrganigrammaA3Page() {
         </header>
 
         <main className="mx-auto max-w-[1500px] space-y-4 p-4 print:max-w-none print:p-0">
+          {avvisiCopertura.length > 0 && sedeCorrente && (
+            <div role="status" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive print:hidden">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">Sede «{sedeCorrente.nome}»: squadre da completare</p>
+                <ul className="list-disc pl-5">
+                  {avvisiCopertura.map((a) => (
+                    <li key={a.chiave}>
+                      {a.titolo}: {a.motivo === "nessun-addetto" ? "nessun addetto assegnato" : "nessun addetto con formazione valida"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           <details className="rounded-lg border border-border bg-card p-3 print:hidden" open={false}>
             <Suggerimento testo="Apre o chiude le voci aggiuntive: ruoli DB (azzurri) e note descrittive (marroncine)." lato="right">
               <summary className={TITOLO_VERDE}>Voci aggiuntive (ruoli DB e note descrittive organigramma)</summary>
@@ -406,7 +427,7 @@ export function OrganigrammaA3Page() {
               ) : (
                 <>
                   <p className="text-center text-xs uppercase">
-                    Organigramma del servizio di prevenzione e protezione della sicurezza{sedeSecondaria ? ` — ${sedeSecondaria.nome}` : ""}
+                    Organigramma del servizio di prevenzione e protezione della sicurezza{piuSedi && sedeCorrente ? ` — ${sedeCorrente.nome}` : ""}
                   </p>
                   <div className="mb-3 flex items-end justify-between print:mb-1.5">
                     <h2 className="flex-1 text-center text-xl font-bold">{d?.ragione_sociale}</h2>

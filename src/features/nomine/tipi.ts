@@ -111,6 +111,7 @@ export const SEGNAPOSTO: { chiave: string; descrizione: string }[] = [
   { chiave: "protocollo", descrizione: "Numero di protocollo" },
   { chiave: "data", descrizione: "Data della nomina" },
   { chiave: "luogo", descrizione: "Comune della ditta" },
+  { chiave: "sede", descrizione: "Plesso scelto nella pagina (vuoto con «Tutte le sedi»)" },
   { chiave: "istituto", descrizione: "Ragione sociale della ditta" },
   { chiave: "firmatario", descrizione: "Datore di lavoro / Dirigente" },
   {

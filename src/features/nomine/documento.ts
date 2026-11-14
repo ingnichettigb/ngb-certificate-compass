@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 12/11/2026 — Dal modello e dai dati (ditta, nominato, protocollo…) costruisce l'elenco dei blocchi del documento.
  *            Anteprima a schermo e PDF leggono la stessa lista, così sono sempre uguali.
+ *   rev 2 — 14/11/2026 — Segnaposto {{sede}}: nome del plesso scelto (vuoto con «Tutte le sedi»).
  */
 import type { DittaRecord } from "@/lib/api/ditta";
 import type { ModelloNomina } from "./tipi";
@@ -17,6 +18,8 @@ export type DatiNomina = {
   data: string;
   /** Numero progressivo della lettera (il «167» in alto sulle nomine del Liceo). Vuoto = non stampato. */
   numero?: string;
+  /** Nome del plesso scelto; vuoto = tutte le sedi. */
+  sede?: string;
 };
 
 export type Blocco =
@@ -104,6 +107,7 @@ export function costruisciDocumento(
     anno: dati.anno,
     protocollo: dati.protocollo,
     data: dati.data,
+    sede: dati.sede ?? "",
   };
   const s = (t: string) => sostituisciSegnaposto(t, valori);
   const out: Blocco[] = [

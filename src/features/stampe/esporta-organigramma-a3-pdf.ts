@@ -12,6 +12,7 @@
  *            mai sotto l'85% del normale; se anche così non sta, il nome va a capo con lo stesso corpo (aCapo). Niente più nomi rimpiccioliti
  *            uno a uno né troncati con «…». Le voci libere (non nomi) seguono lo stesso corpo ma non lo abbassano.
  *   rev 3 — 13/11/2026 — Legenda «* da formare» spostata a destra (allineata al margine destro) e senza la parentesi esplicativa.
+ *   rev 4 — 14/11/2026 — Sedi: opzione `sede` (nome del plesso in testata, nel titolo del file PDF e nel nome del download).
  */
 import type { PDFFont } from "pdf-lib";
 import type { DittaRecord, VoceOrganigramma } from "@/lib/api/ditta";
@@ -35,6 +36,8 @@ export type OpzioniPdfOrganigrammaA3 = {
   /** Le tre colonne della tavola, dall'alto in basso. */
   colonne: RiquadroPdf[][];
   dataStampa?: Date;
+  /** Nome del plesso: se presente compare nella riga di testata, nel titolo del documento e nel nome del file. */
+  sede?: string;
 };
 
 /** Costruisce i riquadri del PDF dalla disposizione (stessi dati e stesso ordine dell'anteprima a video). */
@@ -227,7 +230,7 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
   const d = o.ditta;
   const stampato = o.dataStampa ?? new Date();
 
-  doc.setTitle(testoPdf("Organigramma della sicurezza"));
+  doc.setTitle(testoPdf(o.sede ? `Organigramma della sicurezza - ${o.sede}` : "Organigramma della sicurezza"));
   doc.setAuthor(testoPdf(d?.ragione_sociale || "Nichetti Gian Battista"));
   doc.setSubject("Organigramma del servizio di prevenzione e protezione");
   doc.setCreationDate(stampato);
@@ -260,7 +263,7 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
   /* ---- Intestazione e vertice ---- */
   const centro = X0 + utile / 2;
   let y = MARGINE;
-  centrato("ORGANIGRAMMA DEL SERVIZIO DI PREVENZIONE E PROTEZIONE DELLA SICUREZZA", centro, y, 8);
+  centrato(`ORGANIGRAMMA DEL SERVIZIO DI PREVENZIONE E PROTEZIONE DELLA SICUREZZA${o.sede ? ` - ${o.sede.toUpperCase()}` : ""}`, centro, y, 8);
   y += 11;
   centrato(d?.ragione_sociale ?? "", centro, y, 20, grassetto);
   const anno = testoPdf(o.annoScolastico);
@@ -369,5 +372,5 @@ export async function creaPdfOrganigrammaA3(o: OpzioniPdfOrganigrammaA3): Promis
 /** Crea il PDF e lo scarica come file (nessuna finestra di stampa). */
 export async function scaricaPdfOrganigrammaA3(opzioni: OpzioniPdfOrganigrammaA3) {
   const byte = await creaPdfOrganigrammaA3(opzioni);
-  scarica(new Blob([byte as BlobPart], { type: "application/pdf" }), nomeFileEsportazione("OrganigrammaA3", "pdf"));
+  scarica(new Blob([byte as BlobPart], { type: "application/pdf" }), nomeFileEsportazione(opzioni.sede ? `OrganigrammaA3_${opzioni.sede.replace(/\s+/g, "_")}` : "OrganigrammaA3", "pdf"));
 }

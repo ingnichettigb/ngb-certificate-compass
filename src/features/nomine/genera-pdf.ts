@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 12/11/2026 — PDF delle nomine con pdf-lib (testo reale, A4): intestazione e logo dalla ditta, una nomina per nominato,
  *            ogni nomina inizia su una pagina nuova; numero di pagina e copyright in fondo, come le altre stampe.
+ *   rev 2 — 14/11/2026 — Sedi: il nome del plesso scelto arriva al segnaposto {{sede}} dei modelli.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { DittaRecord } from "@/lib/api/ditta";
@@ -45,7 +46,7 @@ export async function generaPdfNomine(
   modello: ModelloNomina,
   ditta: Partial<DittaRecord> | null | undefined,
   nominati: NominaPerPdf[],
-  comuni: Pick<DatiNomina, "anno" | "data">,
+  comuni: Pick<DatiNomina, "anno" | "data" | "sede">,
 ): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create();
@@ -312,6 +313,7 @@ export async function generaPdfNomine(
       ...(n.numero ? { numero: n.numero } : {}),
       anno: comuni.anno,
       data: comuni.data,
+      ...(comuni.sede ? { sede: comuni.sede } : {}),
     }))
       disegna(b);
   }

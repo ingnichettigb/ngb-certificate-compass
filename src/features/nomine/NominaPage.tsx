@@ -4,9 +4,11 @@
  * Data creaz: 12/11/2026
  * Revisioni:
  *   rev 1 — 12/11/2026 — Una nomina: indice dei nominati a fianco, anteprima della lettera, modifica del testo, PDF (di uno o di tutti i selezionati).
+ *   rev 2 — 14/11/2026 — Sedi: con più sedi compare il menu «Sede»; i nominati sono gli incarichi di quel plesso (la formazione resta centrale).
+ *            Firmatario e intestazione restano quelli della ditta; il plesso va nel segnaposto {{sede}} e nel nome del file.
  */
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, FileDown, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IdentitaDitta } from "@/components/IdentitaDitta";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
 import { nomeFileEsportazione } from "@/features/stampe/esporta-file";
 import {
   CHIAVE_MODELLI_NOMINA,
@@ -45,7 +49,20 @@ function scaricaBlob(bytes: Uint8Array, nome: string) {
 export function NominaPage({ tipo }: { tipo: string }) {
   const voce = voceElenco(tipo);
   const qc = useQueryClient();
-  const { ditta, organigramma, modelli, caricamento, errore } = useDatiNomine();
+  const { ditta, organigramma: organigrammaDitta, modelli, caricamento, errore } = useDatiNomine();
+  const sediQuery = useQuery({ queryKey: CHIAVE_SEDI, queryFn: getSedi });
+  const sediAttive = (sediQuery.data ?? []).filter((s) => s.attiva);
+  const piuSedi = sediAttive.length > 1;
+  const [sedeId, setSedeId] = useState("tutte");
+  const sede = piuSedi ? (sediAttive.find((s) => s.id === sedeId) ?? null) : null;
+  // Con un plesso scelto: solo gli incarichi di quel plesso (gli attestati restano quelli centrali del lavoratore)
+  const organigramma = useMemo(
+    () =>
+      sede
+        ? { ...organigrammaDitta, assegnazioni: organigrammaDitta.assegnazioni.filter((a) => a.sede_id === sede.id) }
+        : organigrammaDitta,
+    [organigrammaDitta, sede],
+  );
 
   const [bozza, setBozza] = useState<ModelloNomina | null>(null);
   const [protocollo, setProtocollo] = useState("");
@@ -108,6 +125,7 @@ export function NominaPage({ tipo }: { tipo: string }) {
         protocollo,
         anno,
         data,
+        ...(sede ? { sede: sede.nome } : {}),
       })
     : [];
 
@@ -145,12 +163,12 @@ export function NominaPage({ tipo }: { tipo: string }) {
           protocollo,
           ...(numeroDi(n.id) ? { numero: numeroDi(n.id)! } : {}),
         })),
-        { anno, data },
+        { anno, data, ...(sede ? { sede: sede.nome } : {}) },
       );
       scaricaBlob(
         bytes,
         nomeFileEsportazione(
-          `Nomina_${voce.tipo}${elenco.length === 1 ? "_" + elenco[0]?.nome.replace(/\s+/g, "_") : ""}`,
+          `Nomina_${voce.tipo}${sede ? "_" + sede.nome.replace(/\s+/g, "_") : ""}${elenco.length === 1 ? "_" + elenco[0]?.nome.replace(/\s+/g, "_") : ""}`,
           "pdf",
         ),
       );
@@ -202,6 +220,30 @@ export function NominaPage({ tipo }: { tipo: string }) {
 
       <main className="mx-auto grid max-w-[1500px] gap-4 p-4 lg:grid-cols-[300px_1fr]">
         <div className="flex flex-col gap-4">
+          {piuSedi && (
+            <section className="space-y-1 rounded-lg border border-border bg-card p-3">
+              <Label htmlFor="n-sede" className="text-xs">
+                Sede / plesso
+              </Label>
+              <Select value={sede?.id ?? "tutte"} onValueChange={setSedeId}>
+                <SelectTrigger id="n-sede" className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tutte">Tutte le sedi</SelectItem>
+                  {sediAttive.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.nome}
+                      {s.is_principale ? " (principale)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {sede ? `Nominati del plesso «${sede.nome}».` : "Nominati di tutte le sedi."}
+              </p>
+            </section>
+          )}
           <section className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-card p-3">
             <div className="space-y-1">
               <Label htmlFor="n-prot" className="text-xs">

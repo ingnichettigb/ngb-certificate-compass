@@ -25,6 +25,13 @@ describe("PDF A3 dell'organigramma", () => {
     expect(width).toBeCloseTo(1190.55, 1);
     expect(height).toBeCloseTo(841.89, 1);
   });
+  it("con il nome del plesso: un solo foglio e il titolo del documento lo riporta", async () => {
+    const doc = await PDFDocument.load(await creaPdfOrganigrammaA3({ ditta: DITTA, annoScolastico: "2026-2027", colonne: NORMALE, sede: "Plesso Via Roma" }));
+    expect(doc.getPageCount()).toBe(1);
+    expect(doc.getTitle()).toBe("Organigramma della sicurezza - Plesso Via Roma");
+    const senza = await PDFDocument.load(await creaPdfOrganigrammaA3({ ditta: DITTA, annoScolastico: "2026-2027", colonne: NORMALE }));
+    expect(senza.getTitle()).toBe("Organigramma della sicurezza");
+  });
   it("con tanti nominativi riduce i caratteri ma resta su un solo foglio", async () => {
     const enorme: RiquadroPdf[][] = [[riquadro("A", 0, 120)], [riquadro("B", 0, 120)], [riquadro("C", 0, 120)]];
     expect(scalaPerEntrare(enorme)).toBeLessThan(0.9);
