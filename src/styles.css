@@ -170,41 +170,7 @@
   }
 }
 
-/* ── Tabelle di raccordo (Impostazioni generali) ───────────────────────────────────────────────
-   Pulsanti verde chiaro con bordo e scritta verde elettrico; da selezionati i colori si invertono.
-   Barre di scorrimento sempre visibili (anche con scorrimento «a scomparsa» di macOS/Windows). */
-.btn-raccordo {
-  --raccordo-chiaro: #eafff0;
-  --raccordo-elettrico: #00e64d;
-  --raccordo-testo: #00a63c;
-  border: 2px solid var(--raccordo-elettrico);
-  background: var(--raccordo-chiaro);
-  color: var(--raccordo-testo);
-  border-radius: 0.5rem;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.25rem;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-.btn-raccordo:hover:not(:disabled) {
-  background: #d4ffe1;
-}
-.btn-raccordo[aria-pressed="true"],
-.btn-raccordo[data-selected="true"] {
-  background: var(--raccordo-elettrico);
-  color: var(--raccordo-chiaro);
-}
-.btn-raccordo:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-raccordo:focus-visible {
-  outline: 2px solid var(--raccordo-elettrico);
-  outline-offset: 2px;
-}
-
+/* Barre di scorrimento sempre visibili (anche con scorrimento «a scomparsa» di macOS/Windows). */
 .scroll-visibile {
   overflow: scroll;
 }

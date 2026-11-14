@@ -3,6 +3,7 @@
  * @path src/components/ui/button.tsx
  * @created 2024-05-10
  * @revision 2026-10-28 20:15 - rev 3 - Centralizzazione stile globale pulsanti verdi con bordo brillante e rossi
+ * @revision 2026-11-14 21:50 - rev 4 - Variante «selezione» per pulsanti-linguetta: attivo con aria-pressed/data-state=active
  * @description Componente unificato per tutti i bottoni dell'applicazione.
  */
 
@@ -31,6 +32,9 @@ const buttonVariants = cva(
           "bg-emerald-100/70 text-emerald-900 border border-emerald-400/50 shadow-sm hover:bg-emerald-200/80 hover:border-emerald-500",
         ghost:
           "hover:bg-emerald-50 hover:text-emerald-900",
+        // Pulsante-linguetta (selettori di sezione/tabella): chiaro, da attivo verde pieno
+        selezione:
+          "bg-background text-emerald-900 border-2 border-emerald-500/60 shadow-sm hover:bg-emerald-50 hover:border-emerald-600 aria-pressed:bg-emerald-600 aria-pressed:border-emerald-700 aria-pressed:text-white data-[state=active]:bg-emerald-600 data-[state=active]:border-emerald-700 data-[state=active]:text-white dark:text-emerald-100",
         link:
           "text-emerald-700 underline-offset-4 hover:underline font-medium",
       },

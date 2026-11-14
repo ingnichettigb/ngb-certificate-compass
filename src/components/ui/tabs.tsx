@@ -1,7 +1,14 @@
+/*
+ * File:      tabs.tsx
+ * Percorso:  src/components/ui/tabs.tsx
+ * Revisioni:
+ *   rev 1 — 14/11/2026 21:50 — Linguette allineate allo standard dei pulsanti (variante «selezione» di button.tsx).
+ */
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 const Tabs = TabsPrimitive.Root;
 
@@ -12,7 +19,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+      "inline-flex flex-wrap h-auto items-center justify-center gap-2 rounded-lg",
       className,
     )}
     {...props}
@@ -27,7 +34,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow",
+      buttonVariants({ variant: "selezione" }),
       className,
     )}
     {...props}
