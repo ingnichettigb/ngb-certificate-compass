@@ -9,6 +9,8 @@
  * - Rev 4 (2026-11-10): I corsi ASPP e RSPP hanno un ciclo proprio (non si mescolano a quello dei lavoratori) e
  *   l'RSPP valido esonera dall'aggiornamento Preposto (vedi esenzioni-rspp.ts).
  * - Rev 5 (2026-11-12): Tolleranza sul ritardo letta da regole-corso.ts (Primo Soccorso = 4 mesi) e passata al motore.
+ * - Rev 6 (2026-11-14 09:25): Ciclo separato per RLS (famiglia:RLS) e Formazione Generale (famiglia:SIC-GEN) così che
+ *   l'RLS non contamini la sicurezza lavoratori e il corso base generale resti credito permanente senza scadenza.
  */
 import type { Attestato } from "@/lib/api";
 import {
@@ -54,12 +56,29 @@ function eBase(a: Attestato): boolean {
   return (a.tipi_corso?.livello_specifico ?? "").toLowerCase() === "base";
 }
 
+/** Riconosce i corsi della famiglia RLS (codici RLS-… o denominazione contenente RLS). */
+export function eCorsoRls(c: { codice?: string | null; nome_corso?: string | null; macro_categoria?: string | null } | null | undefined): boolean {
+  const cod = (c?.codice ?? "").trim().toUpperCase();
+  if (cod.startsWith("RLS-")) return true;
+  const nome = (c?.nome_corso ?? "").toLowerCase();
+  return nome.includes("rls");
+}
+
+/** Riconosce il corso base di formazione generale (SIC-GEN, credito permanente senza scadenza). */
+export function eCorsoGenerale(c: { codice?: string | null } | null | undefined): boolean {
+  return (c?.codice ?? "").trim().toUpperCase().startsWith("SIC-GEN");
+}
+
 /** Un lavoratore + una macro-categoria (o, se manca, un tipo di corso) = un ciclo formativo. */
 export function chiaveGruppo(a: Attestato): string {
   const chi = a.dipendente_id ?? a.codice_fiscale ?? "";
   // ASPP e RSPP: stessa macro-categoria dei lavoratori ma ciclo formativo a parte (moduli A, B, C, aggiornamento)
   const famiglia = famigliaAsppRspp(a.tipi_corso);
   if (famiglia) return `${chi}|famiglia:${famiglia}`;
+  // RLS: ciclo formativo proprio e annuale (non si mescola alla sicurezza generale dei lavoratori)
+  if (eCorsoRls(a.tipi_corso)) return `${chi}|famiglia:RLS`;
+  // Formazione generale (SIC-GEN): credito formativo permanente a sé, non soggetto a cicli di rinnovo
+  if (eCorsoGenerale(a.tipi_corso)) return `${chi}|famiglia:SIC-GEN`;
   const macro = a.tipi_corso?.macro_categoria;
   return `${chi}|${macro ? `macro:${macro}` : `tipo:${a.tipo_corso_id}`}`;
 }
