@@ -4,6 +4,7 @@
  * Data creaz: 13/11/2026
  * Revisioni:
  *   rev 1 — 13/11/2026 — Guardia: il backup deve contenere TUTTE le tabelle create dalle migrazioni; il ripristino rimappa sedi, ruoli e lavoratori.
+ *   rev 2 — 14/11/2026 — Ripristino con lavoratori sia presenti sia mancanti: ogni riga ha «id» (altrimenti PostgREST manda id nullo e il blocco fallisce).
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -76,9 +77,23 @@ describe("copertura del backup", () => {
       { dipendente_id: "D-DB", ruolo_id: "R-DB", sede_id: "P-DB" },
       { dipendente_id: "D-DB", ruolo_id: "R-DB", sede_id: "S2" },
     ]);
-    // il lavoratore esistente mantiene il suo id e passa alla sede principale del database
+    // il lavoratore esistente mantiene il suo id (quello del database) e passa alla sede principale del database
     const dip = JSON.parse(String(registro.find((r) => r[1] === "from.upsert" && r[2] === "dipendenti")![3]))[0][0];
-    expect(dip).toMatchObject({ codice_fiscale: "CF1", sede_id: "P-DB" });
-    expect(dip).not.toHaveProperty("id");
+    expect(dip).toMatchObject({ id: "D-DB", codice_fiscale: "CF1", sede_id: "P-DB" });
+  });
+
+  it("file con lavoratori già presenti e lavoratori mancanti: tutte le righe hanno l'id", async () => {
+    const dump = {
+      versione: 5,
+      sedi: [{ id: "P-FILE", nome: "Sede Centrale", is_principale: true }],
+      dipendenti: [
+        { id: "D-FILE-1", codice_fiscale: "CF1", cognome: "ROSSI", sede_id: "P-FILE" }, // già nel database
+        { id: "D-FILE-2", codice_fiscale: "CF2", cognome: "BIANCHI", sede_id: "P-FILE" }, // mancante: si ricrea
+      ],
+    };
+    const file = { name: "030ArchAttestati_2611141000_archivio-attestati.json", text: async () => JSON.stringify(dump) } as unknown as File;
+    await importaDb(file);
+    const righe = JSON.parse(String(registro.find((r) => r[1] === "from.upsert" && r[2] === "dipendenti")![3]))[0] as Record<string, unknown>[];
+    expect(righe.map((r) => r["id"])).toEqual(["D-DB", "D-FILE-2"]);
   });
 });

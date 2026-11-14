@@ -29,3 +29,11 @@ comprese sedi, incarichi (`dipendenti_ruoli`), `ruoli_sicurezza`, `modelli_nomin
 - `src/lib/api/backup-copertura.test.ts` fallisce se una tabella nuova delle migrazioni non è nel backup.
 - Restano FUORI dal file JSON i file veri degli attestati (bucket «attestati»): vedi sotto.
 - Limite noto: i file veri degli attestati (PDF/immagini nel bucket «attestati») non stanno nel JSON; il JSON ha solo i riferimenti (`percorso_file`). Per quelli serve la copia della cartella archivio.
+
+## Correzioni (14/11/2026)
+- **Ripristino backup con lavoratori misti**: se il file conteneva lavoratori già presenti nel database insieme a lavoratori mancanti
+  (caso tipico: ripristino dopo una cancellazione accidentale), il database rifiutava il blocco («id» nullo) e il ripristino si fermava
+  sulla tabella «dipendenti». Ora ogni riga ha l'id (quello del database se la persona esiste, quello del file se manca).
+  Provato con la vera `importaDb` su PostgreSQL + PostgREST: ripristino misto, ripetuto due volte (nessun doppione), backup versione 4.
+- `backup-copertura.test.ts`: il test sul lavoratore esistente pretendeva «senza id» (cioè il comportamento errato) e ora verifica l'id del database;
+  nuovo test sul file con lavoratori presenti e mancanti.

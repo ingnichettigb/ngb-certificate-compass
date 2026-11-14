@@ -9,6 +9,8 @@
  *   rev 4 — 13/11/2026 — Backup COMPLETO (versione 5): tutte le tabelle (prima 10 su 19: mancavano incarichi, ruoli, sedi, nomine,
  *            documenti, integrazioni DVR, coda valutazioni…), lettura a blocchi senza il limite di 1000 righe, ripristino nell'ordine
  *            delle dipendenze con rimappatura degli id (sedi, ruoli, lavoratori) e errori che nominano la tabella.
+ *   rev 5 — 14/11/2026 — Ripristino lavoratori: «id» sempre presente in ogni riga (prima, con un file che conteneva sia lavoratori già
+ *            presenti sia mancanti, il database rifiutava l'intero blocco: id nullo).
  */
 import { leggiTutto, sb } from "./client";
 import { getCartellaArchivio, leggiPercorsoTestuale } from "./cartella-locale";
@@ -312,8 +314,9 @@ export async function importaDb(file: File) {
     const righe = dipDump.map((d) => {
       const { id, sede_id, ...resto } = d;
       const riga: Riga = { ...resto };
-      const idDb = idPerCf.get(String(d["codice_fiscale"]));
-      if (!idDb) riga["id"] = id; // nuovo: mantiene l'id del file
+      // L'id c'è SEMPRE in tutte le righe: già presente = id del database, mancante = id del file. Se in un blocco alcune righe
+      // avessero l'id e altre no, PostgREST manderebbe id = NULL alle seconde e il ripristino si fermerebbe («id» non può essere vuoto).
+      riga["id"] = idPerCf.get(String(d["codice_fiscale"])) ?? id;
       const sede = sede_id ? (mappaSedi.get(String(sede_id)) ?? String(sede_id)) : null;
       if (sede) riga["sede_id"] = sede; // senza sede ci pensa il database (sede principale)
       return riga;
