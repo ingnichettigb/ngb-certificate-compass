@@ -3,12 +3,14 @@
  * Percorso:  src/features/scadenze/preposti.ts
  * Data creazione: 2026-11-06
  * Revisioni:
+ * - Rev 1 (2026-11-06 18:00): Applica la scadenza del motore dei cicli ai corsi Preposto, così che scheda dipendente
+ *   e stampe mostrino la stessa data e lo stesso stato della pagina Scadenze (regime transitorio 19/05/2026).
+ * - Rev 2 (2026-11-10): L'RSPP valido del lavoratore esonera dall'aggiornamento Preposto (esenzioni-rspp.ts).
  * - Rev 3 (2026-11-12): applicaScadenzaCicli segna gli attestati «superati» (anteriori all'ultima evidenza del gruppo: un Base
  *   rinnovato da un aggiornamento) e quelli di un gruppo «da rifare» (decaduto per ritardo); attestatiCorrenti() li scarta.
  *   Così un Base scaduto con un aggiornamento valido non risulta più scaduto in nessuna schermata.
- * - Rev 2 (2026-11-10): L'RSPP valido del lavoratore esonera dall'aggiornamento Preposto (esenzioni-rspp.ts).
- * - Rev 1 (2026-11-06 18:00): Applica la scadenza del motore dei cicli ai corsi Preposto, così che scheda dipendente
- *   e stampe mostrino la stessa data e lo stesso stato della pagina Scadenze (regime transitorio 19/05/2026).
+ * - Rev 4 (2026-11-14 09:25): I corsi senza scadenza / permanenti (es. SIC-GEN) non ereditano scadenze calcolate da altri
+ *   corsi del gruppo e non vengono marcati come superati o decaduti.
  *
  * Funzione pura. Gli attestati non Preposto sono restituiti identici (stessi oggetti).
  * Tutti gli attestati dello stesso lavoratore e gruppo Preposto ricevono la scadenza del gruppo: è il ciclo
@@ -65,13 +67,22 @@ export function applicaScadenzaCicli(attestati: Attestato[], oggi: Date = new Da
     });
   }
   return attestati.map((a) => {
+    const cod = (a.tipi_corso?.codice ?? "").trim().toUpperCase();
+    const ePermanente =
+      cod.startsWith("SIC-GEN") ||
+      (a.tipi_corso?.durata_validita_anni == null &&
+        !a.tipi_corso?.codice_corso_aggiornamento &&
+        !a.tipi_corso?.anni_aggiornamento);
     const g = perGruppo.get(chiaveGruppo(a));
     if (!g) return a;
     const data = (a.data_corso ?? "").slice(0, 10);
-    const valutato: AttestatoValutato = { ...a, data_scadenza_calcolata: g.scadenza };
-    if (g.ultimaEvidenza && data && data < g.ultimaEvidenza) valutato.superato = true;
-    if (g.daRifareBase) valutato.daRifareBase = true;
-    if (g.limiteRecupero) valutato.limiteRecupero = g.limiteRecupero;
+    const valutato: AttestatoValutato = {
+      ...a,
+      data_scadenza_calcolata: ePermanente ? null : g.scadenza,
+    };
+    if (g.ultimaEvidenza && data && data < g.ultimaEvidenza && !ePermanente) valutato.superato = true;
+    if (g.daRifareBase && !ePermanente) valutato.daRifareBase = true;
+    if (g.limiteRecupero && !ePermanente) valutato.limiteRecupero = g.limiteRecupero;
     return valutato;
   });
 }
