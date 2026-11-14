@@ -264,6 +264,7 @@ export type Database = {
           nome: string
           note_contratto: string | null
           reparto: string | null
+          sede_id: string
           sottoreparto: string | null
           stato_lavoratore: string
           tipo_contratto: string
@@ -286,6 +287,7 @@ export type Database = {
           nome: string
           note_contratto?: string | null
           reparto?: string | null
+          sede_id: string
           sottoreparto?: string | null
           stato_lavoratore?: string
           tipo_contratto?: string
@@ -308,12 +310,21 @@ export type Database = {
           nome?: string
           note_contratto?: string | null
           reparto?: string | null
+          sede_id?: string
           sottoreparto?: string | null
           stato_lavoratore?: string
           tipo_contratto?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dipendenti_sede_id_fkey"
+            columns: ["sede_id"]
+            isOneToOne: false
+            referencedRelation: "sedi"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dipendenti_ruoli: {
         Row: {
@@ -321,18 +332,21 @@ export type Database = {
           dipendente_id: string
           id: string
           ruolo_id: string
+          sede_id: string
         }
         Insert: {
           created_at?: string
           dipendente_id: string
           id?: string
           ruolo_id: string
+          sede_id: string
         }
         Update: {
           created_at?: string
           dipendente_id?: string
           id?: string
           ruolo_id?: string
+          sede_id?: string
         }
         Relationships: [
           {
@@ -347,6 +361,13 @@ export type Database = {
             columns: ["ruolo_id"]
             isOneToOne: false
             referencedRelation: "ruoli_sicurezza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dipendenti_ruoli_sede_id_fkey"
+            columns: ["sede_id"]
+            isOneToOne: false
+            referencedRelation: "sedi"
             referencedColumns: ["id"]
           },
         ]
@@ -597,6 +618,45 @@ export type Database = {
         }
         Relationships: []
       }
+      modelli_nomina: {
+        Row: {
+          chiusura: string
+          corpo: string
+          etichetta_firma: string
+          formazione: string
+          introduzione: string
+          nota_firma: string
+          oggetto: string
+          tipo: string
+          titolo: string
+          updated_at: string
+        }
+        Insert: {
+          chiusura?: string
+          corpo?: string
+          etichetta_firma?: string
+          formazione?: string
+          introduzione?: string
+          nota_firma?: string
+          oggetto: string
+          tipo: string
+          titolo: string
+          updated_at?: string
+        }
+        Update: {
+          chiusura?: string
+          corpo?: string
+          etichetta_firma?: string
+          formazione?: string
+          introduzione?: string
+          nota_firma?: string
+          oggetto?: string
+          tipo?: string
+          titolo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       note_valutazione: {
         Row: {
           created_at: string
@@ -696,6 +756,48 @@ export type Database = {
           nome?: string
           obbligatorio_tutti?: boolean
           ordine?: number
+        }
+        Relationships: []
+      }
+      sedi: {
+        Row: {
+          attiva: boolean
+          cap: string | null
+          comune: string | null
+          created_at: string
+          id: string
+          indirizzo: string | null
+          is_principale: boolean
+          nome: string
+          ordine: number
+          provincia: string | null
+          updated_at: string
+        }
+        Insert: {
+          attiva?: boolean
+          cap?: string | null
+          comune?: string | null
+          created_at?: string
+          id?: string
+          indirizzo?: string | null
+          is_principale?: boolean
+          nome: string
+          ordine?: number
+          provincia?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attiva?: boolean
+          cap?: string | null
+          comune?: string | null
+          created_at?: string
+          id?: string
+          indirizzo?: string | null
+          is_principale?: boolean
+          nome?: string
+          ordine?: number
+          provincia?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -840,6 +942,7 @@ export type Database = {
         Args: { p_classe?: string; p_nome: string }
         Returns: undefined
       }
+      sede_principale_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
