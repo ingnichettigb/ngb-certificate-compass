@@ -7,6 +7,7 @@
  *   rev 2 — 08/11/2026 — Colonne «Luogo di nascita» e «Data di nascita» (intestazioni e testo delle celle).
  *   rev 3 — 09/11/2026 17:30 — Intestazione e rendering cella per «inSquadra» (Sì / No / —).
  *   rev 4 — 09/11/2026 20:00 — Colonne dell'Organigramma (Squadra, Corso base, Aggiornamento); totale con lavoratori distinti.
+ *   rev 5 — 14/11/2026 — Colonna Stato: per il Preposto esonerato dall'aggiornamento (RSPP/ASPP valido) si indica il motivo, non solo «Valido».
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
@@ -67,7 +68,7 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "numero": return r.numero || "—";
     case "data": return dataIt(r.dataCorso);
     case "scadenza": return r.stato === "manca" ? "Manca" : dataIt(r.scadenza);
-    case "stato": return ETICHETTA_STATO[r.stato];
+    case "stato": return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
     case "categoria": return r.sottoreparto || "—";
     case "argomento": return r.gruppoTitolo || "—";
     case "giorni": return r.giorniAllaScadenza != null ? String(r.giorniAllaScadenza) : "—";

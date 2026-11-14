@@ -11,6 +11,7 @@
  *   rev 5 — 09/11/2026 20:00 — Organigramma squadre: colonne «squadra», «corsoBaseSquadra», «aggiornamentoSquadra» e relativi campi di RigaStampa.
  *   rev 6 — 11/11/2026 17:30 — Filtro «Stato lavoratore» (In forza / Solo cessati / Tutti): tipo FiltroStatoLavoratore, campo statoLavoratori,
  *            helper statoEffettivo e includeLavoratorePerStato. «includiCessati» resta valido (vale «Tutti»): test e preset esistenti invariati.
+ *   rev 7 — 14/11/2026 — RigaStampa.esenzioneRspp: motivo dell'esonero dall'aggiornamento Preposto (RSPP/ASPP valido).
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -160,6 +161,8 @@ export type RigaStampa = {
    * null = corso senza specifica squadra operativa (es. Privacy o Formazione generale).
    */
   inSquadra?: boolean | null;
+  /** Preposto esonerato dall'aggiornamento per RSPP/ASPP valido: motivo da mostrare nella colonna Stato. */
+  esenzioneRspp?: string;
   /** Solo Organigramma: la squadra di questa riga (una riga per lavoratore e per squadra) e le due celle di formazione. */
   squadra?: string;
   cellaBase?: CellaSquadra;

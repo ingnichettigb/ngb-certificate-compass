@@ -11,13 +11,16 @@
  *   Così un Base scaduto con un aggiornamento valido non risulta più scaduto in nessuna schermata.
  * - Rev 4 (2026-11-14 09:25): I corsi senza scadenza / permanenti (es. SIC-GEN) non ereditano scadenze calcolate da altri
  *   corsi del gruppo e non vengono marcati come superati o decaduti.
+ * - Rev 5 (2026-11-14): «Permanente» vale solo per la Formazione generale (SIC-GEN, eCorsoGenerale): un tipo di corso configurato
+ *   male (senza durata) non diventa più senza scadenza in silenzio. L'attestato Preposto di chi è esonerato dall'aggiornamento
+ *   per RSPP/ASPP valido riceve `esenzioneRspp` (motivo), così le stampe lo indicano.
  *
  * Funzione pura. Gli attestati non Preposto sono restituiti identici (stessi oggetti).
  * Tutti gli attestati dello stesso lavoratore e gruppo Preposto ricevono la scadenza del gruppo: è il ciclo
  * (non il singolo attestato) a essere valido o scaduto.
  */
 import type { Attestato } from "@/lib/api";
-import { chiaveGruppo, costruisciRighe, ePreposto } from "./raggruppa";
+import { chiaveGruppo, costruisciRighe, eCorsoGenerale, ePreposto } from "./raggruppa";
 
 export function applicaScadenzaPreposti(attestati: Attestato[], oggi: Date = new Date()): Attestato[] {
   const preposti = attestati.filter(ePreposto);
@@ -43,6 +46,8 @@ export type AttestatoValutato = Attestato & {
   daRifareBase?: boolean;
   /** Ultimo giorno utile per sanare con un aggiornamento (solo corsi con tolleranza). */
   limiteRecupero?: string | null;
+  /** Motivo dell'esonero dall'aggiornamento Preposto (RSPP/ASPP valido); assente se il lavoratore non è esonerato. */
+  esenzioneRspp?: string;
 };
 
 /**
@@ -55,24 +60,29 @@ export function applicaScadenzaCicli(attestati: Attestato[], oggi: Date = new Da
   if (attestati.length === 0) return attestati;
   const perGruppo = new Map<
     string,
-    { scadenza: string; ultimaEvidenza: string | null; daRifareBase: boolean; limiteRecupero: string | null }
+    {
+      scadenza: string | null;
+      ultimaEvidenza: string | null;
+      daRifareBase: boolean;
+      limiteRecupero: string | null;
+      esenzione: string | null;
+    }
   >();
   for (const riga of costruisciRighe(attestati, oggi)) {
-    if (!riga.ciclo.scadenzaEffettiva) continue;
+    const esenzione = riga.ciclo.esenteRspp ? riga.ciclo.motivoScadenza : null;
+    // Con RSPP senza scadenza il ciclo Preposto non ha una data: si deve comunque indicare l'esonero.
+    if (!riga.ciclo.scadenzaEffettiva && !esenzione) continue;
     perGruppo.set(riga.chiave, {
       scadenza: riga.ciclo.scadenzaEffettiva,
+      esenzione,
       ultimaEvidenza: riga.ciclo.dataUltimaEvidenza,
       daRifareBase: !!riga.ciclo.decadutoPerRitardo,
       limiteRecupero: riga.ciclo.limiteRecupero ?? null,
     });
   }
   return attestati.map((a) => {
-    const cod = (a.tipi_corso?.codice ?? "").trim().toUpperCase();
-    const ePermanente =
-      cod.startsWith("SIC-GEN") ||
-      (a.tipi_corso?.durata_validita_anni == null &&
-        !a.tipi_corso?.codice_corso_aggiornamento &&
-        !a.tipi_corso?.anni_aggiornamento);
+    // Permanente = solo la Formazione generale (SIC-GEN). Un corso senza durata configurata NON è permanente.
+    const ePermanente = eCorsoGenerale(a.tipi_corso);
     const g = perGruppo.get(chiaveGruppo(a));
     if (!g) return a;
     const data = (a.data_corso ?? "").slice(0, 10);
@@ -83,6 +93,7 @@ export function applicaScadenzaCicli(attestati: Attestato[], oggi: Date = new Da
     if (g.ultimaEvidenza && data && data < g.ultimaEvidenza && !ePermanente) valutato.superato = true;
     if (g.daRifareBase && !ePermanente) valutato.daRifareBase = true;
     if (g.limiteRecupero && !ePermanente) valutato.limiteRecupero = g.limiteRecupero;
+    if (g.esenzione && ePreposto(a)) valutato.esenzioneRspp = g.esenzione;
     return valutato;
   });
 }

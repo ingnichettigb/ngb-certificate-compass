@@ -92,6 +92,13 @@
       "when": 1794466739020,
       "tag": "0012_sedi_multi_sede",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794466799020,
+      "tag": "0013_allinea_catalogo_primo_soccorso",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
  *   rev 7 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: righeMancanti, calcolaRighe e calcolaRigheLavoratori usano includeLavoratorePerStato.
+ *   rev 8 — 14/11/2026 — calcolaRighe passa alla riga l'esonero RSPP/ASPP dal Preposto (esenzioneRspp).
  *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
@@ -187,6 +188,7 @@ export function calcolaRighe(
         stato,
         giorniAllaScadenza: giorni,
         inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
+        ...(a.esenzioneRspp ? { esenzioneRspp: a.esenzioneRspp } : {}),
       };
     });
 

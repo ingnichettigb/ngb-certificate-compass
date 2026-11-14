@@ -4,6 +4,8 @@
  * Data creaz: 08/11/2026
  * Verifica: scadenze calcolate con il ciclo per tutti i corsi, filtro Corso base / specifico, righe «Manca»,
  * scelta del pubblico (Tutti / Solo docenti / Solo ATA) e sezioni per reparto (Docenti poi ATA).
+ * Rev 14/11/2026: la formazione generale (SIC-GEN) è permanente (nessuna scadenza, mai «scaduto»); un corso senza durata configurata
+ * non è permanente; l'esonero RSPP/ASPP dall'aggiornamento Preposto è indicato nella colonna Stato.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -70,10 +72,10 @@ describe("Corso base e Corso specifico con la voce «Manca»", () => {
   const base = trovaPredefinita("scadenze-corso-base")!.filtri;
   const specifico = trovaPredefinita("scadenze-corso-specifico")!.filtri;
 
-  it("Corso base: Bianchi ha il corso (scaduto), gli altri lavoratori in servizio compaiono con «Manca»", () => {
+  it("Corso base: la formazione generale non scade, quindi Bianchi (che ce l'ha) non compare; gli altri lavoratori in servizio compaiono con «Manca»", () => {
     const r = calcolaRighe(atts, base, OGGI, [], null, [], tutti);
     const perStato = Object.fromEntries(r.map((x) => [x.cognome, x.stato]));
-    expect(perStato).toEqual({ Bianchi: "scaduto", Verdi: "manca", Neri: "manca" });
+    expect(perStato).toEqual({ Verdi: "manca", Neri: "manca" });
   });
   it("Corso specifico: l'inverso, e solo gli attestati del Corso specifico", () => {
     const r = calcolaRighe(atts, specifico, OGGI, [], null, [], tutti);
@@ -142,5 +144,45 @@ describe("Tutti / Solo docenti / Solo ATA e sezioni per reparto", () => {
   });
   it("PDF senza raggruppamento: una sola sezione", () => {
     expect(sezioniPerPdf({ modello: "scadenze" }, righe, null, [], undefined)).toHaveLength(1);
+  });
+});
+
+describe("Formazione generale (SIC-GEN) permanente", () => {
+  const rossi = dip("Rossi", "Docente");
+  it("SIC-GEN non scade mai e non è mai «superata», anche con un corso specifico dello stesso lavoratore", () => {
+    const gen = att("g", rossi, "SIC-GEN-04", "Sicurezza lavoratori", "Base", "2015-03-01", "2020-03-01");
+    const spe = att("s", rossi, "SIC-SPE-08", "Sicurezza lavoratori", "Base", "2016-03-01", "2021-03-01", 8);
+    const r = applicaScadenzaCicli([gen, spe], OGGI);
+    expect(r[0]!.data_scadenza_calcolata).toBeNull();
+    expect(r[0]!.superato).toBeUndefined();
+    expect(r[0]!.daRifareBase).toBeUndefined();
+    expect(r[1]!.data_scadenza_calcolata).not.toBeNull();
+  });
+  it("un corso senza durata configurata NON diventa permanente: eredita la scadenza del suo ciclo", () => {
+    const base = att("b", rossi, "VFF-FOR1-4", "Antincendio", "Base", "2018-09-15", null);
+    const senzaDurata = { ...base, tipi_corso: { ...base.tipi_corso!, durata_validita_anni: null } } as Attestato;
+    const agg = att("c", rossi, "VFF-AGG-5", "Antincendio", "Aggiornamento", "2022-05-10", null, 6);
+    const r = applicaScadenzaCicli([senzaDurata, agg], OGGI);
+    expect(r[0]!.data_scadenza_calcolata).toBe("2028-09-15");
+  });
+});
+
+describe("Preposto esonerato dall'aggiornamento per RSPP/ASPP valido", () => {
+  const rossi = dip("Rossi", "ATA");
+  const prep = att("p", rossi, "PRP-BAS-12", "Preposto", "Base", "2022-03-10", null, 8);
+  const rspp = att("r", rossi, "SIC-RSPP-AGG", "RSPP", "Aggiornamento", "2025-01-10", "2030-01-10", 40);
+
+  it("la colonna Stato indica l'esonero e la data dell'RSPP, non solo «Valido»", () => {
+    const righe = calcolaRighe([prep, rspp], FILTRI_INIZIALI, OGGI);
+    const riga = righe.find((x) => x.codice === "PRP-BAS-12")!;
+    expect(riga.stato).toBe("valido");
+    expect(riga.scadenza).toBe("2030-01-10");
+    expect(cella(riga, "stato")).toContain("Esente dall'aggiornamento Preposto");
+    expect(cella(riga, "stato")).toContain("10/01/2030");
+  });
+  it("senza RSPP valido la colonna Stato resta quella di sempre", () => {
+    const riga = calcolaRighe([prep], FILTRI_INIZIALI, OGGI).find((x) => x.codice === "PRP-BAS-12")!;
+    expect(riga.esenzioneRspp).toBeUndefined();
+    expect(cella(riga, "stato")).toBe("Scaduto");
   });
 });
