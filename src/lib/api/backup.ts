@@ -9,6 +9,7 @@
  *   rev 4 — 13/11/2026 — Backup COMPLETO (versione 5): tutte le tabelle (prima 10 su 19: mancavano incarichi, ruoli, sedi, nomine,
  *            documenti, integrazioni DVR, coda valutazioni…), lettura a blocchi senza il limite di 1000 righe, ripristino nell'ordine
  *            delle dipendenze con rimappatura degli id (sedi, ruoli, lavoratori) e errori che nominano la tabella.
+ *   rev 6 — 14/11/2026 — Tabelle di raccordo nel backup: regole_ruolo_corso, rischio_ateco, gruppi_primo_soccorso, gruppi_tariffa_inail.
  *   rev 5 — 14/11/2026 — Ripristino lavoratori: «id» sempre presente in ogni riga (prima, con un file che conteneva sia lavoratori già
  *            presenti sia mancanti, il database rifiutava l'intero blocco: id nullo).
  */
@@ -38,6 +39,10 @@ export const TABELLE_BACKUP = [
   { tabella: "ditta", chiave: "id" },
   { tabella: "soglie_ditta", chiave: "id" },
   { tabella: "ruoli_sicurezza", chiave: "id" },
+  { tabella: "regole_ruolo_corso", chiave: "id" },
+  { tabella: "rischio_ateco", chiave: "id" },
+  { tabella: "gruppi_primo_soccorso", chiave: "id" },
+  { tabella: "gruppi_tariffa_inail", chiave: "id" },
   { tabella: "sedi", chiave: "id" },
   { tabella: "dipendenti", chiave: "id" },
   { tabella: "dipendenti_ruoli", chiave: "id" },
@@ -258,6 +263,10 @@ export async function importaDb(file: File) {
   await semplice("modelli_nomina", "tipo");
   await semplice("ditta", "id");
   await semplice("soglie_ditta", "id");
+  await semplice("regole_ruolo_corso", "id");
+  await semplice("rischio_ateco", "id");
+  await semplice("gruppi_primo_soccorso", "id");
+  await semplice("gruppi_tariffa_inail", "id");
 
   // 2. Ruoli: stesso nome = stesso ruolo (si aggiorna), altrimenti si inserisce
   const mappaRuoli = new Map<string, string>();

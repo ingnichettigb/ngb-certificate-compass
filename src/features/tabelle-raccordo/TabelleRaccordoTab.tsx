@@ -1,0 +1,45 @@
+/*
+ * File:      TabelleRaccordoTab.tsx
+ * Percorso:  src/features/tabelle-raccordo/TabelleRaccordoTab.tsx
+ * Data creaz: 14/11/2026
+ * Revisioni:
+ *   rev 1 — 14/11/2026 — Scheda «Tabelle di raccordo» di Impostazioni generali: un pulsante numerato per ognuna delle 9 tabelle.
+ */
+import { useState } from "react";
+import { TabellaTipiCorsoDialog } from "@/features/tipi-corso/TabellaTipiCorsoDialog";
+import { TABELLE_RACCORDO } from "./definizioni";
+import { TabellaRaccordo } from "./TabellaRaccordo";
+
+export function TabelleRaccordoTab() {
+  const [corrente, setCorrente] = useState(TABELLE_RACCORDO[0]!.id);
+  const def = TABELLE_RACCORDO.find((t) => t.id === corrente) ?? TABELLE_RACCORDO[0]!;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tabelle di raccordo">
+        {TABELLE_RACCORDO.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={t.id === corrente}
+            aria-pressed={t.id === corrente}
+            className="btn-raccordo"
+            onClick={() => setCorrente(t.id)}
+          >
+            {t.numero} – {t.titolo}
+          </button>
+        ))}
+      </div>
+
+      {def.tabella ? (
+        <TabellaRaccordo key={def.id} def={def} />
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{def.descrizione}</p>
+          <TabellaTipiCorsoDialog />
+        </div>
+      )}
+    </div>
+  );
+}

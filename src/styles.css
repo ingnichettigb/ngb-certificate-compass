@@ -169,3 +169,63 @@
     letter-spacing: -0.015em;
   }
 }
+
+/* ── Tabelle di raccordo (Impostazioni generali) ───────────────────────────────────────────────
+   Pulsanti verde chiaro con bordo e scritta verde elettrico; da selezionati i colori si invertono.
+   Barre di scorrimento sempre visibili (anche con scorrimento «a scomparsa» di macOS/Windows). */
+.btn-raccordo {
+  --raccordo-chiaro: #eafff0;
+  --raccordo-elettrico: #00e64d;
+  --raccordo-testo: #00a63c;
+  border: 2px solid var(--raccordo-elettrico);
+  background: var(--raccordo-chiaro);
+  color: var(--raccordo-testo);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.btn-raccordo:hover:not(:disabled) {
+  background: #d4ffe1;
+}
+.btn-raccordo[aria-pressed="true"],
+.btn-raccordo[data-selected="true"] {
+  background: var(--raccordo-elettrico);
+  color: var(--raccordo-chiaro);
+}
+.btn-raccordo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-raccordo:focus-visible {
+  outline: 2px solid var(--raccordo-elettrico);
+  outline-offset: 2px;
+}
+
+.scroll-visibile {
+  overflow: scroll;
+}
+.scroll-visibile::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.scroll-visibile::-webkit-scrollbar-track {
+  background: #e6f5ea;
+}
+.scroll-visibile::-webkit-scrollbar-thumb {
+  background: #00c040;
+  border-radius: 8px;
+  border: 3px solid #e6f5ea;
+}
+.scroll-visibile::-webkit-scrollbar-corner {
+  background: #e6f5ea;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scroll-visibile {
+    scrollbar-width: auto;
+    scrollbar-color: #00c040 #e6f5ea;
+  }
+}

@@ -99,6 +99,13 @@
       "when": 1794466799020,
       "tag": "0013_allinea_catalogo_primo_soccorso",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794466859020,
+      "tag": "0014_tabelle_raccordo",
+      "breakpoints": true
     }
   ]
 }

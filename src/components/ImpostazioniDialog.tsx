@@ -23,6 +23,7 @@ import { InsegnamentoTab } from "@/features/impostazioni/InsegnamentoTab";
 import { CategorieTab } from "@/features/impostazioni/CategorieTab";
 import { RuoliTab } from "@/features/impostazioni/RuoliTab";
 import { ArchivioTab } from "@/features/impostazioni/ArchivioTab";
+import { TabelleRaccordoTab } from "@/features/tabelle-raccordo/TabelleRaccordoTab";
 
 /** Cosa fare dopo la scelta nel dialogo di conferma. */
 type AzioneDopo = { tipo: "chiudi" } | { tipo: "scheda"; valore: string };
@@ -138,7 +139,7 @@ export function ImpostazioniDialog() {
               {/* Area contenuti a tutto schermo con scroll indipendente */}
               <main className="flex-1 overflow-y-auto px-6 py-6 max-w-7xl w-full mx-auto">
                 <Tabs value={scheda} onValueChange={cambiaScheda} className="w-full">
-                  <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-7 mb-6">
+                  <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-8 mb-6">
                     <TabsTrigger value="ditta">Ditta</TabsTrigger>
                     <TabsTrigger value="corsi">Corsi</TabsTrigger>
                     <TabsTrigger value="reparti">Reparti</TabsTrigger>
@@ -146,6 +147,7 @@ export function ImpostazioniDialog() {
                     <TabsTrigger value="categorie">Categorie</TabsTrigger>
                     <TabsTrigger value="ruoli">Ruoli</TabsTrigger>
                     <TabsTrigger value="archivio">Archivio</TabsTrigger>
+                    <TabsTrigger value="raccordo" className="whitespace-normal text-center">Tabelle di raccordo</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="ditta">
@@ -177,6 +179,10 @@ export function ImpostazioniDialog() {
 
                   <TabsContent value="archivio">
                     <ArchivioTab />
+                  </TabsContent>
+
+                  <TabsContent value="raccordo">
+                    <TabelleRaccordoTab />
                   </TabsContent>
                 </Tabs>
               </main>
