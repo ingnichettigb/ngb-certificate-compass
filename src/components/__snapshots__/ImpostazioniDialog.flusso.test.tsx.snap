@@ -77,6 +77,36 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "sb",
     "from",
+    "sedi",
+    "["sedi"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "sedi",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "sedi",
+    "["is_principale",{"ascending":false}]",
+  ],
+  [
+    "sb",
+    "from.select.order.order",
+    "sedi",
+    "["ordine"]",
+  ],
+  [
+    "sb",
+    "from.select.order.order.order",
+    "sedi",
+    "["nome"]",
+  ],
+  [
+    "sb",
+    "from",
     "reparti",
     "["reparti"]",
   ],
