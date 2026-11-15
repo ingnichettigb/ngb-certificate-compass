@@ -10,6 +10,7 @@
  *   rev 5 — 01/11/2026 12:00 — Integrazione DittaTab con anagrafica database e parametri D.Lgs. 81/08.
  *   rev 6 — 06/11/2026 — «Torna» ed Esc chiedono SEMPRE conferma con 3 scelte (Salva e chiudi / Esci senza salvare /
  *                        Annulla); la stessa conferma compare cambiando scheda se la Ditta ha modifiche non salvate.
+ *   rev 7 — 14/11/2026 21:50 — Linguette e tasto «Torna» allo standard comune dei pulsanti.
  */
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

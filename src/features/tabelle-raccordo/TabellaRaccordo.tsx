@@ -5,11 +5,15 @@
  * Revisioni:
  *   rev 1 — 14/11/2026 — Tabella generica delle tabelle di raccordo: intestazione fissa, barre di scorrimento sempre visibili,
  *            righe a colori alternati, aggiunta, modifica, duplicazione e cancellazione dei record, spunta manuale «Applica».
+ *   rev 2 — 14/11/2026 21:50 — Bottoni standard (Cancella rosso) e colonne regolabili, spostabili e ordinabili (modulo comune).
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { IntestazioneColonna } from "@/components/tabella-comune/IntestazioneColonna";
+import { ordinaRighe, useColonneTabella } from "@/components/tabella-comune/useColonneTabella";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +90,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
   const [salvataggio, setSalvataggio] = useState(false);
   const [daCancellare, setDaCancellare] = useState<Riga | null>(null);
   const [selezionata, setSelezionata] = useState<string | null>(null);
+  const colonne = useColonneTabella(`raccordo:${def.id}`, def.colonne.map((c) => c.chiave));
 
   const {
     data: righe = [],
@@ -212,52 +217,53 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
   if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
 
   const selezionataRiga = righe.find((r) => r.id === selezionata) ?? null;
+  const visibili = colonne.ordine
+    .map((k) => def.colonne.find((c) => c.chiave === k))
+    .filter((c): c is Colonna => Boolean(c));
+  const mostrate = ordinaRighe(righe, colonne.ordinamento);
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{def.descrizione}</p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-raccordo" onClick={() => apriModulo(null)}>
-          <Plus className="mr-1 inline size-4" />
-          Aggiungi
-        </button>
-        <button
+        <Button type="button" onClick={() => apriModulo(null)}>
+          <Plus /> Aggiungi
+        </Button>
+        <Button
           type="button"
-          className="btn-raccordo"
           disabled={!selezionataRiga}
           onClick={() => selezionataRiga && apriModulo(selezionataRiga)}
         >
-          <Pencil className="mr-1 inline size-4" />
-          Modifica
-        </button>
-        <button
+          <Pencil /> Modifica
+        </Button>
+        <Button
           type="button"
-          className="btn-raccordo"
           disabled={!selezionataRiga}
           onClick={() => selezionataRiga && duplica(selezionataRiga)}
         >
-          <Copy className="mr-1 inline size-4" />
-          Duplica
-        </button>
-        <button
+          <Copy /> Duplica
+        </Button>
+        <Button
           type="button"
-          className="btn-raccordo"
+          variant="destructive"
           disabled={!selezionataRiga}
           onClick={() => selezionataRiga && setDaCancellare(selezionataRiga)}
         >
-          <Trash2 className="mr-1 inline size-4" />
-          Cancella
-        </button>
+          <Trash2 /> Cancella
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={colonne.ripristina}>
+          Ripristina colonne
+        </Button>
         {def.documento && (
-          <button
+          <Button
             type="button"
-            className="btn-raccordo ml-auto"
+            variant="outline"
+            className="ml-auto"
             onClick={() => window.open(def.documento!.url, "_blank", "noopener,noreferrer")}
           >
-            <ExternalLink className="mr-1 inline size-4" />
-            {def.documento.etichetta}
-          </button>
+            <ExternalLink /> {def.documento.etichetta}
+          </Button>
         )}
         <span className={`text-xs text-muted-foreground ${def.documento ? "" : "ml-auto"}`}>
           {righe.length} record · seleziona una riga per modificarla, duplicarla o cancellarla
@@ -276,13 +282,14 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
                 <th className="sticky top-0 z-10 w-14 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
                   N
                 </th>
-                {def.colonne.map((c) => (
-                  <th
+                {visibili.map((c) => (
+                  <IntestazioneColonna
                     key={c.chiave}
-                    className={`sticky top-0 z-10 border-b border-border bg-muted px-3 py-2 text-left font-semibold ${c.larghezza ?? ""}`}
-                  >
-                    {c.etichetta}
-                  </th>
+                    chiave={c.chiave}
+                    etichetta={c.etichetta}
+                    colonne={colonne}
+                    className={colonne.larghezze[c.chiave] ? "" : (c.larghezza ?? "")}
+                  />
                 ))}
                 <th className="sticky top-0 z-10 w-24 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
                   Applica
@@ -290,7 +297,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
               </tr>
             </thead>
             <tbody>
-              {righe.map((r, i) => (
+              {mostrate.map((r, i) => (
                 <tr
                   key={r.id}
                   onClick={() => setSelezionata(r.id)}
@@ -305,8 +312,8 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
                   <td className="px-3 py-1.5 text-center tabular-nums text-muted-foreground">
                     {i + 1}
                   </td>
-                  {def.colonne.map((c) => (
-                    <td key={c.chiave} className="px-3 py-1.5 align-top">
+                  {visibili.map((c) => (
+                    <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
                       {mostra(c, r[c.chiave])}
                     </td>
                   ))}
@@ -392,23 +399,12 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
             ))}
           </div>
           <DialogFooter className="gap-2">
-            <button
-              type="button"
-              className="btn-raccordo"
-              disabled={salvataggio}
-              onClick={() => setModifica(null)}
-            >
+            <Button type="button" variant="outline" disabled={salvataggio} onClick={() => setModifica(null)}>
               Annulla
-            </button>
-            <button
-              type="button"
-              className="btn-raccordo"
-              data-selected="true"
-              disabled={salvataggio}
-              onClick={salva}
-            >
+            </Button>
+            <Button type="button" disabled={salvataggio} onClick={salva}>
               {salvataggio ? "Salvataggio…" : "Salva"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -421,7 +417,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={conferma}>Cancella</AlertDialogAction>
+            <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={conferma}>Cancella</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
