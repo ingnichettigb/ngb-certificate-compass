@@ -55,7 +55,7 @@ export function IntestazioneColonna({ chiave, etichetta, colonne, className }: P
       </button>
       <span
         role="separator"
-        aria-label={`Larghezza colonna ${etichetta}`}
+        aria-label="Ridimensiona colonna"
         onPointerDown={(e) => colonne.iniziaResize(chiave, e)}
         onDoubleClick={() => colonne.ripristinaLarghezza(chiave)}
         onClick={(e) => e.stopPropagation()}
