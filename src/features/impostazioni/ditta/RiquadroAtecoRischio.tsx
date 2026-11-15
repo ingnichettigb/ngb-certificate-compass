@@ -4,36 +4,26 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: attività, codici ATECO e livello di rischio. Nessun cambio di comportamento.
- *   rev 2 — 15/11/2026 11:56 — Selezione ATECO da catalogo Tabella 06 (ricerca istantanea, scorrimento completo, chiusura Esc), propagazione rischio e allineamento per gravità con notifica.
+ *   rev 2 — 15/11/2026 11:56 — Selezione ATECO da catalogo Tabella 06 (ricerca istantanea, scorrimento, chiusura Esc).
+ *   rev 3 — 15/11/2026 12:45 — Uso hook unico useCatalogoAteco (anti-collisione cache), rimozione mutazione prematura del rischio ditta, stella ATECO principale ed etichetta rischio calcolato vs forzato con tasto ripristina.
  */
 import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { ShieldAlert, Plus, Trash2, Search, BookOpen } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, Search, BookOpen, Star, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import type { DittaRecord } from "@/lib/api/ditta";
-import { leggiTutto, sb } from "@/lib/api/client";
 import type { LivelloRischio } from "@/features/ditta/regole-ditta";
+import {
+  useCatalogoAteco,
+  calcolaRischioMassimo,
+  type VoceCatalogoAteco,
+} from "@/features/ditta/catalogo-ateco";
 import type { AggiornaCampo } from "./tipi-ditta-tab";
 import type { StatoNuovoAteco } from "./useDittaTab";
-
-type VoceCatalogoAteco = {
-  id: string;
-  codice: string;
-  descrizione: string;
-  rischio: LivelloRischio;
-};
-
-const GRAVITA_RISCHIO: Record<LivelloRischio, number> = {
-  basso: 1,
-  medio: 2,
-  alto: 3,
-};
 
 interface Props {
   form: DittaRecord;
@@ -42,6 +32,7 @@ interface Props {
   setNuovoAteco: Dispatch<SetStateAction<StatoNuovoAteco>>;
   aggiungiAteco: () => void;
   rimuoviAteco: (index: number) => void;
+  impostaPrincipale: (index: number) => void;
 }
 
 export function RiquadroAtecoRischio({
@@ -51,21 +42,13 @@ export function RiquadroAtecoRischio({
   setNuovoAteco,
   aggiungiAteco,
   rimuoviAteco,
+  impostaPrincipale,
 }: Props) {
   const [filtroCatalogo, setFiltroCatalogo] = useState("");
   const [catalogoAperto, setCatalogoAperto] = useState(false);
 
-  // Caricamento catalogo completo Tabella 06 (rischio_ateco)
-  const { data: catalogo = [] } = useQuery({
-    queryKey: ["raccordo", "ateco"],
-    queryFn: () =>
-      leggiTutto<VoceCatalogoAteco>(() =>
-        sb
-          .from("rischio_ateco")
-          .select("id, codice, descrizione, rischio")
-          .order("codice", { ascending: true }),
-      ),
-  });
+  // Hook condiviso: nessuna collisione di cache
+  const { data: catalogo = [] } = useCatalogoAteco();
 
   const vociFiltrate = useMemo(() => {
     const q = filtroCatalogo.trim().toLowerCase();
@@ -75,25 +58,32 @@ export function RiquadroAtecoRischio({
     );
   }, [catalogo, filtroCatalogo]);
 
+  // Rischio teorico calcolato in base alla massima gravità dei codici ATECO associati
+  const rischioCalcolato = useMemo(
+    () => calcolaRischioMassimo(form.codici_ateco),
+    [form.codici_ateco],
+  );
+
+  const eManuale =
+    form.codici_ateco.length > 0 &&
+    rischioCalcolato !== null &&
+    form.rischio_ditta !== null &&
+    form.rischio_ditta !== rischioCalcolato;
+
   function selezionaDaCatalogo(voce: VoceCatalogoAteco) {
+    // Precompila il form di inserimento senza toccare prematuramente il rischio aziendale
     setNuovoAteco({
       codice: voce.codice,
       descrizione: voce.descrizione,
       rischio: voce.rischio,
     });
-
-    // Allineamento rischio ditta per principio di massima gravità (D.Lgs. 81/08)
-    const rischioAttuale = form.rischio_ditta ?? null;
-    const gAttuale = rischioAttuale ? GRAVITA_RISCHIO[rischioAttuale] ?? 0 : 0;
-    const gNuovo = GRAVITA_RISCHIO[voce.rischio] ?? 0;
-
-    if (!rischioAttuale || gNuovo > gAttuale || form.codici_ateco.length === 0) {
-      updateCampo("rischio_ditta", voce.rischio);
-      toast.info(
-        `Grado di rischio aziendale proposto aggiornato a «${voce.rischio.toUpperCase()}» (da ATECO ${voce.codice})`,
-      );
-    }
     setCatalogoAperto(false);
+  }
+
+  function ripristinaRischioCalcolato() {
+    if (rischioCalcolato) {
+      updateCampo("rischio_ditta", rischioCalcolato);
+    }
   }
 
   return (
@@ -102,9 +92,24 @@ export function RiquadroAtecoRischio({
         <ShieldAlert className="size-4 text-primary" /> Attività, Codici ATECO e Rischio Aziendale
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-        <div className="space-y-1">
-          <Label htmlFor="rischio_ditta">Grado di Rischio Aziendale</Label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="rischio_ditta">Grado di Rischio Aziendale</Label>
+            {form.codici_ateco.length > 0 && rischioCalcolato && (
+              <span className="text-[11px] text-muted-foreground">
+                {eManuale ? (
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    Impostato manualmente
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    Calcolato dai codici
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
           <select
             id="rischio_ditta"
             className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
@@ -117,9 +122,22 @@ export function RiquadroAtecoRischio({
             <option value="medio">Medio (es. scuola, trasporti, agricoltura)</option>
             <option value="alto">Alto (es. industria, edilizia, sanità)</option>
           </select>
+
+          {eManuale && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={ripristinaRischioCalcolato}
+              className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-foreground gap-1"
+            >
+              <RefreshCw className="size-3" />
+              Ripristina calcolato ({rischioCalcolato})
+            </Button>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 pt-4">
+        <div className="flex items-center gap-3 pt-6">
           <Switch
             id="e_scuola"
             checked={form.e_scuola}
@@ -130,7 +148,7 @@ export function RiquadroAtecoRischio({
           </Label>
         </div>
 
-        <div className="flex items-center gap-3 pt-4">
+        <div className="flex items-center gap-3 pt-6">
           <Switch
             id="reparti_rischio_differenziato"
             checked={form.reparti_rischio_differenziato}
@@ -240,7 +258,25 @@ export function RiquadroAtecoRischio({
           <ul className="divide-y rounded-md border text-xs bg-muted/20">
             {form.codici_ateco.map((ateco, idx) => (
               <li key={idx} className="flex items-center justify-between p-2">
-                <span className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    title={
+                      ateco.principale
+                        ? "Codice ATECO principale per i nuovi dipendenti"
+                        : "Clicca per impostare come codice ATECO principale"
+                    }
+                    onClick={() => impostaPrincipale(idx)}
+                    className="p-1 hover:bg-muted rounded"
+                  >
+                    <Star
+                      className={`size-4 ${
+                        ateco.principale
+                          ? "fill-amber-400 text-amber-500"
+                          : "text-muted-foreground/40 hover:text-muted-foreground"
+                      }`}
+                    />
+                  </button>
                   <strong className="font-mono text-primary">{ateco.codice}</strong>
                   <span>{ateco.descrizione}</span>
                   {ateco.rischio && (
@@ -248,13 +284,19 @@ export function RiquadroAtecoRischio({
                       Rischio {ateco.rischio}
                     </Badge>
                   )}
-                </span>
+                  {ateco.principale && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Principale
+                    </Badge>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                   onClick={() => rimuoviAteco(idx)}
+                  title="Rimuovi questo codice ATECO"
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
