@@ -4,23 +4,42 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: attività, codici ATECO e livello di rischio. Nessun cambio di comportamento.
+ *   rev 2 — 15/11/2026 11:56 — Selezione ATECO da catalogo Tabella 06 (ricerca istantanea, scorrimento completo, chiusura Esc), propagazione rischio e allineamento per gravità con notifica.
  */
+import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { ShieldAlert, Plus, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ShieldAlert, Plus, Trash2, Search, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import type { DittaRecord } from "@/lib/api/ditta";
+import { leggiTutto, sb } from "@/lib/api/client";
+import type { LivelloRischio } from "@/features/ditta/regole-ditta";
 import type { AggiornaCampo } from "./tipi-ditta-tab";
+import type { StatoNuovoAteco } from "./useDittaTab";
 
-type NuovoAteco = { codice: string; descrizione: string };
+type VoceCatalogoAteco = {
+  id: string;
+  codice: string;
+  descrizione: string;
+  rischio: LivelloRischio;
+};
+
+const GRAVITA_RISCHIO: Record<LivelloRischio, number> = {
+  basso: 1,
+  medio: 2,
+  alto: 3,
+};
 
 interface Props {
   form: DittaRecord;
   updateCampo: AggiornaCampo;
-  nuovoAteco: NuovoAteco;
-  setNuovoAteco: Dispatch<SetStateAction<NuovoAteco>>;
+  nuovoAteco: StatoNuovoAteco;
+  setNuovoAteco: Dispatch<SetStateAction<StatoNuovoAteco>>;
   aggiungiAteco: () => void;
   rimuoviAteco: (index: number) => void;
 }
@@ -33,6 +52,50 @@ export function RiquadroAtecoRischio({
   aggiungiAteco,
   rimuoviAteco,
 }: Props) {
+  const [filtroCatalogo, setFiltroCatalogo] = useState("");
+  const [catalogoAperto, setCatalogoAperto] = useState(false);
+
+  // Caricamento catalogo completo Tabella 06 (rischio_ateco)
+  const { data: catalogo = [] } = useQuery({
+    queryKey: ["raccordo", "ateco"],
+    queryFn: () =>
+      leggiTutto<VoceCatalogoAteco>(() =>
+        sb
+          .from("rischio_ateco")
+          .select("id, codice, descrizione, rischio")
+          .order("codice", { ascending: true }),
+      ),
+  });
+
+  const vociFiltrate = useMemo(() => {
+    const q = filtroCatalogo.trim().toLowerCase();
+    if (!q) return catalogo;
+    return catalogo.filter(
+      (v) => v.codice.toLowerCase().includes(q) || v.descrizione.toLowerCase().includes(q),
+    );
+  }, [catalogo, filtroCatalogo]);
+
+  function selezionaDaCatalogo(voce: VoceCatalogoAteco) {
+    setNuovoAteco({
+      codice: voce.codice,
+      descrizione: voce.descrizione,
+      rischio: voce.rischio,
+    });
+
+    // Allineamento rischio ditta per principio di massima gravità (D.Lgs. 81/08)
+    const rischioAttuale = form.rischio_ditta ?? null;
+    const gAttuale = rischioAttuale ? GRAVITA_RISCHIO[rischioAttuale] ?? 0 : 0;
+    const gNuovo = GRAVITA_RISCHIO[voce.rischio] ?? 0;
+
+    if (!rischioAttuale || gNuovo > gAttuale || form.codici_ateco.length === 0) {
+      updateCampo("rischio_ditta", voce.rischio);
+      toast.info(
+        `Grado di rischio aziendale proposto aggiornato a «${voce.rischio.toUpperCase()}» (da ATECO ${voce.codice})`,
+      );
+    }
+    setCatalogoAperto(false);
+  }
+
   return (
     <div className="rounded-lg border bg-card p-4 space-y-4">
       <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
@@ -47,7 +110,7 @@ export function RiquadroAtecoRischio({
             className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
             value={form.rischio_ditta || "medio"}
             onChange={(e) =>
-              updateCampo("rischio_ditta", e.target.value as "basso" | "medio" | "alto")
+              updateCampo("rischio_ditta", e.target.value as LivelloRischio)
             }
           >
             <option value="basso">Basso (es. uffici, commercio)</option>
@@ -81,10 +144,65 @@ export function RiquadroAtecoRischio({
 
       {/* Gestione Codici ATECO */}
       <div className="space-y-2 pt-2 border-t">
-        <Label className="text-xs font-semibold">Codici ATECO Associati</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold">Codici ATECO Associati</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCatalogoAperto((p) => !p)}
+            className="h-7 text-xs gap-1 border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <BookOpen className="size-3.5" />
+            {catalogoAperto ? "Chiudi catalogo ATECO" : "Sfoglia catalogo Tabella 06"}
+          </Button>
+        </div>
+
+        {/* Box ricerca ed elenco scorrevole Tabella 06 */}
+        {catalogoAperto && (
+          <div className="rounded-md border border-primary/30 bg-muted/40 p-3 space-y-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cerca per numero (es. 85) o descrizione attività (es. istruzione, scuola)… [Esc per chiudere]"
+                value={filtroCatalogo}
+                onChange={(e) => setFiltroCatalogo(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setCatalogoAperto(false);
+                }}
+                className="h-8 pl-8 text-xs bg-background"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto divide-y rounded border bg-background text-xs">
+              {vociFiltrate.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => selezionaDaCatalogo(v)}
+                  className="w-full text-left p-2 hover:bg-primary/10 flex items-center justify-between transition-colors"
+                >
+                  <span className="truncate pr-2">
+                    <strong className="font-mono text-primary mr-2">{v.codice}</strong>
+                    {v.descrizione}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] capitalize shrink-0">
+                    Rischio {v.rischio}
+                  </Badge>
+                </button>
+              ))}
+              {vociFiltrate.length === 0 && (
+                <div className="p-3 text-center text-muted-foreground italic">
+                  Nessun codice ATECO trovato con «{filtroCatalogo}».
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <Input
-            placeholder="Codice ATECO (es. 85.31.00)"
+            placeholder="Codice ATECO (es. 85 o 85.31.00)"
             className="w-48 font-mono text-xs"
             value={nuovoAteco.codice}
             onChange={(e) => setNuovoAteco({ ...nuovoAteco, codice: e.target.value })}
@@ -122,9 +240,14 @@ export function RiquadroAtecoRischio({
           <ul className="divide-y rounded-md border text-xs bg-muted/20">
             {form.codici_ateco.map((ateco, idx) => (
               <li key={idx} className="flex items-center justify-between p-2">
-                <span>
-                  <strong className="font-mono text-primary mr-2">{ateco.codice}</strong>
-                  {ateco.descrizione}
+                <span className="flex items-center gap-2">
+                  <strong className="font-mono text-primary">{ateco.codice}</strong>
+                  <span>{ateco.descrizione}</span>
+                  {ateco.rischio && (
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      Rischio {ateco.rischio}
+                    </Badge>
+                  )}
                 </span>
                 <Button
                   type="button"
@@ -140,7 +263,7 @@ export function RiquadroAtecoRischio({
           </ul>
         ) : (
           <p className="text-[11px] text-muted-foreground italic">
-            Nessun codice ATECO registrato. Aggiungi il codice primario dell'attività.
+            Nessun codice ATECO registrato. Scegli dal catalogo o inserisci il codice primario dell'attività.
           </p>
         )}
       </div>
