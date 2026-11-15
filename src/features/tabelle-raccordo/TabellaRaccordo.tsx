@@ -7,11 +7,12 @@
  *            righe a colori alternati, aggiunta, modifica, duplicazione e cancellazione dei record, spunta manuale «Applica».
  *   rev 2 — 14/11/2026 21:50 — Bottoni standard (Cancella rosso) e colonne regolabili, spostabili e ordinabili (modulo comune).
  *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV) accanto a «Ripristina colonne»: colonne e ordinamento come a schermo.
+ *   rev 4 — 15/11/2026 12:04 — Ricerca veloce nella barra comandi, spostamento hook prima delle uscite anticipate (anti-crash), evidenziazione divisione/sottocodice ATECO in Ditta e conteggio record semplificato.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { IntestazioneColonna } from "@/components/tabella-comune/IntestazioneColonna";
 import { ordinaRighe, useColonneTabella } from "@/components/tabella-comune/useColonneTabella";
@@ -20,6 +21,7 @@ import { esportaTabella } from "@/components/tabella-comune/esporta-tabella";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
 import { leggiTutto, sb } from "@/lib/api/client";
 import { ErroreTabelle } from "@/features/impostazioni/ErroreTabelle";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
@@ -94,6 +97,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
   const [salvataggio, setSalvataggio] = useState(false);
   const [daCancellare, setDaCancellare] = useState<Riga | null>(null);
   const [selezionata, setSelezionata] = useState<string | null>(null);
+  const [ricerca, setRicerca] = useState("");
   const colonne = useColonneTabella(`raccordo:${def.id}`, def.colonne.map((c) => c.chiave));
 
   const {
@@ -112,6 +116,46 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
         return q.order("id", { ascending: true });
       }),
   });
+
+  // Codici ATECO associati alla Ditta per evidenziazione nella Tabella 06
+  const { data: ditta } = useQuery({
+    queryKey: CHIAVE_DITTA,
+    queryFn: getDitta,
+    enabled: def.id === "ateco",
+  });
+
+  // Normalizzazione codici ditta (sia codice intero che divisione a 2 cifre)
+  const codiciDittaAteco = useMemo(() => {
+    if (def.id !== "ateco" || !ditta?.codici_ateco) return new Set<string>();
+    const insieme = new Set<string>();
+    for (const a of ditta.codici_ateco) {
+      const pulito = a.codice.trim();
+      insieme.add(pulito);
+      // Divisione a 2 cifre (es. da "85.31.00" ricava "85")
+      const divisione = pulito.split(".")[0]?.slice(0, 2);
+      if (divisione) insieme.add(divisione);
+    }
+    return insieme;
+  }, [def.id, ditta?.codici_ateco]);
+
+  // Filtraggio rapido da casella cerca
+  const righeFiltrate = useMemo(() => {
+    const q = ricerca.trim().toLowerCase();
+    if (!q) return righe;
+    return righe.filter((r) =>
+      def.colonne.some((c) => String(r[c.chiave] ?? "").toLowerCase().includes(q)),
+    );
+  }, [righe, ricerca, def.colonne]);
+
+  const selezionataRiga = righe.find((r) => r.id === selezionata) ?? null;
+  const visibili = colonne.ordine
+    .map((k) => def.colonne.find((c) => c.chiave === k))
+    .filter((c): c is Colonna => Boolean(c));
+
+  const mostrate = ordinaRighe(righeFiltrate, colonne.ordinamento);
+
+  // Tutte le uscite anticipate avvengono TASSATIVAMENTE dopo tutti gli hook
+  if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
 
   const ricarica = () => qc.invalidateQueries({ queryKey: chiave });
   const prossimoOrdine = () => righe.reduce((m, r) => Math.max(m, Number(r["ordine"] ?? 0)), 0) + 1;
@@ -218,14 +262,6 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
     }
   }
 
-  if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
-
-  const selezionataRiga = righe.find((r) => r.id === selezionata) ?? null;
-  const visibili = colonne.ordine
-    .map((k) => def.colonne.find((c) => c.chiave === k))
-    .filter((c): c is Colonna => Boolean(c));
-  const mostrate = ordinaRighe(righe, colonne.ordinamento);
-
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{def.descrizione}</p>
@@ -265,6 +301,18 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
             esportaTabella(tabellaRaccordoDaEsportare(def, visibili, mostrate), formato)
           }
         />
+
+        {/* Casella cerca rapida */}
+        <div className="relative w-44 sm:w-60">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cerca nella tabella…"
+            value={ricerca}
+            onChange={(e) => setRicerca(e.target.value)}
+            className="h-8 pl-8 text-xs bg-background"
+          />
+        </div>
+
         {def.documento && (
           <Button
             type="button"
@@ -276,7 +324,8 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
           </Button>
         )}
         <span className={`text-xs text-muted-foreground ${def.documento ? "" : "ml-auto"}`}>
-          {righe.length} record · seleziona una riga per modificarla, duplicarla o cancellarla
+          {righeFiltrate.length} record
+          {ricerca.trim() && ` (filtrati da ${righe.length})`}
         </span>
       </div>
 
@@ -307,42 +356,61 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
               </tr>
             </thead>
             <tbody>
-              {mostrate.map((r, i) => (
-                <tr
-                  key={r.id}
-                  onClick={() => setSelezionata(r.id)}
-                  className={`cursor-pointer ${
-                    r.id === selezionata
-                      ? "bg-primary/20"
-                      : i % 2 === 0
-                        ? "bg-surface"
-                        : "bg-emerald-50 dark:bg-emerald-950/30"
-                  } hover:bg-primary/10`}
-                >
-                  <td className="px-3 py-1.5 text-center tabular-nums text-muted-foreground">
-                    {i + 1}
-                  </td>
-                  {visibili.map((c) => (
-                    <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
-                      {mostra(c, r[c.chiave])}
+              {mostrate.map((r, i) => {
+                const codiceRiga = String(r["codice"] ?? "").trim();
+                const eAtecoDitta = def.id === "ateco" && codiciDittaAteco.has(codiceRiga);
+
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => setSelezionata(r.id)}
+                    className={`cursor-pointer transition-colors ${
+                      r.id === selezionata
+                        ? "bg-primary/20"
+                        : eAtecoDitta
+                          ? "bg-teal-50/80 border-l-4 border-l-primary dark:bg-teal-950/40"
+                          : i % 2 === 0
+                            ? "bg-surface"
+                            : "bg-emerald-50 dark:bg-emerald-950/30"
+                    } hover:bg-primary/10`}
+                  >
+                    <td className="px-3 py-1.5 text-center tabular-nums text-muted-foreground">
+                      {i + 1}
                     </td>
-                  ))}
-                  <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={Boolean(r["applica"])}
-                      onCheckedChange={(v) => cambiaSpunta(r, v === true)}
-                      aria-label={`Applica la riga ${i + 1}`}
-                    />
-                  </td>
-                </tr>
-              ))}
-              {righe.length === 0 && (
+                    {visibili.map((c) => (
+                      <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
+                        <div className="flex items-center gap-1.5">
+                          <span>{mostra(c, r[c.chiave])}</span>
+                          {c.chiave === "codice" && eAtecoDitta && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] bg-primary/15 text-primary border-primary/30 shrink-0 font-normal py-0 px-1.5"
+                            >
+                              In uso Ditta
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                    ))}
+                    <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={Boolean(r["applica"])}
+                        onCheckedChange={(v) => cambiaSpunta(r, v === true)}
+                        aria-label={`Applica la riga ${i + 1}`}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+              {righeFiltrate.length === 0 && (
                 <tr>
                   <td
-                    colSpan={def.colonne.length + 2}
+                    colSpan={visibili.length + 2}
                     className="px-3 py-8 text-center text-muted-foreground"
                   >
-                    Nessun record. Usa «Aggiungi» per inserirne uno.
+                    {ricerca.trim()
+                      ? `Nessun record corrispondente a «${ricerca}».`
+                      : "Nessun record. Usa «Aggiungi» per inserirne uno."}
                   </td>
                 </tr>
               )}
@@ -409,7 +477,12 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
             ))}
           </div>
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" disabled={salvataggio} onClick={() => setModifica(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={salvataggio}
+              onClick={() => setModifica(null)}
+            >
               Annulla
             </Button>
             <Button type="button" disabled={salvataggio} onClick={salva}>
@@ -427,7 +500,12 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={conferma}>Cancella</AlertDialogAction>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={conferma}
+            >
+              Cancella
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
