@@ -7,6 +7,8 @@
  *     impostata da sola quando cambia il numero dei lavoratori o delle presenze.
  *   - Rev 2 (2026-11-15): Mock di getSedi e contaLavoratoriInForza (mai risolto) per non far scattare la sincronizzazione automatica
  *     di lavoratori e presenze dalle sedi durante i test esistenti.
+ *   - Rev 3 (2026-11-15): Il primo codice ATECO inserito è «principale» (principale: true). Nuovi test: l'allineamento automatico di
+ *     N. lavoratori (anagrafica) e Presenze (sedi) non conta come modifica non salvata (isDirty), una modifica dell'utente sì.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
@@ -34,6 +36,8 @@ vi.mock("@/lib/api/sedi", async (importOriginal) => {
   return { ...reale, getSedi: vi.fn(async () => []) };
 });
 
+import { contaLavoratoriInForza, DITTA_DEFAULT, getDitta } from "@/lib/api/ditta";
+import { getSedi } from "@/lib/api/sedi";
 import { useDittaTab } from "./useDittaTab";
 
 function avvolgi({ children }: { children: ReactNode }) {
@@ -67,7 +71,7 @@ describe("codici ATECO nella scheda Ditta", () => {
     scrivi(r, "853120", "Istruzione secondaria");
     act(() => r.result.current.aggiungiAteco());
     expect(r.result.current.form!.codici_ateco).toEqual([
-      { codice: "85.31.20", descrizione: "Istruzione secondaria", rischio: "medio" },
+      { codice: "85.31.20", descrizione: "Istruzione secondaria", rischio: "medio", principale: true },
     ]);
     expect(r.result.current.nuovoAteco).toEqual({ codice: "", descrizione: "" });
   });
@@ -76,7 +80,18 @@ describe("codici ATECO nella scheda Ditta", () => {
     const r = await pronto();
     scrivi(r, "47.11");
     act(() => r.result.current.aggiungiAteco());
-    expect(r.result.current.form!.codici_ateco).toEqual([{ codice: "47.11", descrizione: "" }]);
+    expect(r.result.current.form!.codici_ateco).toEqual([
+      { codice: "47.11", descrizione: "", principale: true },
+    ]);
+  });
+
+  it("il secondo codice non è principale", async () => {
+    const r = await pronto();
+    scrivi(r, "85.31");
+    act(() => r.result.current.aggiungiAteco());
+    scrivi(r, "47.11");
+    act(() => r.result.current.aggiungiAteco());
+    expect(r.result.current.form!.codici_ateco.map((c) => c.principale)).toEqual([true, undefined]);
   });
 
   it("rifiuta un codice non valido e uno già inserito", async () => {
@@ -115,5 +130,63 @@ describe("date di aggiornamento", () => {
     act(() => r.result.current.updateCampo("referente", "Mario Rossi"));
     expect(r.result.current.form!.n_lavoratori_data_aggiornamento).toBeNull();
     expect(r.result.current.form!.presenze_data_aggiornamento).toBeNull();
+  });
+});
+
+describe("modifiche non salvate (isDirty)", () => {
+  const sedeCentrale = (persone: number | null) =>
+    ({
+      id: "s1",
+      nome: "Sede Centrale",
+      is_principale: true,
+      attiva: true,
+      persone_max: persone,
+      ordine: 0,
+    }) as unknown as Awaited<ReturnType<typeof getSedi>>[number];
+
+  afterEach(() => {
+    vi.mocked(contaLavoratoriInForza).mockImplementation(() => new Promise<number>(() => {}));
+    vi.mocked(getSedi).mockImplementation(async () => []);
+    vi.mocked(getDitta).mockImplementation(async () => ({ ...DITTA_DEFAULT }));
+  });
+
+  it("aprendo la finestra senza toccare nulla non risulta modificato, anche con 127 dichiarati e 128 in forza", async () => {
+    vi.mocked(getDitta).mockImplementation(async () => ({
+      ...DITTA_DEFAULT,
+      n_lavoratori_dichiarato: 127,
+      n_lavoratori_data_aggiornamento: "2026-10-01",
+    }));
+    vi.mocked(contaLavoratoriInForza).mockResolvedValue(128);
+    const r = await pronto();
+    // Il form mostra il conteggio dell'anagrafica…
+    await waitFor(() => expect(r.result.current.form!.n_lavoratori_dichiarato).toBe(128));
+    expect(r.result.current.form!.n_lavoratori_data_aggiornamento).toBe("2026-11-01");
+    // …ma «Torna» non deve chiedere conferma: nessuna modifica dell'utente
+    expect(r.result.current.isDirty).toBe(false);
+  });
+
+  it("una modifica dell'utente accende isDirty e «scarta» lo spegne", async () => {
+    vi.mocked(getDitta).mockImplementation(async () => ({ ...DITTA_DEFAULT, n_lavoratori_dichiarato: 127 }));
+    vi.mocked(contaLavoratoriInForza).mockResolvedValue(128);
+    const r = await pronto();
+    await waitFor(() => expect(r.result.current.form!.n_lavoratori_dichiarato).toBe(128));
+    act(() => r.result.current.updateCampo("referente", "Mario Rossi"));
+    expect(r.result.current.isDirty).toBe(true);
+    act(() => r.result.current.reimpostaForm());
+    await waitFor(() => expect(r.result.current.form!.referente).not.toBe("Mario Rossi"));
+    expect(r.result.current.isDirty).toBe(false);
+  });
+
+  it("anche la somma delle presenze dalle sedi è un allineamento automatico, non una modifica", async () => {
+    vi.mocked(getSedi).mockImplementation(async () => [sedeCentrale(450)]);
+    const r = await pronto();
+    await waitFor(() => expect(r.result.current.form!.presenze_contemporanee_max).toBe(450));
+    expect(r.result.current.form!.presenze_data_aggiornamento).toBe("2026-11-01");
+    expect(r.result.current.isDirty).toBe(false);
+  });
+
+  it("senza anagrafica né sedi il form resta pulito", async () => {
+    const r = await pronto();
+    expect(r.result.current.isDirty).toBe(false);
   });
 });

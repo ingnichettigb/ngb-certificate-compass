@@ -8,9 +8,12 @@
  *   rev 3 — 15/11/2026 12:45 — Rimosso gruppoSpunta da tabella 06 (è un catalogo consultativo con associazioni multiple derivate dalla Ditta).
  *   rev 4 — 15/11/2026 — Descrizione tabella 03 corretta (art. 47: fino a 15 RLS eletto/territoriale, 16-200 un RLS, 201-1.000 tre, oltre 1.000 sei; numero più alto tra dichiarati e in forza).
  *                        Descrizione tabella 07: l'indice INAIL si spunta a mano con «Applica», per ora non entra nel conteggio dei corsi.
+ *   rev 5 — 15/11/2026 — Colonna «Applica» su tutte le tabelle: nelle 03, 04, 05 e 07 la riga della Ditta è spuntata dal programma e salvata nel database
+ *                        (applica = true sulla fascia attiva, false sulle altre). Descrizione tabella 07 aggiornata di conseguenza.
  *
  * Ogni tabella è descritta qui; la pagina (TabellaRaccordo.tsx) è unica e generica. Le tabelle 03, 04 e 05 sono le righe di
- * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» è la spunta manuale della riga da applicare.
+ * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» indica la riga da applicare: nelle 03, 04, 05 e 07
+ * la imposta il programma dai dati della Ditta; nelle altre tabelle si spunta a mano.
  */
 import { sb } from "@/lib/api/client";
 
@@ -127,7 +130,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     tabella: "soglie_ditta",
     filtro: { ambito: "rls" },
     descrizione:
-      "Numero di RLS (art. 47 D.Lgs. 81/08) in base alla fascia di lavoratori: fino a 15 RLS eletto o territoriale, da 16 a 200 un RLS, da 201 a 1.000 tre RLS, oltre 1.000 sei RLS. Si usa il numero più alto tra lavoratori dichiarati e in forza nel programma: la riga della Ditta è evidenziata in giallo.",
+      "Numero di RLS (art. 47 D.Lgs. 81/08) in base alla fascia di lavoratori: fino a 15 RLS eletto o territoriale, da 16 a 200 un RLS, da 201 a 1.000 tre RLS, oltre 1.000 sei RLS. Si usa il numero più alto tra lavoratori dichiarati e in forza nel programma: la riga della Ditta è evidenziata in giallo e spuntata in «Applica».",
     colonne: [
       { chiave: "da", etichetta: "Da lavoratori", tipo: "numero", obbligatorio: true },
       { chiave: "a", etichetta: "A lavoratori (vuoto = oltre)", tipo: "numero" },
@@ -206,7 +209,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Gruppo di primo soccorso",
     tabella: "gruppi_primo_soccorso",
     descrizione:
-      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto. L'indice INAIL si sceglie a mano con «Applica» (per ora non entra nel conteggio dei corsi): la riga spuntata è in giallo, senza spunta il giallo è solo una proposta dal numero di lavoratori.",
+      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto. La riga della Ditta (fascia dei lavoratori e gruppo della Tabella 04) è spuntata con «Applica» e in giallo. Se più righe hanno la stessa fascia e lo stesso gruppo, l'indice INAIL si sceglie a mano tra quelle (per ora non entra nel conteggio dei corsi).",
     gruppoSpunta: [],
     colonne: [
       {

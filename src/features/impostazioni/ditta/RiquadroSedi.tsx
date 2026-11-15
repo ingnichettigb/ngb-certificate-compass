@@ -6,6 +6,8 @@
  *   rev 1 — 13/11/2026 — Sedi e plessi (stessa Ditta, stesso RSPP) in Impostazioni › Ditta.
  *   rev 2 — 15/11/2026 — Massimo numero di presenti per ogni sede (obbligatorio, > 0), avviso sulla Sede Centrale e barra «Totale presenze».
  *   rev 3 — 15/11/2026 — Su ogni riga (Sede Centrale e succursali) icona matita (modifica di tutti i dati) e icona occhio (risultati solo lettura).
+ *   rev 4 — 15/11/2026 — Ordine icone: prima la matita (modifica), poi l'occhio (risultati a sola lettura). Tolto il campo numerico inline:
+ *                        il massimo di presenti si modifica solo dalla finestra della matita; sulla riga resta un'etichetta di sola lettura.
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +16,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CHIAVE_SEDI, aggiornaSede, aggiungiSede, eliminaSede, getSedi, type Sede } from "@/lib/api/sedi";
+import { CHIAVE_SEDI, aggiungiSede, eliminaSede, getSedi, type Sede } from "@/lib/api/sedi";
 import { CHIAVE_ASSEGNAZIONI_RUOLI } from "@/lib/api/ruoli";
 import { DICITURA_PERSONE_MAX, riepilogaPresenze } from "@/features/ditta/presenze-sedi";
 import { DialogModificaSede } from "./DialogModificaSede";
@@ -31,7 +33,6 @@ export function RiquadroSedi() {
   const [comune, setComune] = useState("");
   const [provincia, setProvincia] = useState("");
   const [personeMax, setPersoneMax] = useState("");
-  const [bozze, setBozze] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [inModifica, setInModifica] = useState<Sede | null>(null);
   const [inVisione, setInVisione] = useState<Sede | null>(null);
@@ -65,36 +66,6 @@ export function RiquadroSedi() {
       toast.error((e as Error).message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  /** Salva il massimo di presenti di una sede già esistente (all'uscita dal campo). */
-  const salvaPersone = async (id: string, nomeSede: string, attuale: number | null) => {
-    const testo = bozze[id];
-    if (testo === undefined) return;
-    const n = Number(testo);
-    const scarta = () =>
-      setBozze((b) => {
-        const { [id]: _scartata, ...resto } = b;
-        return resto;
-      });
-    if (testo.trim() === "" || !Number.isInteger(n) || n <= 0) {
-      toast.error(`«${nomeSede}»: il massimo di presenti deve essere un intero maggiore di zero`);
-      scarta();
-      return;
-    }
-    if (n === attuale) {
-      scarta();
-      return;
-    }
-    try {
-      await aggiornaSede(id, { persone_max: n });
-      await qc.invalidateQueries({ queryKey: CHIAVE_SEDI });
-      scarta();
-      toast.success(`Presenze di «${nomeSede}» aggiornate`);
-    } catch (e) {
-      toast.error((e as Error).message);
-      scarta();
     }
   };
 
@@ -152,49 +123,22 @@ export function RiquadroSedi() {
                         : "Indirizzo non indicato")}
                   </p>
                 </div>
-                <div className="w-full max-w-sm space-y-1 md:w-80">
-                  <Label htmlFor={`persone-${s.id}`} className="text-[11px] leading-tight">
-                    {DICITURA_PERSONE_MAX}
-                    <span className="text-destructive"> *</span>
-                  </Label>
-                  <Input
-                    id={`persone-${s.id}`}
-                    type="number"
-                    min={1}
-                    step={1}
-                    placeholder="Es. 450"
-                    aria-invalid={mancante}
-                    className={mancante ? "border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""}
-                    value={bozze[s.id] ?? (s.persone_max ?? "")}
-                    onChange={(e) => setBozze((b) => ({ ...b, [s.id]: e.target.value }))}
-                    onBlur={() => void salvaPersone(s.id, s.nome, s.persone_max ?? null)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    }}
-                  />
-                  {mancante && (
+                <div className="w-full max-w-sm space-y-1 md:w-80" data-testid={`persone-max-${s.id}`}>
+                  <p className="text-[11px] leading-tight text-muted-foreground">{DICITURA_PERSONE_MAX}</p>
+                  {mancante ? (
                     <p className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                       <AlertTriangle className="size-3.5 shrink-0" />
                       {s.is_principale
-                        ? "Compilazione obbligatoria per la Sede Centrale"
-                        : "Da compilare: obbligatorio per ogni plesso"}
+                        ? "Compilazione obbligatoria per la Sede Centrale: usa la matita"
+                        : "Da compilare con la matita: obbligatorio per ogni plesso"}
                     </p>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md border border-primary/30 bg-primary/5 px-2 py-0.5 text-sm font-semibold tabular-nums">
+                      {s.persone_max}
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setInVisione(s)}
-                    title="Risultati della sede (sola lettura)"
-                    aria-label={`Risultati sede ${s.nome}`}
-                  >
-                    <Eye className="size-4" />
-                  </Button>
                   <Button
                     type="button"
                     size="icon"
@@ -205,19 +149,29 @@ export function RiquadroSedi() {
                   >
                     <Pencil className="size-4" />
                   </Button>
-                {!s.is_principale && (
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => elimina(s.id, s.nome)}
-                    title="Elimina sede"
-                    aria-label={`Elimina sede ${s.nome}`}
+                    onClick={() => setInVisione(s)}
+                    title="Risultati della sede (sola lettura)"
+                    aria-label={`Risultati sede ${s.nome}`}
                   >
-                    <Trash2 className="size-4" />
+                    <Eye className="size-4" />
                   </Button>
-                )}
+                  {!s.is_principale && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => elimina(s.id, s.nome)}
+                      title="Elimina sede"
+                      aria-label={`Elimina sede ${s.nome}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );

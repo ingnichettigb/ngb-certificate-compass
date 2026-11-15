@@ -7,6 +7,10 @@
  *            aggiunta, duplicazione, cancellazione, blocco della cancellazione di un ruolo con assegnazioni).
  *   rev 2 — 15/11/2026 10:50 — Bottone «Esporta»: scelta Excel/CSV, dati come a schermo (colonne, ordinamento, N, Applica) e tabella 09.
  *   rev 3 — 15/11/2026 11:20 — Il menu «Esporta» deve stare sopra le Impostazioni generali (z-100) e i dialoghi (z-150).
+ *   rev 4 — 15/11/2026 — Colonna «Applica» su tutte le tabelle: la 06 associa il codice alla Ditta (il primo è «principale»); nelle 03, 04, 05 e 07
+ *            la riga della Ditta è spuntata e salvata nel database (applica true sulla fascia attiva, false sulle altre); nella 07 la scelta
+ *            manuale resta esclusiva e le righe fuori fascia sono bloccate. Esportazione con «Applica» come a schermo. Titolo della 09
+ *            («Tipi di corso») e PDF fonte della 08 (collegamento, non bottone) allineati al codice.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,7 +18,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-const { dati, toasts, esportazioni } = vi.hoisted(() => ({
+const { dati, stato, toasts, esportazioni } = vi.hoisted(() => {
+  const stato = { inForza: 128 };
+  return {
+  stato,
   dati: {
     tabelle: {
       rischio_ateco: [
@@ -53,14 +60,18 @@ const { dati, toasts, esportazioni } = vi.hoisted(() => ({
         },
       ],
     } as Record<string, unknown[]>,
-    conteggio: (tabella: string) => (tabella === "dipendenti_ruoli" ? 3 : undefined),
+    // Anagrafica Ditta (singleton) e lavoratori in forza: si cambiano nei singoli test
+    singoli: { ditta: { n_lavoratori_dichiarato: 127, codici_ateco: [] as unknown[] } } as Record<string, unknown>,
+    conteggio: (tabella: string) =>
+      tabella === "dipendenti_ruoli" ? 3 : tabella === "dipendenti" ? stato.inForza : undefined,
   },
   toasts: [] as string[],
   esportazioni: [] as {
     formato: string;
     tabella: { nomeBase: string; intestazioni: string[]; righe: unknown[][] };
   }[],
-}));
+  };
+});
 
 vi.mock("@/integrations/supabase/client", async () => {
   const { creaClientFinto } = await import("@/test/registratore-supabase");
@@ -112,10 +123,16 @@ function monta() {
   );
 }
 
+const DITTA_BASE = { n_lavoratori_dichiarato: 127, codici_ateco: [] as unknown[] };
+
 beforeEach(() => {
   registro.length = 0;
   toasts.length = 0;
   esportazioni.length = 0;
+  stato.inForza = 128;
+  dati.singoli["ditta"] = { ...DITTA_BASE };
+  delete dati.tabelle["soglie_ditta"];
+  delete dati.tabelle["gruppi_primo_soccorso"];
 });
 afterEach(cleanup);
 
@@ -181,15 +198,17 @@ describe("pagina Tabelle di raccordo", () => {
     expect(document.querySelector(".scroll-visibile")).not.toBeNull();
   });
 
-  it("la spunta esclusiva toglie quella della riga precedente", async () => {
+  it("06: la spunta associa il codice alla Ditta e il primo codice è «principale»", async () => {
     monta();
     await clic(screen.getByRole("tab", { name: /^06 – Rischio per codice ATECO/ }));
     await clic(screen.getByLabelText("Applica la riga 1"));
-    const sc = registro
-      .filter((r) => String(r[1]).includes("update") && r[2] === "rischio_ateco")
-      .map((r) => r[3]);
-    expect(sc).toContain('[{"applica":false}]');
-    expect(sc).toContain('[{"applica":true}]');
+    const scritture = registro
+      .filter((r) => String(r[1]).includes("update") && r[2] === "ditta")
+      .map((r) => String(r[3]));
+    expect(scritture.some((t) => t.includes('"codice":"01"') && t.includes('"principale":true'))).toBe(true);
+    expect(toasts).toContain("ok:Codice ATECO 01 associato alla Ditta");
+    // Il catalogo ATECO non ha più la spunta esclusiva nel database
+    expect(registro.some((r) => String(r[1]).includes("update") && r[2] === "rischio_ateco")).toBe(false);
   });
 
   it("aggiunge, duplica e cancella un record", async () => {
@@ -238,19 +257,15 @@ describe("pagina Tabelle di raccordo", () => {
     expect(toasts.some((t) => t.startsWith("errore:Cancellazione non possibile"))).toBe(true);
   });
 
-  it("la 08 ha il pulsante che apre il PDF fonte e la 09 rimanda ai corsi", async () => {
-    const apri = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("la 08 ha il collegamento che apre il PDF fonte e la 09 rimanda ai corsi", async () => {
     monta();
     await clic(screen.getByRole("tab", { name: /^08 – Gruppi di tariffa INAIL/ }));
-    await clic(screen.getByRole("button", { name: /Apri PDF fonte/ }));
-    expect(apri).toHaveBeenCalledWith(
-      "/documenti/premi-inail-2019.pdf",
-      "_blank",
-      "noopener,noreferrer",
-    );
-    await clic(screen.getByRole("tab", { name: /^09 – Corsi/ }));
+    const pdf = screen.getByRole("link", { name: /Apri PDF fonte/ });
+    expect(pdf.getAttribute("href")).toBe("/documenti/premi-inail-2019.pdf");
+    expect(pdf.getAttribute("target")).toBe("_blank");
+    expect(pdf.getAttribute("rel")).toContain("noopener");
+    await clic(screen.getByRole("tab", { name: /^09 – Tipi di corso/ }));
     expect(screen.getByRole("button", { name: "Tabella corsi" })).toBeTruthy();
-    apri.mockRestore();
   });
 });
 
@@ -262,6 +277,11 @@ describe("bottone Esporta", () => {
   };
 
   it("propone Excel o CSV e scarica la tabella come a schermo", async () => {
+    // Il codice 85 è associato alla Ditta: è la riga con «Applica» spuntato
+    dati.singoli["ditta"] = {
+      ...DITTA_BASE,
+      codici_ateco: [{ codice: "85", descrizione: "Istruzione", rischio: "medio", principale: true }],
+    };
     monta();
     await clic(screen.getByRole("tab", { name: /^06 – Rischio per codice ATECO/ }));
     await apriMenu();
@@ -278,6 +298,7 @@ describe("bottone Esporta", () => {
     expect(tabella.intestazioni[0]).toBe("N");
     expect(tabella.intestazioni.at(-1)).toBe("Applica");
     expect(tabella.righe.map((r) => r[0])).toEqual([1, 2]);
+    expect(tabella.righe[0]!.at(-1)).toBe(false);
     expect(tabella.righe[1]!.at(-1)).toBe(true);
 
     await apriMenu();
@@ -287,11 +308,163 @@ describe("bottone Esporta", () => {
 
   it("c'è anche nella 09 – Corsi, accanto a «Tabella corsi»", async () => {
     monta();
-    await clic(screen.getByRole("tab", { name: /^09 – Corsi/ }));
+    await clic(screen.getByRole("tab", { name: /^09 – Tipi di corso/ }));
     expect(screen.getByRole("button", { name: "Tabella corsi" })).toBeTruthy();
     await apriMenu();
     await clic(screen.getByRole("menuitem", { name: /Excel/ }));
     expect(esportazioni.at(-1)?.formato).toBe("xlsx");
     expect(esportazioni.at(-1)?.tabella.nomeBase).toBe("tipi-corso");
+  });
+});
+
+describe("colonna «Applica» nelle tabelle della Ditta (03, 04, 05, 07)", () => {
+  const SOGLIE = [
+    { ambito: "rls", da: 0, a: 15, etichetta: "Fino a 15", esito: "RLS eletto o territoriale" },
+    { ambito: "rls", da: 16, a: 200, etichetta: "16-200", esito: "1 RLS" },
+    { ambito: "rls", da: 201, a: 1000, etichetta: "201-1.000", esito: "3 RLS" },
+    { ambito: "primo_soccorso", da: 1, a: 2, etichetta: "1-2", esito: "Gruppo C" },
+    { ambito: "primo_soccorso", da: 3, a: 5, etichetta: "3-5", esito: "Gruppo B" },
+    { ambito: "primo_soccorso", da: 6, a: null, etichetta: "6 o più", esito: "Gruppo B" },
+    { ambito: "antincendio_presenze", da: 0, a: 100, etichetta: "Fino a 100", esito: "Livello 1" },
+    { ambito: "antincendio_presenze", da: 101, a: 300, etichetta: "101-300", esito: "Livello 2" },
+    { ambito: "antincendio_presenze", da: 301, a: null, etichetta: "Oltre 300", esito: "Livello 3" },
+  ];
+  /**
+   * Righe di soglie_ditta; «spuntate» = numeri di riga (per ambito, da 1) già spuntati nel database.
+   * Il client finto non applica i filtri .eq(): per le tabelle 03, 04, 05 si passa l'ambito per avere solo le sue righe.
+   */
+  const soglie = (spuntate: Record<string, number[]> = {}, ambito?: string) => {
+    const contatori: Record<string, number> = {};
+    return SOGLIE.filter((r) => !ambito || r.ambito === ambito).map((r) => {
+      const n = (contatori[r.ambito] = (contatori[r.ambito] ?? 0) + 1);
+      return {
+        id: `${r.ambito}-${n}`,
+        ordine: n,
+        note: null,
+        attiva: true,
+        applica: (spuntate[r.ambito] ?? []).includes(n),
+        ...r,
+      };
+    });
+  };
+  const GRUPPI = [
+    ["1-2", "qualsiasi", "C"],
+    ["3-5", "fino a 4", "B"],
+    ["3-5", "oltre 4", "B"],
+    ["6 o più", "fino a 4", "B"],
+    ["6 o più", "oltre 4", "A"],
+    ["6 o più, agricoltura a tempo indeterminato", "—", "A"],
+  ] as const;
+  const gruppi = (spuntate: number[] = []) =>
+    GRUPPI.map(([lavoratori, indice_inail, gruppo], i) => ({
+      id: `g${i + 1}`,
+      ordine: i + 1,
+      lavoratori,
+      indice_inail,
+      gruppo,
+      nota: null,
+      applica: spuntate.includes(i + 1),
+    }));
+
+  const spunta = (n: number) => screen.getByLabelText(`Applica la riga ${n}`);
+  const acceso = (n: number) => spunta(n).getAttribute("aria-checked") === "true";
+  const bloccata = (n: number) => spunta(n).hasAttribute("disabled");
+  const scritture = (tabella: string) =>
+    registro
+      .filter((r) => String(r[1]).startsWith("from.update") && r[2] === tabella)
+      .map((r) => `${r[1]} ${r[3]}`);
+  const aperta = async (titolo: RegExp) => {
+    monta();
+    await attendi();
+    await clic(screen.getByRole("tab", { name: titolo }));
+    await attendi();
+  };
+
+  it("03 RLS: 127 dichiarati e 128 in forza → la fascia 16-200 è gialla, spuntata e salvata (le altre false)", async () => {
+    // Nel database la spunta è sulla fascia sbagliata (la prima): va spostata sulla seconda
+    dati.tabelle["soglie_ditta"] = soglie({ rls: [1] }, "rls");
+    await aperta(/^03 – Soglie numero RLS/);
+
+    const intestazioni = [...document.querySelectorAll("thead th")].map((th) => th.textContent?.trim());
+    expect(intestazioni.at(-1)).toBe("Applica");
+    expect(intestazioni).not.toContain("In uso Ditta");
+
+    const righe = [...document.querySelectorAll("tbody tr")];
+    expect([1, 2, 3].map(acceso)).toEqual([false, true, false]);
+    expect(righe[1]!.className).toContain("bg-amber");
+    expect(righe[1]!.textContent).toContain("In uso Ditta");
+    expect(righe[0]!.textContent).not.toContain("In uso Ditta");
+    expect([1, 2, 3].map(bloccata)).toEqual([true, true, true]); // calcolata dal programma, non a mano
+
+    expect(scritture("soglie_ditta")).toEqual([
+      'from.update [{"applica":false}]',
+      'from.update.in ["id",["rls-1"]]',
+      'from.update [{"applica":true}]',
+      'from.update.in ["id",["rls-2"]]',
+    ]);
+  });
+
+  it("04 Primo soccorso: 128 lavoratori → fascia «6 o più» spuntata", async () => {
+    dati.tabelle["soglie_ditta"] = soglie({}, "primo_soccorso");
+    await aperta(/^04 – Soglie primo soccorso/);
+    expect([1, 2, 3].map(acceso)).toEqual([false, false, true]);
+    expect(scritture("soglie_ditta")).toEqual([
+      'from.update [{"applica":true}]',
+      'from.update.in ["id",["primo_soccorso-3"]]',
+    ]);
+  });
+
+  it("05 Antincendio: 250 presenze → livello 2 spuntato; se il database è già allineato non scrive nulla", async () => {
+    dati.singoli["ditta"] = { ...DITTA_BASE, presenze_contemporanee_max: 250 };
+    dati.tabelle["soglie_ditta"] = soglie({ antincendio_presenze: [2] }, "antincendio_presenze");
+    await aperta(/^05 – Soglie antincendio scuola/);
+    expect([1, 2, 3].map(acceso)).toEqual([false, true, false]);
+    expect(scritture("soglie_ditta")).toEqual([]);
+  });
+
+  it("07: più righe con stessa fascia e gruppo → tutte spuntate, salvate; le righe fuori fascia sono bloccate", async () => {
+    stato.inForza = 4;
+    dati.singoli["ditta"] = { ...DITTA_BASE, n_lavoratori_dichiarato: 4 };
+    dati.tabelle["soglie_ditta"] = soglie();
+    dati.tabelle["gruppi_primo_soccorso"] = gruppi();
+    await aperta(/^07 – Gruppo di primo soccorso/);
+
+    expect([1, 2, 3, 4, 5, 6].map(acceso)).toEqual([false, true, true, false, false, false]);
+    expect([1, 2, 3, 4, 5, 6].map(bloccata)).toEqual([true, false, false, true, true, true]);
+    expect(document.querySelectorAll("tbody tr")[1]!.textContent).toContain("In uso Ditta");
+    expect(scritture("gruppi_primo_soccorso")).toEqual([
+      'from.update [{"applica":true}]',
+      'from.update.in ["id",["g2","g3"]]',
+    ]);
+  });
+
+  it("07: la scelta manuale dell'indice INAIL resta esclusiva e non viene sovrascritta", async () => {
+    stato.inForza = 4;
+    dati.singoli["ditta"] = { ...DITTA_BASE, n_lavoratori_dichiarato: 4 };
+    dati.tabelle["soglie_ditta"] = soglie();
+    dati.tabelle["gruppi_primo_soccorso"] = gruppi([3]); // l'utente aveva scelto «oltre 4»
+    await aperta(/^07 – Gruppo di primo soccorso/);
+
+    expect([2, 3].map(acceso)).toEqual([false, true]);
+    expect(scritture("gruppi_primo_soccorso")).toEqual([]); // nessun allineamento automatico sopra la sua scelta
+
+    await clic(spunta(2)); // sceglie «fino a 4»: toglie la spunta all'altra riga
+    expect(scritture("gruppi_primo_soccorso")).toEqual([
+      'from.update [{"applica":false}]',
+      'from.update.in ["id",["g3"]]',
+      'from.update [{"applica":true}]',
+      'from.update.eq ["id","g2"]',
+    ]);
+  });
+
+  it("l'esportazione porta «Applica» come a schermo, anche se nel database la spunta non è ancora salvata", async () => {
+    dati.tabelle["soglie_ditta"] = soglie({}, "rls");
+    await aperta(/^03 – Soglie numero RLS/);
+    fireEvent.keyDown(screen.getByRole("button", { name: /Esporta/ }), { key: "Enter" });
+    await attendi();
+    await clic(screen.getByRole("menuitem", { name: /Excel/ }));
+    const { tabella } = esportazioni.at(-1)!;
+    expect(tabella.intestazioni.at(-1)).toBe("Applica");
+    expect(tabella.righe.map((r) => r.at(-1))).toEqual([false, true, false]);
   });
 });

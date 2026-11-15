@@ -28,8 +28,10 @@ export const CHIAVE_LAVORATORI_IN_FORZA = ["lavoratori-in-forza"] as const;
 
 export type CodiceAteco = {
   codice: string;
-  descrizione: string;
-  rischio?: "basso" | "medio" | "alto";
+  descrizione?: string | null;
+  rischio?: "basso" | "medio" | "alto" | null;
+  /** Codice ATECO principale della Ditta (uno solo, la stella in Impostazioni › Ditta). */
+  principale?: boolean;
 };
 
 export type TipoVoceOrganigramma = "ruolo" | "nota";

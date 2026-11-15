@@ -11,8 +11,13 @@
  *   rev 6 — 15/11/2026 — Riga gialla con badge «In uso Ditta» anche nelle tabelle 03 (RLS), 04 e 07 (Primo Soccorso), 05 (Antincendio): fascia calcolata su lavoratori più alti tra dichiarato e in forza e su presenze totali delle sedi.
  *   rev 7 — 15/11/2026 — Tabelle 03, 04, 05: colonna «In uso Ditta» con spunta automatica e bloccata, uguale alla riga gialla (nessuna scrittura su «applica»).
  *                        Tabella 07: l'indice INAIL si sceglie a mano con «Applica» (la riga spuntata è gialla); senza spunta la riga gialla è solo «Proposta».
+ *   rev 8 — 15/11/2026 — Colonna «Applica» ripristinata su TUTTE le tabelle. Nelle 03, 04, 05 e 07 la riga calcolata per la Ditta (gialla, «In uso Ditta»)
+ *                        mostra la spunta e il programma la salva nel database (applica = true sulla fascia attiva, false sulle altre della stessa tabella).
+ *                        Tabella 07: se più righe hanno stessa fascia e gruppo (indice INAIL) vale la scelta fatta a mano tra quelle; fuori dalla fascia
+ *                        della Ditta la spunta non è modificabile. Bottone «Esporta» riparato (props e firma di esportaTabella) con «Applica» come a schermo.
+ *                        Rimozione dell'ATECO principale senza errori di tipo.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -21,6 +26,7 @@ import { IntestazioneColonna } from "@/components/tabella-comune/IntestazioneCol
 import { ordinaRighe, useColonneTabella } from "@/components/tabella-comune/useColonneTabella";
 import { PulsanteEsporta } from "@/components/tabella-comune/PulsanteEsporta";
 import { esportaTabella } from "@/components/tabella-comune/esporta-tabella";
+import { tabellaRaccordoDaEsportare } from "./esporta-raccordo";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +63,8 @@ import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
 import { lavoratoriDiRiferimento, nellaFascia, riepilogaPresenze } from "@/features/ditta/presenze-sedi";
 import { CHIAVE_CATALOGO_ATECO } from "@/features/ditta/catalogo-ateco";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
+
+const NESSUNA_RIGA: Riga[] = [];
 
 interface Props {
   def: DefinizioneTabella;
@@ -117,7 +125,10 @@ export function TabellaRaccordo({ def }: Props) {
   const qc = useQueryClient();
   const tabella = def.tabella ?? "";
   // Per ATECO usa la chiave unificata del catalogo; per le altre tabelle usa la chiave dedicata
-  const chiave = def.id === "ateco" ? CHIAVE_CATALOGO_ATECO : (["raccordo", def.id] as const);
+  const chiave = useMemo(
+    () => (def.id === "ateco" ? CHIAVE_CATALOGO_ATECO : (["raccordo", def.id] as const)),
+    [def.id],
+  );
 
   const [selezionata, setSelezionata] = useState<string | null>(null);
   const [modifica, setModifica] = useState<{ riga: Riga | null } | null>(null);
@@ -128,7 +139,7 @@ export function TabellaRaccordo({ def }: Props) {
   const colonne = useColonneTabella(`raccordo:${def.id}`, def.colonne.map((c) => c.chiave));
 
   const {
-    data: righe = [],
+    data: righe = NESSUNA_RIGA,
     isLoading,
     error,
   } = useQuery({
@@ -154,9 +165,9 @@ export function TabellaRaccordo({ def }: Props) {
           ? "antincendio"
           : null;
   const usaLavoratori = tipoSoglia === "rls" || tipoSoglia === "primo_soccorso";
-  // 03, 04, 05: la spunta è il risultato del calcolo (bloccata). 07: l'indice INAIL si spunta a mano.
-  const spuntaAutomatica = tipoSoglia !== null && def.id !== "primo-soccorso";
-  const spuntaManualeIndice = def.id === "primo-soccorso";
+  const e07 = def.id === "primo-soccorso";
+  // 03, 04, 05: la spunta «Applica» è il risultato del calcolo (non modificabile a mano). 07: si può scegliere l'indice INAIL tra le righe in fascia.
+  const spuntaAutomatica = tipoSoglia !== null && !e07;
 
   // Dati Ditta per l'evidenziazione: codici ATECO (Tabella 06) e numeri per le soglie
   const { data: ditta } = useQuery({
@@ -199,33 +210,73 @@ export function TabellaRaccordo({ def }: Props) {
     return /Gruppo\s+([ABC])/i.exec(esito)?.[1]?.toUpperCase() ?? null;
   }, [def.id, valoreDitta, soglieDitta]);
 
-  // Tabella 07: righe spuntate a mano (indice INAIL scelto dall'utente)
-  const righeSpuntate07 = useMemo(
-    () => (spuntaManualeIndice ? righe.filter((r) => Boolean(r["applica"])) : []),
-    [righe, spuntaManualeIndice],
-  );
-  const proposta07 = spuntaManualeIndice && righeSpuntate07.length === 0;
+  // I dati della Ditta sono tutti arrivati: prima di allora la fascia calcolata potrebbe essere provvisoria e NON va scritta nel database
+  const datiPronti =
+    ditta !== undefined &&
+    (!usaLavoratori || inForza !== undefined) &&
+    (tipoSoglia !== "antincendio" || sedi !== undefined) &&
+    (!e07 || soglieDitta !== undefined);
 
-  /** true se la riga è quella in cui ricade la situazione attuale della Ditta (solo tabelle 03, 04, 05, 07). */
-  const rigaInUsoDitta = (r: Riga): boolean => {
-    if (tipoSoglia === null) return false;
-    // Tabella 07: se l'utente ha spuntato un indice INAIL, vale la sua scelta
-    if (spuntaManualeIndice && !proposta07) return Boolean(r["applica"]);
-    if (valoreDitta === null) return false;
-    if (spuntaManualeIndice) {
-      // Nessuna spunta: proposta dalla fascia testuale («1-2», «3-5», «6 o più») e dal gruppo della Tabella 04.
-      // Le righe per agricoltura non si deducono dal numero.
+  // Righe in cui ricade la situazione attuale della Ditta (solo tabelle 03, 04, 05, 07)
+  const idCalcolati = useMemo(() => {
+    const ids = new Set<string>();
+    if (tipoSoglia === null || valoreDitta === null) return ids;
+    for (const r of righe) {
+      if (!e07) {
+        if (nellaFascia(valoreDitta, r["da"], r["a"])) ids.add(r.id);
+        continue;
+      }
+      // Tabella 07: fascia testuale («1-2», «3-5», «6 o più») e gruppo della Tabella 04. Le righe per agricoltura non si deducono dal numero.
       const testo = String(r["lavoratori"] ?? "").toLowerCase();
-      if (testo.includes("agricoltura")) return false;
+      if (testo.includes("agricoltura")) continue;
       const m = /^(\d+)\s*-\s*(\d+)/.exec(testo) ?? /^(\d+)\s*o\s*più/.exec(testo);
-      if (!m) return false;
+      if (!m) continue;
       const fasciaOk = nellaFascia(valoreDitta, m[1], m[2] ?? null);
-      return (
-        fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta
-      );
+      if (fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta) {
+        ids.add(r.id);
+      }
     }
-    return nellaFascia(valoreDitta, r["da"], r["a"]);
-  };
+    return ids;
+  }, [righe, tipoSoglia, valoreDitta, e07, gruppoDitta]);
+
+  // Righe «in uso Ditta» = righe spuntate «Applica». Tabella 07: se più righe hanno stessa fascia e gruppo (indice INAIL diverso)
+  // e l'utente ne ha spuntate alcune tra queste, vale la sua scelta; altrimenti valgono tutte le righe calcolate.
+  const idInUso = useMemo(() => {
+    if (tipoSoglia === null) return new Set<string>();
+    if (!e07) return idCalcolati;
+    const spuntate = righe.filter((r) => Boolean(r["applica"])).map((r) => r.id);
+    if (idCalcolati.size === 0) return new Set(spuntate);
+    const dentro = spuntate.length > 0 && spuntate.every((id) => idCalcolati.has(id));
+    return dentro ? new Set(spuntate) : idCalcolati;
+  }, [righe, tipoSoglia, e07, idCalcolati]);
+
+  // Allinea il database: applica = true sulla fascia attiva e false sulle altre della stessa tabella (cioè dello stesso ambito).
+  const ultimaFirmaAllineamento = useRef("");
+  useEffect(() => {
+    if (tipoSoglia === null || !datiPronti || isLoading || valoreDitta === null) return;
+    const daAccendere = righe.filter((r) => idInUso.has(r.id) && !r["applica"]).map((r) => r.id);
+    const daSpegnere = righe.filter((r) => !idInUso.has(r.id) && Boolean(r["applica"])).map((r) => r.id);
+    if (daAccendere.length === 0 && daSpegnere.length === 0) return;
+    // Un solo tentativo per ogni differenza: se la scrittura fallisce non si ripete in ciclo
+    const firma = `${tabella}|${daAccendere.join(",")}|${daSpegnere.join(",")}`;
+    if (ultimaFirmaAllineamento.current === firma) return;
+    ultimaFirmaAllineamento.current = firma;
+    void (async () => {
+      try {
+        if (daSpegnere.length) {
+          const { error: e } = await sb.from(tabella).update({ applica: false }).in("id", daSpegnere);
+          if (e) throw e;
+        }
+        if (daAccendere.length) {
+          const { error: e } = await sb.from(tabella).update({ applica: true }).in("id", daAccendere);
+          if (e) throw e;
+        }
+        await qc.invalidateQueries({ queryKey: chiave });
+      } catch (e) {
+        console.warn("Allineamento della spunta «Applica» non riuscito", e);
+      }
+    })();
+  }, [tipoSoglia, datiPronti, isLoading, valoreDitta, righe, idInUso, tabella, qc, chiave]);
 
   // Normalizzazione codici ditta (sia codice intero che divisione a 2 cifre)
   const codiciDittaAteco = useMemo(() => {
@@ -258,6 +309,14 @@ export function TabellaRaccordo({ def }: Props) {
 
   // Tutte le uscite anticipate avvengono TASSATIVAMENTE dopo tutti gli hook
   if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
+
+  /** Spunta «Applica» come la vede l'utente: ATECO = codici associati alla Ditta; 03, 04, 05, 07 = riga in uso; altre = campo del database. */
+  const spuntatoRiga = (r: Riga): boolean =>
+    def.id === "ateco"
+      ? codiciDittaAteco.has(String(r["codice"] ?? "").trim())
+      : tipoSoglia !== null
+        ? idInUso.has(r.id)
+        : Boolean(r["applica"]);
 
   const ricarica = () => qc.invalidateQueries({ queryKey: chiave });
   const prossimoOrdine = () => righe.reduce((m, r) => Math.max(m, Number(r["ordine"] ?? 0)), 0) + 1;
@@ -366,7 +425,7 @@ export function TabellaRaccordo({ def }: Props) {
           // Rimozione puntuale del solo codice selezionato (non distruttiva sui sottocodici)
           nuoviCodici = nuoviCodici.filter((a) => a.codice !== codiceRiga);
           if (nuoviCodici.length > 0 && !nuoviCodici.some((a) => a.principale)) {
-            nuoviCodici[0] = { ...nuoviCodici[0], principale: true };
+            nuoviCodici = nuoviCodici.map((a, i) => (i === 0 ? { ...a, principale: true } : a));
           }
         }
 
@@ -389,10 +448,10 @@ export function TabellaRaccordo({ def }: Props) {
       return;
     }
 
-    // 03, 04, 05: la spunta è calcolata dal programma e non si scrive nel database
+    // 03, 04, 05: la spunta è calcolata dal programma (e salvata dall'allineamento automatico): non si cambia a mano
     if (spuntaAutomatica) return;
 
-    // Comportamento standard per le altre tabelle (07 compresa: indice INAIL spuntato a mano)
+    // Comportamento standard per le altre tabelle (07 compresa: indice INAIL spuntato a mano tra le righe in fascia)
     try {
       if (valore && def.gruppoSpunta) {
         const altre = righe
@@ -468,27 +527,17 @@ export function TabellaRaccordo({ def }: Props) {
         </Button>
 
         <PulsanteEsporta
-          alClic={(formato) => {
-            const daEsportare = mostrate.map((r, i) => {
-              const rigaExp: Record<string, unknown> = { N: i + 1 };
-              for (const c of visibili) {
-                rigaExp[c.etichetta] = r[c.chiave];
-              }
-              rigaExp["In uso Ditta"] =
-                def.id === "ateco"
-                  ? codiciDittaAteco.has(String(r["codice"] ?? "").trim())
-                  : spuntaAutomatica
-                    ? rigaInUsoDitta(r)
-                    : Boolean(r["applica"]);
-              return rigaExp;
-            });
-            const colExp = [
-              { chiave: "N", etichetta: "N" },
-              ...visibili.map((c) => ({ chiave: c.etichetta, etichetta: c.etichetta })),
-              { chiave: "In uso Ditta", etichetta: "In uso Ditta" },
-            ];
-            esportaTabella(daEsportare, colExp, `tabella-${def.numero}-${def.id}`, formato);
-          }}
+          onEsporta={(formato) =>
+            esportaTabella(
+              // «Applica» esportato come a schermo (stessa spunta della tabella)
+              tabellaRaccordoDaEsportare(
+                def,
+                visibili,
+                mostrate.map((r) => ({ ...r, applica: spuntatoRiga(r) })),
+              ),
+              formato,
+            )
+          }
         />
 
         {/* Casella Cerca e conteggio record */}
@@ -530,22 +579,18 @@ export function TabellaRaccordo({ def }: Props) {
                   />
                 ))}
                 <th className="sticky top-0 z-10 w-28 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
-                  {def.id === "ateco" || spuntaAutomatica ? "In uso Ditta" : "Applica"}
+                  Applica
                 </th>
               </tr>
             </thead>
             <tbody>
               {mostrate.map((r, i) => {
                 const codiceRiga = String(r["codice"] ?? "").trim();
-                const eAtecoDitta = def.id === "ateco" && codiciDittaAteco.has(codiceRiga);
-                const eSogliaDitta = rigaInUsoDitta(r);
-                const inUso = eAtecoDitta || eSogliaDitta;
-                const spuntato =
-                  def.id === "ateco"
-                    ? eAtecoDitta
-                    : spuntaAutomatica
-                      ? eSogliaDitta
-                      : Boolean(r["applica"]);
+                const spuntato = spuntatoRiga(r);
+                // Riga gialla «In uso Ditta» = riga spuntata «Applica» nelle tabelle 03, 04, 05, 06 e 07
+                const inUso = (def.id === "ateco" || tipoSoglia !== null) && spuntato;
+                // Tabella 07: se la Ditta ha una fascia, si possono spuntare solo le righe di quella fascia
+                const fuoriFascia07 = e07 && idCalcolati.size > 0 && !idCalcolati.has(r.id);
 
                 return (
                   <tr
@@ -573,7 +618,7 @@ export function TabellaRaccordo({ def }: Props) {
                               variant="outline"
                               className="text-[10px] bg-amber-200/60 text-amber-900 border-amber-400 shrink-0 font-normal py-0 px-1.5 dark:bg-amber-900/50 dark:text-amber-200"
                             >
-                              {spuntaManualeIndice && proposta07 ? "Proposta" : "In uso Ditta"}
+                              In uso Ditta
                             </Badge>
                           )}
                         </div>
@@ -582,10 +627,18 @@ export function TabellaRaccordo({ def }: Props) {
                     <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={spuntato}
-                        disabled={spuntaAutomatica}
-                        title={spuntaAutomatica ? "Calcolato dal programma in base ai dati della Ditta" : undefined}
+                        disabled={spuntaAutomatica || fuoriFascia07}
+                        title={
+                          spuntaAutomatica
+                            ? "Calcolato dal programma in base ai dati della Ditta"
+                            : fuoriFascia07
+                              ? "Fuori dalla fascia e dal gruppo calcolati per la Ditta"
+                              : def.id === "ateco"
+                                ? `Associa ${codiceRiga || `la riga ${i + 1}`} alla Ditta`
+                                : undefined
+                        }
                         onCheckedChange={(v) => cambiaSpunta(r, v === true)}
-                        aria-label={`Associa ${codiceRiga || `riga ${i + 1}`} alla Ditta`}
+                        aria-label={`Applica la riga ${i + 1}`}
                       />
                     </td>
                   </tr>

@@ -10,6 +10,9 @@
  *   rev 5 — 15/11/2026 12:45 — Supporto stella ATECO principale, ricalcolo automatico del rischio per massima gravità con override manuale e reset pulito.
  *   rev 6 — 15/11/2026 — «Presenze contemporanee max» = somma delle presenze di tutte le sedi attive (quando tutte compilate); espone il riepilogo.
  *   rev 7 — 15/11/2026 — «N. Lavoratori» letto dall'anagrafica (solo in_forza, cessati esclusi) e date di aggiornamento impostate in automatico a oggi quando il dato cambia.
+ *   rev 8 — 15/11/2026 — «Modifiche non salvate» solo per le modifiche dell'utente: l'allineamento automatico di N. lavoratori (anagrafica) e Presenze (sedi)
+ *                        fa parte della base di confronto di isDirty, quindi aprire la finestra e premere «Torna» non chiede più conferma.
+ *                        Il primo codice ATECO è «principale» (promozione senza errori di tipo).
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +63,36 @@ function uguali(a: unknown, b: unknown): boolean {
   return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
 }
 
+
+/** Tutti i codici ATECO, con il primo promosso a «principale» se nessuno lo è. */
+function conPrincipale(lista: CodiceAteco[]): CodiceAteco[] {
+  if (lista.length === 0 || lista.some((c) => c.principale)) return lista;
+  return lista.map((c, i) => (i === 0 ? { ...c, principale: true } : c));
+}
+
+/**
+ * Valori che il programma ricava da solo (non digitati dall'utente):
+ *  - N. lavoratori = lavoratori in forza dall'anagrafica (con data = oggi se il numero cambia);
+ *  - Presenze contemporanee max = somma dei massimi delle sedi, quando sono tutti compilati.
+ * La stessa funzione serve a riempire il form e a costruire la base di confronto di isDirty:
+ * così il solo aprire la finestra non conta come «modifica non salvata».
+ */
+function conValoriAutomatici(
+  record: DittaRecord,
+  inForza: number | undefined,
+  presenze: { completo: boolean; totale: number },
+  oggi: string,
+): DittaRecord {
+  let r = record;
+  if (inForza !== undefined && r.n_lavoratori_dichiarato !== inForza) {
+    r = { ...r, n_lavoratori_dichiarato: inForza, n_lavoratori_data_aggiornamento: oggi };
+  }
+  if (presenze.completo && r.presenze_contemporanee_max !== presenze.totale) {
+    r = { ...r, presenze_contemporanee_max: presenze.totale, presenze_data_aggiornamento: oggi };
+  }
+  return r;
+}
+
 export function useDittaTab() {
   const qc = useQueryClient();
   const [form, setForm] = useState<DittaRecord | null>(null);
@@ -91,6 +124,8 @@ export function useDittaTab() {
 
   const caricatoDaDb = useRef(false);
   const formPronto = form !== null;
+  // «Oggi» fissato all'apertura: form e base di confronto usano la stessa data anche a cavallo della mezzanotte
+  const oggiSessione = useRef(new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     if (dittaDb && !caricatoDaDb.current) {
@@ -99,37 +134,23 @@ export function useDittaTab() {
     }
   }, [dittaDb]);
 
-  // N. lavoratori = lavoratori in forza dall'anagrafica; la data si aggiorna a oggi solo se il numero cambia
-  const lavoratoriInForm = form?.n_lavoratori_dichiarato ?? null;
-  useEffect(() => {
-    if (!formPronto || inForza === undefined || lavoratoriInForm === inForza) return;
-    const oggi = new Date().toISOString().slice(0, 10);
-    setForm((f) =>
-      f && f.n_lavoratori_dichiarato !== inForza
-        ? { ...f, n_lavoratori_dichiarato: inForza, n_lavoratori_data_aggiornamento: oggi }
-        : f,
-    );
-  }, [formPronto, inForza, lavoratoriInForm]);
-
-  // Propagazione automatica: quando tutte le sedi attive hanno il loro massimo di presenti,
+  // N. lavoratori = lavoratori in forza dall'anagrafica; la data si aggiorna a oggi solo se il numero cambia.
+  // Propagazione automatica delle presenze: quando tutte le sedi attive hanno il loro massimo di presenti,
   // la somma diventa «Presenze contemporanee max» (tetto cautelativo dell'intera azienda).
+  const lavoratoriInForm = form?.n_lavoratori_dichiarato ?? null;
   const presenzeInForm = form?.presenze_contemporanee_max ?? null;
   useEffect(() => {
-    if (!formPronto || !riepilogoPresenze.completo) return;
-    const totale = riepilogoPresenze.totale;
-    if (presenzeInForm === totale) return;
-    const oggi = new Date().toISOString().slice(0, 10);
-    setForm((f) =>
-      f && f.presenze_contemporanee_max !== totale
-        ? { ...f, presenze_contemporanee_max: totale, presenze_data_aggiornamento: oggi }
-        : f,
-    );
-  }, [formPronto, riepilogoPresenze.completo, riepilogoPresenze.totale, presenzeInForm]);
+    if (!formPronto) return;
+    setForm((f) => (f ? conValoriAutomatici(f, inForza, riepilogoPresenze, oggiSessione.current) : f));
+  }, [formPronto, inForza, lavoratoriInForm, presenzeInForm, riepilogoPresenze]);
 
+  // Base di confronto = record del database con gli stessi valori automatici del form:
+  // «modifiche non salvate» = solo ciò che l'utente ha cambiato (non il conteggio dell'anagrafica).
   const isDirty = useMemo(() => {
     if (!form || !dittaDb) return false;
-    return !uguali(form, dittaDb);
-  }, [form, dittaDb]);
+    const base = conValoriAutomatici(dittaDb, inForza, riepilogoPresenze, oggiSessione.current);
+    return !uguali(form, base);
+  }, [form, dittaDb, inForza, riepilogoPresenze]);
 
   const mutazioneSalva = useMutation({
     mutationFn: salvaDitta,
@@ -202,11 +223,9 @@ export function useDittaTab() {
     const nuovaLista = form.codici_ateco.filter((_, i) => i !== index);
 
     // Se è stato rimosso l'ATECO principale e ne rimangono altri, promuovi il primo
-    if (rimosso?.principale && nuovaLista.length > 0 && !nuovaLista.some((c) => c.principale)) {
-      nuovaLista[0] = { ...nuovaLista[0], principale: true };
-    }
+    const listaFinale = rimosso?.principale ? conPrincipale(nuovaLista) : nuovaLista;
 
-    const aggiornato: DittaRecord = { ...form, codici_ateco: nuovaLista };
+    const aggiornato: DittaRecord = { ...form, codici_ateco: listaFinale };
     setForm(aggiornato);
   }
 
