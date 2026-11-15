@@ -4,6 +4,7 @@
  * Data creaz: 14/11/2026
  * Revisioni:
  *   rev 1 — 14/11/2026 — Le 9 tabelle di raccordo (Impostazioni generali > Tabelle di raccordo): colonne, tabella del database e regole.
+ *   rev 2 — 15/11/2026 11:56 — Rimossa colonna «fonte» dalla tabella 06 (rischio_ateco) e aggiornata descrizione normativa.
  *
  * Ogni tabella è descritta qui; la pagina (TabellaRaccordo.tsx) è unica e generica. Le tabelle 03, 04 e 05 sono le righe di
  * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» è la spunta manuale della riga da applicare.
@@ -188,7 +189,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Rischio per codice ATECO",
     tabella: "rischio_ateco",
     descrizione:
-      "Classe di rischio per divisione ATECO. Fonte provvisoria: tabella Vega Formazione PS00007 rev 0.4 (ATECO 2007), non l'allegato ufficiale.",
+      "Classe di rischio per divisione ATECO secondo l'Accordo Stato-Regioni (Tabella di raccordo per formazione specifica).",
     ordinaPer: ["codice"],
     gruppoSpunta: [],
     colonne: [
@@ -202,7 +203,6 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
         obbligatorio: true,
       },
       { chiave: "versione_ateco", etichetta: "Versione ATECO", obbligatorio: true },
-      { chiave: "fonte", etichetta: "Fonte", larghezza: "min-w-[16rem]" },
     ],
     predefiniti: { versione_ateco: "2007", rischio: "basso" },
   },
