@@ -4,7 +4,12 @@
  * Data creaz: 15/11/2026
  * Revisioni:
  *   rev 1 — 15/11/2026 — Calcoli puri: totale presenze di tutte le sedi e numero lavoratori di riferimento (principio più cautelativo).
+ *   rev 2 — 15/11/2026 — DICITURA_PERSONE_MAX spostata qui (usata da riquadro Sedi e finestra Modifica sede senza import circolari).
  */
+
+/** Dicitura unica richiesta per ogni sede e plesso. */
+export const DICITURA_PERSONE_MAX =
+  "Massimo numero di presenti nel plesso (tutti compresi i lavoratori, studenti, ospiti e utenza)";
 
 export type SedePresenze = {
   id: string;

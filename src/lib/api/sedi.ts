@@ -5,8 +5,11 @@
  * Revisioni:
  *   rev 1 — 13/11/2026 — Sedi aziendali: una principale unica + plessi secondari (stessa Ditta, stesso RSPP).
  *   rev 2 — 15/11/2026 — persone_max: massimo numero di presenti per sede (obbligatorio e > 0 per i nuovi plessi).
+ *   rev 3 — 15/11/2026 — aggiornaSede pulisce i testi (trim, provincia maiuscola, vuoto = null) e vieta il nome vuoto; contaLavoratoriPerSede (solo in_forza) per il riepilogo della sede.
  */
-import { sb } from "./client";
+import { leggiTutto, sb } from "./client";
+
+export const CHIAVE_LAVORATORI_PER_SEDE = ["lavoratori-per-sede"] as const;
 
 export const CHIAVE_SEDI = ["sedi-aziendali"] as const;
 
@@ -22,6 +25,8 @@ export type Sede = {
   attiva: boolean;
   /** Massimo numero di presenti contemporanei (lavoratori, studenti, ospiti e utenza). null = ancora da compilare. */
   persone_max: number | null;
+  /** Data dell'ultima modifica, impostata dal database. */
+  updated_at?: string;
 };
 
 /** Valida un numero di presenti: intero maggiore di zero. */
@@ -76,11 +81,33 @@ export async function aggiungiSede(input: {
 
 export async function aggiornaSede(
   id: string,
-  patch: Partial<Pick<Sede, "nome" | "indirizzo" | "cap" | "comune" | "provincia" | "attiva" | "ordine" | "persone_max">>,
+  patch: Partial<
+    Pick<Sede, "nome" | "indirizzo" | "cap" | "comune" | "provincia" | "attiva" | "ordine" | "persone_max">
+  >,
 ) {
+  const pulito: typeof patch = { ...patch };
   if (patch.persone_max !== undefined && patch.persone_max !== null) validaPersoneMax(patch.persone_max);
-  const { error } = await sb.from("sedi").update(patch).eq("id", id);
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Inserisci il nome della sede");
+    pulito.nome = nome;
+  }
+  for (const k of ["indirizzo", "cap", "comune"] as const) {
+    if (patch[k] !== undefined) pulito[k] = patch[k]?.trim() || null;
+  }
+  if (patch.provincia !== undefined) pulito.provincia = patch.provincia?.trim().toUpperCase() || null;
+  const { error } = await sb.from("sedi").update(pulito).eq("id", id);
   if (error) throw error;
+}
+
+/** Lavoratori attivi (stato «in_forza», cessati esclusi) per sede: { sede_id: numero }. */
+export async function contaLavoratoriPerSede(): Promise<Record<string, number>> {
+  const righe = await leggiTutto<{ sede_id: string | null }>(() =>
+    sb.from("dipendenti").select("sede_id").eq("stato_lavoratore", "in_forza").order("id"),
+  );
+  const conteggio: Record<string, number> = {};
+  for (const r of righe) if (r.sede_id) conteggio[r.sede_id] = (conteggio[r.sede_id] ?? 0) + 1;
+  return conteggio;
 }
 
 /** Elimina un plesso (mai la principale). I dipendenti tornano alla principale; gli incarichi del plesso decadono. */

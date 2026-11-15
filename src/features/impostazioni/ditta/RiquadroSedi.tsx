@@ -5,21 +5,22 @@
  * Revisioni:
  *   rev 1 — 13/11/2026 — Sedi e plessi (stessa Ditta, stesso RSPP) in Impostazioni › Ditta.
  *   rev 2 — 15/11/2026 — Massimo numero di presenti per ogni sede (obbligatorio, > 0), avviso sulla Sede Centrale e barra «Totale presenze».
+ *   rev 3 — 15/11/2026 — Su ogni riga (Sede Centrale e succursali) icona matita (modifica di tutti i dati) e icona occhio (risultati solo lettura).
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Building, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CHIAVE_SEDI, aggiornaSede, aggiungiSede, eliminaSede, getSedi } from "@/lib/api/sedi";
+import { CHIAVE_SEDI, aggiornaSede, aggiungiSede, eliminaSede, getSedi, type Sede } from "@/lib/api/sedi";
 import { CHIAVE_ASSEGNAZIONI_RUOLI } from "@/lib/api/ruoli";
-import { riepilogaPresenze } from "@/features/ditta/presenze-sedi";
+import { DICITURA_PERSONE_MAX, riepilogaPresenze } from "@/features/ditta/presenze-sedi";
+import { DialogModificaSede } from "./DialogModificaSede";
+import { DialogRisultatiSede } from "./DialogRisultatiSede";
 
-/** Dicitura unica richiesta per ogni sede e plesso. */
-export const DICITURA_PERSONE_MAX =
-  "Massimo numero di presenti nel plesso (tutti compresi i lavoratori, studenti, ospiti e utenza)";
+export { DICITURA_PERSONE_MAX };
 
 export function RiquadroSedi() {
   const qc = useQueryClient();
@@ -32,6 +33,8 @@ export function RiquadroSedi() {
   const [personeMax, setPersoneMax] = useState("");
   const [bozze, setBozze] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [inModifica, setInModifica] = useState<Sede | null>(null);
+  const [inVisione, setInVisione] = useState<Sede | null>(null);
 
   const riepilogo = riepilogaPresenze(sedi);
 
@@ -141,9 +144,12 @@ export function RiquadroSedi() {
                     <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">Sede principale</span>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {s.is_principale
-                      ? "Indirizzo: quello dell'anagrafica Ditta. Tutti i lavoratori e gli incarichi sono qui, salvo diversa assegnazione."
-                      : [s.indirizzo, [s.cap, s.comune].filter(Boolean).join(" "), s.provincia && `(${s.provincia})`].filter(Boolean).join(" — ") || "Indirizzo non indicato"}
+                    {[s.indirizzo, [s.cap, s.comune].filter(Boolean).join(" "), s.provincia && `(${s.provincia})`]
+                      .filter(Boolean)
+                      .join(" — ") ||
+                      (s.is_principale
+                        ? "Indirizzo: quello dell'anagrafica Ditta. Tutti i lavoratori e gli incarichi sono qui, salvo diversa assegnazione."
+                        : "Indirizzo non indicato")}
                   </p>
                 </div>
                 <div className="w-full max-w-sm space-y-1 md:w-80">
@@ -178,6 +184,27 @@ export function RiquadroSedi() {
                     </p>
                   )}
                 </div>
+                <div className="flex items-center">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setInVisione(s)}
+                    title="Risultati della sede (sola lettura)"
+                    aria-label={`Risultati sede ${s.nome}`}
+                  >
+                    <Eye className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setInModifica(s)}
+                    title="Modifica sede"
+                    aria-label={`Modifica sede ${s.nome}`}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
                 {!s.is_principale && (
                   <Button
                     type="button"
@@ -191,6 +218,7 @@ export function RiquadroSedi() {
                     <Trash2 className="size-4" />
                   </Button>
                 )}
+                </div>
               </div>
             );
           })}
@@ -262,6 +290,9 @@ export function RiquadroSedi() {
           <Plus className="mr-1 size-4" /> Crea plesso
         </Button>
       </div>
+
+      <DialogModificaSede sede={inModifica} onChiudi={() => setInModifica(null)} />
+      <DialogRisultatiSede sede={inVisione} riepilogo={riepilogo} onChiudi={() => setInVisione(null)} />
     </div>
   );
 }

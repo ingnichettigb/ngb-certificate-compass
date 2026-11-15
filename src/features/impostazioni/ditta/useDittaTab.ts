@@ -9,13 +9,16 @@
  *   rev 4 — 15/11/2026 11:56 — Propagazione rischio dal catalogo ATECO.
  *   rev 5 — 15/11/2026 12:45 — Supporto stella ATECO principale, ricalcolo automatico del rischio per massima gravità con override manuale e reset pulito.
  *   rev 6 — 15/11/2026 — «Presenze contemporanee max» = somma delle presenze di tutte le sedi attive (quando tutte compilate); espone il riepilogo.
+ *   rev 7 — 15/11/2026 — «N. Lavoratori» letto dall'anagrafica (solo in_forza, cessati esclusi) e date di aggiornamento impostate in automatico a oggi quando il dato cambia.
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CHIAVE_DITTA,
+  CHIAVE_LAVORATORI_IN_FORZA,
   CHIAVE_SOGLIE_DITTA,
+  contaLavoratoriInForza,
   getDitta,
   salvaDitta,
   getSoglieDitta,
@@ -80,7 +83,14 @@ export function useDittaTab() {
   const { data: sedi = [] } = useQuery({ queryKey: CHIAVE_SEDI, queryFn: getSedi });
   const riepilogoPresenze = useMemo(() => riepilogaPresenze(sedi), [sedi]);
 
+  // Lavoratori attivi dall'anagrafica dipendenti (stato in_forza): è il dato certo, non più digitato a mano
+  const { data: inForza } = useQuery({
+    queryKey: CHIAVE_LAVORATORI_IN_FORZA,
+    queryFn: contaLavoratoriInForza,
+  });
+
   const caricatoDaDb = useRef(false);
+  const formPronto = form !== null;
 
   useEffect(() => {
     if (dittaDb && !caricatoDaDb.current) {
@@ -89,9 +99,20 @@ export function useDittaTab() {
     }
   }, [dittaDb]);
 
+  // N. lavoratori = lavoratori in forza dall'anagrafica; la data si aggiorna a oggi solo se il numero cambia
+  const lavoratoriInForm = form?.n_lavoratori_dichiarato ?? null;
+  useEffect(() => {
+    if (!formPronto || inForza === undefined || lavoratoriInForm === inForza) return;
+    const oggi = new Date().toISOString().slice(0, 10);
+    setForm((f) =>
+      f && f.n_lavoratori_dichiarato !== inForza
+        ? { ...f, n_lavoratori_dichiarato: inForza, n_lavoratori_data_aggiornamento: oggi }
+        : f,
+    );
+  }, [formPronto, inForza, lavoratoriInForm]);
+
   // Propagazione automatica: quando tutte le sedi attive hanno il loro massimo di presenti,
   // la somma diventa «Presenze contemporanee max» (tetto cautelativo dell'intera azienda).
-  const formPronto = form !== null;
   const presenzeInForm = form?.presenze_contemporanee_max ?? null;
   useEffect(() => {
     if (!formPronto || !riepilogoPresenze.completo) return;

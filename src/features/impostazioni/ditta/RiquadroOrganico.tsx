@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: organico, presenze e livello antincendio attribuito. Nessun cambio di comportamento.
  *   rev 2 — 15/11/2026 — Lavoratori di riferimento (il più alto tra dichiarato e in forza) e presenze calcolate dalla somma delle sedi.
+ *   rev 3 — 15/11/2026 — N. Lavoratori letto dall'anagrafica (solo in forza, a sola consultazione); date di aggiornamento automatiche e non modificabili.
  */
 import { Users, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -48,25 +49,18 @@ export function RiquadroOrganico({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label htmlFor="n_lavoratori_dichiarato">N. Lavoratori dichiarato</Label>
+          <Label htmlFor="n_lavoratori_dichiarato">N. Lavoratori (in forza)</Label>
           <Input
             id="n_lavoratori_dichiarato"
             type="number"
-            min={0}
-            placeholder="Es. 127"
-            value={form.n_lavoratori_dichiarato ?? ""}
-            onChange={(e) =>
-              updateCampo(
-                "n_lavoratori_dichiarato",
-                e.target.value === "" ? null : Number(e.target.value),
-              )
-            }
+            readOnly
+            tabIndex={-1}
+            title="Letto dall'anagrafica dipendenti: conta solo i lavoratori in forza, i cessati sono esclusi"
+            className="cursor-not-allowed bg-muted/40 font-semibold"
+            value={lavoratoriInForza ?? form.n_lavoratori_dichiarato ?? ""}
           />
-          <p className="text-[11px] text-muted-foreground">
-            In forza nel programma: <strong>{lavoratoriInForza ?? "—"}</strong>
-          </p>
           <p className="text-[11px] text-muted-foreground" data-testid="lavoratori-riferimento">
-            Adottato per RLS e Primo Soccorso (il più alto):{" "}
+            Dall'anagrafica dipendenti (solo in forza). Adottato per RLS e Primo Soccorso:{" "}
             <strong>{lavoratoriRiferimento ?? "—"}</strong>
           </p>
         </div>
@@ -75,8 +69,12 @@ export function RiquadroOrganico({
           <Input
             id="n_lavoratori_data"
             type="date"
+            readOnly
+            tabIndex={-1}
+            title="Impostata in automatico alla data dell'ultimo aggiornamento del dato"
+            className="cursor-not-allowed bg-muted/40"
+            onClick={(e) => e.preventDefault()}
             value={form.n_lavoratori_data_aggiornamento || ""}
-            onChange={(e) => updateCampo("n_lavoratori_data_aggiornamento", e.target.value || null)}
           />
         </div>
       </div>
@@ -114,8 +112,12 @@ export function RiquadroOrganico({
           <Input
             id="presenze_data"
             type="date"
+            readOnly
+            tabIndex={-1}
+            title="Impostata in automatico alla data dell'ultimo aggiornamento del dato"
+            className="cursor-not-allowed bg-muted/40"
+            onClick={(e) => e.preventDefault()}
             value={form.presenze_data_aggiornamento || ""}
-            onChange={(e) => updateCampo("presenze_data_aggiornamento", e.target.value || null)}
           />
         </div>
       </div>

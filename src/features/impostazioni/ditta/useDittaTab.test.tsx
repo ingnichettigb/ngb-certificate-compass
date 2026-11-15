@@ -22,6 +22,8 @@ vi.mock("@/lib/api/ditta", async (importOriginal) => {
     getDitta: vi.fn(async () => ({ ...reale.DITTA_DEFAULT })),
     getSoglieDitta: vi.fn(async () => []),
     salvaDitta: vi.fn(),
+    // Conteggio lavoratori in forza: mai risolto, così i test esistenti non vengono toccati dalla sincronizzazione automatica
+    contaLavoratoriInForza: vi.fn(() => new Promise<number>(() => {})),
   };
 });
 
