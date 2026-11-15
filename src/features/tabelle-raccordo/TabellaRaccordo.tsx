@@ -9,6 +9,8 @@
  *   rev 4 — 15/11/2026 12:04 — Ricerca veloce nella barra comandi, anti-crash uscite anticipate React e conteggio record semplificato.
  *   rev 5 — 15/11/2026 12:45 — Cache condivisa con Ditta (CHIAVE_CATALOGO_ATECO), riga gialla ben visibile, spunta Ditta isolata su codici_ateco e rimozione puntuale del codice.
  *   rev 6 — 15/11/2026 — Riga gialla con badge «In uso Ditta» anche nelle tabelle 03 (RLS), 04 e 07 (Primo Soccorso), 05 (Antincendio): fascia calcolata su lavoratori più alti tra dichiarato e in forza e su presenze totali delle sedi.
+ *   rev 7 — 15/11/2026 — Tabelle 03, 04, 05: colonna «In uso Ditta» con spunta automatica e bloccata, uguale alla riga gialla (nessuna scrittura su «applica»).
+ *                        Tabella 07: l'indice INAIL si sceglie a mano con «Applica» (la riga spuntata è gialla); senza spunta la riga gialla è solo «Proposta».
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -152,6 +154,9 @@ export function TabellaRaccordo({ def }: Props) {
           ? "antincendio"
           : null;
   const usaLavoratori = tipoSoglia === "rls" || tipoSoglia === "primo_soccorso";
+  // 03, 04, 05: la spunta è il risultato del calcolo (bloccata). 07: l'indice INAIL si spunta a mano.
+  const spuntaAutomatica = tipoSoglia !== null && def.id !== "primo-soccorso";
+  const spuntaManualeIndice = def.id === "primo-soccorso";
 
   // Dati Ditta per l'evidenziazione: codici ATECO (Tabella 06) e numeri per le soglie
   const { data: ditta } = useQuery({
@@ -194,17 +199,30 @@ export function TabellaRaccordo({ def }: Props) {
     return /Gruppo\s+([ABC])/i.exec(esito)?.[1]?.toUpperCase() ?? null;
   }, [def.id, valoreDitta, soglieDitta]);
 
+  // Tabella 07: righe spuntate a mano (indice INAIL scelto dall'utente)
+  const righeSpuntate07 = useMemo(
+    () => (spuntaManualeIndice ? righe.filter((r) => Boolean(r["applica"])) : []),
+    [righe, spuntaManualeIndice],
+  );
+  const proposta07 = spuntaManualeIndice && righeSpuntate07.length === 0;
+
   /** true se la riga è quella in cui ricade la situazione attuale della Ditta (solo tabelle 03, 04, 05, 07). */
   const rigaInUsoDitta = (r: Riga): boolean => {
-    if (tipoSoglia === null || valoreDitta === null) return false;
-    if (def.id === "primo-soccorso") {
-      // Tabella 07: fascia testuale («1-2», «3-5», «6 o più»); le righe per agricoltura non si deducono dal numero
+    if (tipoSoglia === null) return false;
+    // Tabella 07: se l'utente ha spuntato un indice INAIL, vale la sua scelta
+    if (spuntaManualeIndice && !proposta07) return Boolean(r["applica"]);
+    if (valoreDitta === null) return false;
+    if (spuntaManualeIndice) {
+      // Nessuna spunta: proposta dalla fascia testuale («1-2», «3-5», «6 o più») e dal gruppo della Tabella 04.
+      // Le righe per agricoltura non si deducono dal numero.
       const testo = String(r["lavoratori"] ?? "").toLowerCase();
       if (testo.includes("agricoltura")) return false;
       const m = /^(\d+)\s*-\s*(\d+)/.exec(testo) ?? /^(\d+)\s*o\s*più/.exec(testo);
       if (!m) return false;
       const fasciaOk = nellaFascia(valoreDitta, m[1], m[2] ?? null);
-      return fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta;
+      return (
+        fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta
+      );
     }
     return nellaFascia(valoreDitta, r["da"], r["a"]);
   };
@@ -371,7 +389,10 @@ export function TabellaRaccordo({ def }: Props) {
       return;
     }
 
-    // Comportamento standard per le tabelle di soglie (03, 04, 05, 07, 08)
+    // 03, 04, 05: la spunta è calcolata dal programma e non si scrive nel database
+    if (spuntaAutomatica) return;
+
+    // Comportamento standard per le altre tabelle (07 compresa: indice INAIL spuntato a mano)
     try {
       if (valore && def.gruppoSpunta) {
         const altre = righe
@@ -456,7 +477,7 @@ export function TabellaRaccordo({ def }: Props) {
               rigaExp["In uso Ditta"] =
                 def.id === "ateco"
                   ? codiciDittaAteco.has(String(r["codice"] ?? "").trim())
-                  : tipoSoglia !== null
+                  : spuntaAutomatica
                     ? rigaInUsoDitta(r)
                     : Boolean(r["applica"]);
               return rigaExp;
@@ -509,7 +530,7 @@ export function TabellaRaccordo({ def }: Props) {
                   />
                 ))}
                 <th className="sticky top-0 z-10 w-28 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
-                  {def.id === "ateco" ? "In uso Ditta" : "Applica"}
+                  {def.id === "ateco" || spuntaAutomatica ? "In uso Ditta" : "Applica"}
                 </th>
               </tr>
             </thead>
@@ -519,7 +540,12 @@ export function TabellaRaccordo({ def }: Props) {
                 const eAtecoDitta = def.id === "ateco" && codiciDittaAteco.has(codiceRiga);
                 const eSogliaDitta = rigaInUsoDitta(r);
                 const inUso = eAtecoDitta || eSogliaDitta;
-                const spuntato = def.id === "ateco" ? eAtecoDitta : Boolean(r["applica"]);
+                const spuntato =
+                  def.id === "ateco"
+                    ? eAtecoDitta
+                    : spuntaAutomatica
+                      ? eSogliaDitta
+                      : Boolean(r["applica"]);
 
                 return (
                   <tr
@@ -547,7 +573,7 @@ export function TabellaRaccordo({ def }: Props) {
                               variant="outline"
                               className="text-[10px] bg-amber-200/60 text-amber-900 border-amber-400 shrink-0 font-normal py-0 px-1.5 dark:bg-amber-900/50 dark:text-amber-200"
                             >
-                              In uso Ditta
+                              {spuntaManualeIndice && proposta07 ? "Proposta" : "In uso Ditta"}
                             </Badge>
                           )}
                         </div>
@@ -556,6 +582,8 @@ export function TabellaRaccordo({ def }: Props) {
                     <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={spuntato}
+                        disabled={spuntaAutomatica}
+                        title={spuntaAutomatica ? "Calcolato dal programma in base ai dati della Ditta" : undefined}
                         onCheckedChange={(v) => cambiaSpunta(r, v === true)}
                         aria-label={`Associa ${codiceRiga || `riga ${i + 1}`} alla Ditta`}
                       />

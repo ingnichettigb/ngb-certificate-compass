@@ -6,6 +6,8 @@
  *   rev 1 — 14/11/2026 — Le 9 tabelle di raccordo (Impostazioni generali > Tabelle di raccordo): colonne, tabella del database e regole.
  *   rev 2 — 15/11/2026 11:56 — Rimossa colonna «fonte» dalla tabella 06 (rischio_ateco) e aggiornata descrizione normativa.
  *   rev 3 — 15/11/2026 12:45 — Rimosso gruppoSpunta da tabella 06 (è un catalogo consultativo con associazioni multiple derivate dalla Ditta).
+ *   rev 4 — 15/11/2026 — Descrizione tabella 03 corretta (art. 47: fino a 15 RLS eletto/territoriale, 16-200 un RLS, 201-1.000 tre, oltre 1.000 sei; numero più alto tra dichiarati e in forza).
+ *                        Descrizione tabella 07: l'indice INAIL si spunta a mano con «Applica», per ora non entra nel conteggio dei corsi.
  *
  * Ogni tabella è descritta qui; la pagina (TabellaRaccordo.tsx) è unica e generica. Le tabelle 03, 04 e 05 sono le righe di
  * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» è la spunta manuale della riga da applicare.
@@ -204,7 +206,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Gruppo di primo soccorso",
     tabella: "gruppi_primo_soccorso",
     descrizione:
-      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto.",
+      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto. L'indice INAIL si sceglie a mano con «Applica» (per ora non entra nel conteggio dei corsi): la riga spuntata è in giallo, senza spunta il giallo è solo una proposta dal numero di lavoratori.",
     gruppoSpunta: [],
     colonne: [
       {

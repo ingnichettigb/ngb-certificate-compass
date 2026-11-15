@@ -5,6 +5,8 @@
  * Revisioni:
  *   - Rev 1 (2026-11-01 14:00): Scheda Ditta: codice ATECO controllato, normalizzato e senza doppioni; data di aggiornamento
  *     impostata da sola quando cambia il numero dei lavoratori o delle presenze.
+ *   - Rev 2 (2026-11-15): Mock di getSedi e contaLavoratoriInForza (mai risolto) per non far scattare la sincronizzazione automatica
+ *     di lavoratori e presenze dalle sedi durante i test esistenti.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
