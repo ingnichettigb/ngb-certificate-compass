@@ -8,6 +8,7 @@
  *                              rischio suggerito per l'Istruzione); data di aggiornamento impostata da sola quando cambia il numero.
  *   rev 3 — 06/11/2026 — Modifiche pendenti (isDirty), salvaAdesso, reimpostaForm; il form non viene più sovrascritto
  *                        da un ricaricamento mentre ci sono modifiche non salvate.
+ *   rev 4 — 15/11/2026 11:56 — Propagazione del livello di rischio scelto dal catalogo ATECO nel nuovo codice aggiunto alla Ditta.
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +22,13 @@ import {
   DittaRecord,
   CodiceAteco,
 } from "@/lib/api/ditta";
-import { normalizzaAteco, suggerisciRischioAteco } from "@/features/ditta/regole-ditta";
+import { normalizzaAteco, suggerisciRischioAteco, LivelloRischio } from "@/features/ditta/regole-ditta";
+
+export type StatoNuovoAteco = {
+  codice: string;
+  descrizione: string;
+  rischio?: LivelloRischio | null;
+};
 
 /** Confronto profondo con chiavi ordinate: due oggetti con gli stessi dati risultano uguali. */
 function uguali(a: unknown, b: unknown): boolean {
@@ -42,7 +49,11 @@ function uguali(a: unknown, b: unknown): boolean {
 export function useDittaTab() {
   const qc = useQueryClient();
   const [form, setForm] = useState<DittaRecord | null>(null);
-  const [nuovoAteco, setNuovoAteco] = useState({ codice: "", descrizione: "" });
+  const [nuovoAteco, setNuovoAteco] = useState<StatoNuovoAteco>({
+    codice: "",
+    descrizione: "",
+    rischio: null,
+  });
 
   const { data: dittaDb, isLoading: loadingDitta } = useQuery({
     queryKey: CHIAVE_DITTA,
@@ -105,14 +116,14 @@ export function useDittaTab() {
       toast.error("Codice ATECO già inserito");
       return;
     }
-    const rischio = suggerisciRischioAteco(codice);
+    const rischio = nuovoAteco.rischio ?? suggerisciRischioAteco(codice);
     const nuovo: CodiceAteco = {
       codice,
       descrizione: nuovoAteco.descrizione.trim(),
       ...(rischio ? { rischio } : {}),
     };
     updateCampo("codici_ateco", [...form.codici_ateco, nuovo]);
-    setNuovoAteco({ codice: "", descrizione: "" });
+    setNuovoAteco({ codice: "", descrizione: "", rischio: null });
   }
 
   function rimuoviAteco(index: number) {
