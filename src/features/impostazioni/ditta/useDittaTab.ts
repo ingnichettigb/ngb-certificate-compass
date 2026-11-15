@@ -4,11 +4,10 @@
  * Data creaz: 01/11/2026
  * Revisioni:
  *   rev 1 — 01/11/2026 12:00 — Hook per la gestione form e salvataggio anagrafica ditta.
- *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise con gli avvisi in testata; codice ATECO controllato e normalizzato (con
- *                              rischio suggerito per l'Istruzione); data di aggiornamento impostata da sola quando cambia il numero.
- *   rev 3 — 06/11/2026 — Modifiche pendenti (isDirty), salvaAdesso, reimpostaForm; il form non viene più sovrascritto
- *                        da un ricaricamento mentre ci sono modifiche non salvate.
- *   rev 4 — 15/11/2026 11:56 — Propagazione del livello di rischio scelto dal catalogo ATECO nel nuovo codice aggiunto alla Ditta.
+ *   rev 2 — 01/11/2026 14:00 — Chiavi di cache condivise; normalizzazione ATECO.
+ *   rev 3 — 06/11/2026 — Modifiche pendenti (isDirty), salvaAdesso e reimpostaForm.
+ *   rev 4 — 15/11/2026 11:56 — Propagazione rischio dal catalogo ATECO.
+ *   rev 5 — 15/11/2026 12:45 — Supporto stella ATECO principale, ricalcolo automatico del rischio per massima gravità con override manuale e reset pulito.
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,9 +19,18 @@ import {
   salvaDitta,
   getSoglieDitta,
   DittaRecord,
-  CodiceAteco,
 } from "@/lib/api/ditta";
-import { normalizzaAteco, suggerisciRischioAteco, LivelloRischio } from "@/features/ditta/regole-ditta";
+import {
+  normalizzaAteco,
+  suggerisciRischioAteco,
+  LivelloRischio,
+  CodiceAteco,
+} from "@/features/ditta/regole-ditta";
+import {
+  useCatalogoAteco,
+  trovaRischioInCatalogo,
+  calcolaRischioMassimo,
+} from "@/features/ditta/catalogo-ateco";
 
 export type StatoNuovoAteco = {
   codice: string;
@@ -52,7 +60,6 @@ export function useDittaTab() {
   const [nuovoAteco, setNuovoAteco] = useState<StatoNuovoAteco>({
     codice: "",
     descrizione: "",
-    rischio: null,
   });
 
   const { data: dittaDb, isLoading: loadingDitta } = useQuery({
@@ -65,37 +72,39 @@ export function useDittaTab() {
     queryFn: getSoglieDitta,
   });
 
-  // Modifiche non ancora salvate: confronto profondo, indipendente dall'ordine delle chiavi.
+  const { data: catalogoAteco = [] } = useCatalogoAteco();
+
+  const caricatoDaDb = useRef(false);
+
+  useEffect(() => {
+    if (dittaDb && !caricatoDaDb.current) {
+      setForm(dittaDb);
+      caricatoDaDb.current = true;
+    }
+  }, [dittaDb]);
+
   const isDirty = useMemo(() => {
     if (!form || !dittaDb) return false;
     return !uguali(form, dittaDb);
   }, [form, dittaDb]);
-  const dirtyRef = useRef(false);
-  dirtyRef.current = isDirty;
-
-  // Allinea il form al DB solo se non ci sono modifiche in corso (evita di perderle a un ricaricamento).
-  useEffect(() => {
-    if (dittaDb && !dirtyRef.current) setForm(dittaDb);
-  }, [dittaDb]);
 
   const mutazioneSalva = useMutation({
-    mutationFn: (dati: DittaRecord) => salvaDitta(dati),
-    onSuccess: (datiSalvati) => {
-      setForm(datiSalvati);
-      qc.setQueryData(CHIAVE_DITTA, datiSalvati);
-      qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
-      toast.success("Dati ditta salvati nel database con successo");
+    mutationFn: salvaDitta,
+    onSuccess: (datiAggiornati) => {
+      setForm(datiAggiornati);
+      qc.setQueryData(CHIAVE_DITTA, datiAggiornati);
+      toast.success("Dati della Ditta salvati");
     },
-    onError: (err: Error) => {
-      toast.error("Errore salvataggio dati ditta", { description: err.message });
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Salvataggio non riuscito", { description: msg });
     },
   });
 
   function updateCampo<K extends keyof DittaRecord>(campo: K, valore: DittaRecord[K]) {
     if (!form) return;
+    const aggiornato = { ...form, [campo]: valore };
     const oggi = new Date().toISOString().slice(0, 10);
-    const aggiornato: DittaRecord = { ...form, [campo]: valore };
-    // Quando cambia il numero, la data di aggiornamento si imposta da sola (resta modificabile).
     if (campo === "n_lavoratori_dichiarato") {
       aggiornato.n_lavoratori_data_aggiornamento = valore === null ? null : oggi;
     }
@@ -116,19 +125,54 @@ export function useDittaTab() {
       toast.error("Codice ATECO già inserito");
       return;
     }
-    const rischio = nuovoAteco.rischio ?? suggerisciRischioAteco(codice);
+
+    // Lookup del rischio: dal form, oppure dal catalogo DB per divisione, oppure fallback
+    const rischio =
+      nuovoAteco.rischio ??
+      trovaRischioInCatalogo(codice, catalogoAteco) ??
+      suggerisciRischioAteco(codice);
+
+    const primoCodice = form.codici_ateco.length === 0;
     const nuovo: CodiceAteco = {
       codice,
       descrizione: nuovoAteco.descrizione.trim(),
       ...(rischio ? { rischio } : {}),
+      ...(primoCodice ? { principale: true } : {}),
     };
-    updateCampo("codici_ateco", [...form.codici_ateco, nuovo]);
-    setNuovoAteco({ codice: "", descrizione: "", rischio: null });
+
+    const nuovaLista = [...form.codici_ateco, nuovo];
+    const aggiornato: DittaRecord = { ...form, codici_ateco: nuovaLista };
+
+    // Se il rischio aziendale non era impostato, o se il nuovo codice comporta un rischio più alto, allinea
+    const rischioMax = calcolaRischioMassimo(nuovaLista);
+    if (rischioMax && (!form.rischio_ditta || primoCodice)) {
+      aggiornato.rischio_ditta = rischioMax;
+    }
+
+    setForm(aggiornato);
+    setNuovoAteco({ codice: "", descrizione: "" });
   }
 
   function rimuoviAteco(index: number) {
     if (!form) return;
+    const rimosso = form.codici_ateco[index];
     const nuovaLista = form.codici_ateco.filter((_, i) => i !== index);
+
+    // Se è stato rimosso l'ATECO principale e ne rimangono altri, promuovi il primo
+    if (rimosso?.principale && nuovaLista.length > 0 && !nuovaLista.some((c) => c.principale)) {
+      nuovaLista[0] = { ...nuovaLista[0], principale: true };
+    }
+
+    const aggiornato: DittaRecord = { ...form, codici_ateco: nuovaLista };
+    setForm(aggiornato);
+  }
+
+  function impostaPrincipale(index: number) {
+    if (!form) return;
+    const nuovaLista = form.codici_ateco.map((c, i) => ({
+      ...c,
+      principale: i === index,
+    }));
     updateCampo("codici_ateco", nuovaLista);
   }
 
@@ -143,7 +187,7 @@ export function useDittaTab() {
       await mutazioneSalva.mutateAsync(form);
       return true;
     } catch {
-      return false; // il toast di errore è già mostrato da onError
+      return false;
     }
   }
 
@@ -160,6 +204,7 @@ export function useDittaTab() {
   return {
     form,
     soglie,
+    catalogoAteco,
     isLoading: loadingDitta,
     isSaving: mutazioneSalva.isPending,
     isDirty,
@@ -170,6 +215,7 @@ export function useDittaTab() {
     updateCampo,
     aggiungiAteco,
     rimuoviAteco,
+    impostaPrincipale,
     handleSubmit,
   };
 }
