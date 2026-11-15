@@ -6,6 +6,7 @@
  *   rev 1 — 14/11/2026 — Tabella generica delle tabelle di raccordo: intestazione fissa, barre di scorrimento sempre visibili,
  *            righe a colori alternati, aggiunta, modifica, duplicazione e cancellazione dei record, spunta manuale «Applica».
  *   rev 2 — 14/11/2026 21:50 — Bottoni standard (Cancella rosso) e colonne regolabili, spostabili e ordinabili (modulo comune).
+ *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV) accanto a «Ripristina colonne»: colonne e ordinamento come a schermo.
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,8 @@ import { Copy, ExternalLink, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button";
 import { IntestazioneColonna } from "@/components/tabella-comune/IntestazioneColonna";
 import { ordinaRighe, useColonneTabella } from "@/components/tabella-comune/useColonneTabella";
+import { PulsanteEsporta } from "@/components/tabella-comune/PulsanteEsporta";
+import { esportaTabella } from "@/components/tabella-comune/esporta-tabella";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +48,7 @@ import {
 import { leggiTutto, sb } from "@/lib/api/client";
 import { ErroreTabelle } from "@/features/impostazioni/ErroreTabelle";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
+import { tabellaRaccordoDaEsportare } from "./esporta-raccordo";
 
 const messaggio = (e: unknown) => (e as { message?: string })?.message ?? "errore sconosciuto";
 
@@ -255,6 +259,12 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
         <Button type="button" variant="outline" size="sm" onClick={colonne.ripristina}>
           Ripristina colonne
         </Button>
+        <PulsanteEsporta
+          disabled={isLoading}
+          onEsporta={(formato) =>
+            esportaTabella(tabellaRaccordoDaEsportare(def, visibili, mostrate), formato)
+          }
+        />
         {def.documento && (
           <Button
             type="button"

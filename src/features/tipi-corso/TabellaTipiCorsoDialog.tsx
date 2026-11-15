@@ -2,11 +2,13 @@
  * File:      TabellaTipiCorsoDialog.tsx
  * Percorso:  src/features/tipi-corso/TabellaTipiCorsoDialog.tsx
  * Bottone «Tabella corsi» e finestra che contiene la tabella.
+ * Revisioni:
+ *   rev 1 — 15/11/2026 10:50 — «Esporta in Excel» diventa «Esporta»: al clic si sceglie tra Excel (.xlsx) e CSV.
  */
 import { useState } from "react";
-import { FileSpreadsheet, ListChecks } from "lucide-react";
-import { toast } from "sonner";
-import { esportaTipiCorsoExcel } from "./esporta-excel";
+import { ListChecks } from "lucide-react";
+import { PulsanteEsporta } from "@/components/tabella-comune/PulsanteEsporta";
+import { esportaTipiCorso } from "./esporta-excel";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,13 +38,7 @@ export function TabellaTipiCorsoDialog() {
           <DialogHeader>
             <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
               <DialogTitle>Tabella tipi di corso</DialogTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => esportaTipiCorsoExcel().catch(() => toast.error("Esportazione non riuscita"))}
-              >
-                <FileSpreadsheet className="size-4" /> Esporta in Excel
-              </Button>
+              <PulsanteEsporta onEsporta={(formato) => esportaTipiCorso(formato)} />
             </div>
             <DialogDescription>
               Codici ufficiali Stato-Regioni: ore, validità e corso di aggiornamento collegato.

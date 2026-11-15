@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 14/11/2026 — Definizioni coerenti con la migrazione 0014 e comportamento della pagina (N progressivo, spunta esclusiva,
  *            aggiunta, duplicazione, cancellazione, blocco della cancellazione di un ruolo con assegnazioni).
+ *   rev 2 — 15/11/2026 10:50 — Bottone «Esporta»: scelta Excel/CSV, dati come a schermo (colonne, ordinamento, N, Applica) e tabella 09.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -12,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-const { dati, toasts } = vi.hoisted(() => ({
+const { dati, toasts, esportazioni } = vi.hoisted(() => ({
   dati: {
     tabelle: {
       rischio_ateco: [
@@ -54,6 +55,10 @@ const { dati, toasts } = vi.hoisted(() => ({
     conteggio: (tabella: string) => (tabella === "dipendenti_ruoli" ? 3 : undefined),
   },
   toasts: [] as string[],
+  esportazioni: [] as {
+    formato: string;
+    tabella: { nomeBase: string; intestazioni: string[]; righe: unknown[][] };
+  }[],
 }));
 
 vi.mock("@/integrations/supabase/client", async () => {
@@ -69,6 +74,20 @@ vi.mock("sonner", () => ({
 vi.mock("@/features/tipi-corso/TabellaTipiCorsoDialog", () => ({
   TabellaTipiCorsoDialog: () => <button>Tabella corsi</button>,
 }));
+
+vi.mock("@/components/tabella-comune/esporta-tabella", async (importaOriginale) => {
+  const reale =
+    await importaOriginale<typeof import("@/components/tabella-comune/esporta-tabella")>();
+  return {
+    ...reale,
+    esportaTabella: async (
+      t: { nomeBase: string; intestazioni: string[]; righe: unknown[][] },
+      formato: string,
+    ) => {
+      esportazioni.push({ formato, tabella: t });
+    },
+  };
+});
 
 import { registro } from "@/test/registratore-supabase";
 import { TABELLE_RACCORDO } from "./definizioni";
@@ -95,6 +114,7 @@ function monta() {
 beforeEach(() => {
   registro.length = 0;
   toasts.length = 0;
+  esportazioni.length = 0;
 });
 afterEach(cleanup);
 
@@ -230,5 +250,45 @@ describe("pagina Tabelle di raccordo", () => {
     await clic(screen.getByRole("tab", { name: /^09 – Corsi/ }));
     expect(screen.getByRole("button", { name: "Tabella corsi" })).toBeTruthy();
     apri.mockRestore();
+  });
+});
+
+describe("bottone Esporta", () => {
+  const apriMenu = async () => {
+    const bottone = screen.getByRole("button", { name: /Esporta/ });
+    fireEvent.keyDown(bottone, { key: "Enter" });
+    await attendi();
+  };
+
+  it("propone Excel o CSV e scarica la tabella come a schermo", async () => {
+    monta();
+    await clic(screen.getByRole("tab", { name: /^06 – Rischio per codice ATECO/ }));
+    await apriMenu();
+    expect(screen.getByRole("menuitem", { name: /Excel/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeTruthy();
+
+    await clic(screen.getByRole("menuitem", { name: /Excel/ }));
+    expect(esportazioni).toHaveLength(1);
+    const { formato, tabella } = esportazioni[0]!;
+    expect(formato).toBe("xlsx");
+    expect(tabella.nomeBase).toBe("raccordo-06-rischio-per-codice-ateco");
+    expect(tabella.intestazioni[0]).toBe("N");
+    expect(tabella.intestazioni.at(-1)).toBe("Applica");
+    expect(tabella.righe.map((r) => r[0])).toEqual([1, 2]);
+    expect(tabella.righe[1]!.at(-1)).toBe(true);
+
+    await apriMenu();
+    await clic(screen.getByRole("menuitem", { name: /CSV/ }));
+    expect(esportazioni[1]!.formato).toBe("csv");
+  });
+
+  it("c'è anche nella 09 – Corsi, accanto a «Tabella corsi»", async () => {
+    monta();
+    await clic(screen.getByRole("tab", { name: /^09 – Corsi/ }));
+    expect(screen.getByRole("button", { name: "Tabella corsi" })).toBeTruthy();
+    await apriMenu();
+    await clic(screen.getByRole("menuitem", { name: /Excel/ }));
+    expect(esportazioni.at(-1)?.formato).toBe("xlsx");
+    expect(esportazioni.at(-1)?.tabella.nomeBase).toBe("tipi-corso");
   });
 });
