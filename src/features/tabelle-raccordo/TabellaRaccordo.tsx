@@ -8,6 +8,7 @@
  *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV).
  *   rev 4 — 15/11/2026 12:04 — Ricerca veloce nella barra comandi, anti-crash uscite anticipate React e conteggio record semplificato.
  *   rev 5 — 15/11/2026 12:45 — Cache condivisa con Ditta (CHIAVE_CATALOGO_ATECO), riga gialla ben visibile, spunta Ditta isolata su codici_ateco e rimozione puntuale del codice.
+ *   rev 6 — 15/11/2026 — Riga gialla con badge «In uso Ditta» anche nelle tabelle 03 (RLS), 04 e 07 (Primo Soccorso), 05 (Antincendio): fascia calcolata su lavoratori più alti tra dichiarato e in forza e su presenze totali delle sedi.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,7 +50,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { leggiTutto, sb } from "@/lib/api/client";
-import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
+import { CHIAVE_DITTA, CHIAVE_LAVORATORI_IN_FORZA, contaLavoratoriInForza, getDitta, getSoglieDitta, CHIAVE_SOGLIE_DITTA, calcolaSoglia } from "@/lib/api/ditta";
+import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
+import { lavoratoriDiRiferimento, nellaFascia, riepilogaPresenze } from "@/features/ditta/presenze-sedi";
 import { CHIAVE_CATALOGO_ATECO } from "@/features/ditta/catalogo-ateco";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
 
@@ -139,12 +142,72 @@ export function TabellaRaccordo({ def }: Props) {
       }),
   });
 
-  // Codici ATECO associati alla Ditta per evidenziazione nella Tabella 06
+  // Tabelle in cui la riga «in uso» della Ditta è calcolata in automatico (03 RLS, 04 e 07 Primo Soccorso, 05 Antincendio)
+  const tipoSoglia =
+    def.id === "soglie-rls"
+      ? "rls"
+      : def.id === "soglie-primo-soccorso" || def.id === "primo-soccorso"
+        ? "primo_soccorso"
+        : def.id === "soglie-antincendio"
+          ? "antincendio"
+          : null;
+  const usaLavoratori = tipoSoglia === "rls" || tipoSoglia === "primo_soccorso";
+
+  // Dati Ditta per l'evidenziazione: codici ATECO (Tabella 06) e numeri per le soglie
   const { data: ditta } = useQuery({
     queryKey: CHIAVE_DITTA,
     queryFn: getDitta,
-    enabled: def.id === "ateco",
+    enabled: def.id === "ateco" || tipoSoglia !== null,
   });
+  const { data: inForza } = useQuery({
+    queryKey: CHIAVE_LAVORATORI_IN_FORZA,
+    queryFn: contaLavoratoriInForza,
+    enabled: usaLavoratori,
+  });
+  const { data: sedi } = useQuery({
+    queryKey: CHIAVE_SEDI,
+    queryFn: getSedi,
+    enabled: tipoSoglia === "antincendio",
+  });
+  // Tabella 07: serve la soglia 04 per sapere quale gruppo risulta alla Ditta
+  const { data: soglieDitta } = useQuery({
+    queryKey: CHIAVE_SOGLIE_DITTA,
+    queryFn: getSoglieDitta,
+    enabled: def.id === "primo-soccorso",
+  });
+
+  // Numero su cui cade la fascia attiva: lavoratori più alti (RLS, PS) oppure presenze totali delle sedi (antincendio)
+  const valoreDitta = useMemo<number | null>(() => {
+    if (!ditta) return null;
+    if (usaLavoratori) return lavoratoriDiRiferimento(ditta.n_lavoratori_dichiarato, inForza);
+    if (tipoSoglia === "antincendio") {
+      const r = riepilogaPresenze(sedi ?? []);
+      return r.completo ? r.totale : (ditta.presenze_contemporanee_max ?? null);
+    }
+    return null;
+  }, [ditta, inForza, sedi, tipoSoglia, usaLavoratori]);
+
+  // Tabella 07: lettera del gruppo (A/B/C) risultante dalla Tabella 04 per la Ditta
+  const gruppoDitta = useMemo<string | null>(() => {
+    if (def.id !== "primo-soccorso" || valoreDitta === null || !soglieDitta) return null;
+    const esito = calcolaSoglia(soglieDitta, "primo_soccorso", valoreDitta)?.esito ?? "";
+    return /Gruppo\s+([ABC])/i.exec(esito)?.[1]?.toUpperCase() ?? null;
+  }, [def.id, valoreDitta, soglieDitta]);
+
+  /** true se la riga è quella in cui ricade la situazione attuale della Ditta (solo tabelle 03, 04, 05, 07). */
+  const rigaInUsoDitta = (r: Riga): boolean => {
+    if (tipoSoglia === null || valoreDitta === null) return false;
+    if (def.id === "primo-soccorso") {
+      // Tabella 07: fascia testuale («1-2», «3-5», «6 o più»); le righe per agricoltura non si deducono dal numero
+      const testo = String(r["lavoratori"] ?? "").toLowerCase();
+      if (testo.includes("agricoltura")) return false;
+      const m = /^(\d+)\s*-\s*(\d+)/.exec(testo) ?? /^(\d+)\s*o\s*più/.exec(testo);
+      if (!m) return false;
+      const fasciaOk = nellaFascia(valoreDitta, m[1], m[2] ?? null);
+      return fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta;
+    }
+    return nellaFascia(valoreDitta, r["da"], r["a"]);
+  };
 
   // Normalizzazione codici ditta (sia codice intero che divisione a 2 cifre)
   const codiciDittaAteco = useMemo(() => {
@@ -390,7 +453,12 @@ export function TabellaRaccordo({ def }: Props) {
               for (const c of visibili) {
                 rigaExp[c.etichetta] = r[c.chiave];
               }
-              rigaExp["In uso Ditta"] = def.id === "ateco" ? codiciDittaAteco.has(String(r["codice"] ?? "").trim()) : Boolean(r["applica"]);
+              rigaExp["In uso Ditta"] =
+                def.id === "ateco"
+                  ? codiciDittaAteco.has(String(r["codice"] ?? "").trim())
+                  : tipoSoglia !== null
+                    ? rigaInUsoDitta(r)
+                    : Boolean(r["applica"]);
               return rigaExp;
             });
             const colExp = [
@@ -449,6 +517,8 @@ export function TabellaRaccordo({ def }: Props) {
               {mostrate.map((r, i) => {
                 const codiceRiga = String(r["codice"] ?? "").trim();
                 const eAtecoDitta = def.id === "ateco" && codiciDittaAteco.has(codiceRiga);
+                const eSogliaDitta = rigaInUsoDitta(r);
+                const inUso = eAtecoDitta || eSogliaDitta;
                 const spuntato = def.id === "ateco" ? eAtecoDitta : Boolean(r["applica"]);
 
                 return (
@@ -458,7 +528,7 @@ export function TabellaRaccordo({ def }: Props) {
                     className={`cursor-pointer transition-colors ${
                       r.id === selezionata
                         ? "bg-primary/20"
-                        : eAtecoDitta
+                        : inUso
                           ? "bg-amber-100/90 border-l-4 border-l-amber-500 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
                           : i % 2 === 0
                             ? "bg-surface"
@@ -472,7 +542,7 @@ export function TabellaRaccordo({ def }: Props) {
                       <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
                         <div className="flex items-center gap-1.5">
                           <span>{mostra(c, r[c.chiave])}</span>
-                          {c.chiave === "codice" && eAtecoDitta && (
+                          {(def.id === "ateco" ? c.chiave === "codice" : c.chiave === visibili[0]?.chiave) && inUso && (
                             <Badge
                               variant="outline"
                               className="text-[10px] bg-amber-200/60 text-amber-900 border-amber-400 shrink-0 font-normal py-0 px-1.5 dark:bg-amber-900/50 dark:text-amber-200"

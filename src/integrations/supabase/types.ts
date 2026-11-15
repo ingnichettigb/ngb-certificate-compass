@@ -941,6 +941,7 @@ export type Database = {
           is_principale: boolean
           nome: string
           ordine: number
+          persone_max: number | null
           provincia: string | null
           updated_at: string
         }
@@ -954,6 +955,7 @@ export type Database = {
           is_principale?: boolean
           nome: string
           ordine?: number
+          persone_max?: number | null
           provincia?: string | null
           updated_at?: string
         }
@@ -967,6 +969,7 @@ export type Database = {
           is_principale?: boolean
           nome?: string
           ordine?: number
+          persone_max?: number | null
           provincia?: string | null
           updated_at?: string
         }

@@ -10,6 +10,7 @@
  *                        controlli (isDirty/salva/scarta) esposti alla finestra Impostazioni tramite tabHandleRef.
  *   rev 4 — 07/11/2026 — Diviso in file per responsabilità (cartella ditta/): un file per riquadro, calcolo dei fabbisogni e pulsante Salva. Nessun cambio di comportamento.
  *   rev 5 — 13/11/2026 — Riquadro «Sedi e plessi» sotto l'anagrafica.
+ *   rev 6 — 15/11/2026 — Fabbisogni calcolati sul numero di lavoratori più alto tra dichiarato e in forza; presenze dalla somma delle sedi.
  */
 import { useEffect } from "react";
 import { Building2, Loader2 } from "lucide-react";
@@ -38,6 +39,7 @@ export function DittaTab({
   const {
     form,
     soglie,
+    riepilogoPresenze,
     isLoading,
     isSaving,
     isDirty,
@@ -48,6 +50,7 @@ export function DittaTab({
     updateCampo,
     aggiungiAteco,
     rimuoviAteco,
+    impostaPrincipale,
     handleSubmit,
   } = useDittaTab();
   const { data: lavoratoriInForza } = useLavoratoriInForza();
@@ -79,13 +82,14 @@ export function DittaTab({
 
   // Calcolo delle deduzioni automatiche in base alle soglie D.Lgs. 81/08
   const {
+    lavoratoriRiferimento,
     esitoRls,
     esitoPs,
     esitoAntincendio,
     esitoIdoneita,
     livelloPropostoNum,
     antincendioDifferisce,
-  } = calcolaFabbisogniDitta(soglie, form);
+  } = calcolaFabbisogniDitta(soglie, form, lavoratoriInForza);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-8">
@@ -119,6 +123,7 @@ export function DittaTab({
         setNuovoAteco={setNuovoAteco}
         aggiungiAteco={aggiungiAteco}
         rimuoviAteco={rimuoviAteco}
+        impostaPrincipale={impostaPrincipale}
       />
 
       {/* Riquadro 4: Organico, Presenze e Sintesi Fabbisogni Normativi */}
@@ -127,6 +132,8 @@ export function DittaTab({
           form={form}
           updateCampo={updateCampo}
           lavoratoriInForza={lavoratoriInForza}
+          lavoratoriRiferimento={lavoratoriRiferimento}
+          riepilogoPresenze={riepilogoPresenze}
           esitoRls={esitoRls}
           esitoPs={esitoPs}
           esitoAntincendio={esitoAntincendio}

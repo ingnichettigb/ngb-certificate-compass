@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: organico, presenze e livello antincendio attribuito. Nessun cambio di comportamento.
+ *   rev 2 — 15/11/2026 — Lavoratori di riferimento (il più alto tra dichiarato e in forza) e presenze calcolate dalla somma delle sedi.
  */
 import { Users, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -11,11 +12,15 @@ import { Label } from "@/components/ui/label";
 import type { DittaRecord } from "@/lib/api/ditta";
 import type { AggiornaCampo } from "./tipi-ditta-tab";
 import type { EsitoSoglia } from "./tipi-ditta-tab";
+import type { RiepilogoPresenze } from "@/features/ditta/presenze-sedi";
 
 interface Props {
   form: DittaRecord;
   updateCampo: AggiornaCampo;
   lavoratoriInForza: number | undefined;
+  /** Numero adottato per RLS e Primo Soccorso: il più alto tra dichiarato e in forza. */
+  lavoratoriRiferimento: number | null;
+  riepilogoPresenze: RiepilogoPresenze;
   esitoRls: EsitoSoglia;
   esitoPs: EsitoSoglia;
   esitoAntincendio: EsitoSoglia;
@@ -27,6 +32,8 @@ export function RiquadroOrganico({
   form,
   updateCampo,
   lavoratoriInForza,
+  lavoratoriRiferimento,
+  riepilogoPresenze,
   esitoRls,
   esitoPs,
   esitoAntincendio,
@@ -58,6 +65,10 @@ export function RiquadroOrganico({
           <p className="text-[11px] text-muted-foreground">
             In forza nel programma: <strong>{lavoratoriInForza ?? "—"}</strong>
           </p>
+          <p className="text-[11px] text-muted-foreground" data-testid="lavoratori-riferimento">
+            Adottato per RLS e Primo Soccorso (il più alto):{" "}
+            <strong>{lavoratoriRiferimento ?? "—"}</strong>
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="n_lavoratori_data">Data agg. lavoratori</Label>
@@ -78,6 +89,12 @@ export function RiquadroOrganico({
             type="number"
             min={0}
             placeholder="Es. 950"
+            readOnly={riepilogoPresenze.completo}
+            title={
+              riepilogoPresenze.completo
+                ? "Calcolato dalla somma delle presenze di tutte le sedi (Sedi e plessi)"
+                : undefined
+            }
             value={form.presenze_contemporanee_max ?? ""}
             onChange={(e) =>
               updateCampo(
@@ -86,6 +103,11 @@ export function RiquadroOrganico({
               )
             }
           />
+          <p className="text-[11px] text-muted-foreground">
+            {riepilogoPresenze.completo
+              ? "Somma delle presenze massime di tutte le sedi (Sedi e plessi)."
+              : "Compila le presenze di ogni sede in «Sedi e plessi»: il totale verrà calcolato da solo."}
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="presenze_data">Data agg. presenze</Label>

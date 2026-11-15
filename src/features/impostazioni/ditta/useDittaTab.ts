@@ -8,6 +8,7 @@
  *   rev 3 — 06/11/2026 — Modifiche pendenti (isDirty), salvaAdesso e reimpostaForm.
  *   rev 4 — 15/11/2026 11:56 — Propagazione rischio dal catalogo ATECO.
  *   rev 5 — 15/11/2026 12:45 — Supporto stella ATECO principale, ricalcolo automatico del rischio per massima gravità con override manuale e reset pulito.
+ *   rev 6 — 15/11/2026 — «Presenze contemporanee max» = somma delle presenze di tutte le sedi attive (quando tutte compilate); espone il riepilogo.
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +21,8 @@ import {
   getSoglieDitta,
   DittaRecord,
 } from "@/lib/api/ditta";
+import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
+import { riepilogaPresenze } from "@/features/ditta/presenze-sedi";
 import {
   normalizzaAteco,
   suggerisciRischioAteco,
@@ -74,6 +77,9 @@ export function useDittaTab() {
 
   const { data: catalogoAteco = [] } = useCatalogoAteco();
 
+  const { data: sedi = [] } = useQuery({ queryKey: CHIAVE_SEDI, queryFn: getSedi });
+  const riepilogoPresenze = useMemo(() => riepilogaPresenze(sedi), [sedi]);
+
   const caricatoDaDb = useRef(false);
 
   useEffect(() => {
@@ -82,6 +88,22 @@ export function useDittaTab() {
       caricatoDaDb.current = true;
     }
   }, [dittaDb]);
+
+  // Propagazione automatica: quando tutte le sedi attive hanno il loro massimo di presenti,
+  // la somma diventa «Presenze contemporanee max» (tetto cautelativo dell'intera azienda).
+  const formPronto = form !== null;
+  const presenzeInForm = form?.presenze_contemporanee_max ?? null;
+  useEffect(() => {
+    if (!formPronto || !riepilogoPresenze.completo) return;
+    const totale = riepilogoPresenze.totale;
+    if (presenzeInForm === totale) return;
+    const oggi = new Date().toISOString().slice(0, 10);
+    setForm((f) =>
+      f && f.presenze_contemporanee_max !== totale
+        ? { ...f, presenze_contemporanee_max: totale, presenze_data_aggiornamento: oggi }
+        : f,
+    );
+  }, [formPronto, riepilogoPresenze.completo, riepilogoPresenze.totale, presenzeInForm]);
 
   const isDirty = useMemo(() => {
     if (!form || !dittaDb) return false;
@@ -205,6 +227,7 @@ export function useDittaTab() {
     form,
     soglie,
     catalogoAteco,
+    riepilogoPresenze,
     isLoading: loadingDitta,
     isSaving: mutazioneSalva.isPending,
     isDirty,

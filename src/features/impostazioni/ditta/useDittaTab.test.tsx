@@ -25,6 +25,11 @@ vi.mock("@/lib/api/ditta", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/api/sedi", async (importOriginal) => {
+  const reale = await importOriginal<typeof import("@/lib/api/sedi")>();
+  return { ...reale, getSedi: vi.fn(async () => []) };
+});
+
 import { useDittaTab } from "./useDittaTab";
 
 function avvolgi({ children }: { children: ReactNode }) {

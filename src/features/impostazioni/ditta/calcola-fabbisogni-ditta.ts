@@ -4,16 +4,22 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DittaTab.tsx: deduzioni automatiche dalle soglie D.Lgs. 81/08 (RLS, primo soccorso, antincendio, idoneità) e confronto col livello attribuito. Nessun cambio di comportamento.
+ *   rev 2 — 15/11/2026 — RLS e Primo Soccorso usano il numero di lavoratori più alto tra dichiarato e in forza nel programma (principio cautelativo).
  */
 import { calcolaSoglia, type DittaRecord } from "@/lib/api/ditta";
+import { lavoratoriDiRiferimento } from "@/features/ditta/presenze-sedi";
 
 export function calcolaFabbisogniDitta(
   soglie: Parameters<typeof calcolaSoglia>[0],
   form: DittaRecord,
+  lavoratoriInForza?: number | null,
 ) {
+  // Principio cautelativo: si adotta il valore più alto tra dichiarato e in forza
+  const lavoratoriRiferimento = lavoratoriDiRiferimento(form.n_lavoratori_dichiarato, lavoratoriInForza);
+
   // Calcolo delle deduzioni automatiche in base alle soglie D.Lgs. 81/08
-  const esitoRls = calcolaSoglia(soglie, "rls", form.n_lavoratori_dichiarato);
-  const esitoPs = calcolaSoglia(soglie, "primo_soccorso", form.n_lavoratori_dichiarato);
+  const esitoRls = calcolaSoglia(soglie, "rls", lavoratoriRiferimento);
+  const esitoPs = calcolaSoglia(soglie, "primo_soccorso", lavoratoriRiferimento);
   const esitoAntincendio = calcolaSoglia(
     soglie,
     "antincendio_presenze",
@@ -43,6 +49,7 @@ export function calcolaFabbisogniDitta(
     form.livello_antincendio !== livelloPropostoNum;
 
   return {
+    lavoratoriRiferimento,
     esitoRls,
     esitoPs,
     esitoAntincendio,

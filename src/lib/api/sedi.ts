@@ -4,6 +4,7 @@
  * Data creaz: 13/11/2026
  * Revisioni:
  *   rev 1 — 13/11/2026 — Sedi aziendali: una principale unica + plessi secondari (stessa Ditta, stesso RSPP).
+ *   rev 2 — 15/11/2026 — persone_max: massimo numero di presenti per sede (obbligatorio e > 0 per i nuovi plessi).
  */
 import { sb } from "./client";
 
@@ -19,7 +20,18 @@ export type Sede = {
   is_principale: boolean;
   ordine: number;
   attiva: boolean;
+  /** Massimo numero di presenti contemporanei (lavoratori, studenti, ospiti e utenza). null = ancora da compilare. */
+  persone_max: number | null;
 };
+
+/** Valida un numero di presenti: intero maggiore di zero. */
+export function validaPersoneMax(valore: unknown): number {
+  const n = typeof valore === "number" ? valore : Number(valore);
+  if (valore === null || valore === undefined || valore === "" || !Number.isInteger(n) || n <= 0) {
+    throw new Error("Indica il massimo numero di presenti (intero maggiore di zero)");
+  }
+  return n;
+}
 
 export async function getSedi(): Promise<Sede[]> {
   const { data, error } = await sb
@@ -39,9 +51,11 @@ export async function aggiungiSede(input: {
   comune?: string | null;
   provincia?: string | null;
   ordine?: number;
+  persone_max: number;
 }): Promise<Sede> {
   const nome = input.nome.trim();
   if (!nome) throw new Error("Inserisci il nome della sede");
+  const persone_max = validaPersoneMax(input.persone_max);
   const { data, error } = await sb
     .from("sedi")
     .insert({
@@ -52,6 +66,7 @@ export async function aggiungiSede(input: {
       provincia: input.provincia?.trim().toUpperCase() || null,
       is_principale: false,
       ordine: input.ordine ?? 10,
+      persone_max,
     })
     .select("*")
     .single();
@@ -61,8 +76,9 @@ export async function aggiungiSede(input: {
 
 export async function aggiornaSede(
   id: string,
-  patch: Partial<Pick<Sede, "nome" | "indirizzo" | "cap" | "comune" | "provincia" | "attiva" | "ordine">>,
+  patch: Partial<Pick<Sede, "nome" | "indirizzo" | "cap" | "comune" | "provincia" | "attiva" | "ordine" | "persone_max">>,
 ) {
+  if (patch.persone_max !== undefined && patch.persone_max !== null) validaPersoneMax(patch.persone_max);
   const { error } = await sb.from("sedi").update(patch).eq("id", id);
   if (error) throw error;
 }

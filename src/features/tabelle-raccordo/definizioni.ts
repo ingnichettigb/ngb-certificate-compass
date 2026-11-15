@@ -125,7 +125,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     tabella: "soglie_ditta",
     filtro: { ambito: "rls" },
     descrizione:
-      "Numero minimo di RLS (art. 47 D.Lgs. 81/08) in base alla fascia di lavoratori: 1 RLS fino a 15 lavoratori, 3 da 16 a 200, 6 da 201 a 1000.",
+      "Numero di RLS (art. 47 D.Lgs. 81/08) in base alla fascia di lavoratori: fino a 15 RLS eletto o territoriale, da 16 a 200 un RLS, da 201 a 1.000 tre RLS, oltre 1.000 sei RLS. Si usa il numero più alto tra lavoratori dichiarati e in forza nel programma: la riga della Ditta è evidenziata in giallo.",
     colonne: [
       { chiave: "da", etichetta: "Da lavoratori", tipo: "numero", obbligatorio: true },
       { chiave: "a", etichetta: "A lavoratori (vuoto = oltre)", tipo: "numero" },
