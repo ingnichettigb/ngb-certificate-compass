@@ -6,6 +6,7 @@
  *   rev 1 — 14/11/2026 — Definizioni coerenti con la migrazione 0014 e comportamento della pagina (N progressivo, spunta esclusiva,
  *            aggiunta, duplicazione, cancellazione, blocco della cancellazione di un ruolo con assegnazioni).
  *   rev 2 — 15/11/2026 10:50 — Bottone «Esporta»: scelta Excel/CSV, dati come a schermo (colonne, ordinamento, N, Applica) e tabella 09.
+ *   rev 3 — 15/11/2026 11:20 — Il menu «Esporta» deve stare sopra le Impostazioni generali (z-100) e i dialoghi (z-150).
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -266,6 +267,8 @@ describe("bottone Esporta", () => {
     await apriMenu();
     expect(screen.getByRole("menuitem", { name: /Excel/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeTruthy();
+    // Le Impostazioni generali stanno a z-[100], i dialoghi a z-[150]: il menu deve stare sopra entrambi.
+    expect(screen.getByRole("menu").className).toContain("z-[200]");
 
     await clic(screen.getByRole("menuitem", { name: /Excel/ }));
     expect(esportazioni).toHaveLength(1);

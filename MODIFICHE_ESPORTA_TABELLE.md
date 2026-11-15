@@ -16,6 +16,7 @@ Data: 2026-11-15
 | `src/features/tabelle-raccordo/TabelleRaccordo.test.tsx` | sostituisce (rev 2: test del bottone) |
 | `src/features/tipi-corso/esporta-excel.ts` | sostituisce (rev 3: formato Excel vero oltre al CSV, CSV invariato) |
 | `src/features/tipi-corso/TabellaTipiCorsoDialog.tsx` | sostituisce («Esporta in Excel» diventa «Esporta» con la scelta) |
+| `src/components/ui/dropdown-menu.tsx` | sostituisce (rev 2: menu portato a `z-[200]`, altrimenti si apriva dietro le Impostazioni generali) |
 | `src/features/tipi-corso/__snapshots__/TabellaTipiCorsoDialog.flusso.test.tsx.snap` | sostituisce (solo il testo del bottone: «Esporta in Excel» → «Esporta») |
 
 Nessuna modifica a database, API, `package.json` (usa `exceljs`, già presente) o altre pagine.
@@ -38,4 +39,4 @@ Nel mio ambiente di prova (dipendenze reinstallate, senza `xlsx`) 9 test falliva
 - `TabellaTipiCorsoDialog.flusso.test.tsx` (2 test): lo snapshot non contiene la riga «ASPP / RSPP» tra gli argomenti. Va rigenerato con `bunx vitest run -u` dopo averne controllato il contenuto.
 - altri 7 test di flusso (modello-excel, DocumentiAttestati, operatore, dipendenti, hr, index, scadenze).
 
-I 14 test nuovi passano.
+I 14 test nuovi passano (uno verifica anche che il menu stia sopra la pagina delle Impostazioni).
