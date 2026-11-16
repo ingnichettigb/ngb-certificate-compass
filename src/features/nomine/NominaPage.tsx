@@ -6,6 +6,8 @@
  *   rev 1 — 12/11/2026 — Una nomina: indice dei nominati a fianco, anteprima della lettera, modifica del testo, PDF (di uno o di tutti i selezionati).
  *   rev 2 — 14/11/2026 — Sedi: con più sedi compare il menu «Sede»; i nominati sono gli incarichi di quel plesso (la formazione resta centrale).
  *            Firmatario e intestazione restano quelli della ditta; il plesso va nel segnaposto {{sede}} e nel nome del file.
+ *   rev 3 — 16/11/2026 — Nominati eliminabili dalla lista (cestino) con «Ripristina eliminati»; vale per questa pagina e per la stampa,
+ *            non cancella nulla dal database. Spunte, numerazione e PDF considerano solo i nominati rimasti.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,6 +75,8 @@ export function NominaPage({ tipo }: { tipo: string }) {
   const [data, setData] = useState(() => dataItaliana());
   const [extra, setExtra] = useState<Nominato[]>([]);
   const [esclusi, setEsclusi] = useState<Set<string>>(new Set());
+  /** Nominati tolti dalla lista con il cestino (solo per questa pagina). */
+  const [eliminati, setEliminati] = useState<Set<string>>(new Set());
   const [attivoId, setAttivoId] = useState<string | null>(null);
   const [occupato, setOccupato] = useState(false);
 
@@ -85,7 +89,11 @@ export function NominaPage({ tipo }: { tipo: string }) {
     () => (voce ? nominatiDaOrganigramma(voce, organigramma) : []),
     [voce, organigramma],
   );
-  const nominati = useMemo(() => [...daOrganigramma, ...extra], [daOrganigramma, extra]);
+  const nominati = useMemo(
+    () => [...daOrganigramma, ...extra].filter((n) => !eliminati.has(n.id)),
+    [daOrganigramma, extra, eliminati],
+  );
+  // Chi è stato tolto con il cestino torna tra i lavoratori che si possono aggiungere a mano
   const candidati = useMemo(
     () => candidatiManuali(organigramma.dipendenti, nominati),
     [organigramma.dipendenti, nominati],
@@ -303,8 +311,22 @@ export function NominaPage({ tipo }: { tipo: string }) {
               })
             }
             onTutti={(v) => setEsclusi(v ? new Set() : new Set(nominati.map((n) => n.id)))}
+            onElimina={(id) => {
+              setEliminati((prev) => new Set(prev).add(id));
+              setExtra((prev) => prev.filter((n) => n.id !== id));
+              if (attivoId === id) setAttivoId(null);
+            }}
+            eliminati={eliminati.size}
+            onRipristinaEliminati={() => setEliminati(new Set())}
             onAggiungi={(n) => {
-              setExtra((prev) => [...prev, n]);
+              // Se era stato tolto con il cestino, riaggiungerlo lo rimette in lista
+              setEliminati((prev) => {
+                if (!prev.has(n.id)) return prev;
+                const s = new Set(prev);
+                s.delete(n.id);
+                return s;
+              });
+              setExtra((prev) => (prev.some((x) => x.id === n.id) ? prev : [...prev, n]));
               setAttivoId(n.id);
             }}
           />

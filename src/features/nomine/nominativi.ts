@@ -6,12 +6,15 @@
  *   rev 1 — 12/11/2026 — I nominati sono quelli dell'organigramma: ruoli assegnati ai lavoratori oppure voci libere.
  *   rev 2 — 13/11/2026 13:20 — Registro antincendio, DPI e SDS leggono sia assegnazioni DB che voci organigramma.
  *   rev 3 — 13/11/2026 13:40 — Ripristinate interfacce (Nominato, DatiOrganigramma, candidatiManuali, nomeLettera, nomeCompleto).
+ *   rev 4 — 16/11/2026 — Cognomi e nomi sempre in MAIUSCOLO (anche se scritti in minuscolo nell'organigramma o a mano); il confronto per
+ *            togliere i doppioni ignora solo maiuscole/minuscole e spazi doppi o in testa/coda: «MARIACRISTINA» e «MARIA CRISTINA» restano due nomi diversi.
  */
 import type { Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import type { VoceOrganigramma } from "@/lib/api/ditta";
 import { normalizzaVociOrganigramma } from "@/features/stampe/organigramma-a3";
 import { ruoliDelGruppo } from "@/features/stampe/stampa-selezioni";
+import { maiuscolo } from "@/lib/testo-maiuscolo";
 import type { VoceElencoNomine } from "./tipi";
 import { titoloNominato } from "./titolo-nominato";
 
@@ -36,7 +39,7 @@ export const nomeLettera = (n: Pick<Nominato, "nome" | "titolo">, conTitolo = tr
   conTitolo && n.titolo ? `${n.titolo} ${n.nome}` : n.nome;
 
 export const nomeCompleto = (d: Pick<Dipendente, "cognome" | "nome">) =>
-  `${d.cognome} ${d.nome ?? ""}`.trim();
+  maiuscolo(`${d.cognome} ${d.nome ?? ""}`);
 
 const inForza = (d: Dipendente) => d.stato_lavoratore !== "cessato";
 
@@ -59,7 +62,7 @@ export function nominatiDaOrganigramma(voce: VoceElencoNomine, dati: DatiOrganig
   const visti = new Set<string>();
   const out: Nominato[] = [];
   const aggiungi = (n: Nominato) => {
-    const chiave = n.nome.toLocaleLowerCase("it");
+    const chiave = maiuscolo(n.nome);
     if (visti.has(chiave)) return;
     visti.add(chiave);
     out.push(n);
@@ -109,10 +112,10 @@ export function nominatiDaOrganigramma(voce: VoceElencoNomine, dati: DatiOrganig
     // 2. Voci libere dell'organigramma A3
     for (const v of normalizzaVociOrganigramma(dati.voci).filter((x) => rx.test(x.titolo))) {
       for (const grezzo of v.nomi) {
-        const nome = grezzo.replace(/\s*\*+\s*$/, "").trim();
+        const nome = maiuscolo(grezzo.replace(/\s*\*+\s*$/, ""));
         if (nome) {
           const match = dati.dipendenti.find(
-            (d) => inForza(d) && nomeCompleto(d).toLowerCase() === nome.toLowerCase(),
+            (d) => inForza(d) && nomeCompleto(d) === nome,
           );
           if (match) {
             aggiungi(nominatoDaDipendente(match, "voce"));
@@ -129,7 +132,7 @@ export function nominatiDaOrganigramma(voce: VoceElencoNomine, dati: DatiOrganig
 
 /** Lavoratori in forza che si possono aggiungere a mano ai nominati. */
 export function candidatiManuali(dipendenti: Dipendente[], gia: Nominato[]): Nominato[] {
-  const presenti = new Set(gia.map((n) => n.nome.toLocaleLowerCase("it")));
+  const presenti = new Set(gia.map((n) => maiuscolo(n.nome)));
   return dipendenti
     .filter(inForza)
     .map((d): Nominato => {
@@ -145,6 +148,6 @@ export function candidatiManuali(dipendenti: Dipendente[], gia: Nominato[]): Nom
         ...(d.data_nascita ? { dataNascita: d.data_nascita } : {}),
       };
     })
-    .filter((n) => !presenti.has(n.nome.toLocaleLowerCase("it")))
+    .filter((n) => !presenti.has(maiuscolo(n.nome)))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 }

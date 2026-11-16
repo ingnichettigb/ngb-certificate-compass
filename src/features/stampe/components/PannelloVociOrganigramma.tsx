@@ -6,6 +6,9 @@
  *   rev 1 — 13/11/2026 13:20 — Griglia delle schede voci aggiuntive: schede azzurre per ruoli DB
  *            e marroncine per note descrittive, con selezione nominativi del personale e cancellazione collegata.
  *   rev 2 — 13/11/2026 13:40 — Corretto filtro stato_lavoratore dei dipendenti in forza.
+ *   rev 3 — 16/11/2026 — Caselle dei nominativi: mentre si scrive restano spazi e «a capo» (prima venivano tolti subito, quindi un nome
+ *            con due parole si scriveva unito); la pulizia (spazi doppi, righe vuote) avviene all'uscita dalla casella.
+ *            Nei ruoli i nominativi sono portati in MAIUSCOLO; nelle note descrittive il testo resta com'è.
  */
 import { ShieldCheck, FileText, Trash2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dipendente } from "@/lib/api";
 import type { VoceOrganigramma } from "@/lib/api/ditta";
+import { inMaiuscolo, maiuscolo } from "@/lib/testo-maiuscolo";
 
 type Props = {
   voci: VoceOrganigramma[];
@@ -78,14 +82,10 @@ export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onE
                   <Textarea
                     value={voce.nomi.join("\n")}
                     onChange={(e) =>
-                      onAggiornaVoce(indice, {
-                        nomi: e.target.value
-                          .split("\n")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
+                      onAggiornaVoce(indice, { nomi: inMaiuscolo(e.target.value).split("\n") })
                     }
-                    placeholder="Un nominativo per riga (es. Bardelli Mariacristina)"
+                    onBlur={() => onAggiornaVoce(indice, { nomi: voce.nomi.map(maiuscolo).filter(Boolean) })}
+                    placeholder="Un nominativo per riga, cognome e nome (es. ROSSI MARIA CRISTINA)"
                     rows={4}
                     className="text-xs bg-card/90 leading-relaxed font-mono"
                   />
@@ -98,13 +98,9 @@ export function PannelloVociOrganigramma({ voci, dipendenti, onAggiornaVoce, onE
                   <div className="text-[11px] font-medium text-amber-900">Righe descrittive / categorie:</div>
                   <Textarea
                     value={voce.nomi.join("\n")}
-                    onChange={(e) =>
-                      onAggiornaVoce(indice, {
-                        nomi: e.target.value
-                          .split("\n")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
+                    onChange={(e) => onAggiornaVoce(indice, { nomi: e.target.value.split("\n") })}
+                    onBlur={() =>
+                      onAggiornaVoce(indice, { nomi: voce.nomi.map((s) => s.trim()).filter(Boolean) })
                     }
                     placeholder="Un testo per riga (es. Alunni aprifila)"
                     rows={4}

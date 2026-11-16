@@ -3,6 +3,8 @@
  * Percorso:  src/features/nomine/nomine.miglioramenti.test.ts
  * Data creaz: 13/11/2026
  * Test di: titolo Prof./Prof.ssa dal codice fiscale, numero progressivo, intestazione con riga istituzionale e sito, modelli DAE/Evacuazione.
+ * Revisioni:
+ *   rev 2 — 16/11/2026 — Nominativi attesi in MAIUSCOLO.
  */
 import { describe, expect, it } from "vitest";
 import type { Dipendente } from "@/lib/api";
@@ -46,13 +48,13 @@ describe("nominati con titolo", () => {
   it("il titolo c'è per il docente e non per l'ATA; l'indice resta senza titolo", () => {
     const voce = ELENCO_NOMINE.find((v) => v.tipo === "primo-soccorso")!;
     const n = nominatiDaOrganigramma(voce, dati);
-    const somenzi = n.find((x) => x.nome === "Somenzi Lucia")!;
-    const bardelli = n.find((x) => x.nome === "Bardelli Mariacristina")!;
+    const somenzi = n.find((x) => x.nome === "SOMENZI LUCIA")!;
+    const bardelli = n.find((x) => x.nome === "BARDELLI MARIACRISTINA")!;
     expect(somenzi.titolo).toBe("Prof.ssa");
     expect(bardelli.titolo).toBeUndefined();
-    expect(nomeLettera(somenzi)).toBe("Prof.ssa Somenzi Lucia");
-    expect(nomeLettera(somenzi, false)).toBe("Somenzi Lucia");
-    expect(nomeLettera(bardelli)).toBe("Bardelli Mariacristina");
+    expect(nomeLettera(somenzi)).toBe("Prof.ssa SOMENZI LUCIA");
+    expect(nomeLettera(somenzi, false)).toBe("SOMENZI LUCIA");
+    expect(nomeLettera(bardelli)).toBe("BARDELLI MARIACRISTINA");
   });
 });
 

@@ -4,6 +4,7 @@
  * Data creaz: 12/11/2026
  * Revisioni:
  *   rev 1 — 12/11/2026 — Prove su segnaposto, blocchi del documento, anno scolastico e nominativi dall'organigramma.
+ *   rev 2 — 16/11/2026 — Nominativi attesi in MAIUSCOLO (cognome e nome sempre maiuscoli).
  */
 import { describe, expect, it } from "vitest";
 import type { Dipendente } from "@/lib/api";
@@ -149,15 +150,15 @@ describe("nominativi dall'organigramma", () => {
 
   it("dai ruoli: solo lavoratori in forza, in ordine alfabetico, cognome e nome per esteso", () => {
     const n = nominatiDaOrganigramma(voceElenco("antincendio")!, base);
-    expect(n.map((x) => x.nome)).toEqual(["Bianchi Anna", "Strocchia Carlo"]);
+    expect(n.map((x) => x.nome)).toEqual(["BIANCHI ANNA", "STROCCHIA CARLO"]);
     expect(nominatiDaOrganigramma(voceElenco("primo-soccorso")!, base).map((x) => x.nome)).toEqual([
-      "Neri Paolo",
+      "NERI PAOLO",
     ]);
   });
 
   it("dalle voci libere: toglie l'asterisco e i doppioni", () => {
     const n = nominatiDaOrganigramma(voceElenco("registro-antincendio")!, base);
-    expect(n.map((x) => x.nome)).toEqual(["Cicatiello Maria Grazia"]);
+    expect(n.map((x) => x.nome)).toEqual(["CICATIELLO MARIA GRAZIA"]);
     expect(n[0]?.origine).toBe("voce");
   });
 
@@ -165,9 +166,9 @@ describe("nominativi dall'organigramma", () => {
     const v = [{ titolo: "Addetti registro antincendio", nomi: ["Bianchi Anna", "Cessato Gino", "Esterno Mario"] }];
     const n = nominatiDaOrganigramma(voceElenco("registro-antincendio")!, { ...base, voci: v });
     expect(n.map((x) => [x.nome, x.id])).toEqual([
-      ["Bianchi Anna", "2"], // lavoratore in forza: id e reparto dal DB
-      ["Cessato Gino", "voce:Cessato Gino"], // cessato: resta una voce libera
-      ["Esterno Mario", "voce:Esterno Mario"],
+      ["BIANCHI ANNA", "2"], // lavoratore in forza: id e reparto dal DB
+      ["CESSATO GINO", "voce:CESSATO GINO"], // cessato: resta una voce libera
+      ["ESTERNO MARIO", "voce:ESTERNO MARIO"],
     ]);
     expect(n[0]?.dettaglio).toBe("ATA");
   });
@@ -177,7 +178,7 @@ describe("nominativi dall'organigramma", () => {
     const ass = [...assegnazioni, { id: "a9", dipendente_id: "4", ruolo_id: "r9" }];
     const v = [{ titolo: "Responsabile distribuzione D.P.I.", nomi: ["Qualcun Altro"] }];
     const n = nominatiDaOrganigramma(voceElenco("dpi")!, { dipendenti, ruoli: ruoliConDpi, assegnazioni: ass, voci: v });
-    expect(n.map((x) => x.nome)).toEqual(["Neri Paolo"]);
+    expect(n.map((x) => x.nome)).toEqual(["NERI PAOLO"]);
     expect(n[0]?.origine).toBe("ruolo");
   });
 
@@ -188,7 +189,7 @@ describe("nominativi dall'organigramma", () => {
 
   it("candidati manuali: in forza e non già nell'elenco", () => {
     const gia = nominatiDaOrganigramma(voceElenco("antincendio")!, base);
-    expect(candidatiManuali(dipendenti, gia).map((x) => x.nome)).toEqual(["Neri Paolo"]);
+    expect(candidatiManuali(dipendenti, gia).map((x) => x.nome)).toEqual(["NERI PAOLO"]);
   });
 });
 
