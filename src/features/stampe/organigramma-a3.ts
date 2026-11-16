@@ -11,6 +11,7 @@
  *   rev 6 — 13/11/2026 13:20 — Voci con tipo ('ruolo' azzurro collegato a ruolo_id, 'nota' marroncino descrittiva).
  *   rev 7 — 13/11/2026 13:40 — Ripristinate firme complete, salvaVociOrganigramma e supporto tipi/ruolo_id.
  *   rev 8 — 13/11/2026 — calcolaBlocchiA3: filtro facoltativo per sede (sedeFiltroId); senza filtro tutte le sedi.
+ *   rev 9 — 16/11/2026 — Voci azzurre con ruolo_id: i nominativi vengono dal DB (dipendenti_ruoli) tramite nomiVoceRuolo/dipendentiDelRuolo.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
@@ -101,6 +102,45 @@ export function inizialiNome(nome: string): string {
 /** Forma breve di un lavoratore: COGNOME + iniziali puntate (solo il cognome se manca il nome). */
 export const nomeBreve = (d: Pick<Dipendente, "cognome" | "nome">) => `${d.cognome} ${inizialiNome(d.nome ?? "")}`.trim();
 const nomeEsteso = (d: Pick<Dipendente, "cognome" | "nome">) => `${d.cognome} ${d.nome ?? ""}`.trim();
+
+/** Lavoratori in forza che hanno il ruolo (con una sede scelta, solo gli incarichi di quella sede), in ordine alfabetico. */
+export function dipendentiDelRuolo(
+  ruoloId: string,
+  dipendenti: Dipendente[],
+  assegnazioni: AssegnazioneRuolo[],
+  sedeFiltroId?: string | null,
+): Dipendente[] {
+  const ids = new Set(
+    assegnazioni
+      .filter((a) => a.ruolo_id === ruoloId && (!sedeFiltroId || a.sede_id === sedeFiltroId))
+      .map((a) => a.dipendente_id),
+  );
+  return dipendenti
+    .filter((d) => d.stato_lavoratore !== "cessato" && ids.has(d.id))
+    .sort((a, b) => a.cognome.localeCompare(b.cognome, "it") || (a.nome ?? "").localeCompare(b.nome ?? "", "it"));
+}
+
+/**
+ * Nominativi di una voce azzurra, come nel resto della tavola: COGNOME + iniziali, sempre MAIUSCOLO.
+ * Se un'altra persona in forza ha la stessa forma breve si scrive per esteso (come nei riquadri delle squadre).
+ */
+export function nomiVoceRuolo(
+  ruoloId: string,
+  dipendenti: Dipendente[],
+  assegnazioni: AssegnazioneRuolo[],
+  sedeFiltroId?: string | null,
+): string[] {
+  const maiusc = (t: string) => t.toLocaleUpperCase("it-IT");
+  const conteggio = new Map<string, number>();
+  for (const d of dipendenti) {
+    if (d.stato_lavoratore === "cessato") continue;
+    const k = maiusc(nomeBreve(d));
+    conteggio.set(k, (conteggio.get(k) ?? 0) + 1);
+  }
+  return dipendentiDelRuolo(ruoloId, dipendenti, assegnazioni, sedeFiltroId).map((d) =>
+    maiusc((conteggio.get(maiusc(nomeBreve(d))) ?? 0) > 1 ? nomeEsteso(d) : nomeBreve(d)),
+  );
+}
 
 /** Ruoli di squadra del gruppo (esclusi gli obblighi «per tutti» e «Lavoratore»). */
 function ruoliSquadra(chiave: string, ruoli: RuoloSicurezza[]) {

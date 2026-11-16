@@ -5,16 +5,14 @@
  * Revisioni:
  *   rev 1 — 12/11/2026 — Indice a fianco dell'anteprima: nominativi dell'organigramma con spunta per la stampa, clic per vedere la lettera,
  *            aggiunta di un lavoratore a mano.
- *   rev 2 — 16/11/2026 — Cestino su ogni nominato (toglie la persona da questa lista di nomine, senza toccare database e organigramma),
- *            «Ripristina eliminati»; il nome scritto a mano viene portato in MAIUSCOLO.
- *   rev 3 — 16/11/2026 — Etichetta «Organigramma» accanto ai nominati che arrivano dalle voci dell'organigramma (non dai ruoli assegnati nei Dipendenti).
+ *   rev 2 — 16/11/2026 — Nomine collegate a un ruolo del DB (registro, DPI, SDS): «Aggiungi» assegna l'incarico e il cestino lo toglie
+ *            (stessi dati dell'organigramma); niente nome scritto a mano, si sceglie solo tra i lavoratori.
  */
 import { useState } from "react";
-import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { inMaiuscolo, maiuscolo } from "@/lib/testo-maiuscolo";
 import type { Nominato } from "../nominativi";
 
 type Props = {
@@ -26,11 +24,10 @@ type Props = {
   onSpunta: (id: string, valore: boolean) => void;
   onTutti: (valore: boolean) => void;
   onAggiungi: (n: Nominato) => void;
-  /** Toglie il nominato da questa lista (non cancella nulla dal database). */
-  onElimina: (id: string) => void;
-  /** Quanti nominati sono stati tolti dalla lista. */
-  eliminati: number;
-  onRipristinaEliminati: () => void;
+  /** Nomina collegata a un ruolo del DB: toglie l'incarico (compare il cestino sui nominati che vengono dal ruolo). */
+  onRimuovi?: (n: Nominato) => void;
+  /** Solo scelta dall'elenco dei lavoratori, senza nome scritto a mano. */
+  soloElenco?: boolean;
 };
 
 export function IndiceNominati({
@@ -42,19 +39,16 @@ export function IndiceNominati({
   onSpunta,
   onTutti,
   onAggiungi,
-  onElimina,
-  eliminati,
-  onRipristinaEliminati,
+  onRimuovi,
+  soloElenco = false,
 }: Props) {
   const [scelta, setScelta] = useState("");
   const [libero, setLibero] = useState("");
   const aggiungi = () => {
     const c = candidati.find((x) => x.id === scelta);
     if (c) onAggiungi(c);
-    else if (maiuscolo(libero)) {
-      const nome = maiuscolo(libero);
-      onAggiungi({ id: `manuale:${nome}`, nome, origine: "manuale" });
-    }
+    else if (libero.trim())
+      onAggiungi({ id: `manuale:${libero.trim()}`, nome: libero.trim(), origine: "manuale" });
     setScelta("");
     setLibero("");
   };
@@ -78,9 +72,9 @@ export function IndiceNominati({
       </div>
       {nominati.length === 0 && (
         <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
-          Nessun nominativo nell'organigramma per questa nomina. Assegna il ruolo ai lavoratori
-          (Dipendenti) oppure aggiungi i nomi alla voce corrispondente dell'organigramma; in
-          alternativa aggiungi qui sotto un lavoratore a mano.
+          {soloElenco
+            ? "Nessun incarico assegnato. Scegli qui sotto un lavoratore e premi «Aggiungi»: comparirà anche nell'organigramma."
+            : "Nessun nominativo nell'organigramma per questa nomina. Assegna il ruolo ai lavoratori (Dipendenti) oppure aggiungi i nomi alla voce corrispondente dell'organigramma; in alternativa aggiungi qui sotto un lavoratore a mano."}
         </p>
       )}
       <ol className="flex max-h-[55vh] flex-col gap-1 overflow-auto">
@@ -101,41 +95,29 @@ export function IndiceNominati({
             >
               <span className="mr-1 text-xs text-muted-foreground">{i + 1}.</span>
               {n.nome}
-              {n.origine === "voce" && (
-                <span
-                  className="ml-1.5 rounded bg-sky-100 px-1.5 py-0.5 align-middle text-[10px] font-medium text-sky-800"
-                  title="Nominativo scritto nelle voci dell'organigramma"
-                >
-                  Organigramma
-                </span>
-              )}
               {n.dettaglio && (
                 <span className="block truncate text-[11px] text-muted-foreground">
                   {n.dettaglio}
                 </span>
               )}
             </button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-7 shrink-0 text-destructive hover:bg-destructive/10"
-              onClick={() => onElimina(n.id)}
-              title="Togli dalla lista"
-              aria-label={`Togli ${n.nome} dalla lista`}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {onRimuovi && n.origine === "ruolo" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 text-destructive hover:bg-destructive/10"
+                title="Togli l'incarico (si toglie anche dall'organigramma)"
+                aria-label={`Togli l'incarico a ${n.nome}`}
+                onClick={() => onRimuovi(n)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </li>
         ))}
       </ol>
-      {eliminati > 0 && (
-        <Button size="sm" variant="outline" onClick={onRipristinaEliminati}>
-          <RotateCcw className="size-4" /> Ripristina eliminati ({eliminati})
-        </Button>
-      )}
       <div className="space-y-2 border-t border-border pt-3">
-        <p className="text-xs font-medium text-muted-foreground">Aggiungi a mano</p>
+        <p className="text-xs font-medium text-muted-foreground">{soloElenco ? "Aggiungi un incaricato" : "Aggiungi a mano"}</p>
         <select
           className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
           value={scelta}
@@ -149,12 +131,14 @@ export function IndiceNominati({
             </option>
           ))}
         </select>
-        <Input
-          placeholder="oppure scrivi il nome"
-          value={libero}
-          onChange={(e) => setLibero(inMaiuscolo(e.target.value))}
-        />
-        <Button size="sm" variant="outline" onClick={aggiungi} disabled={!scelta && !maiuscolo(libero)}>
+        {!soloElenco && (
+          <Input
+            placeholder="oppure scrivi il nome"
+            value={libero}
+            onChange={(e) => setLibero(e.target.value)}
+          />
+        )}
+        <Button size="sm" variant="outline" onClick={aggiungi} disabled={!scelta && !libero.trim()}>
           <Plus className="size-4" /> Aggiungi
         </Button>
       </div>

@@ -19,6 +19,8 @@
  *            Con la sola sede principale la pagina è identica a prima (nessun selettore, nessun pulsante in più).
  *   rev 13 — 14/11/2026 — Con più sedi il nome della sede (anche la principale) compare nella testata della tavola e nel PDF; avviso se primo soccorso
  *            o antincendio della sede scelta non hanno addetti formati.
+ *   rev 14 — 16/11/2026 — Voci azzurre collegate al ruolo DB: nominativi scelti tra i lavoratori (dipendenti_ruoli), in MAIUSCOLO e per sede;
+ *            «Aggiungi» e «Togli» salvano subito. Le tre voci fisse (registro, DPI, SDS) si collegano ai loro ruoli.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,10 +31,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAttestati, getDipendenti } from "@/lib/api";
-import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, creaRuoloSicurezza, getAssegnazioniRuoli, getRuoliSicurezza } from "@/lib/api/ruoli";
+import { CHIAVE_ASSEGNAZIONI_RUOLI, CHIAVE_RUOLI, creaRuoloSicurezza, getAssegnazioniRuoli, getRuoliSicurezza, impostaRuoloDipendente } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta, type VoceOrganigramma } from "@/lib/api/ditta";
 import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
-import { applicaModoPreposti, calcolaBlocchiA3, normalizzaVociOrganigramma, salvaVociOrganigramma, type BloccoOrganigramma, type ModoPreposti, type NomeBlocco } from "../organigramma-a3";
+import { applicaModoPreposti, calcolaBlocchiA3, nomiVoceRuolo, normalizzaVociOrganigramma, salvaVociOrganigramma, type BloccoOrganigramma, type ModoPreposti, type NomeBlocco } from "../organigramma-a3";
+import { collegaRuoliFissi, eVoceDaDb } from "../ruoli-organigramma";
 import { COLONNE_TAVOLA, impaginaPerFunzione, type ElementoFunzionale } from "../impagina-organigramma-a3";
 import { costruisciRiquadriPdf, scaricaPdfOrganigrammaA3 } from "../esporta-organigramma-a3-pdf";
 import { PannelloVociOrganigramma } from "./PannelloVociOrganigramma";
@@ -169,7 +172,17 @@ export function OrganigrammaA3Page() {
   );
   const blocchi = useMemo(() => applicaModoPreposti(blocchiBase, modoPreposti), [blocchiBase, modoPreposti]);
   const b = (k: string) => blocchi.find((x) => x.chiave === k)!;
-  const vociVisibili = useMemo(() => voci.filter((v) => v.titolo.trim()), [voci]);
+  // Le tre voci fisse (registro, DPI, SDS) si collegano al ruolo del DB anche se salvate prima della migrazione 0016
+  const vociCollegate = useMemo(() => collegaRuoliFissi(voci, ruoli.data ?? []), [voci, ruoli.data]);
+  // Voci azzurre collegate a un ruolo: i nominativi vengono dal DB (sede scelta se ci sono più plessi), in MAIUSCOLO
+  const vociRisolte = useMemo(
+    () =>
+      vociCollegate.map((v) =>
+        eVoceDaDb(v) ? { ...v, nomi: nomiVoceRuolo(v.ruolo_id as string, dip.data ?? [], ass.data ?? [], sedeFiltroId) } : v,
+      ),
+    [vociCollegate, dip.data, ass.data, sedeFiltroId],
+  );
+  const vociVisibili = useMemo(() => vociRisolte.filter((v) => v.titolo.trim()), [vociRisolte]);
 
   const colonneTavola = useMemo(() => {
     const elementi: ElementoFunzionale[] = [
@@ -241,7 +254,7 @@ export function OrganigrammaA3Page() {
   const salva = async () => {
     setSalvataggio(true);
     try {
-      const pulite = await salvaVociOrganigramma(voci);
+      const pulite = await salvaVociOrganigramma(vociCollegate);
       setVoci(pulite);
       await qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
       toast.success("Voci dell'organigramma salvate");
@@ -257,6 +270,24 @@ export function OrganigrammaA3Page() {
 
   const elimina = (i: number) =>
     setVoci((vv) => vv.filter((_, j) => j !== i));
+
+  // Incarichi delle voci azzurre: stessa tabella e stessa cache delle Nomine, della Matrice e della scheda lavoratore
+  const assegnaIncarico = async (dipendenteId: string, ruoloId: string) => {
+    try {
+      await impostaRuoloDipendente(dipendenteId, ruoloId, true, sedeFiltroId ?? undefined);
+      await qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
+    } catch (e) {
+      toast.error(`Incarico non assegnato: ${(e as Error).message}`);
+    }
+  };
+  const togliIncarico = async (dipendenteId: string, ruoloId: string) => {
+    try {
+      await impostaRuoloDipendente(dipendenteId, ruoloId, false, sedeFiltroId ?? undefined);
+      await qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
+    } catch (e) {
+      toast.error(`Incarico non tolto: ${(e as Error).message}`);
+    }
+  };
 
   const aggiungiVoce = async (nuovaVoce: VoceOrganigramma, creaRuoloNelDb = false) => {
     let voce = nuovaVoce;
@@ -277,7 +308,7 @@ export function OrganigrammaA3Page() {
       }
     }
     // La voce si salva subito (insieme a quelle già presenti): così un ruolo appena creato nel DB non resta senza voce.
-    const aggiornate = [...voci, voce];
+    const aggiornate = [...vociCollegate, voce];
     try {
       const pulite = await salvaVociOrganigramma(aggiornate);
       setVoci(pulite);
@@ -374,15 +405,20 @@ export function OrganigrammaA3Page() {
               <summary className={TITOLO_VERDE}>Voci aggiuntive (ruoli DB e note descrittive organigramma)</summary>
             </Suggerimento>
             <p className="mt-2 text-xs text-muted-foreground">
-              Schede azzurre per ruoli di sicurezza aziendali (collegati alle Nomine e al personale); schede marroncine per testi descrittivi liberi.
+              Schede azzurre per ruoli di sicurezza aziendali: i nominativi si scelgono tra i lavoratori e sono gli stessi delle Nomine; schede marroncine per testi descrittivi liberi.
             </p>
 
             <div className="mt-3">
               <PannelloVociOrganigramma
-                voci={voci}
+                voci={vociCollegate}
                 dipendenti={dip.data ?? []}
+                assegnazioni={ass.data ?? []}
+                sedeId={sedeFiltroId}
+                sedeNome={piuSedi ? (sedeCorrente?.nome ?? null) : null}
                 onAggiornaVoce={cambia}
                 onEliminaVoce={elimina}
+                onAssegna={assegnaIncarico}
+                onRimuovi={togliIncarico}
               />
             </div>
 

@@ -4,7 +4,9 @@
  * Data creaz: 12/11/2026
  * Revisioni:
  *   rev 1 — 12/11/2026 — Tipi delle nomine, elenco dei bottoni della pagina Nomine e segnaposto disponibili nei modelli.
+ *   rev 2 — 16/11/2026 — Registro antincendio, DPI e SDS: «ruoloDb» = ruolo di ruoli_sicurezza da cui si leggono (e in cui si scrivono) i nominati.
  */
+import { NOME_RUOLO_DPI, NOME_RUOLO_REGISTRO, NOME_RUOLO_SDS } from "@/features/stampe/ruoli-organigramma";
 
 export type TipoNomina =
   | "primo-soccorso"
@@ -46,6 +48,11 @@ export type VoceElencoNomine = {
   descrizione: string;
   /** Come si ricavano i nominativi dall'organigramma. */
   sorgente: { ruolo: string } | { voce: RegExp };
+  /**
+   * Nome esatto del ruolo del DB (ruoli_sicurezza) che contiene i nominati. Se presente la lista è modificabile anche
+   * dalle Nomine (aggiungi/togli) e coincide con la voce dell'organigramma collegata allo stesso ruolo.
+   */
+  ruoloDb?: string;
 };
 
 /** Bottoni della pagina Nomine, nell'ordine mostrato. */
@@ -73,18 +80,21 @@ export const ELENCO_NOMINE: VoceElencoNomine[] = [
     label: "Registro antincendio",
     descrizione: "Incaricati della gestione del registro antincendio.",
     sorgente: { voce: /registro\s+antincendio/i },
+    ruoloDb: NOME_RUOLO_REGISTRO,
   },
   {
     tipo: "dpi",
     label: "Distribuzione DPI",
     descrizione: "Incaricati della distribuzione e custodia dei DPI.",
     sorgente: { voce: /\bdpi\b|protezione\s+individuale/i },
+    ruoloDb: NOME_RUOLO_DPI,
   },
   {
     tipo: "sds",
     label: "Custodia SDS",
     descrizione: "Incaricati della distribuzione e custodia delle schede di sicurezza.",
     sorgente: { voce: /\bsds\b|schede\s+di\s+sicurezza/i },
+    ruoloDb: NOME_RUOLO_SDS,
   },
   {
     tipo: "dae",

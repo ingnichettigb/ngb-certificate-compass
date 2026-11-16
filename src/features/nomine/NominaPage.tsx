@@ -6,8 +6,9 @@
  *   rev 1 — 12/11/2026 — Una nomina: indice dei nominati a fianco, anteprima della lettera, modifica del testo, PDF (di uno o di tutti i selezionati).
  *   rev 2 — 14/11/2026 — Sedi: con più sedi compare il menu «Sede»; i nominati sono gli incarichi di quel plesso (la formazione resta centrale).
  *            Firmatario e intestazione restano quelli della ditta; il plesso va nel segnaposto {{sede}} e nel nome del file.
- *   rev 3 — 16/11/2026 — Nominati eliminabili dalla lista (cestino) con «Ripristina eliminati»; vale per questa pagina e per la stampa,
- *            non cancella nulla dal database. Spunte, numerazione e PDF considerano solo i nominati rimasti.
+ *   rev 3 — 16/11/2026 — Registro antincendio, DPI e SDS (ruoloDb): «Aggiungi» assegna l'incarico nel DB e il cestino lo toglie, così
+ *            organigramma e Nomine mostrano gli stessi nominativi (con una sede scelta l'incarico è di quel plesso, con «Tutte le sedi»
+ *            si aggiunge alla sede principale e si toglie da tutte). Niente nomi scritti a mano per queste nomine.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IdentitaDitta } from "@/components/IdentitaDitta";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
+import { CHIAVE_ASSEGNAZIONI_RUOLI, impostaRuoloDipendente } from "@/lib/api/ruoli";
 import { nomeFileEsportazione } from "@/features/stampe/esporta-file";
 import {
   CHIAVE_MODELLI_NOMINA,
@@ -75,10 +77,42 @@ export function NominaPage({ tipo }: { tipo: string }) {
   const [data, setData] = useState(() => dataItaliana());
   const [extra, setExtra] = useState<Nominato[]>([]);
   const [esclusi, setEsclusi] = useState<Set<string>>(new Set());
-  /** Nominati tolti dalla lista con il cestino (solo per questa pagina). */
-  const [eliminati, setEliminati] = useState<Set<string>>(new Set());
   const [attivoId, setAttivoId] = useState<string | null>(null);
   const [occupato, setOccupato] = useState(false);
+
+  // Nomine collegate a un ruolo del DB: la lista è modificabile da qui e coincide con la voce dell'organigramma
+  const ruoloDb = useMemo(
+    () => (voce?.ruoloDb ? (organigrammaDitta.ruoli.find((r) => r.nome === voce.ruoloDb) ?? null) : null),
+    [voce, organigrammaDitta.ruoli],
+  );
+  const modificabileDaDb = !!voce?.ruoloDb;
+
+  const assegnaDaDb = async (n: Nominato) => {
+    if (!ruoloDb) {
+      toast.error("Ruolo non presente nel database: applica la migrazione 0016 (ruoli organigramma).");
+      return;
+    }
+    try {
+      await impostaRuoloDipendente(n.id, ruoloDb.id, true, sede?.id);
+      await qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
+      setAttivoId(n.id);
+      toast.success(`Incarico assegnato a ${n.nome}${sede ? ` (${sede.nome})` : ""}`);
+    } catch (e) {
+      toast.error(`Incarico non assegnato: ${e instanceof Error ? e.message : "errore del database"}`);
+    }
+  };
+  const togliDaDb = async (n: Nominato) => {
+    if (!ruoloDb) return;
+    const tutte = !sede && piuSedi;
+    if (tutte && !window.confirm(`Togliere l'incarico a ${n.nome} da TUTTE le sedi?`)) return;
+    try {
+      await impostaRuoloDipendente(n.id, ruoloDb.id, false, sede?.id);
+      await qc.invalidateQueries({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI });
+      toast.success(`Incarico tolto a ${n.nome}`);
+    } catch (e) {
+      toast.error(`Incarico non tolto: ${e instanceof Error ? e.message : "errore del database"}`);
+    }
+  };
 
   const salvato = modelli && voce ? modelli[voce.tipo] : undefined;
   useEffect(() => {
@@ -89,11 +123,7 @@ export function NominaPage({ tipo }: { tipo: string }) {
     () => (voce ? nominatiDaOrganigramma(voce, organigramma) : []),
     [voce, organigramma],
   );
-  const nominati = useMemo(
-    () => [...daOrganigramma, ...extra].filter((n) => !eliminati.has(n.id)),
-    [daOrganigramma, extra, eliminati],
-  );
-  // Chi è stato tolto con il cestino torna tra i lavoratori che si possono aggiungere a mano
+  const nominati = useMemo(() => [...daOrganigramma, ...extra], [daOrganigramma, extra]);
   const candidati = useMemo(
     () => candidatiManuali(organigramma.dipendenti, nominati),
     [organigramma.dipendenti, nominati],
@@ -311,24 +341,15 @@ export function NominaPage({ tipo }: { tipo: string }) {
               })
             }
             onTutti={(v) => setEsclusi(v ? new Set() : new Set(nominati.map((n) => n.id)))}
-            onElimina={(id) => {
-              setEliminati((prev) => new Set(prev).add(id));
-              setExtra((prev) => prev.filter((n) => n.id !== id));
-              if (attivoId === id) setAttivoId(null);
-            }}
-            eliminati={eliminati.size}
-            onRipristinaEliminati={() => setEliminati(new Set())}
             onAggiungi={(n) => {
-              // Se era stato tolto con il cestino, riaggiungerlo lo rimette in lista
-              setEliminati((prev) => {
-                if (!prev.has(n.id)) return prev;
-                const s = new Set(prev);
-                s.delete(n.id);
-                return s;
-              });
-              setExtra((prev) => (prev.some((x) => x.id === n.id) ? prev : [...prev, n]));
+              if (modificabileDaDb && !n.id.startsWith("manuale:")) {
+                void assegnaDaDb(n);
+                return;
+              }
+              setExtra((prev) => [...prev, n]);
               setAttivoId(n.id);
             }}
+            {...(modificabileDaDb ? { onRimuovi: (n: Nominato) => void togliDaDb(n), soloElenco: true } : {})}
           />
         </div>
 
