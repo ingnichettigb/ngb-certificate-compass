@@ -6,6 +6,7 @@
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-10): Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
+ * - Rev (2026-11-16 19:58): Aggiunta corso con controllo dei corsi già in archivio.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";

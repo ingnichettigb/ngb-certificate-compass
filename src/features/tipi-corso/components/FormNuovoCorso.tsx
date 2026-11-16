@@ -91,7 +91,7 @@ export function FormNuovoCorso({
               <li key={c.id} className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs">{c.codice}</span>
                 <span className="flex-1">{c.nome_corso}</span>
-                <span className="text-xs text-muted-foreground">{c.ore ?? "–"} h</span>
+                <span className="text-xs text-muted-foreground">{c.ore_minime_legge ?? "–"} h</span>
                 {c.visibile_lavoratore ? (
                   <span className="text-xs text-primary">visibile</span>
                 ) : onRendiVisibile ? (
