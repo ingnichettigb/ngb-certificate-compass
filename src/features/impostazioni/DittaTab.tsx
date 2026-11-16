@@ -11,6 +11,7 @@
  *   rev 4 — 07/11/2026 — Diviso in file per responsabilità (cartella ditta/): un file per riquadro, calcolo dei fabbisogni e pulsante Salva. Nessun cambio di comportamento.
  *   rev 5 — 13/11/2026 — Riquadro «Sedi e plessi» sotto l'anagrafica.
  *   rev 6 — 15/11/2026 — Fabbisogni calcolati sul numero di lavoratori più alto tra dichiarato e in forza; presenze dalla somma delle sedi.
+ *   rev 7 — 16/11/2026 18:06 — Rimosso passaggio di impostaPrincipale non previsto dal riquadro ATECO (errore di compilazione).
  */
 import { useEffect } from "react";
 import { Building2, Loader2 } from "lucide-react";
@@ -50,7 +51,6 @@ export function DittaTab({
     updateCampo,
     aggiungiAteco,
     rimuoviAteco,
-    impostaPrincipale,
     handleSubmit,
   } = useDittaTab();
   const { data: lavoratoriInForza } = useLavoratoriInForza();
@@ -123,7 +123,6 @@ export function DittaTab({
         setNuovoAteco={setNuovoAteco}
         aggiungiAteco={aggiungiAteco}
         rimuoviAteco={rimuoviAteco}
-        impostaPrincipale={impostaPrincipale}
       />
 
       {/* Riquadro 4: Organico, Presenze e Sintesi Fabbisogni Normativi */}
