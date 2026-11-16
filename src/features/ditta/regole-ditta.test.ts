@@ -4,12 +4,16 @@
  * Data creazione: 2026-11-01
  * Revisioni:
  *   - Rev 1 (2026-11-01 12:30): Fasce di legge ai limiti, codici ATECO, anno scolastico e avvisi sui dati ditta.
+ *   - Rev 2 (2026-11-15 11:45): Divisione ATECO e rischio dal catalogo della Tabella 06.
  */
 import { describe, expect, it } from "vitest";
 import {
   calcolaAvvisi,
+  divisioneAteco,
   inizioAnnoScolastico,
   normalizzaAteco,
+  rischioDaCatalogo,
+  rischioSuggeritoDitta,
   suggerisciRischioAteco,
   trovaSoglia,
   type Soglia,
@@ -171,5 +175,41 @@ describe("avvisi sui dati ditta", () => {
         oggi,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("catalogo ATECO (Tabella 06)", () => {
+  const catalogo = [
+    { codice: "01", rischio: "medio" },
+    { codice: "41", rischio: "alto" },
+    { codice: "47", rischio: "basso" },
+    { codice: "99", rischio: "boh" },
+  ];
+
+  it("divisione: prime due cifre di qualunque formato", () => {
+    expect(divisioneAteco("85")).toBe("85");
+    expect(divisioneAteco("85.31.20")).toBe("85");
+    expect(divisioneAteco(" 853120")).toBe("85");
+    expect(divisioneAteco("A85")).toBeNull();
+    expect(divisioneAteco("")).toBeNull();
+  });
+
+  it("rischio di un codice dalla sua divisione; valori sconosciuti ignorati", () => {
+    expect(rischioDaCatalogo("41.20.00", catalogo)).toBe("alto");
+    expect(rischioDaCatalogo("47", catalogo)).toBe("basso");
+    expect(rischioDaCatalogo("85.31", catalogo)).toBeNull();
+    expect(rischioDaCatalogo("99.00", catalogo)).toBeNull();
+    expect(rischioDaCatalogo("xx", catalogo)).toBeNull();
+  });
+
+  it("rischio suggerito: il più alto tra i codici della ditta", () => {
+    expect(rischioSuggeritoDitta([{ codice: "47.11" }, { codice: "01.11" }], catalogo)).toBe(
+      "medio",
+    );
+    expect(rischioSuggeritoDitta([{ codice: "47.11" }, { codice: "41.20" }], catalogo)).toBe(
+      "alto",
+    );
+    expect(rischioSuggeritoDitta([{ codice: "85.31" }], catalogo)).toBeNull();
+    expect(rischioSuggeritoDitta([], catalogo)).toBeNull();
   });
 });

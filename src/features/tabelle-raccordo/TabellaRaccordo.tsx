@@ -3,21 +3,14 @@
  * Percorso:  src/features/tabelle-raccordo/TabellaRaccordo.tsx
  * Data creaz: 14/11/2026
  * Revisioni:
- *   rev 1 — 14/11/2026 — Tabella generica delle tabelle di raccordo.
- *   rev 2 — 14/11/2026 21:50 — Bottoni standard e colonne regolabili, spostabili e ordinabili.
- *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV).
- *   rev 4 — 15/11/2026 12:04 — Ricerca veloce nella barra comandi, anti-crash uscite anticipate React e conteggio record semplificato.
- *   rev 5 — 15/11/2026 12:45 — Cache condivisa con Ditta (CHIAVE_CATALOGO_ATECO), riga gialla ben visibile, spunta Ditta isolata su codici_ateco e rimozione puntuale del codice.
- *   rev 6 — 15/11/2026 — Riga gialla con badge «In uso Ditta» anche nelle tabelle 03 (RLS), 04 e 07 (Primo Soccorso), 05 (Antincendio): fascia calcolata su lavoratori più alti tra dichiarato e in forza e su presenze totali delle sedi.
- *   rev 7 — 15/11/2026 — Tabelle 03, 04, 05: colonna «In uso Ditta» con spunta automatica e bloccata, uguale alla riga gialla (nessuna scrittura su «applica»).
- *                        Tabella 07: l'indice INAIL si sceglie a mano con «Applica» (la riga spuntata è gialla); senza spunta la riga gialla è solo «Proposta».
- *   rev 8 — 15/11/2026 — Colonna «Applica» ripristinata su TUTTE le tabelle. Nelle 03, 04, 05 e 07 la riga calcolata per la Ditta (gialla, «In uso Ditta»)
- *                        mostra la spunta e il programma la salva nel database (applica = true sulla fascia attiva, false sulle altre della stessa tabella).
- *                        Tabella 07: se più righe hanno stessa fascia e gruppo (indice INAIL) vale la scelta fatta a mano tra quelle; fuori dalla fascia
- *                        della Ditta la spunta non è modificabile. Bottone «Esporta» riparato (props e firma di esportaTabella) con «Applica» come a schermo.
- *                        Rimozione dell'ATECO principale senza errori di tipo.
+ *   rev 1 — 14/11/2026 — Tabella generica delle tabelle di raccordo: intestazione fissa, barre di scorrimento sempre visibili,
+ *            righe a colori alternati, aggiunta, modifica, duplicazione e cancellazione dei record, spunta manuale «Applica».
+ *   rev 2 — 14/11/2026 21:50 — Bottoni standard (Cancella rosso) e colonne regolabili, spostabili e ordinabili (modulo comune).
+ *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV) accanto a «Ripristina colonne»: colonne e ordinamento come a schermo.
+ *   rev 4 — 15/11/2026 11:45 — Casella «Cerca nella tabella» (la riga selezionata vale solo se visibile; «Esporta» scarica sempre tutti i record)
+ *            e, nella 06, evidenziazione delle divisioni ATECO dei codici della Ditta con l'etichetta «In uso Ditta».
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -26,11 +19,9 @@ import { IntestazioneColonna } from "@/components/tabella-comune/IntestazioneCol
 import { ordinaRighe, useColonneTabella } from "@/components/tabella-comune/useColonneTabella";
 import { PulsanteEsporta } from "@/components/tabella-comune/PulsanteEsporta";
 import { esportaTabella } from "@/components/tabella-comune/esporta-tabella";
-import { tabellaRaccordoDaEsportare } from "./esporta-raccordo";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,90 +47,65 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
+import { divisioneAteco } from "@/features/ditta/regole-ditta";
 import { leggiTutto, sb } from "@/lib/api/client";
-import { CHIAVE_DITTA, CHIAVE_LAVORATORI_IN_FORZA, contaLavoratoriInForza, getDitta, getSoglieDitta, CHIAVE_SOGLIE_DITTA, calcolaSoglia } from "@/lib/api/ditta";
-import { CHIAVE_SEDI, getSedi } from "@/lib/api/sedi";
-import { lavoratoriDiRiferimento, nellaFascia, riepilogaPresenze } from "@/features/ditta/presenze-sedi";
-import { CHIAVE_CATALOGO_ATECO } from "@/features/ditta/catalogo-ateco";
+import { ErroreTabelle } from "@/features/impostazioni/ErroreTabelle";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
+import { tabellaRaccordoDaEsportare } from "./esporta-raccordo";
 
-const NESSUNA_RIGA: Riga[] = [];
+const messaggio = (e: unknown) => (e as { message?: string })?.message ?? "errore sconosciuto";
 
-interface Props {
-  def: DefinizioneTabella;
+/** Testo mostrato in cella. */
+function mostra(c: Colonna, v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (c.tipo === "bool") return v ? "sì" : "no";
+  if (c.tipo === "numero") return Number(v).toLocaleString("it-IT");
+  return String(v);
 }
 
-function ErroreTabelle({ messaggio }: { messaggio: string }) {
-  return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-      <p className="font-semibold">Errore nel caricamento della tabella</p>
-      <p className="mt-1 text-xs opacity-90">{messaggio}</p>
-    </div>
-  );
-}
+/** Valori del modulo: tutto come testo, convertito al salvataggio. */
+type Modulo = Record<string, string | boolean>;
 
-function messaggio(e: unknown): string {
-  if (e && typeof e === "object" && "message" in e && typeof e.message === "string") {
-    return e.message;
-  }
-  return String(e);
-}
-
-function moduloDa(def: DefinizioneTabella, riga: Riga | null): Record<string, unknown> {
-  const m: Record<string, unknown> = {};
+function moduloDa(def: DefinizioneTabella, riga: Riga | null): Modulo {
+  const m: Modulo = {};
   for (const c of def.colonne) {
-    if (riga && c.chiave in riga) {
-      m[c.chiave] = riga[c.chiave];
-    } else if (def.predefiniti && c.chiave in def.predefiniti) {
-      m[c.chiave] = def.predefiniti[c.chiave];
-    } else {
-      m[c.chiave] = c.tipo === "bool" ? false : "";
-    }
+    const v = riga ? riga[c.chiave] : def.predefiniti?.[c.chiave];
+    m[c.chiave] = c.tipo === "bool" ? Boolean(v) : v === null || v === undefined ? "" : String(v);
   }
   return m;
 }
 
-function valoriDa(def: DefinizioneTabella, modulo: Record<string, unknown>): Record<string, unknown> {
-  const v: Record<string, unknown> = {};
+function valoriDa(def: DefinizioneTabella, m: Modulo): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const c of def.colonne) {
-    const raw = modulo[c.chiave];
-    if (c.tipo === "numero") {
-      v[c.chiave] = raw === "" || raw === null || raw === undefined ? null : Number(raw);
-    } else if (c.tipo === "bool") {
-      v[c.chiave] = Boolean(raw);
-    } else {
-      v[c.chiave] = raw === "" ? null : raw;
-    }
+    if (c.soloLettura) continue;
+    const v = m[c.chiave];
+    if (c.tipo === "bool") out[c.chiave] = Boolean(v);
+    else if (c.tipo === "numero")
+      out[c.chiave] = String(v).trim() === "" ? null : Number(String(v).replace(",", "."));
+    else out[c.chiave] = String(v).trim() === "" ? null : String(v).trim();
   }
-  return v;
+  return out;
 }
 
-function mostra(c: Colonna, valore: unknown): string {
-  if (valore === null || valore === undefined || valore === "") return "—";
-  if (c.tipo === "bool") return valore ? "Sì" : "No";
-  return String(valore);
-}
-
-export function TabellaRaccordo({ def }: Props) {
+export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
   const qc = useQueryClient();
-  const tabella = def.tabella ?? "";
-  // Per ATECO usa la chiave unificata del catalogo; per le altre tabelle usa la chiave dedicata
-  const chiave = useMemo(
-    () => (def.id === "ateco" ? CHIAVE_CATALOGO_ATECO : (["raccordo", def.id] as const)),
-    [def.id],
-  );
-
-  const [selezionata, setSelezionata] = useState<string | null>(null);
+  const tabella = def.tabella as string;
+  const chiave = ["raccordo", def.id] as const;
   const [modifica, setModifica] = useState<{ riga: Riga | null } | null>(null);
-  const [modulo, setModulo] = useState<Record<string, unknown>>({});
+  const [modulo, setModulo] = useState<Modulo>({});
   const [salvataggio, setSalvataggio] = useState(false);
   const [daCancellare, setDaCancellare] = useState<Riga | null>(null);
+  const [selezionata, setSelezionata] = useState<string | null>(null);
   const [ricerca, setRicerca] = useState("");
-  const colonne = useColonneTabella(`raccordo:${def.id}`, def.colonne.map((c) => c.chiave));
+  const colonne = useColonneTabella(
+    `raccordo:${def.id}`,
+    def.colonne.map((c) => c.chiave),
+  );
 
   const {
-    data: righe = NESSUNA_RIGA,
+    data: righe = [],
     isLoading,
     error,
   } = useQuery({
@@ -155,168 +121,34 @@ export function TabellaRaccordo({ def }: Props) {
       }),
   });
 
-  // Tabelle in cui la riga «in uso» della Ditta è calcolata in automatico (03 RLS, 04 e 07 Primo Soccorso, 05 Antincendio)
-  const tipoSoglia =
-    def.id === "soglie-rls"
-      ? "rls"
-      : def.id === "soglie-primo-soccorso" || def.id === "primo-soccorso"
-        ? "primo_soccorso"
-        : def.id === "soglie-antincendio"
-          ? "antincendio"
-          : null;
-  const usaLavoratori = tipoSoglia === "rls" || tipoSoglia === "primo_soccorso";
-  const e07 = def.id === "primo-soccorso";
-  // 03, 04, 05: la spunta «Applica» è il risultato del calcolo (non modificabile a mano). 07: si può scegliere l'indice INAIL tra le righe in fascia.
-  const spuntaAutomatica = tipoSoglia !== null && !e07;
-
-  // Dati Ditta per l'evidenziazione: codici ATECO (Tabella 06) e numeri per le soglie
+  // Nella 06: divisioni ATECO dei codici della Ditta, per evidenziare le righe in uso («85.31.20» → riga «85»).
+  const ePerAteco = def.id === "ateco";
   const { data: ditta } = useQuery({
     queryKey: CHIAVE_DITTA,
     queryFn: getDitta,
-    enabled: def.id === "ateco" || tipoSoglia !== null,
+    enabled: ePerAteco,
   });
-  const { data: inForza } = useQuery({
-    queryKey: CHIAVE_LAVORATORI_IN_FORZA,
-    queryFn: contaLavoratoriInForza,
-    enabled: usaLavoratori,
-  });
-  const { data: sedi } = useQuery({
-    queryKey: CHIAVE_SEDI,
-    queryFn: getSedi,
-    enabled: tipoSoglia === "antincendio",
-  });
-  // Tabella 07: serve la soglia 04 per sapere quale gruppo risulta alla Ditta
-  const { data: soglieDitta } = useQuery({
-    queryKey: CHIAVE_SOGLIE_DITTA,
-    queryFn: getSoglieDitta,
-    enabled: def.id === "primo-soccorso",
-  });
+  const divisioniDitta = useMemo(
+    () =>
+      new Set(
+        (ditta?.codici_ateco ?? [])
+          .map((c) => divisioneAteco(c.codice))
+          .filter((d): d is string => !!d),
+      ),
+    [ditta?.codici_ateco],
+  );
 
-  // Numero su cui cade la fascia attiva: lavoratori più alti (RLS, PS) oppure presenze totali delle sedi (antincendio)
-  const valoreDitta = useMemo<number | null>(() => {
-    if (!ditta) return null;
-    if (usaLavoratori) return lavoratoriDiRiferimento(ditta.n_lavoratori_dichiarato, inForza);
-    if (tipoSoglia === "antincendio") {
-      const r = riepilogaPresenze(sedi ?? []);
-      return r.completo ? r.totale : (ditta.presenze_contemporanee_max ?? null);
-    }
-    return null;
-  }, [ditta, inForza, sedi, tipoSoglia, usaLavoratori]);
-
-  // Tabella 07: lettera del gruppo (A/B/C) risultante dalla Tabella 04 per la Ditta
-  const gruppoDitta = useMemo<string | null>(() => {
-    if (def.id !== "primo-soccorso" || valoreDitta === null || !soglieDitta) return null;
-    const esito = calcolaSoglia(soglieDitta, "primo_soccorso", valoreDitta)?.esito ?? "";
-    return /Gruppo\s+([ABC])/i.exec(esito)?.[1]?.toUpperCase() ?? null;
-  }, [def.id, valoreDitta, soglieDitta]);
-
-  // I dati della Ditta sono tutti arrivati: prima di allora la fascia calcolata potrebbe essere provvisoria e NON va scritta nel database
-  const datiPronti =
-    ditta !== undefined &&
-    (!usaLavoratori || inForza !== undefined) &&
-    (tipoSoglia !== "antincendio" || sedi !== undefined) &&
-    (!e07 || soglieDitta !== undefined);
-
-  // Righe in cui ricade la situazione attuale della Ditta (solo tabelle 03, 04, 05, 07)
-  const idCalcolati = useMemo(() => {
-    const ids = new Set<string>();
-    if (tipoSoglia === null || valoreDitta === null) return ids;
-    for (const r of righe) {
-      if (!e07) {
-        if (nellaFascia(valoreDitta, r["da"], r["a"])) ids.add(r.id);
-        continue;
-      }
-      // Tabella 07: fascia testuale («1-2», «3-5», «6 o più») e gruppo della Tabella 04. Le righe per agricoltura non si deducono dal numero.
-      const testo = String(r["lavoratori"] ?? "").toLowerCase();
-      if (testo.includes("agricoltura")) continue;
-      const m = /^(\d+)\s*-\s*(\d+)/.exec(testo) ?? /^(\d+)\s*o\s*più/.exec(testo);
-      if (!m) continue;
-      const fasciaOk = nellaFascia(valoreDitta, m[1], m[2] ?? null);
-      if (fasciaOk && gruppoDitta !== null && String(r["gruppo"] ?? "").toUpperCase() === gruppoDitta) {
-        ids.add(r.id);
-      }
-    }
-    return ids;
-  }, [righe, tipoSoglia, valoreDitta, e07, gruppoDitta]);
-
-  // Righe «in uso Ditta» = righe spuntate «Applica». Tabella 07: se più righe hanno stessa fascia e gruppo (indice INAIL diverso)
-  // e l'utente ne ha spuntate alcune tra queste, vale la sua scelta; altrimenti valgono tutte le righe calcolate.
-  const idInUso = useMemo(() => {
-    if (tipoSoglia === null) return new Set<string>();
-    if (!e07) return idCalcolati;
-    const spuntate = righe.filter((r) => Boolean(r["applica"])).map((r) => r.id);
-    if (idCalcolati.size === 0) return new Set(spuntate);
-    const dentro = spuntate.length > 0 && spuntate.every((id) => idCalcolati.has(id));
-    return dentro ? new Set(spuntate) : idCalcolati;
-  }, [righe, tipoSoglia, e07, idCalcolati]);
-
-  // Allinea il database: applica = true sulla fascia attiva e false sulle altre della stessa tabella (cioè dello stesso ambito).
-  const ultimaFirmaAllineamento = useRef("");
-  useEffect(() => {
-    if (tipoSoglia === null || !datiPronti || isLoading || valoreDitta === null) return;
-    const daAccendere = righe.filter((r) => idInUso.has(r.id) && !r["applica"]).map((r) => r.id);
-    const daSpegnere = righe.filter((r) => !idInUso.has(r.id) && Boolean(r["applica"])).map((r) => r.id);
-    if (daAccendere.length === 0 && daSpegnere.length === 0) return;
-    // Un solo tentativo per ogni differenza: se la scrittura fallisce non si ripete in ciclo
-    const firma = `${tabella}|${daAccendere.join(",")}|${daSpegnere.join(",")}`;
-    if (ultimaFirmaAllineamento.current === firma) return;
-    ultimaFirmaAllineamento.current = firma;
-    void (async () => {
-      try {
-        if (daSpegnere.length) {
-          const { error: e } = await sb.from(tabella).update({ applica: false }).in("id", daSpegnere);
-          if (e) throw e;
-        }
-        if (daAccendere.length) {
-          const { error: e } = await sb.from(tabella).update({ applica: true }).in("id", daAccendere);
-          if (e) throw e;
-        }
-        await qc.invalidateQueries({ queryKey: chiave });
-      } catch (e) {
-        console.warn("Allineamento della spunta «Applica» non riuscito", e);
-      }
-    })();
-  }, [tipoSoglia, datiPronti, isLoading, valoreDitta, righe, idInUso, tabella, qc, chiave]);
-
-  // Normalizzazione codici ditta (sia codice intero che divisione a 2 cifre)
-  const codiciDittaAteco = useMemo(() => {
-    if (def.id !== "ateco" || !ditta?.codici_ateco) return new Set<string>();
-    const insieme = new Set<string>();
-    for (const a of ditta.codici_ateco) {
-      const pulito = a.codice.trim();
-      insieme.add(pulito);
-      const divisione = pulito.split(".")[0]?.slice(0, 2);
-      if (divisione) insieme.add(divisione);
-    }
-    return insieme;
-  }, [def.id, ditta?.codici_ateco]);
-
-  // Filtraggio rapido da casella cerca
+  // Ricerca nel testo mostrato in cella. Gli hook stanno prima del ritorno anticipato in caso di errore.
   const righeFiltrate = useMemo(() => {
     const q = ricerca.trim().toLowerCase();
     if (!q) return righe;
     return righe.filter((r) =>
-      def.colonne.some((c) => String(r[c.chiave] ?? "").toLowerCase().includes(q)),
+      def.colonne.some((c) => {
+        const v = r[c.chiave];
+        return v !== null && v !== undefined && v !== "" && mostra(c, v).toLowerCase().includes(q);
+      }),
     );
   }, [righe, ricerca, def.colonne]);
-
-  const selezionataRiga = righe.find((r) => r.id === selezionata) ?? null;
-  const visibili = colonne.ordine
-    .map((k) => def.colonne.find((c) => c.chiave === k))
-    .filter((c): c is Colonna => Boolean(c));
-
-  const mostrate = ordinaRighe(righeFiltrate, colonne.ordinamento);
-
-  // Tutte le uscite anticipate avvengono TASSATIVAMENTE dopo tutti gli hook
-  if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
-
-  /** Spunta «Applica» come la vede l'utente: ATECO = codici associati alla Ditta; 03, 04, 05, 07 = riga in uso; altre = campo del database. */
-  const spuntatoRiga = (r: Riga): boolean =>
-    def.id === "ateco"
-      ? codiciDittaAteco.has(String(r["codice"] ?? "").trim())
-      : tipoSoglia !== null
-        ? idInUso.has(r.id)
-        : Boolean(r["applica"]);
 
   const ricarica = () => qc.invalidateQueries({ queryKey: chiave });
   const prossimoOrdine = () => righe.reduce((m, r) => Math.max(m, Number(r["ordine"] ?? 0)), 0) + 1;
@@ -400,58 +232,8 @@ export function TabellaRaccordo({ def }: Props) {
     }
   }
 
-  /**
-   * Gestione della spunta:
-   * Per la Tabella 06 (ATECO), associa o dissocia il codice in ditta.codici_ateco in modo atomico.
-   * Per le altre tabelle, aggiorna il campo «applica» della tabella di soglia.
-   */
+  /** Spunta «Applica» manuale; se la tabella ha un gruppo, nel gruppo ce n'è una sola. */
   async function cambiaSpunta(riga: Riga, valore: boolean) {
-    if (def.id === "ateco") {
-      const codiceRiga = String(riga["codice"] ?? "").trim();
-      if (!codiceRiga) return;
-      try {
-        const attuali = ditta?.codici_ateco ?? [];
-        let nuoviCodici = [...attuali];
-        if (valore) {
-          if (!nuoviCodici.some((a) => a.codice === codiceRiga)) {
-            nuoviCodici.push({
-              codice: codiceRiga,
-              descrizione: String(riga["descrizione"] ?? ""),
-              rischio: riga["rischio"] as "basso" | "medio" | "alto",
-              principale: nuoviCodici.length === 0,
-            });
-          }
-        } else {
-          // Rimozione puntuale del solo codice selezionato (non distruttiva sui sottocodici)
-          nuoviCodici = nuoviCodici.filter((a) => a.codice !== codiceRiga);
-          if (nuoviCodici.length > 0 && !nuoviCodici.some((a) => a.principale)) {
-            nuoviCodici = nuoviCodici.map((a, i) => (i === 0 ? { ...a, principale: true } : a));
-          }
-        }
-
-        // Aggiorna atomicamente solo la colonna codici_ateco della Ditta
-        const { error: e } = await sb
-          .from("ditta")
-          .update({ codici_ateco: nuoviCodici, updated_at: new Date().toISOString() })
-          .eq("id", true);
-        if (e) throw e;
-
-        await qc.invalidateQueries({ queryKey: CHIAVE_DITTA });
-        toast.success(
-          valore
-            ? `Codice ATECO ${codiceRiga} associato alla Ditta`
-            : `Codice ATECO ${codiceRiga} rimosso dalla Ditta`,
-        );
-      } catch (e) {
-        toast.error("Aggiornamento codice ATECO Ditta non riuscito", { description: messaggio(e) });
-      }
-      return;
-    }
-
-    // 03, 04, 05: la spunta è calcolata dal programma (e salvata dall'allineamento automatico): non si cambia a mano
-    if (spuntaAutomatica) return;
-
-    // Comportamento standard per le altre tabelle (07 compresa: indice INAIL spuntato a mano tra le righe in fascia)
     try {
       if (valore && def.gruppoSpunta) {
         const altre = righe
@@ -472,6 +254,15 @@ export function TabellaRaccordo({ def }: Props) {
       toast.error("Spunta non salvata", { description: messaggio(e) });
     }
   }
+
+  if (error) return <ErroreTabelle messaggio={messaggio(error)} />;
+
+  const visibili = colonne.ordine
+    .map((k) => def.colonne.find((c) => c.chiave === k))
+    .filter((c): c is Colonna => Boolean(c));
+  const mostrate = ordinaRighe(righeFiltrate, colonne.ordinamento);
+  // Modifica, Duplica e Cancellazione valgono solo per una riga visibile: con la ricerca attiva non si agisce su righe nascoste.
+  const selezionataRiga = mostrate.find((r) => r.id === selezionata) ?? null;
 
   return (
     <div className="space-y-3">
@@ -503,57 +294,42 @@ export function TabellaRaccordo({ def }: Props) {
         >
           <Trash2 /> Cancella
         </Button>
-
-        {def.documento && (
-          <a
-            href={def.documento.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <ExternalLink className="size-4 mr-1" />
-            {def.documento.etichetta}
-          </a>
-        )}
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-xs"
-          onClick={() => colonne.ripristina()}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={colonne.ripristina}>
           Ripristina colonne
         </Button>
-
         <PulsanteEsporta
+          disabled={isLoading}
           onEsporta={(formato) =>
             esportaTabella(
-              // «Applica» esportato come a schermo (stessa spunta della tabella)
-              tabellaRaccordoDaEsportare(
-                def,
-                visibili,
-                mostrate.map((r) => ({ ...r, applica: spuntatoRiga(r) })),
-              ),
+              tabellaRaccordoDaEsportare(def, visibili, ordinaRighe(righe, colonne.ordinamento)),
               formato,
             )
           }
         />
-
-        {/* Casella Cerca e conteggio record */}
-        <div className="relative ml-auto flex items-center gap-2">
+        <div className="relative w-44 sm:w-60">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label="Cerca nella tabella"
             placeholder="Cerca nella tabella…"
             value={ricerca}
             onChange={(e) => setRicerca(e.target.value)}
-            className="h-8 w-44 pl-8 text-xs bg-background"
+            className="h-8 pl-8 text-xs"
           />
         </div>
-
+        {def.documento && (
+          <Button
+            type="button"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => window.open(def.documento!.url, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink /> {def.documento.etichetta}
+          </Button>
+        )}
         <span className={`text-xs text-muted-foreground ${def.documento ? "" : "ml-auto"}`}>
-          {righeFiltrate.length} record
-          {ricerca.trim() && ` (filtrati da ${righe.length})`}
+          {ricerca.trim() ? `${mostrate.length} di ${righe.length}` : righe.length} record ·
+          seleziona una riga per modificarla, duplicarla o cancellarla
         </span>
       </div>
 
@@ -578,65 +354,49 @@ export function TabellaRaccordo({ def }: Props) {
                     className={colonne.larghezze[c.chiave] ? "" : (c.larghezza ?? "")}
                   />
                 ))}
-                <th className="sticky top-0 z-10 w-28 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
+                <th className="sticky top-0 z-10 w-24 border-b border-border bg-muted px-3 py-2 text-center font-semibold">
                   Applica
                 </th>
               </tr>
             </thead>
             <tbody>
               {mostrate.map((r, i) => {
-                const codiceRiga = String(r["codice"] ?? "").trim();
-                const spuntato = spuntatoRiga(r);
-                // Riga gialla «In uso Ditta» = riga spuntata «Applica» nelle tabelle 03, 04, 05, 06 e 07
-                const inUso = (def.id === "ateco" || tipoSoglia !== null) && spuntato;
-                // Tabella 07: se la Ditta ha una fascia, si possono spuntare solo le righe di quella fascia
-                const fuoriFascia07 = e07 && idCalcolati.size > 0 && !idCalcolati.has(r.id);
-
+                const inUsoDitta =
+                  ePerAteco && divisioniDitta.has(String(r["codice"] ?? "").trim());
                 return (
                   <tr
                     key={r.id}
                     onClick={() => setSelezionata(r.id)}
-                    className={`cursor-pointer transition-colors ${
+                    className={`cursor-pointer ${
                       r.id === selezionata
                         ? "bg-primary/20"
-                        : inUso
-                          ? "bg-amber-100/90 border-l-4 border-l-amber-500 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+                        : inUsoDitta
+                          ? "bg-teal-100 dark:bg-teal-950/50"
                           : i % 2 === 0
                             ? "bg-surface"
                             : "bg-emerald-50 dark:bg-emerald-950/30"
                     } hover:bg-primary/10`}
                   >
-                    <td className="px-3 py-1.5 text-center tabular-nums text-muted-foreground">
+                    <td
+                      className={`px-3 py-1.5 text-center tabular-nums text-muted-foreground ${
+                        inUsoDitta ? "border-l-4 border-l-primary" : ""
+                      }`}
+                    >
                       {i + 1}
                     </td>
                     {visibili.map((c) => (
                       <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
-                        <div className="flex items-center gap-1.5">
-                          <span>{mostra(c, r[c.chiave])}</span>
-                          {(def.id === "ateco" ? c.chiave === "codice" : c.chiave === visibili[0]?.chiave) && inUso && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] bg-amber-200/60 text-amber-900 border-amber-400 shrink-0 font-normal py-0 px-1.5 dark:bg-amber-900/50 dark:text-amber-200"
-                            >
-                              In uso Ditta
-                            </Badge>
-                          )}
-                        </div>
+                        {mostra(c, r[c.chiave])}
+                        {inUsoDitta && c.chiave === "codice" && (
+                          <span className="ml-2 rounded border border-primary/40 bg-primary/15 px-1.5 text-[10px] font-medium text-primary">
+                            In uso Ditta
+                          </span>
+                        )}
                       </td>
                     ))}
                     <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={spuntato}
-                        disabled={spuntaAutomatica || fuoriFascia07}
-                        title={
-                          spuntaAutomatica
-                            ? "Calcolato dal programma in base ai dati della Ditta"
-                            : fuoriFascia07
-                              ? "Fuori dalla fascia e dal gruppo calcolati per la Ditta"
-                              : def.id === "ateco"
-                                ? `Associa ${codiceRiga || `la riga ${i + 1}`} alla Ditta`
-                                : undefined
-                        }
+                        checked={Boolean(r["applica"])}
                         onCheckedChange={(v) => cambiaSpunta(r, v === true)}
                         aria-label={`Applica la riga ${i + 1}`}
                       />
@@ -644,15 +404,15 @@ export function TabellaRaccordo({ def }: Props) {
                   </tr>
                 );
               })}
-              {righeFiltrate.length === 0 && (
+              {mostrate.length === 0 && (
                 <tr>
                   <td
-                    colSpan={visibili.length + 2}
+                    colSpan={def.colonne.length + 2}
                     className="px-3 py-8 text-center text-muted-foreground"
                   >
-                    {ricerca.trim()
-                      ? `Nessun record corrispondente a «${ricerca}».`
-                      : "Nessun record. Usa «Aggiungi» per inserirne uno."}
+                    {righe.length === 0
+                      ? "Nessun record. Usa «Aggiungi» per inserirne uno."
+                      : `Nessun record corrisponde a «${ricerca.trim()}».`}
                   </td>
                 </tr>
               )}
@@ -661,43 +421,44 @@ export function TabellaRaccordo({ def }: Props) {
         </div>
       )}
 
-      {/* Dialog Aggiungi / Modifica */}
-      <Dialog open={Boolean(modifica)} onOpenChange={(a) => !a && setModifica(null)}>
-        <DialogContent className="max-w-lg">
+      <Dialog
+        open={modifica !== null}
+        onOpenChange={(o) => !o && !salvataggio && setModifica(null)}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
-              {modifica?.riga ? `Modifica record (${def.titolo})` : `Nuovo record in ${def.titolo}`}
+              {modifica?.riga ? "Modifica record" : "Nuovo record"} · {def.numero} – {def.titolo}
             </DialogTitle>
-            <DialogDescription>
-              Compila i campi del record. I valori saranno salvati nella tabella di raccordo.
-            </DialogDescription>
+            <DialogDescription>I campi con asterisco sono obbligatori.</DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-3 py-2">
-            {def.colonne
-              .filter((c) => !c.soloLettura)
-              .map((c) => (
-                <div key={c.chiave} className="grid grid-cols-3 items-center gap-2">
-                  <Label htmlFor={`campo-${c.chiave}`} className="text-right text-xs">
-                    {c.etichetta} {c.obbligatorio && <span className="text-destructive">*</span>}
-                  </Label>
-                  <div className="col-span-2">
-                    {c.tipo === "bool" ? (
-                      <Switch
-                        id={`campo-${c.chiave}`}
-                        checked={Boolean(modulo[c.chiave])}
-                        onCheckedChange={(v) => setModulo((m) => ({ ...m, [c.chiave]: v }))}
-                      />
-                    ) : c.tipo === "scelta" && c.opzioni ? (
+          <div className="grid gap-3">
+            {def.colonne.map((c) => (
+              <div key={c.chiave} className="grid gap-1">
+                {c.tipo === "bool" ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={Boolean(modulo[c.chiave])}
+                      onCheckedChange={(v) => setModulo((m) => ({ ...m, [c.chiave]: v === true }))}
+                    />
+                    {c.etichetta}
+                  </label>
+                ) : (
+                  <>
+                    <Label htmlFor={`raccordo-${c.chiave}`}>
+                      {c.etichetta}
+                      {c.obbligatorio ? " *" : ""}
+                    </Label>
+                    {c.tipo === "scelta" ? (
                       <Select
                         value={String(modulo[c.chiave] ?? "")}
                         onValueChange={(v) => setModulo((m) => ({ ...m, [c.chiave]: v }))}
                       >
-                        <SelectTrigger id={`campo-${c.chiave}`}>
+                        <SelectTrigger id={`raccordo-${c.chiave}`}>
                           <SelectValue placeholder="Scegli…" />
                         </SelectTrigger>
                         <SelectContent>
-                          {c.opzioni.map((o) => (
+                          {(c.opzioni ?? []).map((o) => (
                             <SelectItem key={o} value={o}>
                               {o}
                             </SelectItem>
@@ -706,37 +467,38 @@ export function TabellaRaccordo({ def }: Props) {
                       </Select>
                     ) : (
                       <Input
-                        id={`campo-${c.chiave}`}
-                        type={c.tipo === "numero" ? "number" : "text"}
-                        value={modulo[c.chiave] === null || modulo[c.chiave] === undefined ? "" : String(modulo[c.chiave])}
+                        id={`raccordo-${c.chiave}`}
+                        inputMode={c.tipo === "numero" ? "decimal" : undefined}
+                        value={String(modulo[c.chiave] ?? "")}
                         onChange={(e) => setModulo((m) => ({ ...m, [c.chiave]: e.target.value }))}
                       />
                     )}
-                  </div>
-                </div>
-              ))}
+                  </>
+                )}
+              </div>
+            ))}
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setModifica(null)}>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={salvataggio}
+              onClick={() => setModifica(null)}
+            >
               Annulla
             </Button>
             <Button type="button" disabled={salvataggio} onClick={salva}>
-              {salvataggio && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-              Salva
+              {salvataggio ? "Salvataggio…" : "Salva"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Conferma cancellazione */}
-      <AlertDialog open={Boolean(daCancellare)} onOpenChange={(a) => !a && setDaCancellare(null)}>
+      <AlertDialog open={daCancellare !== null} onOpenChange={(o) => !o && setDaCancellare(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancellare questo record?</AlertDialogTitle>
-            <AlertDialogDescription>
-              L'operazione non può essere annullata. Se il record è collegato ad altre tabelle, la cancellazione potrebbe essere bloccata.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Cancellare il record?</AlertDialogTitle>
+            <AlertDialogDescription>L'operazione non si può annullare.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>

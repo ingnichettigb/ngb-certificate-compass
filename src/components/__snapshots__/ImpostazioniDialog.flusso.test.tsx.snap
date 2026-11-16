@@ -107,6 +107,30 @@ exports[`Impostazioni: percorso d'uso completo > registra tutto quello che la fi
   [
     "sb",
     "from",
+    "rischio_ateco",
+    "["rischio_ateco"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "rischio_ateco",
+    "["id, codice, descrizione, rischio"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "rischio_ateco",
+    "["codice",{"ascending":true}]",
+  ],
+  [
+    "sb",
+    "from.select.order.range",
+    "rischio_ateco",
+    "[0,999]",
+  ],
+  [
+    "sb",
+    "from",
     "reparti",
     "["reparti"]",
   ],

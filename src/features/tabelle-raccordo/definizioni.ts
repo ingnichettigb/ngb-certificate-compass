@@ -4,16 +4,10 @@
  * Data creaz: 14/11/2026
  * Revisioni:
  *   rev 1 — 14/11/2026 — Le 9 tabelle di raccordo (Impostazioni generali > Tabelle di raccordo): colonne, tabella del database e regole.
- *   rev 2 — 15/11/2026 11:56 — Rimossa colonna «fonte» dalla tabella 06 (rischio_ateco) e aggiornata descrizione normativa.
- *   rev 3 — 15/11/2026 12:45 — Rimosso gruppoSpunta da tabella 06 (è un catalogo consultativo con associazioni multiple derivate dalla Ditta).
- *   rev 4 — 15/11/2026 — Descrizione tabella 03 corretta (art. 47: fino a 15 RLS eletto/territoriale, 16-200 un RLS, 201-1.000 tre, oltre 1.000 sei; numero più alto tra dichiarati e in forza).
- *                        Descrizione tabella 07: l'indice INAIL si spunta a mano con «Applica», per ora non entra nel conteggio dei corsi.
- *   rev 5 — 15/11/2026 — Colonna «Applica» su tutte le tabelle: nelle 03, 04, 05 e 07 la riga della Ditta è spuntata dal programma e salvata nel database
- *                        (applica = true sulla fascia attiva, false sulle altre). Descrizione tabella 07 aggiornata di conseguenza.
+ *   rev 2 — 15/11/2026 11:45 — Tabella 06 (rischio_ateco): tolta la colonna «Fonte» (resta nel database, non si mostra né si esporta).
  *
  * Ogni tabella è descritta qui; la pagina (TabellaRaccordo.tsx) è unica e generica. Le tabelle 03, 04 e 05 sono le righe di
- * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» indica la riga da applicare: nelle 03, 04, 05 e 07
- * la imposta il programma dai dati della Ditta; nelle altre tabelle si spunta a mano.
+ * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» è la spunta manuale della riga da applicare.
  */
 import { sb } from "@/lib/api/client";
 
@@ -50,13 +44,13 @@ export interface DefinizioneTabella {
    * Assente = spunte libere.
    */
   gruppoSpunta?: string[];
+  /** Valori predefiniti di un nuovo record. */
   predefiniti?: Record<string, unknown>;
-  /** Blocco della cancellazione se il record è in uso (restituisce il messaggio di blocco). */
-  controlloCancellazione?: (riga: Riga) => Promise<string | null>;
-  /** Modifica i dati della riga prima di duplicarla (es. per togliere codici univoci). */
-  alDuplicare?: (riga: Riga) => Record<string, unknown>;
-  /** Documento PDF di riferimento da aprire con un clic in alto a destra. */
   documento?: { etichetta: string; url: string };
+  /** Adatta la riga duplicata (es. nome univoco). */
+  alDuplicare?: (riga: Riga) => Riga;
+  /** Restituisce un messaggio se la riga non si può cancellare. */
+  controlloCancellazione?: (riga: Riga) => Promise<string | null>;
 }
 
 export const TABELLE_RACCORDO: DefinizioneTabella[] = [
@@ -66,115 +60,123 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Ruoli di sicurezza",
     tabella: "ruoli_sicurezza",
     descrizione:
-      "Ruoli della sicurezza (D.Lgs. 81/08): preposti, addetti antincendio, primo soccorso, RLS, dirigenti. La cancellazione è bloccata se il ruolo è assegnato a dei lavoratori.",
+      "Ruoli e incarichi del programma. Il codice è la chiave stabile per le regole; «Richiede» indica il ruolo necessario per l'incarico. I ruoli con assegnazioni non si possono cancellare.",
+    ordinaPer: ["nome"],
     colonne: [
-      { chiave: "codice", etichetta: "Codice", obbligatorio: true },
-      { chiave: "descrizione", etichetta: "Descrizione", obbligatorio: true, larghezza: "min-w-[18rem]" },
-      { chiave: "categoria", etichetta: "Categoria", larghezza: "min-w-[12rem]" },
+      { chiave: "codice", etichetta: "Codice", larghezza: "min-w-[11rem]" },
+      { chiave: "nome", etichetta: "Ruolo", obbligatorio: true, larghezza: "min-w-[16rem]" },
       {
-        chiave: "n_assegnazioni",
-        etichetta: "Assegnazioni",
-        tipo: "numero",
-        soloLettura: true,
+        chiave: "tipo",
+        etichetta: "Tipo",
+        tipo: "scelta",
+        opzioni: ["ruolo", "incarico"],
+        obbligatorio: true,
       },
+      { chiave: "richiede", etichetta: "Richiede", larghezza: "min-w-[12rem]" },
+      { chiave: "obbligatorio_tutti", etichetta: "Per tutti", tipo: "bool" },
       { chiave: "attivo", etichetta: "Attivo", tipo: "bool" },
     ],
-    predefiniti: { attivo: true },
-    controlloCancellazione: async (riga) => {
+    predefiniti: { tipo: "ruolo", obbligatorio_tutti: false, attivo: true },
+    alDuplicare: (r) => ({ ...r, nome: `${String(r["nome"])} (copia)`, codice: null }),
+    controlloCancellazione: async (r) => {
       const { count, error } = await sb
         .from("dipendenti_ruoli")
         .select("id", { count: "exact", head: true })
-        .eq("ruolo_id", riga.id)
-        .eq("attivo", true);
-      if (error) return "Impossibile verificare le assegnazioni del ruolo.";
-      if ((count ?? 0) > 0) {
-        return `Il ruolo è assegnato a ${count} ${count === 1 ? "lavoratore" : "lavoratori"}. Rimuovi prima le assegnazioni dalla finestra Dipendenti.`;
-      }
-      return null;
+        .eq("ruolo_id", r.id);
+      if (error)
+        return `Controllo non riuscito: ${(error as { message?: string }).message ?? "errore"}`;
+      return count && count > 0
+        ? `Il ruolo «${String(r["nome"])}» ha ${count} assegnazioni: cancellarlo le farebbe perdere. Disattivalo invece di cancellarlo.`
+        : null;
     },
-    alDuplicare: (riga) => ({
-      ...riga,
-      codice: `${String(riga["codice"] ?? "")}-COPIA`,
-      descrizione: `${String(riga["descrizione"] ?? "")} (copia)`,
-      n_assegnazioni: 0,
-    }),
   },
   {
-    id: "regole-ruoli-corsi",
+    id: "regole-corso",
     numero: "02",
-    titolo: "Regole ruoli e corsi",
-    tabella: "regole_ruoli_corsi",
+    titolo: "Regole ruolo → corso",
+    tabella: "regole_ruolo_corso",
     descrizione:
-      "Associazione tra ruoli della sicurezza e corsi obbligatori: indica se il corso è iniziale o di aggiornamento e quali parametri ditta lo attivano.",
-    ordinaPer: ["ruolo_codice", "corso_codice"],
+      "Quale corso (base e aggiornamento) corrisponde a ruolo e parametro. La spunta è una sola per ogni coppia ruolo + parametro.",
+    gruppoSpunta: ["ruolo", "parametro"],
     colonne: [
-      { chiave: "ruolo_codice", etichetta: "Codice ruolo", obbligatorio: true },
-      { chiave: "corso_codice", etichetta: "Codice corso", obbligatorio: true },
+      { chiave: "ruolo", etichetta: "Ruolo", obbligatorio: true, larghezza: "min-w-[11rem]" },
       {
-        chiave: "tipo_formazione",
-        etichetta: "Tipo formazione",
-        tipo: "scelta",
-        opzioni: ["base", "aggiornamento", "entrambi"],
+        chiave: "parametro",
+        etichetta: "Parametro",
         obbligatorio: true,
+        larghezza: "min-w-[10rem]",
       },
-      { chiave: "condizione_ditta", etichetta: "Condizione ditta", larghezza: "min-w-[16rem]" },
-      { chiave: "obbligatorio", etichetta: "Obbligatorio", tipo: "bool" },
-      { chiave: "note", etichetta: "Note", larghezza: "min-w-[18rem]" },
+      { chiave: "valore", etichetta: "Valore", obbligatorio: true },
+      { chiave: "corso_base", etichetta: "Corso base", larghezza: "min-w-[11rem]" },
+      { chiave: "corso_aggiornamento", etichetta: "Aggiornamento", larghezza: "min-w-[11rem]" },
     ],
-    predefiniti: { tipo_formazione: "base", obbligatorio: true },
+    predefiniti: { parametro: "nessuno", valore: "—" },
   },
   {
-    id: "soglie-rls",
+    id: "antincendio",
     numero: "03",
-    titolo: "Soglie numero RLS",
-    tabella: "soglie_ditta",
-    filtro: { ambito: "rls" },
-    descrizione:
-      "Numero di RLS (art. 47 D.Lgs. 81/08) in base alla fascia di lavoratori: fino a 15 RLS eletto o territoriale, da 16 a 200 un RLS, da 201 a 1.000 tre RLS, oltre 1.000 sei RLS. Si usa il numero più alto tra lavoratori dichiarati e in forza nel programma: la riga della Ditta è evidenziata in giallo e spuntata in «Applica».",
-    colonne: [
-      { chiave: "da", etichetta: "Da lavoratori", tipo: "numero", obbligatorio: true },
-      { chiave: "a", etichetta: "A lavoratori (vuoto = oltre)", tipo: "numero" },
-      { chiave: "etichetta", etichetta: "Fascia", obbligatorio: true },
-      { chiave: "esito", etichetta: "Numero RLS previsti", obbligatorio: true },
-      { chiave: "note", etichetta: "Nota", larghezza: "min-w-[18rem]" },
-      { chiave: "attiva", etichetta: "Attiva", tipo: "bool" },
-    ],
-    predefiniti: { attiva: true },
-  },
-  {
-    id: "soglie-primo-soccorso",
-    numero: "04",
-    titolo: "Soglie primo soccorso",
-    tabella: "soglie_ditta",
-    filtro: { ambito: "primo_soccorso" },
-    descrizione:
-      "Classificazione aziendale per il primo soccorso (D.M. 388/2003): gruppo A (aziende ad alto rischio o oltre soglia), gruppi B e C.",
-    colonne: [
-      { chiave: "da", etichetta: "Da lavoratori", tipo: "numero", obbligatorio: true },
-      { chiave: "a", etichetta: "A lavoratori (vuoto = oltre)", tipo: "numero" },
-      { chiave: "etichetta", etichetta: "Fascia", obbligatorio: true },
-      { chiave: "esito", etichetta: "Gruppo risultante", obbligatorio: true },
-      { chiave: "note", etichetta: "Nota", larghezza: "min-w-[18rem]" },
-      { chiave: "attiva", etichetta: "Attiva", tipo: "bool" },
-    ],
-    predefiniti: { attiva: true },
-  },
-  {
-    id: "soglie-antincendio",
-    numero: "05",
-    titolo: "Soglie antincendio scuola",
+    titolo: "Presenze → livello antincendio",
     tabella: "soglie_ditta",
     filtro: { ambito: "antincendio_presenze" },
     descrizione:
-      "Livello di rischio incendio per istituti scolastici (D.M. 26/08/1992 e D.M. 02/09/2021) in base alle presenze contemporanee massime: livello 1 (fino a 100), livello 2 (101-300), livello 3 (oltre 300).",
+      "Fasce di presenze contemporanee e livello antincendio. Dati di «soglie_ditta», ambito antincendio_presenze.",
+    gruppoSpunta: [],
     colonne: [
-      { chiave: "da", etichetta: "Da presenze", tipo: "numero", obbligatorio: true },
-      { chiave: "a", etichetta: "A presenze (vuoto = oltre)", tipo: "numero" },
-      { chiave: "etichetta", etichetta: "Tipo scuola / presenze", obbligatorio: true },
+      { chiave: "da", etichetta: "Da", tipo: "numero", obbligatorio: true },
+      { chiave: "a", etichetta: "A", tipo: "numero" },
+      { chiave: "esito", etichetta: "Livello", obbligatorio: true, larghezza: "min-w-[10rem]" },
       {
-        chiave: "esito",
-        etichetta: "Livello antincendio risultante",
+        chiave: "etichetta",
+        etichetta: "Etichetta",
         obbligatorio: true,
+        larghezza: "min-w-[16rem]",
+      },
+      { chiave: "note", etichetta: "Nota", larghezza: "min-w-[18rem]" },
+      { chiave: "attiva", etichetta: "Attiva", tipo: "bool" },
+    ],
+    predefiniti: { attiva: true },
+  },
+  {
+    id: "idoneita-vvf",
+    numero: "04",
+    titolo: "Presenze → idoneità tecnica VVF",
+    tabella: "soglie_ditta",
+    filtro: { ambito: "idoneita_tecnica_presenze" },
+    descrizione:
+      "Fasce di presenze e obbligo di idoneità tecnica dei Vigili del Fuoco. Dati di «soglie_ditta».",
+    gruppoSpunta: [],
+    colonne: [
+      { chiave: "da", etichetta: "Da", tipo: "numero", obbligatorio: true },
+      { chiave: "a", etichetta: "A", tipo: "numero" },
+      { chiave: "esito", etichetta: "Esito", obbligatorio: true, larghezza: "min-w-[16rem]" },
+      {
+        chiave: "etichetta",
+        etichetta: "Etichetta",
+        obbligatorio: true,
+        larghezza: "min-w-[16rem]",
+      },
+      { chiave: "note", etichetta: "Nota", larghezza: "min-w-[18rem]" },
+      { chiave: "attiva", etichetta: "Attiva", tipo: "bool" },
+    ],
+    predefiniti: { attiva: true },
+  },
+  {
+    id: "rls",
+    numero: "05",
+    titolo: "Lavoratori → numero di RLS",
+    tabella: "soglie_ditta",
+    filtro: { ambito: "rls" },
+    descrizione: "Fasce di lavoratori e numero di RLS. Dati di «soglie_ditta», ambito rls.",
+    gruppoSpunta: [],
+    colonne: [
+      { chiave: "da", etichetta: "Da", tipo: "numero", obbligatorio: true },
+      { chiave: "a", etichetta: "A", tipo: "numero" },
+      { chiave: "esito", etichetta: "Esito", obbligatorio: true, larghezza: "min-w-[16rem]" },
+      {
+        chiave: "etichetta",
+        etichetta: "Etichetta",
+        obbligatorio: true,
+        larghezza: "min-w-[16rem]",
       },
       { chiave: "note", etichetta: "Nota", larghezza: "min-w-[18rem]" },
       { chiave: "attiva", etichetta: "Attiva", tipo: "bool" },
@@ -187,8 +189,9 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Rischio per codice ATECO",
     tabella: "rischio_ateco",
     descrizione:
-      "Catalogo normativo delle classi di rischio per divisione ATECO secondo l'Accordo Stato-Regioni (formazione specifica lavoratori). I codici associati alla Ditta sono evidenziati in giallo.",
+      "Classe di rischio per divisione ATECO. Fonte provvisoria: tabella Vega Formazione PS00007 rev 0.4 (ATECO 2007), non l'allegato ufficiale.",
     ordinaPer: ["codice"],
+    gruppoSpunta: [],
     colonne: [
       { chiave: "codice", etichetta: "Codice ATECO", obbligatorio: true },
       { chiave: "descrizione", etichetta: "Descrizione", larghezza: "min-w-[22rem]" },
@@ -209,7 +212,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Gruppo di primo soccorso",
     tabella: "gruppi_primo_soccorso",
     descrizione:
-      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto. La riga della Ditta (fascia dei lavoratori e gruppo della Tabella 04) è spuntata con «Applica» e in giallo. Se più righe hanno la stessa fascia e lo stesso gruppo, l'indice INAIL si sceglie a mano tra quelle (per ora non entra nel conteggio dei corsi).",
+      "Gruppo di primo soccorso (D.M. 388/2003) per numero di lavoratori e indice INAIL. Soglie da verificare sul testo del decreto.",
     gruppoSpunta: [],
     colonne: [
       {
@@ -255,28 +258,21 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
         tipo: "scelta",
         opzioni: ["Industria", "Artigianato", "Terziario", "Altre attività"],
       },
-      { chiave: "voce", etichetta: "Voce di tariffa", obbligatorio: true },
-      { chiave: "attivita", etichetta: "Attività descritta", larghezza: "min-w-[20rem]" },
-      {
-        chiave: "tasso_medio",
-        etichetta: "Tasso medio per mille",
-        tipo: "numero",
-        larghezza: "min-w-[12rem]",
-      },
-      {
-        chiave: "indice_inabilita",
-        etichetta: "Indice inabilità permanente",
-        tipo: "numero",
-        larghezza: "min-w-[14rem]",
-      },
+      { chiave: "voce", etichetta: "Voce", obbligatorio: true },
+      { chiave: "descrizione", etichetta: "Descrizione", larghezza: "min-w-[22rem]" },
+      { chiave: "tasso", etichetta: "Tasso", tipo: "numero" },
+      { chiave: "indice_inabilita", etichetta: "Indice inabilità perm.", tipo: "numero" },
+      { chiave: "anno", etichetta: "Anno", tipo: "numero" },
+      { chiave: "oltre_4", etichetta: "Oltre 4", tipo: "bool" },
     ],
+    predefiniti: { anno: 2019, oltre_4: false },
   },
   {
-    id: "tipi-corso",
+    id: "corsi",
     numero: "09",
-    titolo: "Tipi di corso (scheda Corsi)",
+    titolo: "Corsi",
     descrizione:
-      "La tabella completa dei corsi è consultabile e modificabile nella scheda «Corsi» qui accanto (catalogo con durate, validità in anni e categorie).",
+      "Tabella dei tipi di corso già presente nel programma (non duplicata): si apre con il pulsante.",
     colonne: [],
   },
 ];

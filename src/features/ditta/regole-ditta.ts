@@ -5,6 +5,8 @@
  * Revisioni:
  *   - Rev 1 (2026-11-01 12:00): Regole sui dati della ditta: fasce dalle soglie del database, controllo dei codici ATECO,
  *     suggerimento del rischio, anno scolastico e avvisi quando i dati dichiarati non sono più allineati alla realtà.
+ *   - Rev 2 (2026-11-15 11:45): Divisione ATECO (prime due cifre) e rischio dal catalogo della Tabella 06 (rischio_ateco):
+ *     rischio di un codice e rischio più alto tra i codici della ditta.
  */
 
 export type AmbitoSoglia =
@@ -63,6 +65,41 @@ export function normalizzaAteco(testo: string): string | null {
  */
 export function suggerisciRischioAteco(codice: string): LivelloRischio | null {
   return codice.startsWith("85") ? "medio" : null;
+}
+
+/** Divisione ATECO (le prime due cifre) di un codice: «85.31.20» → «85». Null se non inizia con due cifre. */
+export function divisioneAteco(codice: string): string | null {
+  return /^\s*(\d{2})/.exec(codice)?.[1] ?? null;
+}
+
+/** Voce del catalogo ATECO (Tabella 06): divisione di due cifre e rischio. */
+export type VoceRischioAteco = { codice: string; rischio: string | null };
+
+const ORDINE_RISCHIO: Record<LivelloRischio, number> = { basso: 0, medio: 1, alto: 2 };
+const eRischio = (v: unknown): v is LivelloRischio => typeof v === "string" && v in ORDINE_RISCHIO;
+
+/** Rischio della divisione di un codice secondo il catalogo; null se il codice o la divisione non ci sono. */
+export function rischioDaCatalogo(
+  codice: string,
+  catalogo: VoceRischioAteco[],
+): LivelloRischio | null {
+  const div = divisioneAteco(codice);
+  if (!div) return null;
+  const voce = catalogo.find((v) => v.codice.trim() === div);
+  return voce && eRischio(voce.rischio) ? voce.rischio : null;
+}
+
+/** Rischio più alto tra i codici della ditta secondo il catalogo; null se nessun codice è nel catalogo. */
+export function rischioSuggeritoDitta(
+  codici: { codice: string }[],
+  catalogo: VoceRischioAteco[],
+): LivelloRischio | null {
+  let migliore: LivelloRischio | null = null;
+  for (const c of codici) {
+    const r = rischioDaCatalogo(c.codice, catalogo);
+    if (r && (migliore === null || ORDINE_RISCHIO[r] > ORDINE_RISCHIO[migliore])) migliore = r;
+  }
+  return migliore;
 }
 
 /** Primo settembre dell'anno scolastico in corso (da settembre a dicembre è quello dell'anno, poi quello precedente). */
