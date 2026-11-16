@@ -227,7 +227,14 @@ export function TabellaTipiCorso() {
         </Table>
       </div>
 
-      <FormNuovoCorso nuovo={nuovo} setNuovo={setNuovo} busy={busy} onInserisci={inserisci} />
+      <FormNuovoCorso
+        nuovo={nuovo}
+        setNuovo={setNuovo}
+        busy={busy}
+        onInserisci={inserisci}
+        corsi={corsi}
+        onRendiVisibile={(c) => salvaCampo(c, "visibile_lavoratore", true)}
+      />
 
       <p className="text-xs text-muted-foreground">
         "Al lavoratore" mostra o nasconde questo corso specifico nel modulo di invio: utile se un
