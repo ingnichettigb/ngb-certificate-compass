@@ -6,6 +6,7 @@
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-10): Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
+ * - Rev (2026-11-16 19:58): Aggiunta corso con controllo dei corsi già in archivio.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
@@ -227,7 +228,14 @@ export function TabellaTipiCorso() {
         </Table>
       </div>
 
-      <FormNuovoCorso nuovo={nuovo} setNuovo={setNuovo} busy={busy} onInserisci={inserisci} />
+      <FormNuovoCorso
+        nuovo={nuovo}
+        setNuovo={setNuovo}
+        busy={busy}
+        onInserisci={inserisci}
+        corsi={corsi}
+        onRendiVisibile={(c) => salvaCampo(c, "visibile_lavoratore", true)}
+      />
 
       <p className="text-xs text-muted-foreground">
         "Al lavoratore" mostra o nasconde questo corso specifico nel modulo di invio: utile se un
