@@ -6,6 +6,7 @@
  *   - Rev 1 (2026-11-20): Ordine «per gruppo» della tabella «Tutti gli attestati» della scheda dipendente.
  *     Gruppi: Lavoratori, Preposto, Primo soccorso, Antincendio, Defibrillatore, Evacuazione, Privacy, Altro, Covid.
  *     Dentro ogni gruppo prima i corsi base, poi gli aggiornamenti, sempre in ordine di data (dal più vecchio).
+ *   - Rev 2 (2026-11-20 16:25): valori mancanti passati come null (correzione errore di tipo).
  */
 import { assegnaGruppoArgomento, type GruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { eAggiornamento } from "@/features/stampe/stampa-squadre";
@@ -54,9 +55,9 @@ function fase(c: CorsoLike | null | undefined): number {
 
 export function gruppoDelCorso(c: CorsoLike | null | undefined): GruppoArgomento {
   return assegnaGruppoArgomento({
-    macro_categoria: c?.macro_categoria,
-    codice: c?.codice,
-    nome_corso: c?.nome_corso,
+    macro_categoria: c?.macro_categoria ?? null,
+    codice: c?.codice ?? null,
+    nome_corso: c?.nome_corso ?? null,
   });
 }
 
