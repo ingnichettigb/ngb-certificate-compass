@@ -12,8 +12,9 @@
  *   - Rev 12 (2026-10-30 20:30): Toast condivisi (avvisi-cartella) al posto di quelli locali.
  *   - Rev 13 (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  *   - Rev 14 (2026-11-06 18:37): Nuova colonna ordinabile "Ore" posizionata dopo "Scadenza".
+ *   - Rev 15 (2026-11-20): Ordine per gruppo (predefinito) con sfondo tenue e intestazione per ogni gruppo di corsi.
  */
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Search, RefreshCw, Unlink, Pencil, Trash2, Eye } from "lucide-react";
 import {
   formatData,
@@ -157,7 +158,19 @@ export function TabellaAttestati({
 
   return (
     <>
-      <h3 className="text-sm font-semibold">Tutti gli attestati</h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Tutti gli attestati</h3>
+        {colonna !== "gruppo" && (
+          <button
+            type="button"
+            onClick={() => onOrdina("gruppo")}
+            className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            title="Raggruppa per argomento: corso base e poi aggiornamenti in ordine di data"
+          >
+            Ordine per gruppo
+          </button>
+        )}
+      </div>
 
       <div className="max-h-[380px] overflow-auto rounded-lg border border-border bg-surface">
         <table className="w-full min-w-[720px] text-sm">
@@ -177,9 +190,23 @@ export function TabellaAttestati({
               if (r.isAttestato && r.attestato) {
                 const a = r.attestato;
                 const haFile = Boolean(a.url_foto_fronte);
+                const gruppo = r.gruppo;
+                const precedente = righe[idx - 1];
+                const nuovoGruppo = colonna === "gruppo" && gruppo && precedente?.gruppo?.chiave !== gruppo.chiave;
 
                 return (
-                  <tr key={a.id} className={doppioni.has(a.id) ? "bg-warning/20 hover:bg-warning/30" : "hover:bg-muted/40"}>
+                  <Fragment key={a.id}>
+                  {nuovoGruppo && gruppo && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className={`px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${gruppo.coloreSfondo.split(" ")[0]} ${gruppo.coloreTesto}`}
+                      >
+                        {gruppo.titolo}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className={doppioni.has(a.id) ? "bg-warning/20 hover:bg-warning/30" : (gruppo?.coloreSfondo ?? "hover:bg-muted/40")}>
                     <td className="px-3 py-2 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium">
                       {doppioni.has(a.id) && (
@@ -293,6 +320,7 @@ export function TabellaAttestati({
                       </div>
                     </td>
                   </tr>
+                  </Fragment>
                 );
               }
               if (!r.isAttestato && r.integrazione) {

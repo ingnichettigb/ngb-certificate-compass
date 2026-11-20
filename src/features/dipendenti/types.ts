@@ -5,13 +5,15 @@
  * Revisioni:
  *   - Rev 1 (2026-10-24 16:30): Costanti e tipi base della pagina Dipendenti.
  *   - Rev 2 (2026-11-06 18:37): Aggiunta colonna ordinabile "ore" e proprietà ore in RigaAttestato.
+ *   - Rev 3 (2026-11-20): Ordine «gruppo» e proprietà gruppo in RigaAttestato.
  */
 import { type Attestato, type Dipendente, type IntegrazioneDvr } from "@/lib/api";
+import { type GruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 
 export const TUTTI = "__tutti__";
 export const NESSUNO = "__nessuno__";
 
-export type ColonnaSortAttestati = "corso" | "data" | "scadenza" | "ore" | "stato";
+export type ColonnaSortAttestati = "gruppo" | "corso" | "data" | "scadenza" | "ore" | "stato";
 export type { DirezioneSort } from "@/components/IntestazioneOrdinabile";
 
 export const VUOTO: Omit<Dipendente, "id"> = {
@@ -43,4 +45,6 @@ export type RigaAttestato = {
   stato: string;
   attestato?: Attestato;
   integrazione?: IntegrazioneDvr;
+  /** Gruppo di appartenenza (solo attestati): serve per sfondo e intestazione di gruppo. */
+  gruppo?: GruppoArgomento;
 };
