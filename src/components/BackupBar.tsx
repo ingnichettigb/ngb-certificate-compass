@@ -10,6 +10,8 @@
  *   rev 5 — 30/10/2026 21:00 — Indicatore stato cartella locale accanto a Impostazioni generali.
  *   rev 6 — 31/10/2026 09:00 — Indicatore spostato in alto a destra nelle testate; aggiunta prop className.
  *   rev 7 — 01/11/2026 12:35 — Notifica con percorso esplicito di salvataggio in "Backup DB".
+ *   rev 8 — 21/11/2026 — Se il salvataggio resta in attesa oltre 8 secondi compare un avviso: quasi sempre il browser sta
+ *     aspettando il permesso sulla cartella (avviso vicino alla barra dell'indirizzo o finestra nascosta).
  */
 import { useState } from "react";
 import { Download, Upload, Loader2 } from "lucide-react";
@@ -28,6 +30,14 @@ export function BackupBar({ onImported, className }: { onImported?: () => void; 
 
   async function handleExport() {
     setBusyExport(true);
+    const avvisoAttesa = window.setTimeout(() => {
+      toast.info("Il backup è in attesa", {
+        id: "backup-attesa",
+        duration: 30000,
+        description:
+          "Probabilmente il browser aspetta il tuo permesso sulla cartella: guarda vicino alla barra dell'indirizzo e clicca «Consenti», oppure cerca una finestra di scelta cartella nascosta. Se non compare nulla, ricarica la pagina e riprova.",
+      });
+    }, 8000);
     try {
       const esito = await esportaDb();
       if (esito) {
@@ -38,6 +48,8 @@ export function BackupBar({ onImported, className }: { onImported?: () => void; 
     } catch (e) {
       toast.error("Esportazione non riuscita", { description: String(e) });
     } finally {
+      window.clearTimeout(avvisoAttesa);
+      toast.dismiss("backup-attesa");
       setBusyExport(false);
     }
   }

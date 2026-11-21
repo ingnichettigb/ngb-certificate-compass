@@ -6,6 +6,8 @@
  *   - Rev 2 (2026-10-31 11:00): Chiavi di cache condivise (CHIAVE_RUOLI, CHIAVE_ASSEGNAZIONI_RUOLI) tra Matrice e Scheda.
  *   - Rev 3 (2026-11-13): creaRuoloSicurezza: crea un ruolo e restituisce la riga inserita (serve l'id per collegarlo a una voce dell'organigramma A3).
  *   - Rev 4 (2026-11-13): Incarichi per sede (sede_id). Senza sede indicata = sede principale; per togliere senza sede = da tutte le sedi.
+ *   - Rev 5 (2026-11-21): RuoloSicurezza con codice, tipo e richiede (colonne già nel database); aggiungiRuolo e
+ *     creaRuoloSicurezza accettano il codice stabile del ruolo.
  */
 import { leggiTutto, sb } from "./client";
 
@@ -24,6 +26,12 @@ export type RuoloSicurezza = {
   obbligatorio_tutti: boolean;
   attivo: boolean;
   ordine: number;
+  /** Codice stabile del ruolo (es. ADD_DAE): è lui il riferimento, il nome si può cambiare. */
+  codice?: string | null;
+  /** «ruolo» o «incarico». */
+  tipo?: string;
+  /** Codice del ruolo che deve essere già assegnato (es. LAVORATORE per le attrezzature). */
+  richiede?: string | null;
 };
 
 export type AssegnazioneRuolo = { id: string; dipendente_id: string; ruolo_id: string; sede_id?: string | null };
@@ -39,11 +47,14 @@ export async function aggiungiRuolo(input: {
   macro_categoria?: string | null;
   obbligatorio_tutti?: boolean;
   ordine: number;
+  /** Codice stabile del ruolo (maiuscolo, senza spazi): da indicare sempre per i ruoli ufficiali. */
+  codice?: string;
 }) {
   const nome = input.nome.trim();
   if (!nome) throw new Error("Scrivi il nome del ruolo");
   const { error } = await sb.from("ruoli_sicurezza").insert({
     nome,
+    codice: input.codice?.trim().toUpperCase() || null,
     macro_categoria: input.macro_categoria?.trim() || null,
     obbligatorio_tutti: input.obbligatorio_tutti ?? false,
     ordine: input.ordine,
@@ -60,6 +71,7 @@ export async function creaRuoloSicurezza(input: {
   macro_categoria?: string | null;
   descrizione?: string | null;
   obbligatorio_tutti?: boolean;
+  codice?: string;
 }): Promise<RuoloSicurezza> {
   const nome = input.nome.trim();
   if (!nome) throw new Error("Scrivi il nome del ruolo");
@@ -74,6 +86,7 @@ export async function creaRuoloSicurezza(input: {
     .from("ruoli_sicurezza")
     .insert({
       nome,
+      codice: input.codice?.trim().toUpperCase() || null,
       macro_categoria: input.macro_categoria?.trim() || null,
       descrizione: input.descrizione?.trim() || null,
       obbligatorio_tutti: input.obbligatorio_tutti ?? false,

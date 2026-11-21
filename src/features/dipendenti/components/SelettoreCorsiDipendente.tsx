@@ -10,6 +10,9 @@
  *     (Verde = in regola, Arancione = entro MM-AA, Rosso = scaduto MM-AA o da svolgere).
  *   - Rev 3 (2026-11-11 10:45): I corsi di evacuazione (EME-…) si collegano al ruolo «Addetto all'evacuazione»
  *     tramite la mappatura ruoli-corsi, invece di creare un ruolo con il nome del corso.
+ *   - Rev 4 (2026-11-21): Il ruolo del corso si trova sempre per codice (trovaRuoloPerCorso), non più per nome uguale al corso;
+ *     non si creano più ruoli con il nome del corso (né spuntando un corso né aggiungendone uno al catalogo): un corso senza
+ *     ruolo si collega dalla Tabella 02. Il codice scritto nel nuovo corso viene salvato.
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,7 +51,6 @@ import {
   type TipoCorso,
   getTipiCorso,
   aggiungiTipoCorso,
-  aggiungiRuolo,
   impostaRuoloDipendente,
   CHIAVE_RUOLI,
   CHIAVE_ASSEGNAZIONI_RUOLI,
@@ -86,19 +88,9 @@ export function SelettoreCorsiDipendente({
     queryFn: getTipiCorso,
   });
 
-  const mappaRuoli = useMemo(() => {
-    const map = new Map<string, RuoloSicurezza>();
-    ruoliCatalogo.forEach((r) => map.set(r.nome.toLowerCase().trim(), r));
-    return map;
-  }, [ruoliCatalogo]);
-
-  /** Ruolo collegato al corso: per nome esatto; per i corsi di evacuazione tramite la mappatura ruoli-corsi. */
-  const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined => {
-    const perNome = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
-    if (perNome?.attivo !== false && perNome) return perNome;
-    if ((corso.codice ?? "").toUpperCase().startsWith("EME-")) return trovaRuoloPerCorso(corso, ruoliCatalogo) ?? perNome;
-    return perNome;
-  };
+  /** Ruolo collegato al corso, sempre per codice (mai per nome): vedi trovaRuoloPerCorso. */
+  const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined =>
+    trovaRuoloPerCorso(corso, ruoliCatalogo) ?? undefined;
 
   const haObbligoCorso = (corso: TipoCorso): boolean => {
     const ruolo = ruoloDelCorso(corso);
@@ -112,20 +104,11 @@ export function SelettoreCorsiDipendente({
     setSalvandoCorsoId(corso.id);
 
     try {
-      let ruolo = ruoloDelCorso(corso);
+      const ruolo = ruoloDelCorso(corso);
       if (!ruolo) {
-        await aggiungiRuolo({
-          nome: corso.nome_corso,
-          macro_categoria: corso.macro_categoria || "Corsi",
-          obbligatorio_tutti: false,
-          ordine: ruoliCatalogo.length + 1,
+        toast.error("Questo corso non è collegato a nessun ruolo", {
+          description: "Collegalo in Impostazioni generali → Tabelle di raccordo (Tabella 02).",
         });
-        await qc.invalidateQueries({ queryKey: CHIAVE_RUOLI });
-        ruolo = mappaRuoli.get(corso.nome_corso.toLowerCase().trim());
-      }
-
-      if (!ruolo) {
-        toast.error("Impossibile associare il ruolo del corso");
         return;
       }
       if (ruolo.obbligatorio_tutti) {
@@ -166,21 +149,14 @@ export function SelettoreCorsiDipendente({
         macro_categoria: nuovaMacro.trim() || "Altro",
         livello_specifico: "Base",
         ordine: corsiDb.length + 1,
+        codice: nuovoCodice,
       });
 
-      await aggiungiRuolo({
-        nome: nome,
-        macro_categoria: nuovaMacro.trim() || "Corsi",
-        obbligatorio_tutti: false,
-        ordine: ruoliCatalogo.length + 1,
+      await qc.invalidateQueries({ queryKey: ["tipi-corso"] });
+
+      toast.success(`Nuovo corso "${nome}" inserito nel catalogo`, {
+        description: "Per renderlo obbligatorio collegalo a un ruolo nella Tabella 02.",
       });
-
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["tipi-corso"] }),
-        qc.invalidateQueries({ queryKey: CHIAVE_RUOLI }),
-      ]);
-
-      toast.success(`Nuovo corso "${nome}" inserito nel catalogo`);
       setNuovoNome("");
       setNuovoCodice("");
       setDialogNuovoAperto(false);
@@ -210,7 +186,7 @@ export function SelettoreCorsiDipendente({
 
   const corsiAttivi = useMemo(() => {
     return corsiDb.filter((c) => haObbligoCorso(c));
-  }, [corsiDb, mappaRuoli, assegnazioni, corrente.id]);
+  }, [corsiDb, ruoliCatalogo, assegnazioni, corrente.id]);
 
   return (
     <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-3 shadow-xs">

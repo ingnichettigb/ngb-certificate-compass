@@ -8,8 +8,11 @@
  * sia dalla lettura del file: così i due non possono più divergere.
  * Revisioni:
  *   rev 1 — 11/11/2026 — Prima stesura.
+ *   rev 2 — 21/11/2026 — Ogni funzione ha il CODICE del ruolo: il ruolo si trova prima per codice (così una rinomina non ne
+ *     fa creare un doppione), per nome solo come ripiego; il ruolo creato nasce col suo codice.
  */
 import { aggiungiRuolo, getRuoliSicurezza, type RuoloSicurezza } from "@/lib/api/ruoli";
+import { CODICE_RUOLO, trovaRuoloPerCodice, type CodiceRuolo } from "@/lib/api/codici-ruoli";
 
 export type ChiaveFunzione =
   | "preposto"
@@ -28,6 +31,8 @@ export type DefinizioneFunzione = {
   intestazione: string;
   /** Riconosce l'intestazione di colonna scritta dall'utente (testo già in minuscolo non obbligatorio). */
   riconosciIntestazione: RegExp;
+  /** Codice stabile del ruolo nel catalogo (ruoli_sicurezza.codice): è il primo criterio di ricerca. */
+  codiceRuolo: CodiceRuolo;
   /** Nome e macro-categoria del ruolo creato se nel catalogo manca. */
   ruoloPredefinito: { nome: string; macro: string };
   /** Riconosce il ruolo nel catalogo (testo già normalizzato: minuscolo, senza accenti né apostrofi). */
@@ -41,6 +46,7 @@ export const INTESTAZIONE_CLASSE_PROFILO = "Classe di concorso / Profilo ATA";
 export const FUNZIONI: DefinizioneFunzione[] = [
   {
     chiave: "preposto",
+    codiceRuolo: CODICE_RUOLO.PREPOSTO,
     intestazione: "Preposto",
     riconosciIntestazione: /^preposto/i,
     ruoloPredefinito: { nome: "Preposto", macro: "Preposto" },
@@ -49,6 +55,7 @@ export const FUNZIONI: DefinizioneFunzione[] = [
   },
   {
     chiave: "antincendio",
+    codiceRuolo: CODICE_RUOLO.ADD_ANTINCENDIO,
     intestazione: "Antincendio",
     riconosciIntestazione: /antincendio/i,
     ruoloPredefinito: { nome: "Addetto Antincendio", macro: "Antincendio" },
@@ -57,6 +64,7 @@ export const FUNZIONI: DefinizioneFunzione[] = [
   },
   {
     chiave: "primoSoccorso",
+    codiceRuolo: CODICE_RUOLO.ADD_PRIMO_SOCCORSO,
     intestazione: "Primo soccorso",
     riconosciIntestazione: /primo\s*soccorso/i,
     ruoloPredefinito: { nome: "Addetto Primo Soccorso", macro: "Primo Soccorso" },
@@ -66,6 +74,7 @@ export const FUNZIONI: DefinizioneFunzione[] = [
   },
   {
     chiave: "defibrillatore",
+    codiceRuolo: CODICE_RUOLO.ADD_DAE,
     intestazione: "Defibrillatore (BLSD)",
     riconosciIntestazione: /defibrill|blsd|\bdae\b/i,
     ruoloPredefinito: { nome: "Addetto BLSD / Defibrillatore", macro: "Defibrillatore" },
@@ -74,6 +83,7 @@ export const FUNZIONI: DefinizioneFunzione[] = [
   },
   {
     chiave: "evacuazione",
+    codiceRuolo: CODICE_RUOLO.ADD_EVACUAZIONE,
     intestazione: "Addetto all'evacuazione",
     riconosciIntestazione: /evacuaz/i,
     ruoloPredefinito: { nome: "Addetto all'evacuazione", macro: "Emergenze" },
@@ -82,6 +92,7 @@ export const FUNZIONI: DefinizioneFunzione[] = [
   },
   {
     chiave: "privacy",
+    codiceRuolo: CODICE_RUOLO.INC_PRIVACY,
     intestazione: "Privacy",
     riconosciIntestazione: /privacy/i,
     ruoloPredefinito: { nome: "Referente Privacy", macro: "Privacy" },
@@ -113,10 +124,15 @@ export function chiaviSegnate(f: FunzioniImport | undefined): ChiaveFunzione[] {
   return FUNZIONI.filter((d) => f?.[d.chiave]).map((d) => d.chiave);
 }
 
-/** Ruolo del catalogo che corrisponde alla funzione (attivo; se più d'uno, quello col nome identico al predefinito). */
+/**
+ * Ruolo del catalogo che corrisponde alla funzione (attivo). Prima per CODICE; solo se il codice non c'è (catalogo non
+ * ancora bonificato) per nome: se più d'uno, quello col nome identico al predefinito.
+ */
 export function trovaRuoloFunzione(ruoli: RuoloSicurezza[], chiave: ChiaveFunzione): RuoloSicurezza | undefined {
   const def = FUNZIONI.find((d) => d.chiave === chiave);
   if (!def) return undefined;
+  const perCodice = trovaRuoloPerCodice(ruoli, def.codiceRuolo);
+  if (perCodice) return perCodice;
   const candidati = ruoli.filter((r) => r.attivo && def.riconosciRuolo(normalizza(r.nome), normalizza(r.macro_categoria)));
   return (
     candidati.find((r) => normalizza(r.nome) === normalizza(def.ruoloPredefinito.nome)) ?? candidati[0]
@@ -140,7 +156,12 @@ export async function assicuraRuoliFunzioni(
     const def = FUNZIONI.find((d) => d.chiave === chiave);
     if (!def) continue;
     ordine += 1;
-    await aggiungiRuolo({ nome: def.ruoloPredefinito.nome, macro_categoria: def.ruoloPredefinito.macro, ordine });
+    await aggiungiRuolo({
+      nome: def.ruoloPredefinito.nome,
+      macro_categoria: def.ruoloPredefinito.macro,
+      ordine,
+      codice: def.codiceRuolo,
+    });
     creati.push(def.ruoloPredefinito.nome);
   }
   return { ruoli: await getRuoliSicurezza(), creati };

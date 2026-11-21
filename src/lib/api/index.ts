@@ -19,4 +19,5 @@ export * from "./cartella-locale";
 export * from "./cartelle-multiple";
 export * from "./integrazioni-dvr";
 export * from "./ruoli";
+export * from "./codici-ruoli";
 export * from "./sedi";

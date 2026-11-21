@@ -8,9 +8,13 @@
  *   - Rev 2 (2026-11-10): isCorsoObbligatorioPerDipendente non richiede l'aggiornamento Preposto a chi ha un RSPP valido.
  *   - Rev 3 (2026-11-20 16:20): trovaRuoloPerCorso cerca prima il ruolo per CODICE stabile (dal prefisso del codice corso);
  *     i vecchi confronti per nome restano come ripiego finché la tabella ruoli non è bonificata.
+ *   - Rev 4 (2026-11-21): Ricerca per codice senza cast (RuoloSicurezza ha ora codice); i corsi delle attrezzature (LAV-…)
+ *     vanno solo al loro ruolo OPER_… e, se manca, a nessuno: prima il ripiego «Sicurezza lavoratori» li legava al ruolo
+ *     Lavoratore (obbligatorio per tutti). La fonte definitiva sarà la Tabella 02 (Fase 2).
  */
 
 import type { TipoCorso, RuoloSicurezza } from "@/lib/api";
+import { codiceRuoloAttrezzatura, normalizzaCodice, trovaRuoloPerCodice } from "@/lib/api/codici-ruoli";
 import { eAggiornamentoPreposto, type ValiditaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 /** Prefisso codice corso -> codice stabile del ruolo (ruoli_sicurezza.codice). */
@@ -32,15 +36,11 @@ export function ruoloPerCodiceCorso(
   codiceCorso: string | null | undefined,
   ruoliCatalogo: RuoloSicurezza[],
 ): RuoloSicurezza | null {
-  const cod = (codiceCorso ?? "").toUpperCase().trim();
+  const cod = normalizzaCodice(codiceCorso);
   if (!cod) return null;
   const voce = RUOLO_PER_PREFISSO_CORSO.find(([pref]) => cod.startsWith(pref));
   if (!voce) return null;
-  return (
-    ruoliCatalogo.find(
-      (r) => r.attivo && ((r as { codice?: string | null }).codice ?? "").toUpperCase() === voce[1],
-    ) ?? null
-  );
+  return trovaRuoloPerCodice(ruoliCatalogo, voce[1]) ?? null;
 }
 
 function normalizza(str: string | null | undefined): string {
@@ -57,11 +57,15 @@ export function trovaRuoloPerCorso(
 ): RuoloSicurezza | null {
   const nomeC = normalizza(corso.nome_corso);
   const macroC = normalizza(corso.macro_categoria);
-  const codC = (corso.codice ?? "").toUpperCase().trim();
+  const codC = normalizzaCodice(corso.codice);
 
   // 0. Corrispondenza per codice stabile del ruolo
   const perCodice = ruoloPerCodiceCorso(codC, ruoliCatalogo);
   if (perCodice) return perCodice;
+
+  // 0b. Attrezzature (LAV-…): solo il ruolo OPER_… dedicato; se non esiste, nessun ruolo (mai il Lavoratore)
+  const codAttrezzatura = codiceRuoloAttrezzatura(codC);
+  if (codAttrezzatura) return trovaRuoloPerCodice(ruoliCatalogo, codAttrezzatura) ?? null;
 
   // 1. Corrispondenza esatta per nome
   const esatto = ruoliCatalogo.find((r) => r.attivo && normalizza(r.nome) === nomeC);
