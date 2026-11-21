@@ -6,6 +6,7 @@
  * - Rev 1 (2026-10-15 10:00): Funzioni pure per elenchi, filtri e ordinamento.
  * - Rev 2 (2026-11-06 12:00): Righe raggruppate per lavoratore + corso; filtri per decadenza, ore parziali e giorni alla scadenza.
  * - Rev 3 (2026-11-06 18:30): Filtro per soli incarichi attualmente assegnati (esclude corsi di ruoli non più ricoperti).
+ * - Rev 4 (2026-11-21): Il ruolo di un corso segue la Tabella 02 (parametro «regole»).
  */
 import {
   repartoLeggibile,
@@ -15,6 +16,7 @@ import {
   type TipoCorso,
 } from "@/lib/api";
 import { trovaRuoloPerCorso } from "@/features/dipendenti/matrice/mappatura-ruoli-corsi";
+import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
 import { costruisciRighe } from "./raggruppa";
 import {
   TUTTI,
@@ -102,6 +104,7 @@ export function filtraScadenze({
   soloIncarichiAssegnati = true,
   ruoliCatalogo = [],
   assegnazioni = [],
+  regole,
 }: {
   attestati: Attestato[];
   vista: Vista;
@@ -114,6 +117,8 @@ export function filtraScadenze({
   soloIncarichiAssegnati?: boolean;
   ruoliCatalogo?: RuoloSicurezza[];
   assegnazioni?: AssegnazioneRuolo[];
+  /** Tabella 02: indica il ruolo di ogni corso (undefined = non ancora caricata). */
+  regole?: RegolaRuoloCorso[] | undefined;
 }): RigaScadenzaDati[] {
   const righe = costruisciRighe(attestati, oggi);
 
@@ -141,7 +146,7 @@ export function filtraScadenze({
       const dipId = r.attestato.dipendente_id;
       const tc = r.attestato.tipi_corso as TipoCorso | null | undefined;
       if (dipId && tc) {
-        const ruolo = trovaRuoloPerCorso(tc, ruoliCatalogo);
+        const ruolo = trovaRuoloPerCorso(tc, ruoliCatalogo, regole);
         if (ruolo && !ruolo.obbligatorio_tutti && !mappaAssegnati.has(`${dipId}_${ruolo.id}`)) return false;
       }
     }

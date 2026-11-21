@@ -5,10 +5,12 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: riga di un lavoratore con funzione, ruoli e caselle dei corsi. Nessun cambio di comportamento.
  *   rev 2 — 10/11/2026 — Casella «E» (esente) per l'aggiornamento Preposto di chi ha un RSPP valido.
+ *   rev 3 — 21/11/2026 — Il ruolo indicato nel suggerimento della casella segue la Tabella 02 (prop «regole»).
  */
 import { Check } from "lucide-react";
 import type { Dipendente, TipoCorso } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
+import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
 import { ruoliSicurezzaAssegnati, trovaRuoloPerCorso } from "./mappatura-ruoli-corsi";
 
 interface Props {
@@ -17,6 +19,8 @@ interface Props {
   attiva: boolean;
   corsiVisibili: TipoCorso[];
   ruoli: RuoloSicurezza[];
+  /** Tabella 02: indica il ruolo di ogni corso (undefined = non ancora caricata). */
+  regole?: RegolaRuoloCorso[] | undefined;
   mappaAssegnazioni: Set<string>;
   haObbligoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
   motivoEsenzione?: (dipendenteId: string, corso: TipoCorso) => string | null;
@@ -31,6 +35,7 @@ export function RigaLavoratoreMatrice({
   attiva,
   corsiVisibili,
   ruoli,
+  regole,
   mappaAssegnazioni,
   haObbligoCorso,
   motivoEsenzione,
@@ -99,7 +104,7 @@ export function RigaLavoratoreMatrice({
       {corsiVisibili.map((c) => {
         const obbligatorio = haObbligoCorso(dip.id, c);
         const fatto = haAttestatoCorso(dip.id, c);
-        const ruoloCollegato = trovaRuoloPerCorso(c, ruoli);
+        const ruoloCollegato = trovaRuoloPerCorso(c, ruoli, regole);
         const esente = motivoEsenzione?.(dip.id, c) ?? null;
 
         return (

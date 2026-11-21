@@ -4,6 +4,7 @@
  * Dati, filtri e ordinamento della pagina Scadenze.
  * Revisioni:
  * - Rev 2 (2026-11-06 18:30): Integrazione ruoli/assegnazioni e filtro «Solo incarichi attualmente assegnati».
+ * - Rev 3 (2026-11-21): Legge la Tabella 02 e la passa al filtro: il ruolo di un corso segue le regole.
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/api";
 import { TUTTI, type Vista, type ColonnaSort, type DirezioneSort } from "../types";
 import { elencoReparti, elencoCorsi, filtraScadenze } from "../filtri";
+import { useRegoleRuoloCorso } from "@/features/dipendenti/matrice/useRegoleRuoloCorso";
 
 export function useScadenze() {
   const [vista, setVista] = useState<Vista>("Scaduti");
@@ -40,6 +42,8 @@ export function useScadenze() {
     queryKey: CHIAVE_ASSEGNAZIONI_RUOLI,
     queryFn: getAssegnazioniRuoli,
   });
+
+  const regole = useRegoleRuoloCorso();
 
   const reparti = useMemo(() => elencoReparti(attestati), [attestati]);
   const corsi = useMemo(() => elencoCorsi(attestati), [attestati]);
@@ -67,8 +71,9 @@ export function useScadenze() {
         soloIncarichiAssegnati,
         ruoliCatalogo,
         assegnazioni,
+        regole,
       }),
-    [attestati, vista, q, reparto, corsoSelezionato, sortCol, sortDir, soloIncarichiAssegnati, ruoliCatalogo, assegnazioni],
+    [attestati, vista, q, reparto, corsoSelezionato, sortCol, sortDir, soloIncarichiAssegnati, ruoliCatalogo, assegnazioni, regole],
   );
 
   return {

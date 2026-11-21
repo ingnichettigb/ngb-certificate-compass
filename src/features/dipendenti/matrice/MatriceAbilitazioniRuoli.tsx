@@ -15,6 +15,7 @@
  *   - Rev 10 (2026-11-02 10:48): Passaggio dipendenti={listaElaborata} alle barre alfabetiche per conteggio e protezione runtime.
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  *   - Rev 11 (2026-11-07): Diviso in file per responsabilità (useDatiMatrice, useColonneMatrice, matrice-lista, esporta-matrice-csv e sottocomponenti). Nessun cambio di comportamento.
+ *   - Rev 12 (2026-11-21): Passa la Tabella 02 (regole) alla riga: il ruolo mostrato nel suggerimento segue le regole.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -52,6 +53,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
   const {
     dipendenti,
     ruoli,
+    regole,
     corsiCatalogo,
     conteggiCorsiPerGruppo,
     mappaAssegnazioni,
@@ -293,6 +295,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                     attiva={rigaSelezionata === dip.id}
                     corsiVisibili={corsiVisibili}
                     ruoli={ruoli}
+                    regole={regole}
                     mappaAssegnazioni={mappaAssegnazioni}
                     haObbligoCorso={haObbligoCorso}
                     motivoEsenzione={motivoEsenzione}

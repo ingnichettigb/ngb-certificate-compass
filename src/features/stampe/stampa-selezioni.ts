@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: periodi, formazione, stato di validità e selezioni dei lavoratori. Nessun cambio di comportamento.
+ *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -52,8 +53,18 @@ export function voceFormazione(tc: Pick<TipoCorso, "codice" | "nome_corso" | "ma
   }
 }
 
+/** Codice stabile del ruolo -> voce della stampa. */
+const VOCE_PER_CODICE_RUOLO: Record<string, VoceRuolo> = {
+  ADD_DAE: "defibrillatore",
+  PREPOSTO: "preposto",
+  ADD_ANTINCENDIO: "antincendio",
+  ADD_PRIMO_SOCCORSO: "primoSoccorso",
+};
+
 /** A quale voce corrisponde un ruolo di sicurezza (stesse parole usate da trovaRuoloPerCorso); null = nessuna delle quattro. */
-export function voceDelRuolo(r: Pick<RuoloSicurezza, "nome" | "macro_categoria">): VoceRuolo | null {
+export function voceDelRuolo(r: Pick<RuoloSicurezza, "nome" | "macro_categoria"> & { codice?: string | null }): VoceRuolo | null {
+  const perCodice = VOCE_PER_CODICE_RUOLO[(r.codice ?? "").toUpperCase().trim()];
+  if (perCodice) return perCodice;
   const nome = (r.nome ?? "").toLowerCase().trim();
   const macro = (r.macro_categoria ?? "").toLowerCase().trim();
   if (macro.includes("defibrillatore") || nome.includes("defibrillatore") || nome.includes("blsd")) return "defibrillatore";

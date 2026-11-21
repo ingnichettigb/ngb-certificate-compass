@@ -13,6 +13,7 @@
  *   - Rev 4 (2026-11-21): Il ruolo del corso si trova sempre per codice (trovaRuoloPerCorso), non più per nome uguale al corso;
  *     non si creano più ruoli con il nome del corso (né spuntando un corso né aggiungendone uno al catalogo): un corso senza
  *     ruolo si collega dalla Tabella 02. Il codice scritto nel nuovo corso viene salvato.
+ *   - Rev 5 (2026-11-21): Il ruolo del corso lo indica la Tabella 02 (useRegoleRuoloCorso).
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ import {
 } from "@/lib/api";
 import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
 import { trovaRuoloPerCorso } from "../matrice/mappatura-ruoli-corsi";
+import { useRegoleRuoloCorso } from "../matrice/useRegoleRuoloCorso";
 import { validitaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 export function SelettoreCorsiDipendente({
@@ -88,9 +90,10 @@ export function SelettoreCorsiDipendente({
     queryFn: getTipiCorso,
   });
 
-  /** Ruolo collegato al corso, sempre per codice (mai per nome): vedi trovaRuoloPerCorso. */
+  /** Ruolo collegato al corso, deciso dalla Tabella 02 (per codice, mai per nome): vedi trovaRuoloPerCorso. */
+  const regole = useRegoleRuoloCorso();
   const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined =>
-    trovaRuoloPerCorso(corso, ruoliCatalogo) ?? undefined;
+    trovaRuoloPerCorso(corso, ruoliCatalogo, regole) ?? undefined;
 
   const haObbligoCorso = (corso: TipoCorso): boolean => {
     const ruolo = ruoloDelCorso(corso);
@@ -186,7 +189,7 @@ export function SelettoreCorsiDipendente({
 
   const corsiAttivi = useMemo(() => {
     return corsiDb.filter((c) => haObbligoCorso(c));
-  }, [corsiDb, ruoliCatalogo, assegnazioni, corrente.id]);
+  }, [corsiDb, ruoliCatalogo, regole, assegnazioni, corrente.id]);
 
   return (
     <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-3 shadow-xs">

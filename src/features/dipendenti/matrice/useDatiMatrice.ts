@@ -6,6 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: letture dal database, mappe di assegnazioni e attestati,
  *            regole «obbligo / attestato» e assegnazione del ruolo con un clic. Nessun cambio di comportamento.
  *   rev 2 — 10/11/2026 — Esenzione dall'aggiornamento Preposto per chi ha un RSPP valido (motivoEsenzione).
+ *   rev 3 — 21/11/2026 — Legge la Tabella 02 (regole) e la usa per sapere da quale ruolo dipende ogni corso; la restituisce a chi la serve.
  */
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +35,7 @@ import {
   trovaRuoloPerChiaveGruppo,
   isCorsoObbligatorioPerDipendente,
 } from "./mappatura-ruoli-corsi";
+import { useRegoleRuoloCorso } from "./useRegoleRuoloCorso";
 
 export function useDatiMatrice() {
   const queryClient = useQueryClient();
@@ -57,6 +59,9 @@ export function useDatiMatrice() {
     queryKey: CHIAVE_RUOLI,
     queryFn: getRuoliSicurezza,
   });
+
+  // Tabella 02: decide da quale ruolo dipende ogni corso (undefined = non ancora caricata: vale il riconoscimento di prima)
+  const regole = useRegoleRuoloCorso();
 
   const { data: assegnazioni = [] } = useQuery({
     queryKey: CHIAVE_ASSEGNAZIONI_RUOLI,
@@ -108,6 +113,7 @@ export function useDatiMatrice() {
       ruoli,
       mappaAssegnazioni,
       rsppValidi.get(dipendenteId) ?? null,
+      regole,
     );
   }
 
@@ -138,7 +144,7 @@ export function useDatiMatrice() {
   }
 
   async function handleToggleObbligo(dipendente: Dipendente, corso: TipoCorso) {
-    const ruolo = trovaRuoloPerCorso(corso, ruoli);
+    const ruolo = trovaRuoloPerCorso(corso, ruoli, regole);
     if (!ruolo) {
       toast.error(`Nessun ruolo di sicurezza censito per "${corso.nome_corso}"`);
       return;
@@ -166,6 +172,7 @@ export function useDatiMatrice() {
   return {
     dipendenti,
     ruoli,
+    regole,
     corsiCatalogo,
     conteggiCorsiPerGruppo,
     mappaAssegnazioni,

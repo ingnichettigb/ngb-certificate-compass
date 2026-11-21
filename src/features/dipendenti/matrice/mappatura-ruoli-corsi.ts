@@ -11,10 +11,15 @@
  *   - Rev 4 (2026-11-21): Ricerca per codice senza cast (RuoloSicurezza ha ora codice); i corsi delle attrezzature (LAV-…)
  *     vanno solo al loro ruolo OPER_… e, se manca, a nessuno: prima il ripiego «Sicurezza lavoratori» li legava al ruolo
  *     Lavoratore (obbligatorio per tutti). La fonte definitiva sarà la Tabella 02 (Fase 2).
+ *   - Rev 5 (2026-11-21): Fase 2 — con la Tabella 02 (regole ruolo -> corso) caricata, il ruolo di un corso lo decide SOLO lei:
+ *     un corso che nessuna regola cita non è obbligatorio per nessuno. Senza regole (non ancora caricate, o lettura fallita)
+ *     resta il riconoscimento di prima. trovaRuoloPerChiaveGruppo cerca prima per codice.
  */
 
 import type { TipoCorso, RuoloSicurezza } from "@/lib/api";
-import { codiceRuoloAttrezzatura, normalizzaCodice, trovaRuoloPerCodice } from "@/lib/api/codici-ruoli";
+import { CODICE_RUOLO, codiceRuoloAttrezzatura, normalizzaCodice, trovaRuoloPerCodice } from "@/lib/api/codici-ruoli";
+import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
+import { ruoloCodicePerCorso } from "./regole-ruolo-corso";
 import { eAggiornamentoPreposto, type ValiditaRspp } from "@/features/scadenze/esenzioni-rspp";
 
 /** Prefisso codice corso -> codice stabile del ruolo (ruoli_sicurezza.codice). */
@@ -50,11 +55,20 @@ function normalizza(str: string | null | undefined): string {
 /**
  * Individua il ruolo di sicurezza primario da attivare/disattivare quando si interagisce
  * con un corso o una colonna nella matrice dei fabbisogni.
+ *
+ * Con «regole» (Tabella 02) non vuote il ruolo è quello che la tabella indica per il codice del corso; se nessuna regola
+ * cita il corso, o il ruolo è disattivato, il risultato è null (nessun obbligo). Senza regole vale il riconoscimento di prima.
  */
 export function trovaRuoloPerCorso(
   corso: TipoCorso,
   ruoliCatalogo: RuoloSicurezza[],
+  regole?: RegolaRuoloCorso[],
 ): RuoloSicurezza | null {
+  if (regole && regole.length > 0) {
+    const codiceRuolo = ruoloCodicePerCorso(regole, corso.codice);
+    return codiceRuolo ? (trovaRuoloPerCodice(ruoliCatalogo, codiceRuolo) ?? null) : null;
+  }
+
   const nomeC = normalizza(corso.nome_corso);
   const macroC = normalizza(corso.macro_categoria);
   const codC = normalizzaCodice(corso.codice);
@@ -174,6 +188,16 @@ export function trovaRuoloPerCorso(
   );
 }
 
+/** Parte della chiave del gruppo di argomenti -> codice stabile del ruolo (stesso ordine di controllo di prima). */
+const CODICE_PER_CHIAVE_GRUPPO: [string, string][] = [
+  ["defibrillatore", CODICE_RUOLO.ADD_DAE],
+  ["antincendio", CODICE_RUOLO.ADD_ANTINCENDIO],
+  ["primo-soccorso", CODICE_RUOLO.ADD_PRIMO_SOCCORSO],
+  ["preposti", CODICE_RUOLO.PREPOSTO],
+  ["evacuazione", CODICE_RUOLO.ADD_EVACUAZIONE],
+  ["sicurezza-lavoratori", CODICE_RUOLO.LAVORATORE],
+];
+
 /**
  * Individua il ruolo primario associato a una macro-chiave di gruppo
  * (es. "defibrillatore" -> Addetto BLSD / Defibrillatore).
@@ -183,6 +207,11 @@ export function trovaRuoloPerChiaveGruppo(
   ruoliCatalogo: RuoloSicurezza[],
 ): RuoloSicurezza | null {
   const chiave = normalizza(chiaveGruppo);
+  const perCodice = CODICE_PER_CHIAVE_GRUPPO.find(([parte]) => chiave.includes(parte));
+  if (perCodice) {
+    const ruolo = trovaRuoloPerCodice(ruoliCatalogo, perCodice[1]);
+    if (ruolo) return ruolo;
+  }
   if (chiave.includes("defibrillatore")) {
     return (
       ruoliCatalogo.find(
@@ -258,9 +287,11 @@ export function isCorsoObbligatorioPerDipendente(
   mappaAssegnazioni: Set<string>,
   /** RSPP valido del lavoratore (se c'è): esonera dall'aggiornamento Preposto, non dal corso base. */
   rspp: ValiditaRspp | null = null,
+  /** Tabella 02: se non vuota, è lei a dire da quale ruolo dipende il corso. */
+  regole?: RegolaRuoloCorso[],
 ): boolean {
   if (rspp && eAggiornamentoPreposto(corso)) return false;
-  const ruolo = trovaRuoloPerCorso(corso, ruoliCatalogo);
+  const ruolo = trovaRuoloPerCorso(corso, ruoliCatalogo, regole);
   if (!ruolo) return false;
   if (ruolo.obbligatorio_tutti) return true;
   return mappaAssegnazioni.has(`${dipendenteId}_${ruolo.id}`);

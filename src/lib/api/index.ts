@@ -20,4 +20,5 @@ export * from "./cartelle-multiple";
 export * from "./integrazioni-dvr";
 export * from "./ruoli";
 export * from "./codici-ruoli";
+export * from "./regole-ruolo-corso";
 export * from "./sedi";
