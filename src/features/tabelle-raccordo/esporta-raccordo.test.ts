@@ -6,6 +6,8 @@
  *   rev 1 — 15/11/2026 10:50 — Test dei dati esportati: N, ordine delle colonne, «Applica», valori sì/no e numerici, nomi file di tutte le tabelle.
  *   rev 2 — 15/11/2026 — Allineato alle definizioni attuali: tabella 01 con le colonne Codice/Descrizione/Categoria/Assegnazioni/Attivo e
  *            tabella 05 con id «soglie-antincendio» (colonne «Da presenze», «A presenze (vuoto = oltre)»).
+ *   rev 3 — 21/11/2026 — Allineato alle definizioni dopo la bonifica dei ruoli: tabella 01 con Codice/Ruolo/Tipo/Richiede/Per tutti/Attivo e
+ *            tabella 03 con id «antincendio» (colonne «Da», «A», «Livello»); le colonne «riferimento» si esportano con il codice.
  */
 import { describe, expect, it } from "vitest";
 import { TABELLE_RACCORDO, type Riga } from "./definizioni";
@@ -28,19 +30,21 @@ describe("dati esportati dalle tabelle di raccordo", () => {
     const righe: Riga[] = [
       {
         id: "1",
-        codice: "PREPOSTO",
-        descrizione: "Preposto",
-        categoria: "Sicurezza",
-        n_assegnazioni: 3,
+        codice: "OPER_PLE_II_831",
+        nome: "OPERATORE PLE",
+        tipo: "ruolo",
+        richiede: "LAVORATORE",
+        obbligatorio_tutti: false,
         attivo: true,
         applica: false,
       },
       {
         id: "2",
         codice: null,
-        descrizione: "ASPP",
-        categoria: null,
-        n_assegnazioni: 0,
+        nome: "ASPP",
+        tipo: "ruolo",
+        richiede: null,
+        obbligatorio_tutti: false,
         attivo: false,
         applica: true,
       },
@@ -49,16 +53,35 @@ describe("dati esportati dalle tabelle di raccordo", () => {
     expect(t.intestazioni).toEqual([
       "N",
       "Codice",
-      "Descrizione",
-      "Categoria",
-      "Assegnazioni",
+      "Ruolo",
+      "Tipo",
+      "Richiede",
+      "Per tutti",
       "Attivo",
       "Applica",
     ]);
+    // «Richiede» è una colonna «riferimento»: si esporta il codice, che è la chiave stabile
     expect(t.righe).toEqual([
-      [1, "PREPOSTO", "Preposto", "Sicurezza", 3, true, false],
-      [2, null, "ASPP", null, 0, false, true],
+      [1, "OPER_PLE_II_831", "OPERATORE PLE", "ruolo", "LAVORATORE", false, true, false],
+      [2, null, "ASPP", "ruolo", null, false, false, true],
     ]);
+  });
+
+  it("regole ruolo → corso: si esportano i codici di ruolo e corsi", () => {
+    const d = def("regole-corso");
+    const t = tabellaRaccordoDaEsportare(d, d.colonne, [
+      {
+        id: "1",
+        ruolo_codice: "ADD_DAE",
+        parametro: "nessuno",
+        valore: "—",
+        corso_base: "BLS-BAS-05",
+        corso_aggiornamento: "BLS-AGG-05",
+        applica: false,
+      },
+    ]);
+    expect(t.intestazioni).toEqual(["N", "Ruolo", "Parametro", "Valore", "Corso base", "Aggiornamento", "Applica"]);
+    expect(t.righe[0]).toEqual([1, "ADD_DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05", false]);
   });
 
   it("usa l'ordine delle colonne scelto dall'utente", () => {
@@ -73,13 +96,13 @@ describe("dati esportati dalle tabelle di raccordo", () => {
   });
 
   it("le soglie numeriche restano numeri e i codici con lo zero restano testo", () => {
-    const d = def("soglie-antincendio");
+    const d = def("antincendio");
     const t = tabellaRaccordoDaEsportare(d, d.colonne, [
       { id: "1", da: 10, a: null, esito: "Livello 2", attiva: true, applica: false },
     ]);
     const i = (e: string) => t.intestazioni.indexOf(e);
-    expect(t.righe[0]![i("Da presenze")]).toBe(10);
-    expect(t.righe[0]![i("A presenze (vuoto = oltre)")]).toBeNull();
+    expect(t.righe[0]![i("Da")]).toBe(10);
+    expect(t.righe[0]![i("A")]).toBeNull();
     expect(t.righe[0]![i("Applica")]).toBe(false);
     const ateco = def("ateco");
     const t2 = tabellaRaccordoDaEsportare(ateco, ateco.colonne, [

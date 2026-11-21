@@ -9,6 +9,9 @@
  *   rev 3 — 15/11/2026 10:50 — Bottone «Esporta» (Excel o CSV) accanto a «Ripristina colonne»: colonne e ordinamento come a schermo.
  *   rev 4 — 15/11/2026 11:45 — Casella «Cerca nella tabella» (la riga selezionata vale solo se visibile; «Esporta» scarica sempre tutti i record)
  *            e, nella 06, evidenziazione delle divisioni ATECO dei codici della Ditta con l'etichetta «In uso Ditta».
+ *   rev 5 — 21/11/2026 — Punto di verità ruoli-corsi (Fase 3): colonne «riferimento» con elenco di ruoli o corsi (si vede il nome, si salva il
+ *            codice); codice scritto a mano in maiuscolo e non più modificabile; dopo ogni salvataggio si aggiornano anche le letture
+ *            usate da Matrice e Scadenze; errori del database in italiano semplice.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,15 +53,33 @@ import {
 import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
 import { divisioneAteco } from "@/features/ditta/regole-ditta";
 import { leggiTutto, sb } from "@/lib/api/client";
+import { CHIAVE_RUOLI, getRuoliSicurezza } from "@/lib/api/ruoli";
+import { getTipiCorso } from "@/lib/api/tipi-corso";
 import { ErroreTabelle } from "@/features/impostazioni/ErroreTabelle";
 import type { Colonna, DefinizioneTabella, Riga } from "./definizioni";
 import { tabellaRaccordoDaEsportare } from "./esporta-raccordo";
+import { codiceValido, messaggioErrore } from "./messaggi-raccordo";
+import {
+  etichettaRiferimento,
+  opzioniCorsi,
+  opzioniRuoli,
+  type FonteRiferimento,
+  type OpzioneRiferimento,
+} from "./riferimenti";
 
-const messaggio = (e: unknown) => (e as { message?: string })?.message ?? "errore sconosciuto";
+const messaggio = messaggioErrore;
+
+/** Valore del menu a tendina per «nessuno» (un elemento del menu non può avere valore vuoto). */
+const NESSUNO = "__nessuno__";
+
+type Opzioni = Record<FonteRiferimento, OpzioneRiferimento[]>;
+const SENZA_OPZIONI: Opzioni = { ruoli: [], corsi: [] };
 
 /** Testo mostrato in cella. */
-function mostra(c: Colonna, v: unknown): string {
+function mostra(c: Colonna, v: unknown, opzioni: Opzioni = SENZA_OPZIONI): string {
   if (v === null || v === undefined || v === "") return "—";
+  if (c.tipo === "riferimento" && c.riferimento)
+    return etichettaRiferimento(opzioni[c.riferimento], v) || "—";
   if (c.tipo === "bool") return v ? "sì" : "no";
   if (c.tipo === "numero") return Number(v).toLocaleString("it-IT");
   return String(v);
@@ -76,14 +97,30 @@ function moduloDa(def: DefinizioneTabella, riga: Riga | null): Modulo {
   return m;
 }
 
-function valoriDa(def: DefinizioneTabella, m: Modulo): Record<string, unknown> {
+/** Colonne che in modifica non si cambiano più (es. il codice di un ruolo che ce l'ha già). */
+function bloccate(def: DefinizioneTabella, riga: Riga | null): Set<string> {
+  const out = new Set<string>();
+  if (!riga) return out;
+  for (const c of def.colonne) {
+    const v = riga[c.chiave];
+    if (c.soloLetturaInModifica && v !== null && v !== undefined && String(v).trim() !== "") out.add(c.chiave);
+  }
+  return out;
+}
+
+function valoriDa(
+  def: DefinizioneTabella,
+  m: Modulo,
+  fisse: Set<string> = new Set(),
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const c of def.colonne) {
-    if (c.soloLettura) continue;
+    if (c.soloLettura || fisse.has(c.chiave)) continue;
     const v = m[c.chiave];
     if (c.tipo === "bool") out[c.chiave] = Boolean(v);
     else if (c.tipo === "numero")
       out[c.chiave] = String(v).trim() === "" ? null : Number(String(v).replace(",", "."));
+    else if (c.codice) out[c.chiave] = String(v).trim() === "" ? null : (codiceValido(String(v)) ?? String(v).trim());
     else out[c.chiave] = String(v).trim() === "" ? null : String(v).trim();
   }
   return out;
@@ -121,6 +158,24 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
       }),
   });
 
+  // Colonne «riferimento»: gli elenchi di ruoli e corsi si leggono solo se la tabella li usa (cache condivisa con il resto del programma)
+  const usaRuoli = def.colonne.some((c) => c.riferimento === "ruoli");
+  const usaCorsi = def.colonne.some((c) => c.riferimento === "corsi");
+  const { data: ruoliCatalogo = [] } = useQuery({
+    queryKey: CHIAVE_RUOLI,
+    queryFn: getRuoliSicurezza,
+    enabled: usaRuoli,
+  });
+  const { data: corsiCatalogo = [] } = useQuery({
+    queryKey: ["tipi_corso"],
+    queryFn: getTipiCorso,
+    enabled: usaCorsi,
+  });
+  const opzioni = useMemo<Opzioni>(
+    () => ({ ruoli: opzioniRuoli(ruoliCatalogo), corsi: opzioniCorsi(corsiCatalogo) }),
+    [ruoliCatalogo, corsiCatalogo],
+  );
+
   // Nella 06: divisioni ATECO dei codici della Ditta, per evidenziare le righe in uso («85.31.20» → riga «85»).
   const ePerAteco = def.id === "ateco";
   const { data: ditta } = useQuery({
@@ -145,12 +200,18 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
     return righe.filter((r) =>
       def.colonne.some((c) => {
         const v = r[c.chiave];
-        return v !== null && v !== undefined && v !== "" && mostra(c, v).toLowerCase().includes(q);
+        return v !== null && v !== undefined && v !== "" && mostra(c, v, opzioni).toLowerCase().includes(q);
       }),
     );
-  }, [righe, ricerca, def.colonne]);
+  }, [righe, ricerca, def.colonne, opzioni]);
 
-  const ricarica = () => qc.invalidateQueries({ queryKey: chiave });
+  /** Aggiorna questa tabella e le letture che altre schermate (Matrice, Scadenze, scheda lavoratore) ricavano dagli stessi dati. */
+  const ricarica = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: chiave }),
+      ...(def.chiaviCollegate ?? []).map((k) => qc.invalidateQueries({ queryKey: [...k] })),
+    ]);
+  };
   const prossimoOrdine = () => righe.reduce((m, r) => Math.max(m, Number(r["ordine"] ?? 0)), 0) + 1;
 
   function apriModulo(riga: Riga | null) {
@@ -166,9 +227,19 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
         return;
       }
     }
+    const fisse = bloccate(def, modifica.riga);
+    for (const c of def.colonne) {
+      const testo = String(modulo[c.chiave] ?? "").trim();
+      if (c.codice && !fisse.has(c.chiave) && testo !== "" && codiceValido(testo) === null) {
+        toast.error(`«${c.etichetta}» non valido`, {
+          description: "Usa solo lettere, numeri e il trattino basso (es. ADD_DAE), senza spazi né accenti.",
+        });
+        return;
+      }
+    }
     setSalvataggio(true);
     try {
-      const valori = valoriDa(def, modulo);
+      const valori = valoriDa(def, modulo, fisse);
       if (modifica.riga) {
         const { error: e } = await sb.from(tabella).update(valori).eq("id", modifica.riga.id);
         if (e) throw e;
@@ -230,6 +301,21 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
     } finally {
       setDaCancellare(null);
     }
+  }
+
+  /** Colonne bloccate nel record che si sta modificando (es. il codice di un ruolo che ce l'ha già). */
+  const fisseModulo = bloccate(def, modifica?.riga ?? null);
+
+  /**
+   * Elenco per una colonna «riferimento»: tutte le opzioni, più il valore attuale se non è più nell'elenco
+   * (così il campo non resta vuoto); nei ruoli, «Richiede» non offre il ruolo stesso.
+   */
+  function elencoPerCampo(c: Colonna): OpzioneRiferimento[] {
+    if (!c.riferimento) return [];
+    const proprio = def.id === "ruoli" && c.chiave === "richiede" ? String(modifica?.riga?.["codice"] ?? "") : "";
+    const base = opzioni[c.riferimento].filter((o) => !proprio || o.valore !== proprio);
+    const attuale = String(modulo[c.chiave] ?? "");
+    return attuale && !base.some((o) => o.valore === attuale) ? [{ valore: attuale, etichetta: attuale }, ...base] : base;
   }
 
   /** Spunta «Applica» manuale; se la tabella ha un gruppo, nel gruppo ce n'è una sola. */
@@ -386,7 +472,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
                     </td>
                     {visibili.map((c) => (
                       <td key={c.chiave} className="overflow-hidden px-3 py-1.5 align-top">
-                        {mostra(c, r[c.chiave])}
+                        {mostra(c, r[c.chiave], opzioni)}
                         {inUsoDitta && c.chiave === "codice" && (
                           <span className="ml-2 rounded border border-primary/40 bg-primary/15 px-1.5 text-[10px] font-medium text-primary">
                             In uso Ditta
@@ -465,13 +551,40 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : c.tipo === "riferimento" && c.riferimento ? (
+                      <Select
+                        value={String(modulo[c.chiave] ?? "") || (c.obbligatorio ? "" : NESSUNO)}
+                        onValueChange={(v) =>
+                          setModulo((m) => ({ ...m, [c.chiave]: v === NESSUNO ? "" : v }))
+                        }
+                      >
+                        <SelectTrigger id={`raccordo-${c.chiave}`}>
+                          <SelectValue placeholder="Scegli…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {!c.obbligatorio && <SelectItem value={NESSUNO}>(nessuno)</SelectItem>}
+                          {elencoPerCampo(c).map((o) => (
+                            <SelectItem key={o.valore} value={o.valore}>
+                              {o.etichetta}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
-                      <Input
-                        id={`raccordo-${c.chiave}`}
-                        inputMode={c.tipo === "numero" ? "decimal" : undefined}
-                        value={String(modulo[c.chiave] ?? "")}
-                        onChange={(e) => setModulo((m) => ({ ...m, [c.chiave]: e.target.value }))}
-                      />
+                      <>
+                        <Input
+                          id={`raccordo-${c.chiave}`}
+                          inputMode={c.tipo === "numero" ? "decimal" : undefined}
+                          value={String(modulo[c.chiave] ?? "")}
+                          disabled={fisseModulo.has(c.chiave)}
+                          onChange={(e) => setModulo((m) => ({ ...m, [c.chiave]: e.target.value }))}
+                        />
+                        {fisseModulo.has(c.chiave) && (
+                          <p className="text-xs text-muted-foreground">
+                            Non si può più cambiare: è la chiave stabile usata dalle regole.
+                          </p>
+                        )}
+                      </>
                     )}
                   </>
                 )}

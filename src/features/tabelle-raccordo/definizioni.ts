@@ -5,13 +5,20 @@
  * Revisioni:
  *   rev 1 — 14/11/2026 — Le 9 tabelle di raccordo (Impostazioni generali > Tabelle di raccordo): colonne, tabella del database e regole.
  *   rev 2 — 15/11/2026 11:45 — Tabella 06 (rischio_ateco): tolta la colonna «Fonte» (resta nel database, non si mostra né si esporta).
+ *   rev 3 — 21/11/2026 — Punto di verità ruoli-corsi (Fase 3): colonne «riferimento» (si sceglie un ruolo o un corso, si salva il
+ *            codice); 01: codice obbligatorio, maiuscolo e non più modificabile, «Richiede» è un ruolo, cancellazione bloccata se il ruolo
+ *            ha regole nella 02 o è richiesto da altri ruoli; 02: ruolo per codice (ruolo_codice) e corsi scelti dal catalogo; dopo ogni
+ *            salvataggio si aggiornano ruoli e regole usati da Matrice e Scadenze.
  *
  * Ogni tabella è descritta qui; la pagina (TabellaRaccordo.tsx) è unica e generica. Le tabelle 03, 04 e 05 sono le righe di
  * «soglie_ditta» per ambito (nessuna copia dei dati). La colonna «applica» è la spunta manuale della riga da applicare.
  */
 import { sb } from "@/lib/api/client";
+import { CHIAVE_RUOLI } from "@/lib/api/ruoli";
+import { CHIAVE_REGOLE_RUOLO_CORSO } from "@/lib/api/regole-ruolo-corso";
+import type { FonteRiferimento } from "./riferimenti";
 
-export type TipoCampo = "testo" | "numero" | "bool" | "scelta";
+export type TipoCampo = "testo" | "numero" | "bool" | "scelta" | "riferimento";
 
 export interface Colonna {
   chiave: string;
@@ -23,6 +30,12 @@ export interface Colonna {
   larghezza?: string;
   /** Solo lettura nel modulo di modifica. */
   soloLettura?: boolean;
+  /** Per il tipo «riferimento»: si sceglie un ruolo o un corso dall'elenco e si salva il suo CODICE. */
+  riferimento?: FonteRiferimento;
+  /** Una volta valorizzato non si cambia più (es. il codice di un ruolo: è la chiave stabile). */
+  soloLetturaInModifica?: boolean;
+  /** Testo libero che è un codice: si porta in maiuscolo e ammette solo lettere, numeri e trattino basso. */
+  codice?: boolean;
 }
 
 export type Riga = Record<string, unknown> & { id: string };
@@ -44,6 +57,8 @@ export interface DefinizioneTabella {
    * Assente = spunte libere.
    */
   gruppoSpunta?: string[];
+  /** Altre letture (chiavi TanStack Query) da aggiornare dopo ogni modifica: dati usati da altre schermate. */
+  chiaviCollegate?: readonly (readonly string[])[];
   /** Valori predefiniti di un nuovo record. */
   predefiniti?: Record<string, unknown>;
   documento?: { etichetta: string; url: string };
@@ -60,10 +75,18 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Ruoli di sicurezza",
     tabella: "ruoli_sicurezza",
     descrizione:
-      "Ruoli e incarichi del programma. Il codice è la chiave stabile per le regole; «Richiede» indica il ruolo necessario per l'incarico. I ruoli con assegnazioni non si possono cancellare.",
+      "Ruoli e incarichi del programma. Il codice è la chiave stabile per le regole (maiuscolo, senza spazi, non si cambia più); «Richiede» indica il ruolo necessario. Non si cancella un ruolo con assegnazioni, con regole nella 02 o richiesto da altri ruoli.",
+    chiaviCollegate: [CHIAVE_RUOLI, CHIAVE_REGOLE_RUOLO_CORSO],
     ordinaPer: ["nome"],
     colonne: [
-      { chiave: "codice", etichetta: "Codice", larghezza: "min-w-[11rem]" },
+      {
+        chiave: "codice",
+        etichetta: "Codice",
+        obbligatorio: true,
+        codice: true,
+        soloLetturaInModifica: true,
+        larghezza: "min-w-[11rem]",
+      },
       { chiave: "nome", etichetta: "Ruolo", obbligatorio: true, larghezza: "min-w-[16rem]" },
       {
         chiave: "tipo",
@@ -72,7 +95,13 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
         opzioni: ["ruolo", "incarico"],
         obbligatorio: true,
       },
-      { chiave: "richiede", etichetta: "Richiede", larghezza: "min-w-[12rem]" },
+      {
+        chiave: "richiede",
+        etichetta: "Richiede",
+        tipo: "riferimento",
+        riferimento: "ruoli",
+        larghezza: "min-w-[14rem]",
+      },
       { chiave: "obbligatorio_tutti", etichetta: "Per tutti", tipo: "bool" },
       { chiave: "attivo", etichetta: "Attivo", tipo: "bool" },
     ],
@@ -85,8 +114,26 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
         .eq("ruolo_id", r.id);
       if (error)
         return `Controllo non riuscito: ${(error as { message?: string }).message ?? "errore"}`;
-      return count && count > 0
-        ? `Il ruolo «${String(r["nome"])}» ha ${count} assegnazioni: cancellarlo le farebbe perdere. Disattivalo invece di cancellarlo.`
+      if (count && count > 0)
+        return `Il ruolo «${String(r["nome"])}» ha ${count} assegnazioni: cancellarlo le farebbe perdere. Disattivalo invece di cancellarlo.`;
+      const codice = typeof r["codice"] === "string" ? r["codice"] : "";
+      if (!codice) return null;
+      const regole = await sb
+        .from("regole_ruolo_corso")
+        .select("id", { count: "exact", head: true })
+        .eq("ruolo_codice", codice);
+      if (regole.error)
+        return `Controllo non riuscito: ${(regole.error as { message?: string }).message ?? "errore"}`;
+      if (regole.count && regole.count > 0)
+        return `Il ruolo «${String(r["nome"])}» ha ${regole.count} regole nella Tabella 02: cancellale prima o disattiva il ruolo.`;
+      const richiesto = await sb
+        .from("ruoli_sicurezza")
+        .select("id", { count: "exact", head: true })
+        .eq("richiede", codice);
+      if (richiesto.error)
+        return `Controllo non riuscito: ${(richiesto.error as { message?: string }).message ?? "errore"}`;
+      return richiesto.count && richiesto.count > 0
+        ? `Il ruolo «${String(r["nome"])}» è richiesto da ${richiesto.count} altri ruoli (colonna «Richiede»): cambia prima quelli.`
         : null;
     },
   },
@@ -96,10 +143,18 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Regole ruolo → corso",
     tabella: "regole_ruolo_corso",
     descrizione:
-      "Quale corso (base e aggiornamento) corrisponde a ruolo e parametro. La spunta è una sola per ogni coppia ruolo + parametro.",
-    gruppoSpunta: ["ruolo", "parametro"],
+      "Quale corso (base e aggiornamento) corrisponde a ruolo e parametro: è l'unico punto che dice da quale ruolo dipende un corso. Ruolo e corsi si scelgono dall'elenco (si salvano i codici). Un corso che non compare qui non è obbligatorio per nessuno. La spunta è una sola per ogni coppia ruolo + parametro.",
+    gruppoSpunta: ["ruolo_codice", "parametro"],
+    chiaviCollegate: [CHIAVE_REGOLE_RUOLO_CORSO],
     colonne: [
-      { chiave: "ruolo", etichetta: "Ruolo", obbligatorio: true, larghezza: "min-w-[11rem]" },
+      {
+        chiave: "ruolo_codice",
+        etichetta: "Ruolo",
+        tipo: "riferimento",
+        riferimento: "ruoli",
+        obbligatorio: true,
+        larghezza: "min-w-[16rem]",
+      },
       {
         chiave: "parametro",
         etichetta: "Parametro",
@@ -107,10 +162,23 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
         larghezza: "min-w-[10rem]",
       },
       { chiave: "valore", etichetta: "Valore", obbligatorio: true },
-      { chiave: "corso_base", etichetta: "Corso base", larghezza: "min-w-[11rem]" },
-      { chiave: "corso_aggiornamento", etichetta: "Aggiornamento", larghezza: "min-w-[11rem]" },
+      {
+        chiave: "corso_base",
+        etichetta: "Corso base",
+        tipo: "riferimento",
+        riferimento: "corsi",
+        larghezza: "min-w-[18rem]",
+      },
+      {
+        chiave: "corso_aggiornamento",
+        etichetta: "Aggiornamento",
+        tipo: "riferimento",
+        riferimento: "corsi",
+        larghezza: "min-w-[18rem]",
+      },
     ],
     predefiniti: { parametro: "nessuno", valore: "—" },
+    alDuplicare: (r) => ({ ...r, valore: `${String(r["valore"] ?? "—")} (copia)` }),
   },
   {
     id: "antincendio",
