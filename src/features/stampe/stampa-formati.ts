@@ -5,8 +5,12 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: formato data italiano ed etichette di stato e modello
  *            (senza dipendenze dagli altri file di stampa, per evitare giri circolari).
+ *   rev 2 — 22/11/2026 — GIORNI_PREAVVISO_STAMPE = 270 (9 mesi): da quando un corso non ancora scaduto risulta «In scadenza».
  */
 import type { Modello, StatoValidita } from "./stampa-tipi";
+
+/** Giorni prima della scadenza da cui il corso risulta «In scadenza» (arancione) nelle stampe: 9 mesi. Prima: «Valido». */
+export const GIORNI_PREAVVISO_STAMPE = 270;
 
 export function dataIt(iso: string | null | undefined): string {
   if (!iso) return "—";

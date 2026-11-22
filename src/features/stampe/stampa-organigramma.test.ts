@@ -4,6 +4,7 @@
  * Data creaz: 09/11/2026
  * Verifica l'Organigramma squadre di sicurezza (regole di Corso base / Aggiornamento, righe per squadra, filtri Docenti/ATA e squadra)
  * e i colori delle celle (anteprima e PDF).
+ * Rev 22/11/2026: «In scadenza» da 9 mesi (270 giorni) prima della scadenza; «Da formare» / «Non necessario» restano sui 90 giorni.
  */
 import { describe, expect, it, vi } from "vitest";
 import { inflateSync } from "node:zlib";
@@ -54,6 +55,13 @@ describe("regole delle celle Corso base / Aggiornamento", () => {
     expect(aggiornamento.etichetta).toBe("da_formare");
   });
 
+  it("corso base che scade entro 9 mesi ma oltre 90 giorni, senza aggiornamento: base «In scadenza» (arancione), aggiornamento ancora «Non necessario»", () => {
+    // base 10/03/2022 + 5 anni = scade il 10/03/2027: da oggi (2026-11) mancano circa 4 mesi
+    const { base, aggiornamento } = cellaDi([att("a", ANT_B, "2022-03-10")]);
+    expect(base).toEqual({ data: "2022-03-10", etichetta: "in_scadenza" });
+    expect(aggiornamento).toEqual({ data: null, etichetta: "non_necessario" });
+  });
+
   it("corso base scaduto (anno solare di scadenza finito), senza aggiornamento: «Scaduto» e «Da formare»", () => {
     const { base, aggiornamento } = cellaDi([att("a", ANT_B, "2020-03-01")]);
     expect(base).toEqual({ data: "2020-03-01", etichetta: "scaduto" });
@@ -99,9 +107,10 @@ describe("regole delle celle Corso base / Aggiornamento", () => {
     expect(aggiornamento.etichetta).toBe("non_necessario");
   });
 
-  it("tolleranza: scaduto solo dopo il 31/12 dell'anno di scadenza; «In scadenza» da 90 giorni prima", () => {
+  it("tolleranza: scaduto solo dopo il 31/12 dell'anno di scadenza; «In scadenza» da 9 mesi (270 giorni) prima", () => {
     expect(esitoPerScadenza("2026-12-15", "2026-11-09")).toBe("in_scadenza");
-    expect(esitoPerScadenza("2027-03-01", "2026-11-09")).toBe("valido");
+    expect(esitoPerScadenza("2027-03-01", "2026-11-09")).toBe("in_scadenza");
+    expect(esitoPerScadenza("2027-09-01", "2026-11-09")).toBe("valido");
     expect(esitoPerScadenza("2026-03-01", "2026-12-31")).toBe("in_scadenza");
     expect(esitoPerScadenza("2026-03-01", "2027-01-01")).toBe("scaduto");
     expect(esitoPerScadenza(null, "2027-01-01")).toBe("valido");

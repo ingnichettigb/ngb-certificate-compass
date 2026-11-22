@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: periodi, formazione, stato di validità e selezioni dei lavoratori. Nessun cambio di comportamento.
  *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
+ *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
  */
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -13,7 +14,7 @@ import type { TipoCorso } from "@/lib/api/tipi-corso";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { TUTTI } from "./stampa-tipi";
 import type { Finestra, ModoSenza, PeriodoArrivi, RigaStampa, StatoValidita, VoceFormazione, VoceRuolo } from "./stampa-tipi";
-import { dataIt } from "./stampa-formati";
+import { dataIt, GIORNI_PREAVVISO_STAMPE } from "./stampa-formati";
 
 /** Primo giorno del periodo scelto (AAAA-MM-GG): 1 settembre dell'anno scolastico in corso, oppure 1 gennaio. */
 export function inizioPeriodoArrivi(periodo: PeriodoArrivi, oggi = new Date()): string | null {
@@ -129,7 +130,7 @@ export function statoValidita(scadenza: string | null, oggi: Date): { stato: Sta
   if (!scadenza) return { stato: "senza_scadenza", giorni: null };
   const g = Math.floor((new Date(scadenza + "T00:00:00").getTime() - new Date(oggi.toDateString()).getTime()) / GIORNO);
   if (g < 0) return { stato: "scaduto", giorni: g };
-  if (g <= 90) return { stato: "in_scadenza", giorni: g };
+  if (g <= GIORNI_PREAVVISO_STAMPE) return { stato: "in_scadenza", giorni: g };
   return { stato: "valido", giorni: g };
 }
 

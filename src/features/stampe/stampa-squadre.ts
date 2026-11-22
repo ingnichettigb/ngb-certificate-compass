@@ -5,6 +5,8 @@
  * Revisioni:
  *   rev 1 — 09/11/2026 20:00 — Regole dell'«Organigramma squadre di sicurezza»: per ogni lavoratore e squadra, stato di Corso base e
  *            Aggiornamento (valido / in scadenza / scaduto / fuori termine / da formare / non necessario) e testo delle celle.
+ *   rev 2 — 22/11/2026 — «In scadenza» (arancione) da 9 mesi (270 giorni) prima della scadenza, ancora «valido»; «Da formare» e «Non necessario»
+ *            restano decisi con i 90 giorni di prima (GIORNI_DA_FORMARE). Legenda aggiornata.
  *
  * Regole (concordate):
  * - Con un Aggiornamento fatto «in tempo» conta quello: lo stato si legge dall'aggiornamento (il Corso base mostra solo la data).
@@ -15,7 +17,7 @@
  * Funzioni pure, senza dipendenze dall'interfaccia.
  */
 import type { Attestato } from "@/lib/api";
-import { dataIt } from "./stampa-formati";
+import { dataIt, GIORNI_PREAVVISO_STAMPE } from "./stampa-formati";
 import type { CellaSquadra, Colonna, EsitoSquadra, RigaStampa } from "./stampa-tipi";
 
 /** Le quattro squadre dell'organigramma, nell'ordine di stampa (lo stesso di ORDINE_MACRO_GRUPPI). */
@@ -26,8 +28,11 @@ export const SQUADRE = [
   { chiave: "privacy", nome: "Privacy" },
 ] as const;
 
-/** Giorni prima della scadenza da cui il corso risulta «In scadenza» (come in tutta l'applicazione). */
-export const GIORNI_PREAVVISO = 90;
+/** Giorni prima della scadenza da cui il corso risulta «In scadenza» (arancione, ancora valido): 9 mesi, come nelle altre stampe. */
+export const GIORNI_PREAVVISO = GIORNI_PREAVVISO_STAMPE;
+
+/** Giorni prima della scadenza del Corso base entro cui, senza aggiornamento, l'aggiornamento è «Da formare» (rosso); prima è «Non necessario». */
+export const GIORNI_DA_FORMARE = 90;
 
 /** Codici degli aggiornamenti, usati se nel catalogo il livello del corso non è indicato. */
 const CODICI_AGGIORNAMENTO = new Set([
@@ -70,11 +75,11 @@ function scadenzaDi(a: Attestato): string | null {
   return anni ? piuAnni(a.data_corso.slice(0, 10), anni) : null;
 }
 
-/** Stato alla data di oggi: scaduto solo dopo il 31/12 dell'anno di scadenza (tolleranza), in scadenza da 90 giorni prima. */
-export function esitoPerScadenza(scadenza: string | null, oggi: string): "valido" | "in_scadenza" | "scaduto" {
+/** Stato alla data di oggi: scaduto solo dopo il 31/12 dell'anno di scadenza (tolleranza), in scadenza da `preavviso` giorni prima (9 mesi). */
+export function esitoPerScadenza(scadenza: string | null, oggi: string, preavviso: number = GIORNI_PREAVVISO): "valido" | "in_scadenza" | "scaduto" {
   if (!scadenza) return "valido";
   if (oggi > fineAnno(scadenza)) return "scaduto";
-  if (oggi >= menoGiorni(scadenza, GIORNI_PREAVVISO)) return "in_scadenza";
+  if (oggi >= menoGiorni(scadenza, preavviso)) return "in_scadenza";
   return "valido";
 }
 
@@ -112,7 +117,7 @@ export function celleSquadra(attestati: Attestato[], oggi: string): { base: Cell
     cellaAgg = aggEfficace
       ? { data: ultimoAgg.data, etichetta: esitoPerScadenza(ultimoAgg.scadenza, oggi) }
       : { data: ultimoAgg.data, etichetta: "fuori_termine" };
-  } else if (base && esitoPerScadenza(base.scadenza, oggi) === "valido") {
+  } else if (base && esitoPerScadenza(base.scadenza, oggi, GIORNI_DA_FORMARE) === "valido") {
     cellaAgg = { data: null, etichetta: "non_necessario" };
   } else {
     cellaAgg = { data: null, etichetta: "da_formare" };
@@ -156,4 +161,4 @@ export function righeCellaSquadra(r: RigaStampa, colonna: Colonna): { testo: str
 
 /** Legenda sotto la tabella (anteprima e PDF). */
 export const LEGENDA_SQUADRE =
-  "Legenda squadre: sotto la data «In scadenza» (arancione) = scade entro 90 giorni; «Scaduto» (rosso) = termine superato; «Fuori termine» (rosso) = aggiornamento fatto dopo il 31/12 dell'anno di scadenza; «Non necessario» = aggiornamento non ancora dovuto; «Da formare» (rosso) = non svolto. Con un aggiornamento in tempo (entro il 31/12 dell'anno di scadenza) lo stato si legge dall'aggiornamento.";
+  "Legenda squadre: sotto la data «In scadenza» (arancione) = ancora valido, scade entro 9 mesi (270 giorni); «Scaduto» (rosso) = termine superato; «Fuori termine» (rosso) = aggiornamento fatto dopo il 31/12 dell'anno di scadenza; «Non necessario» = aggiornamento non ancora dovuto; «Da formare» (rosso) = non svolto. Con un aggiornamento in tempo (entro il 31/12 dell'anno di scadenza) lo stato si legge dall'aggiornamento.";

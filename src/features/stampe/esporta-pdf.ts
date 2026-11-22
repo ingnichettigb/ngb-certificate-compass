@@ -10,12 +10,14 @@
  *            celle su due righe (data + avviso) e legenda dell'Organigramma.
  *   rev 3 — 09/11/2026 21:55 — Legenda coerente con i colori: «in grassetto» (non più «sull'anteprima») e riga «Stato» con rosso/arancione.
  *   rev 4 — 12/11/2026 06:53 — Logo dall'anagrafica e copyright su ogni pagina PDF.
+ *   rev 5 — 22/11/2026 — Nota sullo Stato: «In scadenza» in arancione con la data, ancora valido, entro 9 mesi (GIORNI_PREAVVISO_STAMPE).
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import type { DittaRecord } from "@/lib/api/ditta";
 import { COPYRIGHT_STAMPE, byteLogoDitta, nomeDitta } from "@/lib/identita-ditta";
 import { dataIt, INTESTAZIONI, cella, raggruppa, righeCella, LEGENDA_SQUADRE, type Colonna, type FiltriStampa, type OrdineColonna, type RigaStampa } from "./dati-stampa";
+import { GIORNI_PREAVVISO_STAMPE } from "./stampa-formati";
 import { gruppiLavoratori, sezioniPerReparto, type RaggruppaPer } from "./stampa-gruppi";
 import { scarica, nomeFileEsportazione } from "./esporta-file";
 import type { LarghezzeColonne } from "./preferenze-colonne";
@@ -111,7 +113,7 @@ export function righeLegenda(colonne: Colonna[]): string[] {
     );
   }
   if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
-  if (colonne.includes("stato")) out.push("Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione (scadenza entro 90 giorni).");
+  if (colonne.includes("stato")) out.push(`Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione, con la data = ancora valido, scade entro 9 mesi (${GIORNI_PREAVVISO_STAMPE} giorni).`);
   if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
   return out;
 }
