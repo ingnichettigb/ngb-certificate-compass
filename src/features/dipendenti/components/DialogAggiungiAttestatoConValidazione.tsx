@@ -4,6 +4,7 @@
  * Data creazione: 2026-11-06
  * Revisioni:
  *   - Rev 1 (2026-11-06 17:15): Flusso unificato di caricamento attestato da archivio con validazione immediata tramite DettaglioAttestato.
+ *   - Rev 2 (2026-11-22 18:30): Tipo di equivalenza_esito allineato ad Attestato (errore di compilazione).
  * Descrizione:   Seleziona un PDF dalle cartelle collegate, crea il record in attesa e apre direttamente la maschera di validazione HR.
  */
 import { useState } from "react";
@@ -76,6 +77,8 @@ export function DialogAggiungiAttestatoConValidazione({
       const attestatoCompleto: Attestato = {
         ...nuovo,
         stato_validazione: nuovo.stato_validazione as Attestato["stato_validazione"],
+        equivalenza_esito: (nuovo.equivalenza_esito ?? null) as NonNullable<Attestato["equivalenza_esito"]> | null,
+        equivalenza_rischio: (nuovo.equivalenza_rischio ?? null) as NonNullable<Attestato["equivalenza_rischio"]> | null,
         dipendenti: dipendente,
         tipi_corso: corsi.find((c) => c.id === corsoDefault) || null,
       };
