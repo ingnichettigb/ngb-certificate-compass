@@ -5,6 +5,7 @@ Percorso:   DB_E.md (radice del deposito)
 Data creaz: 22/11/2026
 Revisioni:
   rev 1 — 22/11/2026 — Fase 1, carta 13 «Scadenze – defibrillatore (DAE / BLSD)».
+  rev 4 — 22/11/2026 — Avviso rosso se il caricamento dei dati fallisce (StampePage rev 16).
   rev 3 — 22/11/2026 — Correzione di getAttestati (relazione ambigua dopo la migrazione 0018).
   rev 2 — 22/11/2026 — Pannello «Controllo addetti» e test del caso reale (19 addetti, 6 da formare).
 
@@ -29,17 +30,21 @@ Tabella, Stampa, PDF, Excel e CSV seguono la vista attiva (titolo, sottotitolo e
 | src/features/stampe/stampa-tipi.ts | modificato (campo `senzaFinestra`) | 9 |
 | src/features/stampe/stampa-calcolo.ts | modificato (usa `senzaFinestra`) | 10 |
 | src/features/stampe/stampe-predefinite.ts | modificato (campo `vistaAddetti`, carta 13) | 10 |
-| src/features/stampe/StampePage.tsx | modificato (barra, filtri, titolo, conteggi, controllo) | 15 |
+| src/features/stampe/StampePage.tsx | modificato (barra, filtri, titolo, conteggi, controllo, avviso errore) | 16 |
 | src/features/stampe/components/PannelloControlloAddetti.tsx | NUOVO | 1 |
 | src/features/stampe/stampa-addetti.caso-reale.test.ts | NUOVO | 1 |
 | src/lib/api/attestati.ts | modificato (relazione esplicita con tipi_corso, 3 query) | 6 |
 | src/routes/__snapshots__/hr.flusso.test.tsx.snap, dipendenti.flusso…snap, scadenze.flusso…snap | aggiornati (testo della query) | — |
-| DB_E.md | NUOVO | 3 |
+| DB_E.md | NUOVO | 4 |
 
 ## Causa del «19 su 19» (errore preesistente, non della Fase 1)
 La migrazione `0018_decisione_formazione_specifica.sql` ha aggiunto due chiavi esterne da `attestati_caricati` a `tipi_corso(codice)` (`equivalenza_corso_svolto`, `equivalenza_corso_atteso`). Con tre relazioni, la query `tipi_corso(*)` non è più univoca e il backend risponde PGRST201: `getAttestati()` non carica nulla e tutti gli addetti risultano «Manca». Il difetto tocca tutta l'app (anagrafiche, scadenze, HR), non solo le Stampe.
 Correzione: `tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)` nelle 3 query di `src/lib/api/attestati.ts`; il risultato resta sotto la chiave `tipi_corso`.
 Non verificato: non posso interrogare il tuo database né eseguire i test di interfaccia (mancano pacchetti nel mio ambiente). Verifica che il nome del vincolo esista: `select conname from pg_constraint where conrelid='public.attestati_caricati'::regclass and contype='f';` deve elencare `attestati_caricati_tipo_corso_id_fkey`.
+
+## Verifiche sul database (22/11/2026)
+Eseguite sul database reale: 19 addetti, 13 in regola (Bretani e Valenzi «in scadenza»), 6 da formare (Alquati, Bodini, Ferrari, Guernelli, Somenzi scaduti; Bertuccioli «Manca corso base»). Le chiavi esterne di `attestati_caricati` verso `tipi_corso` sono 3: confermata l'ambiguità.
+Se il caricamento fallisce, la pagina ora mostra un avviso rosso con il motivo e il pulsante «Riprova», invece di numeri falsi.
 
 ## Controllo addetti (sequenza di controllo)
 Sotto i due pulsanti c'è un pannello a tendina «Controllo addetti — N nominati, M richiedono formazione» (solo a schermo, non si stampa). Per ogni addetto mostra le righe lette dagli attestati (corso, stato, data corso, scadenza), SÌ/no e il motivo (es. «Scaduto il 04/03/2026 (BLS-BAS-05 del 04/03/2024)», «Manca corso base», «Corso in regola»).
@@ -53,5 +58,5 @@ Antincendio, Primo soccorso e Privacy: aggiungere `vistaAddetti: true` alla cart
 
 ## Push
     cd ngb-certificate-compass
-    unzip -o ../ngb-dae-viste-addetti-rev3.zip
+    unzip -o ../ngb-dae-viste-addetti-rev4.zip
     git add -A && git commit -m "Stampe DAE: viste Tutti gli addetti / Richiedono formazione" && git push origin main

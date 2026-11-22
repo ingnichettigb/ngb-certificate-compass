@@ -28,6 +28,7 @@
  *   rev 15 — 22/11/2026 — Carte di squadra con «vistaAddetti» (Fase 1: defibrillatore): due pulsanti esclusivi «Tutti gli addetti» / «Richiedono formazione»;
  *                         tabella, Stampa, PDF, Excel e CSV seguono la vista attiva; titolo e nome file con il suffisso della vista;
  *                         il totale «N addetti» conta i lavoratori distinti; pannello «Controllo addetti» (righe e motivo per ogni addetto).
+ *   rev 16 — 22/11/2026 — Se il caricamento degli attestati o dei lavoratori fallisce compare un avviso rosso con il motivo, invece di numeri e righe «Manca» falsi.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -231,6 +232,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const numero = conVistaAddetti ? new Set(righe.map((r) => r.dipendenteId)).size : righe.length;
   const sottotitolo = [...parti, `${numero} ${unita}`].join(" · ");
   const caricamento = att.isLoading || dip.isLoading;
+  const erroreCaricamento = att.error ?? dip.error ?? null;
 
   async function excel() {
     try {
@@ -294,6 +296,12 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
         />}
         {caricamento ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="size-5 animate-spin" /> Caricamento…</div>
+        ) : erroreCaricamento ? (
+          <div role="alert" className="mx-auto my-10 max-w-[720px] rounded-md border-2 border-red-500 bg-red-50 p-4 text-sm text-red-950 dark:bg-red-950/40 dark:text-red-100">
+            <b>Impossibile caricare i dati: la stampa non è attendibile.</b>
+            <div className="mt-1 break-words">{erroreCaricamento instanceof Error ? erroreCaricamento.message : String(erroreCaricamento)}</div>
+            <Button type="button" size="sm" className="mt-3" onClick={() => { void att.refetch(); void dip.refetch(); }}>Riprova</Button>
+          </div>
         ) : (
           <div className="min-w-0">
             {/* Barra pillole per i gruppi di sicurezza */}
