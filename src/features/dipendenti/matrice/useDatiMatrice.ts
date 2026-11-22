@@ -7,6 +7,7 @@
  *            regole «obbligo / attestato» e assegnazione del ruolo con un clic. Nessun cambio di comportamento.
  *   rev 2 — 10/11/2026 — Esenzione dall'aggiornamento Preposto per chi ha un RSPP valido (motivoEsenzione).
  *   rev 3 — 21/11/2026 — Legge la Tabella 02 (regole) e la usa per sapere da quale ruolo dipende ogni corso; la restituisce a chi la serve.
+ *   rev 4 — 21/11/2026 — Legge anche il grado di rischio della ditta: un corso è dovuto solo se la sua regola vale per la ditta.
  */
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +36,7 @@ import {
   trovaRuoloPerChiaveGruppo,
   isCorsoObbligatorioPerDipendente,
 } from "./mappatura-ruoli-corsi";
+import { useContestoRegole } from "./useContestoRegole";
 import { useRegoleRuoloCorso } from "./useRegoleRuoloCorso";
 
 export function useDatiMatrice() {
@@ -62,6 +64,7 @@ export function useDatiMatrice() {
 
   // Tabella 02: decide da quale ruolo dipende ogni corso (undefined = non ancora caricata: vale il riconoscimento di prima)
   const regole = useRegoleRuoloCorso();
+  const contesto = useContestoRegole();
 
   const { data: assegnazioni = [] } = useQuery({
     queryKey: CHIAVE_ASSEGNAZIONI_RUOLI,
@@ -114,6 +117,7 @@ export function useDatiMatrice() {
       mappaAssegnazioni,
       rsppValidi.get(dipendenteId) ?? null,
       regole,
+      contesto,
     );
   }
 

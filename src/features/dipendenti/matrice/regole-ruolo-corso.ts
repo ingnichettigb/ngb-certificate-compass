@@ -6,6 +6,7 @@
  * Funzioni pure, senza accesso al database: i dati arrivano da useRegoleRuoloCorso.
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 2).
+ *   - Rev 2 (2026-11-21): L'indice elenca anche le regole che citano ciascun corso (serve a capire se valgono per la ditta, Fase 4).
  */
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
 import { normalizzaCodice } from "@/lib/api/codici-ruoli";
@@ -17,6 +18,8 @@ export type IndiceRegole = {
   perCorso: Map<string, string[]>;
   /** Codice ruolo (maiuscolo) -> codici dei suoi corsi base e di aggiornamento, senza ripetizioni. */
   perRuolo: Map<string, CorsiDelRuolo>;
+  /** Codice corso (maiuscolo) -> regole che lo citano (come corso base o di aggiornamento). */
+  regolePerCorso: Map<string, RegolaRuoloCorso[]>;
 };
 
 const cache = new WeakMap<RegolaRuoloCorso[], IndiceRegole>();
@@ -31,6 +34,7 @@ export function indiceRegole(regole: RegolaRuoloCorso[]): IndiceRegole {
   if (gia) return gia;
   const perCorso = new Map<string, string[]>();
   const perRuolo = new Map<string, CorsiDelRuolo>();
+  const regolePerCorso = new Map<string, RegolaRuoloCorso[]>();
   const ordinate = [...regole].sort((a, b) => (a.ordine ?? 0) - (b.ordine ?? 0));
   for (const r of ordinate) {
     const ruolo = normalizzaCodice(r.ruolo_codice);
@@ -47,9 +51,12 @@ export function indiceRegole(regole: RegolaRuoloCorso[]): IndiceRegole {
       const ruoli = perCorso.get(corso) ?? [];
       aggiungi(ruoli, ruolo);
       perCorso.set(corso, ruoli);
+      const citanti = regolePerCorso.get(corso) ?? [];
+      if (!citanti.includes(r)) citanti.push(r);
+      regolePerCorso.set(corso, citanti);
     }
   }
-  const out = { perCorso, perRuolo };
+  const out = { perCorso, perRuolo, regolePerCorso };
   cache.set(regole, out);
   return out;
 }

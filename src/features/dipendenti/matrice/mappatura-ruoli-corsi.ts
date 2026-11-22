@@ -14,11 +14,14 @@
  *   - Rev 5 (2026-11-21): Fase 2 — con la Tabella 02 (regole ruolo -> corso) caricata, il ruolo di un corso lo decide SOLO lei:
  *     un corso che nessuna regola cita non è obbligatorio per nessuno. Senza regole (non ancora caricate, o lettura fallita)
  *     resta il riconoscimento di prima. trovaRuoloPerChiaveGruppo cerca prima per codice.
+ *   - Rev 6 (2026-11-21): Fase 4 — con le regole, l'obbligo vale solo se la regola è applicabile alla ditta (es. la formazione specifica
+ *     del Lavoratore: solo le ore del suo grado di rischio). Parametro «contesto» di isCorsoObbligatorioPerDipendente.
  */
 
 import type { TipoCorso, RuoloSicurezza } from "@/lib/api";
 import { CODICE_RUOLO, codiceRuoloAttrezzatura, normalizzaCodice, trovaRuoloPerCodice } from "@/lib/api/codici-ruoli";
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
+import { corsoApplicabile, type ContestoRegole } from "./condizioni-regole";
 import { ruoloCodicePerCorso } from "./regole-ruolo-corso";
 import { eAggiornamentoPreposto, type ValiditaRspp } from "@/features/scadenze/esenzioni-rspp";
 
@@ -289,10 +292,13 @@ export function isCorsoObbligatorioPerDipendente(
   rspp: ValiditaRspp | null = null,
   /** Tabella 02: se non vuota, è lei a dire da quale ruolo dipende il corso. */
   regole?: RegolaRuoloCorso[],
+  /** Dati della ditta (grado di rischio): se la regola del corso non vale per la ditta, il corso non è dovuto. */
+  contesto: ContestoRegole = {},
 ): boolean {
   if (rspp && eAggiornamentoPreposto(corso)) return false;
   const ruolo = trovaRuoloPerCorso(corso, ruoliCatalogo, regole);
   if (!ruolo) return false;
+  if (regole && regole.length > 0 && !corsoApplicabile(regole, corso.codice, contesto)) return false;
   if (ruolo.obbligatorio_tutti) return true;
   return mappaAssegnazioni.has(`${dipendenteId}_${ruolo.id}`);
 }

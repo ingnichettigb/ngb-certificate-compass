@@ -14,6 +14,7 @@
  *     non si creano più ruoli con il nome del corso (né spuntando un corso né aggiungendone uno al catalogo): un corso senza
  *     ruolo si collega dalla Tabella 02. Il codice scritto nel nuovo corso viene salvato.
  *   - Rev 5 (2026-11-21): Il ruolo del corso lo indica la Tabella 02 (useRegoleRuoloCorso).
+ *   - Rev 6 (2026-11-21): Il corso è dovuto solo se la sua regola vale per la ditta (grado di rischio): come nella Matrice.
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,6 +59,8 @@ import {
 } from "@/lib/api";
 import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
 import { trovaRuoloPerCorso } from "../matrice/mappatura-ruoli-corsi";
+import { corsoApplicabile } from "../matrice/condizioni-regole";
+import { useContestoRegole } from "../matrice/useContestoRegole";
 import { useRegoleRuoloCorso } from "../matrice/useRegoleRuoloCorso";
 import { validitaRspp } from "@/features/scadenze/esenzioni-rspp";
 
@@ -92,12 +95,14 @@ export function SelettoreCorsiDipendente({
 
   /** Ruolo collegato al corso, deciso dalla Tabella 02 (per codice, mai per nome): vedi trovaRuoloPerCorso. */
   const regole = useRegoleRuoloCorso();
+  const contesto = useContestoRegole();
   const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined =>
     trovaRuoloPerCorso(corso, ruoliCatalogo, regole) ?? undefined;
 
   const haObbligoCorso = (corso: TipoCorso): boolean => {
     const ruolo = ruoloDelCorso(corso);
     if (!ruolo) return false;
+    if (regole && regole.length > 0 && !corsoApplicabile(regole, corso.codice, contesto)) return false;
     if (ruolo.obbligatorio_tutti) return true;
     return assegnazioni.some((a) => a.dipendente_id === corrente.id && a.ruolo_id === ruolo.id);
   };
@@ -189,7 +194,7 @@ export function SelettoreCorsiDipendente({
 
   const corsiAttivi = useMemo(() => {
     return corsiDb.filter((c) => haObbligoCorso(c));
-  }, [corsiDb, ruoliCatalogo, regole, assegnazioni, corrente.id]);
+  }, [corsiDb, ruoliCatalogo, regole, contesto, assegnazioni, corrente.id]);
 
   return (
     <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-3 shadow-xs">
