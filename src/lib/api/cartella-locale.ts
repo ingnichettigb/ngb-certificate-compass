@@ -13,7 +13,10 @@
  *   - Rev 8 (2026-10-30 19:30): verificaPermessi accetta la modalità (read/readwrite); default invariato.
  *   - Rev 9 (2026-10-30 20:30): Evento «cartelle:cambiate» (notificaCartelleCambiate) per aggiornare gli indicatori.
  *   - Rev 10 (2026-11-01 12:20): Salvataggio e lettura del percorso testuale esteso in IndexedDB.
+ *   - Rev 11 (2026-11-22): apriDb con apriDbConTabella: se la tabella mancasse nel database già esistente viene creata.
  */
+
+import { apriDbConTabella } from "./idb-tabella";
 
 const DB_NOME = "app_archivio_attestati";
 const STORE_NOME = "impostazioni";
@@ -28,17 +31,7 @@ export function supportaCartellaLocale(): boolean {
 }
 
 function apriDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NOME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NOME)) {
-        db.createObjectStore(STORE_NOME);
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  return apriDbConTabella(DB_NOME, STORE_NOME);
 }
 
 async function salvaHandleSuDb(handle: FileSystemDirectoryHandle): Promise<void> {

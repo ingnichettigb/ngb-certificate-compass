@@ -4,9 +4,12 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da cartelle-multiple.ts: elenco, aggiunta e rimozione delle cartelle collegate e ricerca per nome. Nessun cambio di comportamento.
+ *   rev 2 — 22/11/2026 — apriDb con apriDbConTabella: se il database creato il 27/10 ha ancora la vecchia tabella «cartelle», crea «cartelle_collegate»
+ *            (prima: «One of the specified object stores was not found» e impossibile aggiungere cartelle).
  */
 import { getCartellaArchivio, leggiPercorsoTestuale, cercaFileRicorsivo, verificaPermessi, notificaCartelleCambiate } from "./cartella-locale";
 import type { FileTrovato } from "./cartella-locale";
+import { apriDbConTabella } from "./idb-tabella";
 
 const DB_NOME = "app_archivio_cartelle";
 const STORE_NOME = "cartelle_collegate";
@@ -32,17 +35,7 @@ type RecordCartellaDb = {
 };
 
 function apriDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NOME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NOME)) {
-        db.createObjectStore(STORE_NOME, { keyPath: "id" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  return apriDbConTabella(DB_NOME, STORE_NOME, { keyPath: "id" });
 }
 
 export async function elencoCartelle(): Promise<CartellaCollegata[]> {
