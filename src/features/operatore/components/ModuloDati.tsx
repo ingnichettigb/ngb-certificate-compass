@@ -11,6 +11,9 @@
  *   rev 5 — 22/11/2026 — Riconoscimento immediato dal Codice Fiscale (digitato, incollato o da mirino OCR):
  *                        compila Cognome, Nome, ATECO, Reparto, Email. Ore corso proposte dal catalogo
  *                        (ore_minime_legge) alla scelta del corso, senza sovrascrivere ore modificate a mano.
+ *   rev 6 — 22/11/2026 — «Corso identificato»: elenco con pulsanti delle categorie (dal database), ricerca, ultimo scelto
+ *                        per primo, corsi e poi aggiornamenti (SelettoreCorso). Nuovo parametro facoltativo `legami`.
+ *                        Ore proposte, codice e nome del corso: invariati.
  */
 import { useEffect, useRef, useState } from "react";
 import { Archive, CheckCircle2, Loader2, Plus, Search, X } from "lucide-react";
@@ -27,11 +30,14 @@ import { nomeFileStandard } from "../nome-file";
 import type { CampoOcr, Riga, TipoCorso } from "../types";
 import { MirinoOcr } from "./MirinoOcr";
 import { SelezioneRepartoModulo } from "./SelezioneRepartoModulo";
+import { SelettoreCorso } from "@/features/selezione-corso/SelettoreCorso";
+import type { LegamiCorsi } from "@/features/selezione-corso/categorie-corso";
 
 export function ModuloDati({
   form,
   set,
   tipi,
+  legami = null,
   campoOcr,
   setCampoOcr,
   haAnteprima,
@@ -47,6 +53,8 @@ export function ModuloDati({
   form: Omit<Riga, "id">;
   set: <K extends keyof Riga>(k: K, v: Riga[K]) => void;
   tipi: TipoCorso[];
+  /** Legami corso → ruoli (categoria e abilitazione per la Ditta). Se manca, categoria del corso e tutti i corsi. */
+  legami?: LegamiCorsi | null;
   campoOcr: CampoOcr | null;
   setCampoOcr: (campo: CampoOcr | null) => void;
   haAnteprima: boolean;
@@ -230,35 +238,19 @@ export function ModuloDati({
 
         <div>
           <Label>Corso identificato</Label>
-          <Select
-            value={form.tipo_corso_id ?? ""}
-            onValueChange={(val) => {
-              const t = tipi.find((x) => x.id === val);
+          <SelettoreCorso
+            corsi={tipi}
+            legami={legami}
+            valore={form.tipo_corso_id ?? ""}
+            onScegli={(t) => {
               const orePrecedenti = tipi.find((x) => x.id === form.tipo_corso_id)?.ore_minime_legge ?? null;
-              set("tipo_corso_id", val);
-              if (t) set("tipo_corso_nome", t.nome_corso);
-              set("tipo_corso_codice", t?.codice ?? null);
+              set("tipo_corso_id", t.id);
+              set("tipo_corso_nome", t.nome_corso);
+              set("tipo_corso_codice", t.codice ?? null);
               // Ore di legge del corso: proposte solo se il campo è vuoto o ha ancora il valore automatico del corso precedente.
-              if (t?.ore_minime_legge != null && (form.ore == null || form.ore === orePrecedenti)) set("ore", t.ore_minime_legge);
+              if (t.ore_minime_legge != null && (form.ore == null || form.ore === orePrecedenti)) set("ore", t.ore_minime_legge);
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleziona corso..." />
-            </SelectTrigger>
-            <SelectContent>
-              {[...tipi]
-                .sort((a, b) => (a.codice ?? "~").localeCompare(b.codice ?? "~"))
-                .map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <span className="font-mono text-xs text-primary mr-2">{t.codice ?? "—"}</span>
-                    {t.nome_corso}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({t.ore_minime_legge ?? "?"} ore)
-                    </span>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-3">

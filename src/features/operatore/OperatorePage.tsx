@@ -2,6 +2,8 @@
  * File:      OperatorePage.tsx
  * Percorso:  src/features/operatore/OperatorePage.tsx
  * Postazione Operatore: compone i blocchi grafici con la logica degli hook.
+ * Revisioni:
+ *   rev 2 — 22/11/2026 — Passa al modulo i legami corso → ruoli (categorie dell'elenco corsi, dal database).
  */
 import { IntestazioneOperatore } from "./components/IntestazioneOperatore";
 import { PannelloDocumento } from "./components/PannelloDocumento";
@@ -17,9 +19,11 @@ import { useInvioEmail } from "./hooks/useInvioEmail";
 import { useLetturaAi } from "./hooks/useLetturaAi";
 import { useSalvataggioCoda } from "./hooks/useSalvataggioCoda";
 import { useTipiCorso } from "./hooks/useTipiCorso";
+import { useLegamiCorsi } from "@/features/selezione-corso/useLegamiCorsi";
 
 export function OperatorePage() {
   const tipi = useTipiCorso();
+  const legami = useLegamiCorsi();
   const formRiga = useFormRiga();
   const documento = useDocumento();
   const coda = useCodaLavoro();
@@ -67,6 +71,7 @@ export function OperatorePage() {
           form={form}
           set={set}
           tipi={tipi}
+          legami={legami}
           campoOcr={campoOcr}
           setCampoOcr={setCampoOcr}
           haAnteprima={!!anteprima}

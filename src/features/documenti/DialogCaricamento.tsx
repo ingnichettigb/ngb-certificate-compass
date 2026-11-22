@@ -8,6 +8,8 @@
  *   - Rev 2 (2026-10-30 20:30): Salvataggio locale e gestione permessi cartelle.
  *   - Rev 3 (2026-11-04 08:00): Selezione corsi dal catalogo completo (inclusi Privacy e Covid),
  *            badge colorati per argomento, codice standard e ricalcolo automatico della scadenza.
+ *   - Rev 4 (2026-11-22): Elenco corsi con pulsanti delle categorie (dal database), ricerca, ultimo scelto per primo,
+ *            corsi e poi aggiornamenti (SelettoreCorso). Badge per argomento, «Altro» e ricalcolo scadenza invariati.
  */
 import { SceltaCartellaSalvataggio } from "./SceltaCartellaSalvataggio";
 import { useRef } from "react";
@@ -24,16 +26,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { getTipiCorso, type TipoCorso, type Dipendente } from "@/lib/api";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 import { useCaricamentoAttestato } from "./hooks/useCaricamentoAttestato";
+import { SelettoreCorso } from "@/features/selezione-corso/SelettoreCorso";
+import { useLegamiCorsi } from "@/features/selezione-corso/useLegamiCorsi";
 import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
 import { useStatoCartelle } from "@/features/cartelle/useStatoCartelle";
 import { autorizzaCartelle, collegaCartella } from "@/lib/api/stato-cartelle";
@@ -72,6 +69,7 @@ export function DialogCaricamento({
     queryKey: ["tipi_corso"],
     queryFn: getTipiCorso,
   });
+  const legami = useLegamiCorsi(open);
 
   function ricalcolaScadenza(nomeCorso: string, dataRif: string) {
     const c = corsi.find((x) => x.nome_corso === nomeCorso);
@@ -126,55 +124,21 @@ export function DialogCaricamento({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Tipo di attestato</Label>
-              <Select value={tipo} onValueChange={cambiaTipo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona corso dal catalogo…">
-                    {corsoSelezionato ? (
-                      <span className="flex items-center gap-2 truncate">
-                        {corsoSelezionato.codice && (
-                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-primary">
-                            {corsoSelezionato.codice}
-                          </span>
-                        )}
-                        <span className="truncate font-medium">{corsoSelezionato.nome_corso}</span>
-                      </span>
-                    ) : tipo === "Altro" ? (
-                      <span className="font-medium">Altro (specifica sotto)</span>
-                    ) : null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="max-h-80 w-[min(92vw,560px)]">
-                  {isLoadingCorsi ? (
-                    <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin" /> Caricamento corsi…
-                    </div>
-                  ) : (
-                    <>
-                      {corsi.map((c: TipoCorso) => {
-                        const gruppo = assegnaGruppoArgomento(c);
-                        return (
-                          <SelectItem key={c.id} value={c.nome_corso} className="cursor-pointer py-2">
-                            <div className="flex items-center gap-2">
-                              {c.codice && (
-                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold text-primary">
-                                  {c.codice}
-                                </span>
-                              )}
-                              <span className="font-medium text-foreground">{c.nome_corso}</span>
-                              <span className={`ml-auto rounded px-1.5 py-0.5 text-xs font-medium ${gruppo.coloreSfondo} ${gruppo.coloreTesto}`}>
-                                {gruppo.titolo}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                      <SelectItem value="Altro" className="cursor-pointer border-t border-border py-2 font-semibold">
-                        Altro (corso fuori catalogo)
-                      </SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+              <SelettoreCorso
+                corsi={corsi}
+                legami={legami}
+                valore={tipo}
+                valoreDi={(c: TipoCorso) => c.nome_corso}
+                onScegli={(c: TipoCorso) => cambiaTipo(c.nome_corso)}
+                segnaposto="Seleziona corso dal catalogo…"
+                caricamento={isLoadingCorsi}
+                badge={(c: TipoCorso) => {
+                  const gruppo = assegnaGruppoArgomento(c);
+                  return { testo: gruppo.titolo, classe: `${gruppo.coloreSfondo} ${gruppo.coloreTesto}` };
+                }}
+                extra={{ valore: "Altro", etichetta: "Altro (corso fuori catalogo)", etichettaScelta: "Altro (specifica sotto)" }}
+                onScegliExtra={cambiaTipo}
+              />
             </div>
 
             <div className="space-y-1.5">

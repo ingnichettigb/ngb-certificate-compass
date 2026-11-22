@@ -4,6 +4,8 @@
  * Data creazione: 2026-10-25
  * Revisioni:
  *   - Rev 1 (2026-10-25 20:30): Dialog per modifica corso, date, ore e stato di validazione dell'attestato.
+ *   - Rev 2 (2026-11-22): Campo «Tipo di corso» con pulsanti delle categorie (dal database), ricerca, ultimo scelto per
+ *            primo, corsi e poi aggiornamenti (SelettoreCorso). Date, ore, stato e ricalcolo scadenza invariati.
  */
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +27,8 @@ import {
   type Stato,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { SelettoreCorso } from "@/features/selezione-corso/SelettoreCorso";
+import { useLegamiCorsi } from "@/features/selezione-corso/useLegamiCorsi";
 
 export function DialogModificaAttestato({
   open,
@@ -42,6 +46,7 @@ export function DialogModificaAttestato({
     queryFn: getTipiCorso,
   });
 
+  const legami = useLegamiCorsi(open);
   const [tipoCorsoId, setTipoCorsoId] = useState("");
   const [dataCorso, setDataCorso] = useState("");
   const [senzaScadenza, setSenzaScadenza] = useState(false);
@@ -125,25 +130,17 @@ export function DialogModificaAttestato({
           {/* Tipo di corso */}
           <div className="space-y-1.5">
             <Label htmlFor="tipo-corso">Tipo di corso *</Label>
-            <select
+            <SelettoreCorso
               id="tipo-corso"
-              value={tipoCorsoId}
-              onChange={(e) => {
-                const nuovoId = e.target.value;
-                setTipoCorsoId(nuovoId);
-                ricalcolaScadenza(nuovoId, dataCorso);
+              corsi={tipiCorso}
+              legami={legami}
+              valore={tipoCorsoId}
+              onScegli={(tc) => {
+                setTipoCorsoId(tc.id);
+                ricalcolaScadenza(tc.id, dataCorso);
               }}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              required
-            >
-              <option value="">-- Seleziona corso --</option>
-              {tipiCorso.map((tc) => (
-                <option key={tc.id} value={tc.id}>
-                  {tc.codice ? `[${tc.codice}] ` : ""}
-                  {tc.nome_corso}
-                </option>
-              ))}
-            </select>
+              segnaposto="-- Seleziona corso --"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
