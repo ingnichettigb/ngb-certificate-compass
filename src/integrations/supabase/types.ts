@@ -40,6 +40,12 @@ export type Database = {
           data_scadenza_calcolata: string | null
           data_validazione: string | null
           dipendente_id: string
+          equivalenza_corso_atteso: string | null
+          equivalenza_corso_svolto: string | null
+          equivalenza_data: string | null
+          equivalenza_esito: string | null
+          equivalenza_nota: string | null
+          equivalenza_rischio: string | null
           id: string
           note_rifiuto: string | null
           numero_attestato: string | null
@@ -57,6 +63,12 @@ export type Database = {
           data_scadenza_calcolata?: string | null
           data_validazione?: string | null
           dipendente_id: string
+          equivalenza_corso_atteso?: string | null
+          equivalenza_corso_svolto?: string | null
+          equivalenza_data?: string | null
+          equivalenza_esito?: string | null
+          equivalenza_nota?: string | null
+          equivalenza_rischio?: string | null
           id?: string
           note_rifiuto?: string | null
           numero_attestato?: string | null
@@ -74,6 +86,12 @@ export type Database = {
           data_scadenza_calcolata?: string | null
           data_validazione?: string | null
           dipendente_id?: string
+          equivalenza_corso_atteso?: string | null
+          equivalenza_corso_svolto?: string | null
+          equivalenza_data?: string | null
+          equivalenza_esito?: string | null
+          equivalenza_nota?: string | null
+          equivalenza_rischio?: string | null
           id?: string
           note_rifiuto?: string | null
           numero_attestato?: string | null
@@ -105,6 +123,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tipi_corso"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attestati_equivalenza_atteso_fkey"
+            columns: ["equivalenza_corso_atteso"]
+            isOneToOne: false
+            referencedRelation: "tipi_corso"
+            referencedColumns: ["codice"]
+          },
+          {
+            foreignKeyName: "attestati_equivalenza_svolto_fkey"
+            columns: ["equivalenza_corso_svolto"]
+            isOneToOne: false
+            referencedRelation: "tipi_corso"
+            referencedColumns: ["codice"]
           },
         ]
       }
