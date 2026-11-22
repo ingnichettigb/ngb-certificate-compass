@@ -12,6 +12,7 @@
  *   rev 6 — 11/11/2026 17:30 — Filtro «Stato lavoratore» (In forza / Solo cessati / Tutti): tipo FiltroStatoLavoratore, campo statoLavoratori,
  *            helper statoEffettivo e includeLavoratorePerStato. «includiCessati» resta valido (vale «Tutti»): test e preset esistenti invariati.
  *   rev 7 — 14/11/2026 — RigaStampa.esenzioneRspp: motivo dell'esonero dall'aggiornamento Preposto (RSPP/ASPP valido).
+ *   rev 8 — 22/11/2026 — RigaStampa.testoManca (testo al posto di «Manca») e aggiornamentoSenzaBase (aggiornamento svolto, corso base assente).
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -163,6 +164,10 @@ export type RigaStampa = {
   inSquadra?: boolean | null;
   /** Preposto esonerato dall'aggiornamento per RSPP/ASPP valido: motivo da mostrare nella colonna Stato. */
   esenzioneRspp?: string;
+  /** Riga «Manca» del corso base: testo mostrato in Scadenza e Stato al posto di «Manca» (es. «Manca corso base»). */
+  testoManca?: string;
+  /** Aggiornamento svolto da chi non ha il corso base: non è «Scaduto», Scadenza «—» e Stato «Aggiornamento svolto». */
+  aggiornamentoSenzaBase?: boolean;
   /** Solo Organigramma: la squadra di questa riga (una riga per lavoratore e per squadra) e le due celle di formazione. */
   squadra?: string;
   cellaBase?: CellaSquadra;

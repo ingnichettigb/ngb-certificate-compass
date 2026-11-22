@@ -6,11 +6,13 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
  *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
  *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
+ *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
  *   rev 7 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: righeMancanti, calcolaRighe e calcolaRigheLavoratori usano includeLavoratorePerStato.
  *   rev 8 — 14/11/2026 — calcolaRighe passa alla riga l'esonero RSPP/ASPP dal Preposto (esenzioneRspp).
- *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
+ *   rev 9 — 22/11/2026 — Scadenze: aggiornamento senza corso base (defibrillatore, antincendio, primo soccorso, preposti) = niente «Scaduto»;
+ *            riga «Manca corso base» sopra l'aggiornamento (stampa-senza-base.ts). Il motore dei cicli non cambia. Ordine delle revisioni ripristinato.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -19,6 +21,7 @@ import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { includeLavoratorePerStato, TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
+import { aggiornamentiSenzaBase, eAggiornamento, TESTO_MANCA_BASE } from "./stampa-senza-base";
 import { dipendentiConRuolo, formazionePerLavoratore, mansioneDi, nellaFinestra, ordina, ruoliDelGruppo, statoValidita, voceDelRuolo, voceFormazione } from "./stampa-selezioni";
 
 const ETICHETTA_CORSO_MANCANTE = { corsoBase: "Corso base (formazione generale)", corsoSpecifico: "Corso specifico" } as const;
@@ -134,6 +137,37 @@ function righeMancanti(
     }));
 }
 
+/**
+ * Una riga «Manca corso base» per ogni lavoratore e gruppo che ha l'aggiornamento senza il base (dopo tutti i filtri).
+ * Senza data corso, così l'ordinamento la mette sopra l'aggiornamento dello stesso lavoratore.
+ */
+function righeMancaBase(righe: RigaStampa[]): RigaStampa[] {
+  const viste = new Set<string>();
+  const out: RigaStampa[] = [];
+  for (const r of righe) {
+    if (!r.aggiornamentoSenzaBase) continue;
+    const k = `${r.dipendenteId}|${r.gruppo}`;
+    if (viste.has(k)) continue;
+    viste.add(k);
+    const riga: RigaStampa = { ...r };
+    delete riga.aggiornamentoSenzaBase;
+    out.push({
+      ...riga,
+      id: `manca-base-${r.dipendenteId}-${r.gruppo}`,
+      corso: `Corso base – ${r.gruppoTitolo}`,
+      codice: "",
+      ore: null,
+      numero: "",
+      dataCorso: "",
+      scadenza: null,
+      stato: "manca",
+      giorniAllaScadenza: null,
+      testoManca: TESTO_MANCA_BASE,
+    });
+  }
+  return out;
+}
+
 /** Converte gli attestati approvati in righe filtrate e ordinate per cognome, nome, data corso. */
 export function calcolaRighe(
   attestatiGrezzi: Attestato[],
@@ -149,6 +183,8 @@ export function calcolaRighe(
     attestatiGrezzi.filter((a) => a.stato_validazione === "Approvato"),
     oggi,
   );
+  // Solo nelle scadenze: chi ha l'aggiornamento senza il corso base non è «scaduto», gli manca il base.
+  const senzaBase = filtri.modello === "scadenze" ? aggiornamentiSenzaBase(attestati) : new Set<string>();
   let righe = attestati
     .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
     .filter((a) => includeLavoratorePerStato(a.dipendenti!.stato_lavoratore, filtri))
@@ -189,6 +225,9 @@ export function calcolaRighe(
         giorniAllaScadenza: giorni,
         inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
         ...(a.esenzioneRspp ? { esenzioneRspp: a.esenzioneRspp } : {}),
+        ...(senzaBase.has(`${d.id}|${g.chiave}`) && eAggiornamento(tc)
+          ? { aggiornamentoSenzaBase: true, scadenza: null, stato: "senza_scadenza" as const, giorniAllaScadenza: null }
+          : {}),
       };
     });
 
@@ -222,7 +261,9 @@ export function calcolaRighe(
   }
 
   const finestra = filtri.modello === "scadenze" && filtri.finestra === "tutti" ? "365" : filtri.finestra;
-  righe = righe.filter((r) => nellaFinestra(r, finestra));
+  // L'aggiornamento senza base non ha una data affidabile: resta in elenco comunque, insieme alla riga «Manca corso base».
+  righe = righe.filter((r) => r.aggiornamentoSenzaBase || nellaFinestra(r, finestra));
+  righe = [...righe, ...righeMancaBase(righe)];
   if (filtri.conMancanti && dipendenti.length) {
     righe = [...righe, ...righeMancanti(dipendenti, attestati, filtri, assegnazioni, ruoli, soloDipendenti)];
   }

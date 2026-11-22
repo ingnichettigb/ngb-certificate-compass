@@ -8,12 +8,14 @@
  *   rev 3 — 09/11/2026 17:30 — Intestazione e rendering cella per «inSquadra» (Sì / No / —).
  *   rev 4 — 09/11/2026 20:00 — Colonne dell'Organigramma (Squadra, Corso base, Aggiornamento); totale con lavoratori distinti.
  *   rev 5 — 14/11/2026 — Colonna Stato: per il Preposto esonerato dall'aggiornamento (RSPP/ASPP valido) si indica il motivo, non solo «Valido».
+ *   rev 6 — 22/11/2026 — Scadenza e Stato: «Manca corso base» (testoManca) e «Aggiornamento svolto» per l'aggiornamento senza corso base.
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 import { VOCI_CON_RUOLO } from "./stampa-tipi";
 import type { Colonna, FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
 import { cellaMancante } from "./stampa-vista";
+import { TESTO_AGGIORNAMENTO_SVOLTO } from "./stampa-senza-base";
 import { ETICHETTA_STATO, dataIt } from "./stampa-formati";
 import { testoCellaSquadra } from "./stampa-squadre";
 
@@ -67,8 +69,11 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "ore": return r.ore != null ? String(r.ore) : "—";
     case "numero": return r.numero || "—";
     case "data": return dataIt(r.dataCorso);
-    case "scadenza": return r.stato === "manca" ? "Manca" : dataIt(r.scadenza);
-    case "stato": return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
+    case "scadenza": return r.stato === "manca" ? (r.testoManca ?? "Manca") : r.aggiornamentoSenzaBase ? "—" : dataIt(r.scadenza);
+    case "stato":
+      if (r.stato === "manca" && r.testoManca) return r.testoManca;
+      if (r.aggiornamentoSenzaBase) return TESTO_AGGIORNAMENTO_SVOLTO;
+      return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
     case "categoria": return r.sottoreparto || "—";
     case "argomento": return r.gruppoTitolo || "—";
     case "giorni": return r.giorniAllaScadenza != null ? String(r.giorniAllaScadenza) : "—";
