@@ -3,6 +3,7 @@
  * Percorso:  src/features/stampe/stampe-predefinite.test.ts
  * Data creaz: 08/11/2026
  * Verifica le stampe predefinite, il raggruppamento con salto pagina e le colonne di nascita separate.
+ * Rev 6 (22/11/2026): nuova carta 13 «Scadenze – defibrillatore (DAE / BLSD)», con solo incarichi e righe «Manca».
  * Rev 5 (11/11/2026 17:30): nuova carta 04 «Registro lavoratori cessati» nella famiglia Anagrafica.
  * Rev 4 (10/11/2026 18:00): nuovo ordine di «Anagrafica» (organigramma squadre per primo, dopo la tavola A3 che è la carta 01).
  * Rev 3 (09/11/2026 20:00): catalogo attuale (famiglie Anagrafica / Scadenze / Completati) e carta Organigramma squadre.
@@ -47,16 +48,17 @@ describe("stampe predefinite: il catalogo", () => {
   it("le scadenze guardano scaduti e prossimi 12 mesi; quelle per ruolo tengono solo chi ha l'incarico", () => {
     const scadenze = STAMPE_PREDEFINITE.filter((s) => s.famiglia === "Scadenze");
     expect(scadenze.map((s) => s.id)).toEqual([
-      "scadenze-tutte", "scadenze-corso-base", "scadenze-corso-specifico", "scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-privacy",
+      "scadenze-tutte", "scadenze-corso-base", "scadenze-corso-specifico", "scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-defibrillatore", "scadenze-privacy",
     ]);
     for (const s of scadenze) {
       expect(s.filtri.modello).toBe("scadenze");
       expect(s.filtri.finestra).toBe("365");
     }
-    const perRuolo = ["scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso"].map((id) => trovaPredefinita(id)!);
-    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso"]);
+    const perRuolo = ["scadenze-preposti", "scadenze-antincendio", "scadenze-primo-soccorso", "scadenze-defibrillatore"].map((id) => trovaPredefinita(id)!);
+    expect(perRuolo.map((s) => s.filtri.gruppo)).toEqual(["preposti", "antincendio", "primo-soccorso", "defibrillatore"]);
     for (const s of perRuolo) expect(s.filtri.soloIncarichi).toBe(true);
     expect(trovaPredefinita("scadenze-tutte")?.filtri.soloIncarichi).toBe(false);
+    expect(trovaPredefinita("scadenze-defibrillatore")?.filtri).toMatchObject({ conMancanti: true, soloIncarichi: true, gruppo: "defibrillatore" });
   });
 
   it("Corso base e Corso specifico: solo quel corso, con i lavoratori senza corso come «Manca»", () => {

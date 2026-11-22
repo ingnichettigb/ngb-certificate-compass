@@ -8,6 +8,7 @@
  *            le altre carte scalano senza buchi: Scadenze parte dalla 06, Completati segue.
  *   rev 2 — 11/11/2026 17:30 — Nuova carta 04 «Registro lavoratori cessati»: la numerazione resta automatica (posizione nell'elenco), le carte
  *            successive scalano di uno: Scadenze parte dalla 07, Completati dalla 14.
+ *   rev 3 — 22/11/2026 — Nuova carta 13 «Scadenze – defibrillatore (DAE / BLSD)»: numerazione sempre automatica; Scadenze – privacy diventa la 14, Completati dalla 15.
  */
 import { STAMPE_PREDEFINITE, type FamigliaPredefinita } from "./stampe-predefinite";
 

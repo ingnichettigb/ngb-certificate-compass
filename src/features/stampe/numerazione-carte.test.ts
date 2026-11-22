@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 10/11/2026 18:00 — Verifica la sequenza 01–05 di «Anagrafica e organico» e la numerazione continua senza buchi.
  *   rev 2 — 11/11/2026 17:30 — Sequenza 01–06 con la nuova carta 04 «Registro lavoratori cessati»; Scadenze dalla 07, Completati dalla 14.
+ *   rev 3 — 22/11/2026 — Nuova carta 13 «Scadenze – defibrillatore»: privacy 14, Completati dalla 15 (Abilitati Defibrillatore = 19).
  */
 import { describe, expect, it } from "vitest";
 import { STAMPE_PREDEFINITE } from "./stampe-predefinite";
@@ -22,10 +23,13 @@ describe("numerazione delle carte", () => {
     expect(num["anagrafica-gruppi"]).toBe("06");
   });
 
-  it("Scadenze parte dalla 07 e Completati segue", () => {
+  it("Scadenze parte dalla 07 (defibrillatore 13, privacy 14) e Completati dalla 15", () => {
     expect(num["scadenze-tutte"]).toBe("07");
-    expect(num["scadenze-privacy"]).toBe("13");
-    expect(num["completati-corso-base"]).toBe("14");
+    expect(num["scadenze-primo-soccorso"]).toBe("12");
+    expect(num["scadenze-defibrillatore"]).toBe("13");
+    expect(num["scadenze-privacy"]).toBe("14");
+    expect(num["completati-corso-base"]).toBe("15");
+    expect(num["completati-defibrillatore"]).toBe("19");
   });
 
   it("numeri continui e univoci: nessun buco, tutte le stampe predefinite comprese", () => {

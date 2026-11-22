@@ -14,6 +14,8 @@
  *            tavola A3 che è la carta 01); seguono Registro anagrafico (03), Elenco per settore (04), Stampa per funzioni e squadre (05).
  *   rev 8 — 11/11/2026 17:30 — Nuova carta «Registro lavoratori cessati» (04, subito dopo il Registro anagrafico): solo cessati con data di cessazione.
  *            Le carte successive scalano di uno (Elenco per settore 05, Stampa per funzioni 06, Scadenze dalla 07, Completati dalla 14).
+ *   rev 9 — 22/11/2026 — Nuova carta «Scadenze – defibrillatore (DAE / BLSD)» (13), gemella di antincendio e primo soccorso: solo chi ha l'incarico,
+ *            scaduti e in scadenza entro 12 mesi, «Manca» in rosso per chi ha la nomina ma non il corso. Scadenze – privacy passa alla 14, Completati dalla 15.
  */
 import type { Colonna, FiltriStampa } from "./stampa-tipi";
 import { FILTRI_INIZIALI, TUTTI } from "./stampa-tipi";
@@ -131,6 +133,18 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     destinatari: true,
     raggruppaPer: "reparto",
     filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti primo soccorso con incarico assegnato", MANCA],
+  },
+  {
+    id: "scadenze-defibrillatore",
+    famiglia: "Scadenze",
+    titolo: "Scadenze – defibrillatore (DAE / BLSD)",
+    descrizione: `Le scadenze degli addetti al defibrillatore (BLSD/DAE) con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA(false)}`,
+    contiene: CONTIENE_SCADENZE,
+    filtri: { ...scadenzeBase, gruppo: "defibrillatore", soloIncarichi: true, conMancanti: true },
+    colonne: ["scadenza", "stato", "lavoratore", "cf", "reparto", "corso", "data"],
+    destinatari: true,
+    raggruppaPer: "reparto",
+    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti defibrillatore (BLSD/DAE) con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-privacy",
