@@ -13,6 +13,7 @@
  *            helper statoEffettivo e includeLavoratorePerStato. «includiCessati» resta valido (vale «Tutti»): test e preset esistenti invariati.
  *   rev 7 — 14/11/2026 — RigaStampa.esenzioneRspp: motivo dell'esonero dall'aggiornamento Preposto (RSPP/ASPP valido).
  *   rev 8 — 22/11/2026 — RigaStampa.testoManca (testo al posto di «Manca») e aggiornamentoSenzaBase (aggiornamento svolto, corso base assente).
+ *   rev 9 — 22/11/2026 — FiltriStampa.senzaFinestra (facoltativo): nelle scadenze non limita le righe alla finestra di 12 mesi (vista «Tutti gli addetti»).
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -91,6 +92,7 @@ export type FiltriStampa = {
   soloIncarichi: boolean; // con un gruppo corsi: tiene solo chi ha oggi il ruolo collegato assegnato
   soloCorso: SoloCorso | null; // solo gli attestati del Corso base o del Corso specifico
   conMancanti: boolean; // aggiunge i lavoratori a cui il corso manca (stato «Manca»)
+  senzaFinestra?: boolean; // scadenze: nessun limite di finestra (anche i corsi validi lontani dalla scadenza)
   incompleta: boolean; // selezione «Anagrafica incompleta»
   senzaAttestati: boolean; // selezione «Senza attestati»
   senzaModo: ModoSenza; // «nessuno» dei due minimi oppure manca «almeno» uno dei due

@@ -13,6 +13,7 @@
  *   rev 8 — 14/11/2026 — calcolaRighe passa alla riga l'esonero RSPP/ASPP dal Preposto (esenzioneRspp).
  *   rev 9 — 22/11/2026 — Scadenze: aggiornamento senza corso base (defibrillatore, antincendio, primo soccorso, preposti) = niente «Scaduto»;
  *            riga «Manca corso base» sopra l'aggiornamento (stampa-senza-base.ts). Il motore dei cicli non cambia. Ordine delle revisioni ripristinato.
+ *   rev 10 — 22/11/2026 — Con filtri.senzaFinestra le scadenze non sono limitate ai 12 mesi (vista «Tutti gli addetti»); senza il flag nulla cambia.
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -260,7 +261,7 @@ export function calcolaRighe(
     righe = [...ultimo.values()];
   }
 
-  const finestra = filtri.modello === "scadenze" && filtri.finestra === "tutti" ? "365" : filtri.finestra;
+  const finestra = filtri.senzaFinestra ? "tutti" : filtri.modello === "scadenze" && filtri.finestra === "tutti" ? "365" : filtri.finestra;
   // L'aggiornamento senza base non ha una data affidabile: resta in elenco comunque, insieme alla riga «Manca corso base».
   righe = righe.filter((r) => r.aggiornamentoSenzaBase || nellaFinestra(r, finestra));
   righe = [...righe, ...righeMancaBase(righe)];

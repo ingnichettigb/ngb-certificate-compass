@@ -16,6 +16,7 @@
  *            Le carte successive scalano di uno (Elenco per settore 05, Stampa per funzioni 06, Scadenze dalla 07, Completati dalla 14).
  *   rev 9 — 22/11/2026 — Nuova carta «Scadenze – defibrillatore (DAE / BLSD)» (13), gemella di antincendio e primo soccorso: solo chi ha l'incarico,
  *            scaduti e in scadenza entro 12 mesi, «Manca» in rosso per chi ha la nomina ma non il corso. Scadenze – privacy passa alla 14, Completati dalla 15.
+ *   rev 10 — 22/11/2026 — Carta 13 (defibrillatore): campo vistaAddetti, due viste esclusive «Tutti gli addetti» / «Richiedono formazione» (Fase 1, solo DAE).
  */
 import type { Colonna, FiltriStampa } from "./stampa-tipi";
 import { FILTRI_INIZIALI, TUTTI } from "./stampa-tipi";
@@ -37,6 +38,8 @@ export type StampaPredefinita = {
   destinatari?: boolean;
   /** Organigramma: una riga per lavoratore e per squadra di sicurezza (non dipende dagli attestati filtrati). */
   organigramma?: boolean;
+  /** Squadre: barra con due pulsanti esclusivi «Tutti gli addetti» / «Richiedono formazione» (una riga per lavoratore). */
+  vistaAddetti?: boolean;
   /** Spiegazione mostrata quando la tabella è vuota. */
   messaggioVuoto?: string;
   filtriApplicati: string[];
@@ -138,13 +141,14 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     id: "scadenze-defibrillatore",
     famiglia: "Scadenze",
     titolo: "Scadenze – defibrillatore (DAE / BLSD)",
-    descrizione: `Le scadenze degli addetti al defibrillatore (BLSD/DAE) con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA(false)}`,
+    descrizione: `Gli addetti al defibrillatore (BLSD/DAE) con l'incarico oggi assegnato, in due viste: «Tutti gli addetti» (l'intera squadra) e «Richiedono formazione» (scaduti e chi non ha il corso).${NOTA_MANCA(false)}`,
     contiene: CONTIENE_SCADENZE,
     filtri: { ...scadenzeBase, gruppo: "defibrillatore", soloIncarichi: true, conMancanti: true },
     colonne: ["scadenza", "stato", "lavoratore", "cf", "reparto", "corso", "data"],
     destinatari: true,
     raggruppaPer: "reparto",
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti defibrillatore (BLSD/DAE) con incarico assegnato", MANCA],
+    vistaAddetti: true,
+    filtriApplicati: ["Solo addetti defibrillatore (BLSD/DAE) con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-privacy",

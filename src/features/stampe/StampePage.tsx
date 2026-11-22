@@ -25,6 +25,9 @@
  *   rev 12 — 08/11/2026 — «Stampa» (stampante) e «PDF» separati: il PDF si genera e si scarica direttamente, con testo reale
  *                         modificabile (esporta-pdf.ts), senza passare dalla stampante PDF installata.
  *   rev 14 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: elenco lavoratori filtrato con includeLavoratorePerStato; badge «Solo cessati» / «Inclusi cessati».
+ *   rev 15 — 22/11/2026 — Carte di squadra con «vistaAddetti» (Fase 1: defibrillatore): due pulsanti esclusivi «Tutti gli addetti» / «Richiedono formazione»;
+ *                         tabella, Stampa, PDF, Excel e CSV seguono la vista attiva; titolo e nome file con il suffisso della vista;
+ *                         il totale «N addetti» conta i lavoratori distinti.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -55,6 +58,8 @@ import { ContenutoStampa } from "./components/ContenutoStampa";
 import { BarraEsportazione } from "./components/BarraEsportazione";
 import { BarraGruppiPredefinite } from "./components/BarraGruppiPredefinite";
 import { BarraDestinatari } from "./components/BarraDestinatari";
+import { BarraVistaAddetti } from "./components/BarraVistaAddetti";
+import { contaVistaAddetti, ETICHETTA_VISTA_ADDETTI, righePerVistaAddetti, type VistaAddetti } from "./stampa-addetti";
 import { GuidaStampe } from "./components/GuidaStampe";
 
 const distinti = (v: (string | null | undefined)[]) =>
@@ -68,6 +73,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const [univoco, setUnivoco] = useState(false);
   const [gruppoScelto, setGruppoScelto] = useState<string | null>(null);
   const [pubblico, setPubblico] = useState<Pubblico>("tutti");
+  const [vistaAddetti, setVistaAddetti] = useState<VistaAddetti>("tutti");
 
   const att = useQuery({ queryKey: ["stampe-attestati"], queryFn: () => getAttestati("Approvato") });
   const dip = useQuery({ queryKey: ["dipendenti"], queryFn: getDipendenti });
@@ -78,7 +84,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const conArrivi = filtri.arrivi !== "no";
   const vista = predefinita ? `pre:${predefinita.id}` : `${filtri.modello}|${conArrivi}|${filtri.incompleta}|${filtri.senzaAttestati}`;
 
-  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setGruppoScelto(null); setPubblico("tutti"); }, [vista]);
+  useEffect(() => { setPref(leggiPreferenze(vista)); setOrdine(null); setGruppoScelto(null); setPubblico("tutti"); setVistaAddetti("tutti"); }, [vista]);
   const cambiaPreferenze = (cambia: (p: PreferenzeColonne) => PreferenzeColonne) =>
     setPref((p) => {
       const n = cambia(p);
@@ -117,13 +123,21 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
   const soloIds = useMemo(() => intersezioneId(arrivi.ids, senzaMinimi), [arrivi.ids, senzaMinimi]);
 
   const organigramma = !!predefinita?.organigramma;
-  const righeGrezze = useMemo(
+  // Carte di squadra: le due viste partono da tutte le righe del gruppo, senza il limite dei 12 mesi.
+  const conVistaAddetti = !!predefinita?.vistaAddetti;
+  const filtriMotore = useMemo(() => (conVistaAddetti ? { ...filtri, senzaFinestra: true } : filtri), [conVistaAddetti, filtri]);
+  const righeMotore = useMemo(
     () => organigramma
       ? calcolaRigheOrganigramma(tutti, att.data ?? [], ruoliQ.data ?? [], assegnazioni, filtri, soloIds)
       : filtri.modello === "lavoratori"
         ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
-        : calcolaRighe(att.data ?? [], filtri, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
-    [organigramma, att.data, tutti, filtri, assegnazioni, ruoliQ.data, soloIds],
+        : calcolaRighe(att.data ?? [], filtriMotore, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
+    [organigramma, att.data, tutti, filtri, filtriMotore, assegnazioni, ruoliQ.data, soloIds],
+  );
+  const conteggiAddetti = useMemo(() => contaVistaAddetti(righeMotore), [righeMotore]);
+  const righeGrezze = useMemo(
+    () => (conVistaAddetti ? righePerVistaAddetti(righeMotore, vistaAddetti) : righeMotore),
+    [conVistaAddetti, righeMotore, vistaAddetti],
   );
 
   // Carte di scadenza: scelta del pubblico (Tutti / Solo docenti / Solo ATA); i numeri contano i lavoratori di ogni scelta.
@@ -180,7 +194,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const colonneFile: Colonna[] = filtri.modello === "scheda" ? ["lavoratore", ...colonne.filter((c) => c !== "lavoratore")] : colonne;
   const suffissoPubblico = conDestinatari && pubblico !== "tutti" ? ` – ${ETICHETTA_PUBBLICO[pubblico]}` : "";
-  const titolo = predefinita ? `${gruppoScelto ? `${predefinita.titolo} – ${gruppoScelto}` : predefinita.titolo}${suffissoPubblico}` : titoloStampa(filtri);
+  const suffissoVista = conVistaAddetti && vistaAddetti === "formazione" ? " – richiedono formazione" : "";
+  const titolo = predefinita ? `${gruppoScelto ? `${predefinita.titolo} – ${gruppoScelto}` : predefinita.titolo}${suffissoVista}${suffissoPubblico}` : titoloStampa(filtri);
   const nomeBase = titolo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const nomeRuolo = ruoliPresenti.find((r) => r.id === filtri.ruoloId)?.nome;
@@ -204,14 +219,16 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   const partiPredefinita = [
     ...predefinita?.filtriApplicati ?? [],
+    conVistaAddetti ? `Vista: ${ETICHETTA_VISTA_ADDETTI[vistaAddetti]}` : null,
     gruppoScelto ? `Gruppo: ${gruppoScelto}` : null,
     conDestinatari ? `Per: ${ETICHETTA_PUBBLICO[pubblico]}` : null,
   ].filter(Boolean) as string[];
 
   const parti = predefinita ? partiPredefinita : partiPersonalizzata;
   const orizzontale = filtri.modello !== "scheda";
-  const unita = organigramma ? "componenti" : filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
-  const sottotitolo = [...parti, `${righe.length} ${unita}`].join(" · ");
+  const unita = organigramma ? "componenti" : conVistaAddetti ? "addetti" : filtri.modello === "lavoratori" || univocoAttivo ? "lavoratori" : "righe";
+  const numero = conVistaAddetti ? new Set(righe.map((r) => r.dipendenteId)).size : righe.length;
+  const sottotitolo = [...parti, `${numero} ${unita}`].join(" · ");
   const caricamento = att.isLoading || dip.isLoading;
 
   async function excel() {
@@ -289,6 +306,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
               />
             )}
 
+            {conVistaAddetti && <BarraVistaAddetti scelta={vistaAddetti} conteggi={conteggiAddetti} onSeleziona={setVistaAddetti} />}
+
             {conDestinatari && <BarraDestinatari scelto={pubblico} conteggi={conteggiPubblico} onSeleziona={setPubblico} />}
 
             <BarraEsportazione
@@ -308,7 +327,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
             />
 
             <div className="mb-2 rounded-md border border-emerald-700/40 bg-emerald-50 px-3 py-1 text-xs text-emerald-950 print:hidden dark:bg-emerald-950/30 dark:text-emerald-100">
-              <b>Filtri attivi:</b> {parti.length ? parti.join(" · ") : "nessuno"} — <b>{righe.length} {unita}</b>
+              <b>Filtri attivi:</b> {parti.length ? parti.join(" · ") : "nessuno"} — <b>{numero} {unita}</b>
             </div>
 
             <FoglioStampa
@@ -333,7 +352,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
                 onOrdina={(c) => setOrdine((o) => prossimoOrdine(o, c))}
                 dipendenti={tutti}
                 ditta={ditta.data}
-                messaggioVuoto={predefinita?.messaggioVuoto ?? messaggioVuoto(filtri, arrivi.inizio, arrivi.senzaData)}
+                messaggioVuoto={conVistaAddetti && vistaAddetti === "formazione" ? "Nessun addetto richiede formazione: tutti hanno il corso in regola." : predefinita?.messaggioVuoto ?? messaggioVuoto(filtri, arrivi.inizio, arrivi.senzaData)}
                 raggruppaPer={predefinita?.raggruppaPer}
                 soloGruppo={gruppoScelto}
               />
