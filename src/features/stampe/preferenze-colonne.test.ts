@@ -3,6 +3,7 @@
  * Percorso:  src/features/stampe/preferenze-colonne.test.ts
  * Data creaz: 07/11/2026
  * Verifica che colonne tolte/aggiunte e larghezze si ricordino per ogni documento e che dati rovinati non rompano la pagina.
+ * Rev 2 (22/11/2026): la colonna scartata nel «registro» è «ruoli» (la «Data assunzione» ora è disponibile anche per attestato).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -41,7 +42,7 @@ describe("applicaPreferenze e alternaColonna", () => {
   });
 
   it("scarta le colonne aggiunte che nel documento non hanno dato", () => {
-    const p: PreferenzeColonne = { tolte: [], aggiunte: ["corsoBase", "assunzione", "nascita"], larghezze: {} };
+    const p: PreferenzeColonne = { tolte: [], aggiunte: ["corsoBase", "ruoli", "nascita"], larghezze: {} };
     expect(applicaPreferenze(BASE, p, "registro")).toEqual([...BASE, "nascita"]);
   });
 

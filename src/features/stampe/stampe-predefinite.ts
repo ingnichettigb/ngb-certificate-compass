@@ -17,6 +17,7 @@
  *   rev 9 — 22/11/2026 — Nuova carta «Scadenze – defibrillatore (DAE / BLSD)» (13), gemella di antincendio e primo soccorso: solo chi ha l'incarico,
  *            scaduti e in scadenza entro 12 mesi, «Manca» in rosso per chi ha la nomina ma non il corso. Scadenze – privacy passa alla 14, Completati dalla 15.
  *   rev 10 — 22/11/2026 — Carta 13 (defibrillatore): campo vistaAddetti, due viste esclusive «Tutti gli addetti» / «Richiedono formazione» (Fase 1, solo DAE).
+ *   rev 11 — 22/11/2026 — Le due viste anche su Scadenze – preposti (10), antincendio (11) e primo soccorso (12): stesse regole del defibrillatore.
  */
 import type { Colonna, FiltriStampa } from "./stampa-tipi";
 import { FILTRI_INIZIALI, TUTTI } from "./stampa-tipi";
@@ -105,37 +106,40 @@ export const STAMPE_PREDEFINITE: StampaPredefinita[] = [
     id: "scadenze-preposti",
     famiglia: "Scadenze",
     titolo: "Scadenze – preposti",
-    descrizione: `Le scadenze dei soli preposti con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA(false)}`,
+    descrizione: `I preposti con l'incarico oggi assegnato, in due viste: «Tutti gli addetti» (l'intera squadra) e «Richiedono formazione» (scaduti e chi non ha il corso).${NOTA_MANCA(false)}`,
     contiene: CONTIENE_SCADENZE,
     filtri: { ...scadenzeBase, gruppo: "preposti", soloIncarichi: true, conMancanti: true },
     colonne: ["scadenza", "stato", "lavoratore", "cf", "reparto", "corso", "data"],
     destinatari: true,
     raggruppaPer: "reparto",
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo preposti con incarico assegnato", MANCA],
+    vistaAddetti: true,
+    filtriApplicati: ["Solo preposti con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-antincendio",
     famiglia: "Scadenze",
     titolo: "Scadenze – antincendio",
-    descrizione: `Le scadenze degli addetti antincendio con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA(false)}`,
+    descrizione: `Gli addetti antincendio con l'incarico oggi assegnato, in due viste: «Tutti gli addetti» (l'intera squadra) e «Richiedono formazione» (scaduti e chi non ha il corso).${NOTA_MANCA(false)}`,
     contiene: CONTIENE_SCADENZE,
     filtri: { ...scadenzeBase, gruppo: "antincendio", soloIncarichi: true, conMancanti: true },
     colonne: ["scadenza", "stato", "lavoratore", "cf", "reparto", "corso", "data"],
     destinatari: true,
     raggruppaPer: "reparto",
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti antincendio con incarico assegnato", MANCA],
+    vistaAddetti: true,
+    filtriApplicati: ["Solo addetti antincendio con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-primo-soccorso",
     famiglia: "Scadenze",
     titolo: "Scadenze – primo soccorso",
-    descrizione: `Le scadenze degli addetti al primo soccorso con l'incarico oggi assegnato: scaduti e in scadenza entro 12 mesi.${NOTA_MANCA(false)}`,
+    descrizione: `Gli addetti al primo soccorso con l'incarico oggi assegnato, in due viste: «Tutti gli addetti» (l'intera squadra) e «Richiedono formazione» (scaduti e chi non ha il corso).${NOTA_MANCA(false)}`,
     contiene: CONTIENE_SCADENZE,
     filtri: { ...scadenzeBase, gruppo: "primo-soccorso", soloIncarichi: true, conMancanti: true },
     colonne: ["scadenza", "stato", "lavoratore", "cf", "reparto", "corso", "data"],
     destinatari: true,
     raggruppaPer: "reparto",
-    filtriApplicati: [scaduteOEntro12Mesi, "Solo addetti primo soccorso con incarico assegnato", MANCA],
+    vistaAddetti: true,
+    filtriApplicati: ["Solo addetti primo soccorso con incarico assegnato", MANCA],
   },
   {
     id: "scadenze-defibrillatore",

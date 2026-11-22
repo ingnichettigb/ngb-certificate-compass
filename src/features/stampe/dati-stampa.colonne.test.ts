@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Verifica l'elenco delle colonne aggiungibili (gruppi funzionali in ordine alfabetico, per documento) e le colonne nuove.
  * Rev 2 (09/11/2026 20:00): le colonne dell'Organigramma si raggiungono solo con quel documento; gli altri non le offrono.
+ * Rev 3 (22/11/2026): «Data assunzione» è offerta anche nei documenti per attestato.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -43,10 +44,10 @@ describe("gruppiColonne: raggruppamento funzionale in ordine alfabetico", () => 
   it("nei documenti per attestato non offre colonne che lì non hanno dato", () => {
     for (const m of ["registro", "gruppo", "scadenze", "scheda", "reparto"] as Modello[]) {
       const d = colonneDisponibili(m);
-      for (const vuota of ["assunzione", "ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"] as Colonna[]) {
+      for (const vuota of ["ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"] as Colonna[]) {
         expect(d).not.toContain(vuota);
       }
-      expect(d).toEqual(expect.arrayContaining(["corso", "scadenza", "giorni", "argomento", "nascita", "mansione", "categoria"]));
+      expect(d).toEqual(expect.arrayContaining(["corso", "scadenza", "giorni", "argomento", "nascita", "mansione", "categoria", "assunzione", "fineContratto", "cessazione"]));
     }
   });
 

@@ -7,6 +7,7 @@
  *   rev 2 — 08/11/2026 — Aggiunte tra le colonne dell'anagrafica «Luogo di nascita» e «Data di nascita».
  *   rev 3 — 09/11/2026 17:30 — Colonna «inSquadra» aggiunta al gruppo «Formazione e incarichi» per i documenti per attestato.
  *   rev 4 — 09/11/2026 20:00 — Gruppo «Squadre di sicurezza» (Squadra, Corso base, Aggiornamento): solo per l'Organigramma.
+ *   rev 5 — 22/11/2026 — «Data assunzione» scelta dal «+» anche nelle stampe per attestato (scadenze, completati, registro): non è più riservata ai lavoratori.
  */
 import type { Attestato } from "@/lib/api";
 import type { Colonna, Modello } from "./stampa-tipi";
@@ -32,7 +33,7 @@ const RAGGRUPPAMENTO_COLONNE: GruppoColonne[] = [
 const SOLO_PER_ATTESTATO: readonly Colonna[] = ["corso", "argomento", "numero", "ore", "data", "scadenza", "giorni", "stato", "inSquadra"];
 /** Colonne con dato solo nelle righe «per lavoratore» (nelle righe per attestato non sono valorizzate). */
 const SOLO_PER_LAVORATORE: readonly Colonna[] = [
-  "assunzione", "ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore",
+  "ruoli", "corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore",
 ];
 
 /** Colonne con dato solo nell'Organigramma delle squadre. */

@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 22/11/2026 — Aggiornamento senza corso base (defibrillatore, antincendio, primo soccorso, preposti): il lavoratore non risulta
  *            «Scaduto» (l'aggiornamento è stato fatto) e riceve, sopra l'aggiornamento, una riga «Manca corso base».
+ *   rev 2 — 22/11/2026 — aggiornamentiSenzaBase conta solo gli attestati «Approvato» (un base in attesa o respinto non conta come base presente).
  *
  * Regola per riconoscere l'aggiornamento: il codice del corso contiene «AGG» oppure il livello è «Aggiornamento»
  * (VFF-FOR1A2 e PSO-AgB-04 non contengono «AGG» ma hanno livello «Aggiornamento»; PRP-BAS-12 ha livello «Specifico»).
@@ -35,10 +36,11 @@ export function gruppoConBase(a: Pick<Attestato, "tipi_corso">): string | null {
   return GRUPPI_CON_BASE_E_AGGIORNAMENTO.has(chiave) ? chiave : null;
 }
 
-/** Chiavi «dipendente|gruppo» di chi ha almeno un aggiornamento e nessun corso base (attestati già filtrati per stato). */
+/** Chiavi «dipendente|gruppo» di chi ha almeno un aggiornamento e nessun corso base (contano solo gli attestati approvati). */
 export function aggiornamentiSenzaBase(attestati: Attestato[]): Set<string> {
   const conta = new Map<string, { agg: number; base: number }>();
   for (const a of attestati) {
+    if (a.stato_validazione !== "Approvato") continue;
     const g = gruppoConBase(a);
     if (!g) continue;
     const k = `${a.dipendente_id}|${g}`;

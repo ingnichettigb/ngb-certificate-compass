@@ -14,6 +14,7 @@
  *   rev 9 — 22/11/2026 — Scadenze: aggiornamento senza corso base (defibrillatore, antincendio, primo soccorso, preposti) = niente «Scaduto»;
  *            riga «Manca corso base» sopra l'aggiornamento (stampa-senza-base.ts). Il motore dei cicli non cambia. Ordine delle revisioni ripristinato.
  *   rev 10 — 22/11/2026 — Con filtri.senzaFinestra le scadenze non sono limitate ai 12 mesi (vista «Tutti gli addetti»); senza il flag nulla cambia.
+ *   rev 11 — 22/11/2026 — Le righe per attestato portano la data di assunzione dall'anagrafica (colonna «Data assunzione» scelta dal «+»).
  */
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -207,7 +208,7 @@ export function calcolaRighe(
         classe: d.classe_concorso ?? "",
         mansione: mansioneDi(d),
         ruoli: "",
-        assunzione: null,
+        assunzione: d.data_assunzione ?? null,
         luogoNascita: d.luogo_nascita ?? "",
         dataNascita: d.data_nascita ?? null,
         formazione: {},

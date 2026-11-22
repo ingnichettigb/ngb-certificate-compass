@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 22/11/2026 — Aggiornamento senza corso base: niente «Scaduto», riga «Manca corso base» sopra l'aggiornamento
  *            (defibrillatore, antincendio, primo soccorso, preposti); nessun effetto con il base presente, fuori dalle scadenze e sugli altri gruppi.
+ *   rev 2 — 22/11/2026 — Solo gli attestati «Approvato» contano: un corso base in attesa o respinto non cancella «Manca corso base».
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -128,6 +129,16 @@ describe("altri gruppi e altri modelli", () => {
     const ple = att("y", neri, "LAV-PLE-II-831-AGG", "Sicurezza Lavoratori", "Specifico", "2020-01-10", "2025-01-10", 4);
     const r = calcolaRighe([pr, ple], { ...tutte, finestra: "tutti" }, OGGI, [], null, [], [neri]);
     expect(r.some((x) => x.stato === "manca" || x.aggiornamentoSenzaBase)).toBe(false);
+  });
+
+  it("aggiornamentiSenzaBase: un corso base non approvato non conta come base presente", () => {
+    const villa = dip("Villa");
+    const agg = att("a1", villa, "BLS-AGG-02", "Defibrillatore", "Aggiornamento", "2022-03-10", "2024-03-10");
+    const baseInAttesa = { ...att("b1", villa, "BLS-BAS-05", "Defibrillatore", "Base", "2020-03-10", "2022-03-10"), stato_validazione: "In attesa" } as Attestato;
+    const baseRespinto = { ...baseInAttesa, stato_validazione: "Respinto" } as Attestato;
+    expect(aggiornamentiSenzaBase([agg, baseInAttesa]).has("Villa|defibrillatore")).toBe(true);
+    expect(aggiornamentiSenzaBase([agg, baseRespinto]).has("Villa|defibrillatore")).toBe(true);
+    expect(aggiornamentiSenzaBase([agg, att("b2", villa, "BLS-BAS-05", "Defibrillatore", "Base", "2020-03-10", "2022-03-10")]).size).toBe(0);
   });
 
   it("aggiornamentiSenzaBase: gli attestati dei gruppi senza base e aggiornamento non producono chiavi", () => {
