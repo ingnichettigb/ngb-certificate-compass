@@ -9,6 +9,7 @@
  * Funzioni pure.
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 4).
+ *   - Rev 2 (2026-11-22): regolaDecisa: dice se per la regola si sa già se vale per la ditta (serve alla proposta del corso, Fase 7).
  */
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
 import { normalizzaCodice } from "@/lib/api/codici-ruoli";
@@ -47,4 +48,14 @@ export function corsoApplicabile(regole: RegolaRuoloCorso[], codiceCorso: string
   const citanti = indiceRegole(regole).regolePerCorso.get(normalizzaCodice(codiceCorso));
   if (!citanti || citanti.length === 0) return true;
   return citanti.some((r) => regolaApplicabile(r, contesto));
+}
+
+/**
+ * Per questa regola il programma sa già dire se vale per la ditta? Sì per «nessuno» (vale sempre) e per «rischio ATECO»
+ * (lo decide il grado di rischio). Per gli altri parametri (livello antincendio, gruppo primo soccorso, fascia RLS, settore,
+ * modulo, integrazione…) non ancora: servono dati che la ditta non fornisce, quindi non si propone un corso al posto di un altro.
+ */
+export function regolaDecisa(regola: RegolaRuoloCorso, contesto: ContestoRegole): boolean {
+  const decidibile = testo(regola.parametro) === "nessuno" || eParametroRischio(regola);
+  return decidibile && regolaApplicabile(regola, contesto);
 }

@@ -7,103 +7,136 @@
  *   - Rev 2 (2026-10-26 16:45): Catalogo corsi completo con codici standard, descrizione, spunta visiva e ricalcolo scadenza.
  *   - Rev 3 (2026-11-01 11:00): Mappa nome→codice allineata al catalogo reale (codici VFF-FOR… per l'antincendio, PSO-AgB-04,
  *     EME-PRO-02, SIC-SPE-…); i vecchi nomi dell'antincendio restano come alias.
+ *   - Rev 4 (2026-11-22): Punto di verità ruoli-corsi (Fase 7). Il corso si sceglie per IDENTIFICATIVO, non per nome: base e
+ *     aggiornamento hanno lo stesso nome e prima vinceva sempre il primo. Tolta la mappa nome→codice (i corsi hanno tutti il codice).
+ *     Il corso si propone dal codice (o dal nome, se unico) scritto nel nome del file scelto e dai corsi che la Tabella 02 prevede per
+ *     i ruoli del lavoratore e che mancano o sono scaduti. Il nome del documento porta il codice se più corsi hanno lo stesso nome.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Lightbulb, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTipiCorso, type TipoCorso, type Dipendente } from "@/lib/api";
+import {
+  CHIAVE_ASSEGNAZIONI_RUOLI,
+  CHIAVE_RUOLI,
+  getAssegnazioniRuoli,
+  getAttestati,
+  getRuoliSicurezza,
+  getTipiCorso,
+  type TipoCorso,
+  type Dipendente,
+} from "@/lib/api";
+import { useContestoRegole } from "../matrice/useContestoRegole";
+import { useRegoleRuoloCorso } from "../matrice/useRegoleRuoloCorso";
+import { corsiProposti, corsoDalNomeFile, etichettaCorso } from "./proposta-corso";
+
+/** Voce «Altro» del menu: corso fuori catalogo, descritto a mano. */
+const ALTRO = "Altro";
 
 /**
- * Usata solo quando un corso non ha un codice nel catalogo. Nomi e codici sono quelli del catalogo reale;
- * in fondo i vecchi nomi dell'antincendio (alias) puntano ai nuovi codici VVF.
+ * tipo: testo del corso per il documento e per il nome file (con il codice se il nome è condiviso da più corsi);
+ * tipoCorsoId: identificativo del corso scelto («Altro» per un corso fuori catalogo, vuoto se non scelto).
  */
-const CODICI_CORSI_STANDARD: Record<string, string> = {
-  "Sicurezza Generale": "SIC-GEN-04",
-  "Sicurezza Specifica Rischio Basso": "SIC-SPE-04",
-  "Sicurezza Specifica Rischio Medio": "SIC-SPE-08",
-  "Sicurezza Specifica Rischio Alto": "SIC-SPE-12",
-  "Aggiornamento Lavoratori": "SIC-AGG-06",
-  "Preposto": "PRP-BAS-12",
-  "Aggiornamento Preposto": "PRP-AGG-06",
-  "VVFF Livello 1 Base (FOR1)": "VFF-FOR1-4",
-  "VVFF Livello 1 Aggiornamento (FOR1)": "VFF-FOR1A2",
-  "VVFF Livello 2 Base (FOR2)": "VFF-FOR2-8",
-  "VVFF Livello 2 Aggiornamento (FOR2)": "VFF-FOR2A5",
-  "VVFF Livello 3 Base (FOR3)": "VFF-FOR316",
-  "VVFF Livello 3 Aggiornamento (FOR3)": "VFF-FOR3A8",
-  "Primo Soccorso Gruppo A Base": "PSO-GAB-16",
-  "Aggiornamento Primo Soccorso Gruppo A": "PSO-GAA-06",
-  "Primo Soccorso Gruppo B/C Base": "PSO-BCB-12",
-  "Aggiornamento Primo Soccorso Gruppo B/C": "PSO-AgB-04",
-  "Uso del DAE (BLSD)": "BLS-BAS-05",
-  "Aggiornamento Uso del DAE (BLSD)": "BLS-AGG-02",
-  "Evacuazione / Emergenze dell'Istituto": "EME-EVA-02",
-  "Aggiornamento Evacuazione / Emergenze dell'Istituto": "EME-EAA-02",
-  "Prova di Evacuazione / Emergenze": "EME-PRO-02",
-  // Alias: vecchi nomi dell'antincendio
-  "Antincendio Livello 1 Base": "VFF-FOR1-4",
-  "Aggiornamento Antincendio Livello 1": "VFF-FOR1A2",
-  "Antincendio Livello 2": "VFF-FOR2-8",
-  "Aggiornamento Antincendio Livello 2": "VFF-FOR2A5",
-};
-
-export type DatiAllegato = { tipo: string; altro: string; dataCorso: string; scadenza: string };
+export type DatiAllegato = { tipo: string; tipoCorsoId: string; altro: string; dataCorso: string; scadenza: string };
 
 export function ZonaLavoratore({
   dipendente,
   dati,
   onCambia,
+  nomeFile = null,
 }: {
   dipendente: Dipendente;
   dati: DatiAllegato;
   onCambia: (d: DatiAllegato) => void;
+  /** Nome del file scelto a sinistra: se contiene il codice del corso, il corso si propone da solo. */
+  nomeFile?: string | null;
 }) {
   const { data: corsi = [], isLoading } = useQuery({
     queryKey: ["tipi_corso"],
     queryFn: getTipiCorso,
   });
+  const { data: ruoli = [] } = useQuery({ queryKey: CHIAVE_RUOLI, queryFn: getRuoliSicurezza, retry: false });
+  const { data: assegnazioni = [] } = useQuery({ queryKey: CHIAVE_ASSEGNAZIONI_RUOLI, queryFn: getAssegnazioniRuoli, retry: false });
+  const { data: attestati = [] } = useQuery({ queryKey: ["attestati", "Tutti"], queryFn: () => getAttestati("Tutti") });
+  const regole = useRegoleRuoloCorso();
+  const contesto = useContestoRegole();
+  const [suggerimento, setSuggerimento] = useState<string | null>(null);
+  const autoDaFile = useRef(false);
+  const ultimoFile = useRef<string | null>(null);
 
-  const codiciMappa = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of corsi) {
-      const cod = c.codice || CODICI_CORSI_STANDARD[c.nome_corso] || "";
-      map.set(c.nome_corso, cod);
-    }
-    return map;
-  }, [corsi]);
+  /** Corsi previsti dalla Tabella 02 per i ruoli del lavoratore che mancano o sono scaduti. */
+  const proposti = useMemo(
+    () =>
+      regole && regole.length > 0
+        ? corsiProposti({ ruoli, assegnazioni, dipendenteId: dipendente.id, regole, contesto, corsi, attestati })
+        : [],
+    [ruoli, assegnazioni, dipendente.id, regole, contesto, corsi, attestati],
+  );
 
-  function ricalcolaScadenza(nomeCorso: string, dataRif: string): string {
-    const c = corsi.find((x) => x.nome_corso === nomeCorso);
-    if (!c || !dataRif || !c.durata_validita_anni) return "";
+  function ricalcolaScadenza(corso: TipoCorso | undefined, dataRif: string): string {
+    if (!corso || !dataRif || !corso.durata_validita_anni) return "";
     const d = new Date(dataRif);
     if (isNaN(d.getTime())) return "";
-    d.setFullYear(d.getFullYear() + c.durata_validita_anni);
+    d.setFullYear(d.getFullYear() + corso.durata_validita_anni);
     return d.toISOString().slice(0, 10);
   }
 
-  function selezionaTipo(nuovoTipo: string) {
-    let nuovaScadenza = dati.scadenza;
-    if (dati.dataCorso && nuovoTipo !== "Altro") {
-      const calcolata = ricalcolaScadenza(nuovoTipo, dati.dataCorso);
-      if (calcolata) nuovaScadenza = calcolata;
-    }
-    onCambia({ ...dati, tipo: nuovoTipo, scadenza: nuovaScadenza });
+  function datiPerCorso(corso: TipoCorso): DatiAllegato {
+    const calcolata = dati.dataCorso ? ricalcolaScadenza(corso, dati.dataCorso) : "";
+    return { ...dati, tipo: etichettaCorso(corso, corsi), tipoCorsoId: corso.id, scadenza: calcolata || dati.scadenza };
   }
+
+  function selezionaCorso(corso: TipoCorso) {
+    autoDaFile.current = false;
+    setSuggerimento(null);
+    onCambia(datiPerCorso(corso));
+  }
+
+  function selezionaVoce(valore: string) {
+    if (valore === ALTRO) {
+      autoDaFile.current = false;
+      setSuggerimento(null);
+      onCambia({ ...dati, tipo: ALTRO, tipoCorsoId: ALTRO });
+      return;
+    }
+    const corso = corsi.find((c) => c.id === valore);
+    if (corso) selezionaCorso(corso);
+  }
+
+  // Il file scelto contiene il codice (o il nome, se unico) di un corso: lo propone, senza mai scavalcare una scelta fatta a mano
+  useEffect(() => {
+    if (!nomeFile || nomeFile === ultimoFile.current || corsi.length === 0) return;
+    ultimoFile.current = nomeFile;
+    if (dati.tipoCorsoId && !autoDaFile.current) return;
+    const trovato = corsoDalNomeFile(nomeFile, corsi);
+    if (!trovato) {
+      if (autoDaFile.current) setSuggerimento(null);
+      return;
+    }
+    autoDaFile.current = true;
+    setSuggerimento(
+      trovato.via === "codice"
+        ? `Proposto dal codice nel nome del file (${trovato.corso.codice}).`
+        : "Proposto dal nome del corso nel nome del file.",
+    );
+    onCambia(datiPerCorso(trovato.corso));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nomeFile, corsi]);
 
   function cambiaDataCorso(nuovaData: string) {
     let nuovaScadenza = dati.scadenza;
-    if (nuovaData && dati.tipo && dati.tipo !== "Altro") {
-      const calcolata = ricalcolaScadenza(dati.tipo, nuovaData);
+    const corso = corsi.find((c) => c.id === dati.tipoCorsoId);
+    if (nuovaData && corso) {
+      const calcolata = ricalcolaScadenza(corso, nuovaData);
       if (calcolata) nuovaScadenza = calcolata;
     }
     onCambia({ ...dati, dataCorso: nuovaData, scadenza: nuovaScadenza });
   }
 
-  const corsoSelezionato = corsi.find((c) => c.nome_corso === dati.tipo);
-  const codiceSelezionato = dati.tipo ? codiciMappa.get(dati.tipo) : "";
+  const corsoSelezionato = corsi.find((c) => c.id === dati.tipoCorsoId);
+  const codiceSelezionato = corsoSelezionato?.codice ?? "";
 
   return (
     <div className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm">
@@ -117,7 +150,7 @@ export function ZonaLavoratore({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
           <Label>Tipo attestato / Corso identificato</Label>
-          <Select value={dati.tipo} onValueChange={selezionaTipo}>
+          <Select value={dati.tipoCorsoId} onValueChange={selezionaVoce}>
             <SelectTrigger className="h-10">
               <SelectValue placeholder="Scegli il corso dal catalogo">
                 {corsoSelezionato ? (
@@ -129,7 +162,7 @@ export function ZonaLavoratore({
                     )}
                     <span className="truncate font-medium">{corsoSelezionato.nome_corso}</span>
                   </span>
-                ) : dati.tipo === "Altro" ? (
+                ) : dati.tipoCorsoId === ALTRO ? (
                   <span className="font-medium">Altro (specifica sotto)</span>
                 ) : null}
               </SelectValue>
@@ -142,10 +175,10 @@ export function ZonaLavoratore({
               ) : (
                 <>
                   {corsi.map((c: TipoCorso) => {
-                    const codice = codiciMappa.get(c.nome_corso) || "";
-                    const sel = dati.tipo === c.nome_corso;
+                    const codice = c.codice || "";
+                    const sel = dati.tipoCorsoId === c.id;
                     return (
-                      <SelectItem key={c.id} value={c.nome_corso} className="cursor-pointer py-2">
+                      <SelectItem key={c.id} value={c.id} className="cursor-pointer py-2">
                         <div className="flex items-center gap-2.5">
                           <span
                             className={`flex size-4 shrink-0 items-center justify-center rounded border ${
@@ -176,16 +209,16 @@ export function ZonaLavoratore({
                       </SelectItem>
                     );
                   })}
-                  <SelectItem value="Altro" className="cursor-pointer border-t border-border py-2">
+                  <SelectItem value={ALTRO} className="cursor-pointer border-t border-border py-2">
                     <div className="flex items-center gap-2.5">
                       <span
                         className={`flex size-4 shrink-0 items-center justify-center rounded border ${
-                          dati.tipo === "Altro"
+                          dati.tipoCorsoId === ALTRO
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-muted-foreground/40 bg-background"
                         }`}
                       >
-                        {dati.tipo === "Altro" && <Check className="size-3 stroke-[3]" />}
+                        {dati.tipoCorsoId === ALTRO && <Check className="size-3 stroke-[3]" />}
                       </span>
                       <span className="font-semibold text-foreground">Altro (corso fuori catalogo)</span>
                     </div>
@@ -196,7 +229,36 @@ export function ZonaLavoratore({
           </Select>
         </div>
 
-        {dati.tipo === "Altro" && (
+        {suggerimento && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:col-span-2">
+            <Lightbulb className="size-3.5" /> {suggerimento}
+          </p>
+        )}
+
+        {proposti.length > 0 && (
+          <div className="space-y-1 sm:col-span-2" aria-label="Corsi proposti per questo lavoratore">
+            <span className="text-xs text-muted-foreground">Proposti per questo lavoratore (dai suoi ruoli)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {proposti.slice(0, 6).map((p) => (
+                <button
+                  key={p.corso.id}
+                  type="button"
+                  onClick={() => selezionaCorso(p.corso)}
+                  className={`rounded-md border px-2 py-1 text-left text-xs hover:bg-muted ${
+                    dati.tipoCorsoId === p.corso.id ? "border-primary bg-primary/10" : "border-border"
+                  }`}
+                  title={p.dettaglio}
+                >
+                  <span className="font-mono font-semibold text-primary">{p.corso.codice}</span>{" "}
+                  <span className="font-medium">{p.corso.nome_corso}</span>
+                  <span className="block text-muted-foreground">{p.dettaglio}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {dati.tipoCorsoId === ALTRO && (
           <div className="space-y-1 sm:col-span-2">
             <Label>Descrizione attestato personalizzato</Label>
             <Input
