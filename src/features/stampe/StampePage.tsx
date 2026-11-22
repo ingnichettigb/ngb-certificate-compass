@@ -27,7 +27,7 @@
  *   rev 14 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: elenco lavoratori filtrato con includeLavoratorePerStato; badge «Solo cessati» / «Inclusi cessati».
  *   rev 15 — 22/11/2026 — Carte di squadra con «vistaAddetti» (Fase 1: defibrillatore): due pulsanti esclusivi «Tutti gli addetti» / «Richiedono formazione»;
  *                         tabella, Stampa, PDF, Excel e CSV seguono la vista attiva; titolo e nome file con il suffisso della vista;
- *                         il totale «N addetti» conta i lavoratori distinti.
+ *                         il totale «N addetti» conta i lavoratori distinti; pannello «Controllo addetti» (righe e motivo per ogni addetto).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +59,7 @@ import { BarraEsportazione } from "./components/BarraEsportazione";
 import { BarraGruppiPredefinite } from "./components/BarraGruppiPredefinite";
 import { BarraDestinatari } from "./components/BarraDestinatari";
 import { BarraVistaAddetti } from "./components/BarraVistaAddetti";
+import { PannelloControlloAddetti } from "./components/PannelloControlloAddetti";
 import { contaVistaAddetti, ETICHETTA_VISTA_ADDETTI, righePerVistaAddetti, type VistaAddetti } from "./stampa-addetti";
 import { GuidaStampe } from "./components/GuidaStampe";
 
@@ -307,6 +308,8 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
             )}
 
             {conVistaAddetti && <BarraVistaAddetti scelta={vistaAddetti} conteggi={conteggiAddetti} onSeleziona={setVistaAddetti} />}
+
+            {conVistaAddetti && <PannelloControlloAddetti righe={righeMotore} />}
 
             {conDestinatari && <BarraDestinatari scelto={pubblico} conteggi={conteggiPubblico} onSeleziona={setPubblico} />}
 

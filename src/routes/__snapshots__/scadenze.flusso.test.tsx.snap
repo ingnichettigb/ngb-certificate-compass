@@ -12,7 +12,7 @@ exports[`Scadenze: percorso d'uso completo > registra tutto quello che la pagina
     "sb",
     "from.select",
     "attestati_caricati",
-    "["*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)"]",
+    "["*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)"]",
   ],
   [
     "sb",

@@ -10,6 +10,8 @@
  *   - Rev 5 (2026-10-28 14:40): Ripristinato il modulo integrale (tipi, get, upload, crea,
  *                              aggiorna, elimina) con scollegaDocumentoAttestato che azzera
  *                              i link, imposta «Approvato» e registra la data di validazione.
+ *   - Rev 6 (2026-11-22): Relazione con tipi_corso resa esplicita (…!attestati_caricati_tipo_corso_id_fkey): la migrazione 0018
+ *                              ha aggiunto altre due chiavi verso tipi_corso e la query dava PGRST201 (relazione ambigua).
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
@@ -51,7 +53,7 @@ export async function getAttestati(stato?: FiltroAttestati): Promise<Attestato[]
     return leggiTutto<Attestato>(() =>
       sb
         .from("attestati_caricati")
-        .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
+        .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)")
         .or("url_foto_fronte.is.null,url_foto_fronte.eq.")
         .order("created_at", { ascending: false })
         .order("id"),
@@ -60,7 +62,7 @@ export async function getAttestati(stato?: FiltroAttestati): Promise<Attestato[]
   return leggiTutto<Attestato>(() => {
     let q = sb
       .from("attestati_caricati")
-      .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
+      .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)")
       .order("created_at", { ascending: false })
       .order("id");
     if (stato && stato !== "Tutti") q = q.eq("stato_validazione", stato);
@@ -116,7 +118,7 @@ export async function aggiornaAttestato(id: string, patch: AttestatoPatch) {
     .from("attestati_caricati")
     .update(patch)
     .eq("id", id)
-    .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso(*)")
+    .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)")
     .single();
   if (error) throw error;
   return data as unknown as Attestato;

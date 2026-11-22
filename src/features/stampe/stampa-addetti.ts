@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 22/11/2026 — Due viste esclusive per le carte di squadra: «Tutti gli addetti» (l'intera squadra nominata) e
  *            «Richiedono formazione» (scaduti + chi ha l'incarico ma non ha il corso, «Manca»).
+ *   rev 3 — 22/11/2026 — diagnosiAddetti: per ogni addetto le righe e il motivo per cui richiede (o no) la formazione (pannello «Controllo»).
  *   rev 2 — 22/11/2026 — Le viste mostrano TUTTE le righe di ogni lavoratore scelto (es. «Manca corso base» + aggiornamento); i numeri contano lavoratori distinti.
  *
  * Regole:
@@ -14,6 +15,7 @@
  * Funzioni pure, senza dipendenze dall'interfaccia.
  */
 import type { RigaStampa, StatoValidita } from "./stampa-tipi";
+import { dataIt } from "./stampa-formati";
 
 export type VistaAddetti = "tutti" | "formazione";
 
@@ -57,4 +59,33 @@ export function righePerVistaAddetti(righe: RigaStampa[], vista: VistaAddetti): 
 export function contaVistaAddetti(righe: RigaStampa[]): Record<VistaAddetti, number> {
   const gruppi = perLavoratore(righe);
   return { tutti: gruppi.length, formazione: gruppi.filter(richiedeFormazione).length };
+}
+
+export type DiagnosiAddetto = {
+  dipendenteId: string;
+  lavoratore: string;
+  richiede: boolean;
+  /** Una voce per riga: corso, stato, data corso e scadenza. */
+  righe: { corso: string; stato: StatoValidita; dataCorso: string; scadenza: string }[];
+  motivo: string;
+};
+
+/** Sequenza di controllo: per ogni addetto, perché richiede (o no) la formazione. Ordinata per cognome. */
+export function diagnosiAddetti(righe: RigaStampa[]): DiagnosiAddetto[] {
+  return perLavoratore(righe)
+    .map((g): DiagnosiAddetto => {
+      const motivi: string[] = [];
+      for (const r of g) {
+        if (r.stato === "manca") motivi.push(r.testoManca ?? "Manca il corso");
+        else if (r.stato === "scaduto") motivi.push(`Scaduto il ${dataIt(r.scadenza ?? "")} (${r.codice || r.corso} del ${dataIt(r.dataCorso)})`);
+      }
+      return {
+        dipendenteId: g[0]!.dipendenteId,
+        lavoratore: `${g[0]!.cognome} ${g[0]!.nome}`.trim(),
+        richiede: motivi.length > 0,
+        righe: g.map((r) => ({ corso: r.codice || r.corso, stato: r.stato, dataCorso: r.dataCorso ? dataIt(r.dataCorso) : "—", scadenza: r.scadenza ? dataIt(r.scadenza) : "—" })),
+        motivo: motivi.length ? motivi.join("; ") : "Corso in regola",
+      };
+    })
+    .sort((a, b) => a.lavoratore.localeCompare(b.lavoratore, "it"));
 }
