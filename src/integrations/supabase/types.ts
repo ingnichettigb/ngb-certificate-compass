@@ -786,7 +786,8 @@ export type Database = {
           id: string
           ordine: number
           parametro: string
-          ruolo: string
+          ruolo: string | null
+          ruolo_codice: string
           updated_at: string
           valore: string
         }
@@ -798,7 +799,8 @@ export type Database = {
           id?: string
           ordine?: number
           parametro?: string
-          ruolo: string
+          ruolo?: string | null
+          ruolo_codice: string
           updated_at?: string
           valore?: string
         }
@@ -810,11 +812,34 @@ export type Database = {
           id?: string
           ordine?: number
           parametro?: string
-          ruolo?: string
+          ruolo?: string | null
+          ruolo_codice?: string
           updated_at?: string
           valore?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "regole_ruolo_corso_agg_fkey"
+            columns: ["corso_aggiornamento"]
+            isOneToOne: false
+            referencedRelation: "tipi_corso"
+            referencedColumns: ["codice"]
+          },
+          {
+            foreignKeyName: "regole_ruolo_corso_base_fkey"
+            columns: ["corso_base"]
+            isOneToOne: false
+            referencedRelation: "tipi_corso"
+            referencedColumns: ["codice"]
+          },
+          {
+            foreignKeyName: "regole_ruolo_corso_ruolo_fkey"
+            columns: ["ruolo_codice"]
+            isOneToOne: false
+            referencedRelation: "ruoli_sicurezza"
+            referencedColumns: ["codice"]
+          },
+        ]
       }
       reparti: {
         Row: {
@@ -928,7 +953,15 @@ export type Database = {
           richiede?: string | null
           tipo?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ruoli_sicurezza_richiede_fkey"
+            columns: ["richiede"]
+            isOneToOne: false
+            referencedRelation: "ruoli_sicurezza"
+            referencedColumns: ["codice"]
+          },
+        ]
       }
       sedi: {
         Row: {
