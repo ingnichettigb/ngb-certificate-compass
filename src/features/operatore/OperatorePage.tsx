@@ -4,12 +4,15 @@
  * Postazione Operatore: compone i blocchi grafici con la logica degli hook.
  * Revisioni:
  *   rev 2 — 22/11/2026 — Passa al modulo i legami corso → ruoli (categorie dell'elenco corsi, dal database).
+ *   rev 3 — 22/11/2026 — Se l'archiviazione crea un lavoratore nuovo, si apre la scheda «Completa i nuovi inserimenti».
  */
+import { useState } from "react";
 import { IntestazioneOperatore } from "./components/IntestazioneOperatore";
 import { PannelloDocumento } from "./components/PannelloDocumento";
 import { ModuloDati } from "./components/ModuloDati";
 import { CodaLavoro } from "./components/CodaLavoro";
 import { ModaleEmail } from "./components/ModaleEmail";
+import { DialogNuoviNominativi } from "./components/DialogNuoviNominativi";
 import { salvaLocale } from "./azioni-file";
 import { useArchiviazione } from "./hooks/useArchiviazione";
 import { useCodaLavoro } from "./hooks/useCodaLavoro";
@@ -28,7 +31,11 @@ export function OperatorePage() {
   const documento = useDocumento();
   const coda = useCodaLavoro();
   const { aiAttiva, lettura, scegliFile } = useLetturaAi({ tipi, formRiga, documento });
-  const { archiviando, archivia } = useArchiviazione(coda.ricarica);
+  // Lavoratori creati dall'archiviazione: la loro scheda anagrafica si completa subito dopo l'attestato.
+  const [nuoviDaCompletare, setNuoviDaCompletare] = useState<string[]>([]);
+  const { archiviando, archivia } = useArchiviazione(coda.ricarica, (ids) =>
+    setNuoviDaCompletare((prima) => [...new Set([...prima, ...ids])]),
+  );
 
   /** Svuota modulo e documento. */
   function nuovo() {
@@ -110,6 +117,8 @@ export function OperatorePage() {
         inviando={inviandoEmail}
         onConferma={confermaEInviaEmail}
       />
+
+      <DialogNuoviNominativi ids={nuoviDaCompletare} onClose={() => setNuoviDaCompletare([])} />
     </div>
   );
 }

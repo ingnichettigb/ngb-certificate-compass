@@ -7,6 +7,8 @@
  * i dati mancanti, e permette Salva e prossimo / Salta / Indietro, con l'opzione di riusare la fine contratto.
  * Revisioni:
  *   rev 1 — 06/11/2026 08:20 — Prima stesura.
+ *   rev 2 — 22/11/2026 — Prop facoltativa soloIds: apertura sui soli nuovi nominativi creati dall'archiviazione
+ *                        di un attestato (Postazione Operatore); il testo finale dei saltati si adegua.
  */
 import { ArrowLeft, CheckCircle2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,13 +26,16 @@ export function DialogDaCompletare({
   onClose,
   dipendenti,
   repartiAttivi,
+  soloIds,
 }: {
   open: boolean;
   onClose: () => void;
   dipendenti: Dipendente[];
   repartiAttivi: string[];
+  /** Se presente, la coda contiene solo questi lavoratori (nuovi nominativi appena creati). */
+  soloIds?: string[];
 }) {
-  const c = useCodaDaCompletare(open, dipendenti);
+  const c = useCodaDaCompletare(open, dipendenti, soloIds);
   const mancantiForm = c.form ? campiMancanti(c.form) : [];
   const mancantiSalvati = c.corrente ? campiMancanti(c.corrente) : [];
   const percentuale = c.totale > 0 ? Math.round(((c.finito ? c.totale : c.indice) / c.totale) * 100) : 0;
@@ -67,7 +72,9 @@ export function DialogDaCompletare({
                     </p>
                     {c.saltati > 0 && (
                       <p className="text-muted-foreground">
-                        I saltati restano in «Da completare» finché i loro dati non sono a posto.
+                        {soloIds
+                          ? "I saltati restano con i dati mancanti: li ritrovi in Dipendenti e nella stampa «Anagrafica incompleta»."
+                          : "I saltati restano in «Da completare» finché i loro dati non sono a posto."}
                       </p>
                     )}
                   </>

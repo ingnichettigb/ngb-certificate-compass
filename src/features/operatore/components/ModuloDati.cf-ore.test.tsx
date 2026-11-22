@@ -109,6 +109,21 @@ describe("ModuloDati: riconoscimento dal Codice Fiscale", () => {
     expect(campo("ateco").value).toBe("");
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.warning).not.toHaveBeenCalled();
+    // ...ma l'operatore vede che sarà un nuovo nominativo
+    expect(await screen.findByText(/Nuovo nominativo/)).toBeTruthy();
+  });
+
+  it("l'etichetta «Nuovo nominativo» sparisce se il CF cambia o se il lavoratore c'è", async () => {
+    cerca.mockResolvedValue(null);
+    render(<Pagina />);
+    await scrivi("cf", "BNCNNA85B41F205X");
+    expect(await screen.findByText(/Nuovo nominativo/)).toBeTruthy();
+    await scrivi("cf", "BNCNNA85B41F205");
+    expect(screen.queryByText(/Nuovo nominativo/)).toBeNull();
+    cerca.mockResolvedValue({ cognome: "ROSSI", nome: "MARIO", codice_fiscale: "RSSMRA80A01H501U", reparto: null, email: null, codice_ateco: null });
+    await scrivi("cf", "RSSMRA80A01H501U");
+    await waitFor(() => expect(campo("cog").value).toBe("ROSSI"));
+    expect(screen.queryByText(/Nuovo nominativo/)).toBeNull();
   });
 
   it("non sovrascrive email, reparto e ATECO già compilati", async () => {

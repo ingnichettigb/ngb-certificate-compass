@@ -14,6 +14,8 @@
  *   rev 6 — 22/11/2026 — «Corso identificato»: elenco con pulsanti delle categorie (dal database), ricerca, ultimo scelto
  *                        per primo, corsi e poi aggiornamenti (SelettoreCorso). Nuovo parametro facoltativo `legami`.
  *                        Ore proposte, codice e nome del corso: invariati.
+ *   rev 7 — 22/11/2026 — Etichetta «Nuovo nominativo» sotto il CF quando il lavoratore non è in anagrafica
+ *                        (dopo l'archiviazione si apre la scheda da completare).
  */
 import { useEffect, useRef, useState } from "react";
 import { Archive, CheckCircle2, Loader2, Plus, Search, X } from "lucide-react";
@@ -68,6 +70,8 @@ export function ModuloDati({
   onSalva: (archiviaSubito: boolean) => void;
 }) {
   const [cercandoDb, setCercandoDb] = useState(false);
+  /** CF completo cercato in anagrafica senza trovarlo: il lavoratore sarà creato dall'archiviazione. */
+  const [cfNuovo, setCfNuovo] = useState("");
   // Ultimo CF già cercato in automatico, e valori più recenti (per non lavorare su dati superati dopo l'attesa).
   const cfGiaCercato = useRef("");
   const cfCorrente = useRef(form.codice_fiscale);
@@ -83,7 +87,9 @@ export function ModuloDati({
     void (async () => {
       try {
         const trovato = await cercaDipendentePerAnagrafica({ codice_fiscale: cf });
-        if (!trovato || cfCorrente.current !== cf) return;
+        if (cfCorrente.current !== cf) return;
+        setCfNuovo(trovato ? "" : cf);
+        if (!trovato) return;
         const atecoPredefinito = formCorrente.current.codice_ateco ? "" : await recuperaAtecoPredefinito();
         if (cfCorrente.current !== cf) return;
         const attuale = formCorrente.current;
@@ -211,6 +217,11 @@ export function ModuloDati({
                 }
               }}
             />
+            {cfNuovo && cfNuovo === form.codice_fiscale && (
+              <p className="mt-1 text-[11px] font-medium text-amber-700">
+                Nuovo nominativo: non è in anagrafica. Dopo l'archiviazione si apre la scheda da completare.
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="ateco">Codice ATECO{mirino("codice_ateco")}</Label>

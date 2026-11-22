@@ -7,6 +7,8 @@
  * Salvando si azzera la data di cessazione (chi era stato riabilitato esce dalla coda).
  * Revisioni:
  *   rev 1 — 06/11/2026 08:20 — Prima stesura.
+ *   rev 2 — 22/11/2026 — Parametro facoltativo soloIds: la coda contiene solo quei lavoratori (nuovi nominativi
+ *                        creati dall'archiviazione di un attestato), senza passare dalla regola «Da completare».
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,10 +18,12 @@ import { campiMancanti, ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica
 import { erroreBlocco, ordinaCoda, precompilaFineContratto, type DatiForm } from "./logica-coda";
 import { inCodaDaCompletare } from "./regola-coda";
 
-export function useCodaDaCompletare(open: boolean, dipendenti: Dipendente[]) {
+export function useCodaDaCompletare(open: boolean, dipendenti: Dipendente[], soloIds?: string[]) {
   const qc = useQueryClient();
   const ultimi = useRef(dipendenti);
   ultimi.current = dipendenti;
+  const idsRichiesti = useRef(soloIds);
+  idsRichiesti.current = soloIds;
 
   const [ids, setIds] = useState<string[]>([]);
   const [indice, setIndice] = useState(0);
@@ -35,7 +39,10 @@ export function useCodaDaCompletare(open: boolean, dipendenti: Dipendente[]) {
   // All'apertura: fotografia della coda.
   useEffect(() => {
     if (!open) return;
-    const coda = ordinaCoda(ultimi.current.filter((d) => inCodaDaCompletare(d)));
+    const richiesti = idsRichiesti.current;
+    const coda = ordinaCoda(
+      richiesti ? ultimi.current.filter((d) => richiesti.includes(d.id)) : ultimi.current.filter((d) => inCodaDaCompletare(d)),
+    );
     setIds(coda.map((d) => d.id));
     setIndice(0);
     setCompletati([]);

@@ -6,20 +6,27 @@
  *   - Rev 2 (2026-10-30 10:40): Numero attestato (automatico AAMMGG-CODICE se assente) e blocco doppioni.
  *   - Rev 3 (22/11/2026): archivia() restituisce true solo se TUTTE le righe sono state archiviate (serve a
  *     chi la chiama per non svuotare il modulo quando l'archiviazione fallisce).
+ *   - Rev 4 (22/11/2026): riconosce i NUOVI lavoratori (CF non ancora in anagrafica) creati dall'archiviazione e,
+ *     a fine operazione, li comunica con onNuovi così la pagina apre la scheda da completare. Il lavoratore creato
+ *     resta ricordato anche se l'archiviazione dell'attestato fallisce, così al secondo tentativo viene comunque segnalato.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { generaNumeroAttestato, pulisciCF, upsertDipendente, CARTELLA_ARCHIVIO, cartellaDipendente, creaIntegrazioneDvr } from "@/lib/api";
+import { cercaDipendentePerAnagrafica } from "@/lib/api/dipendenti";
 import { estensioneFile, nomeFileStandard } from "../nome-file";
 import { riepilogo } from "../bozza-email";
 import type { CodaRiga } from "../types";
 import { supabase as sb } from "@/integrations/supabase/client";
 
-export function useArchiviazione(ricarica: () => unknown) {
+/** onNuovi riceve gli id dei lavoratori creati ex novo da questa archiviazione (da completare nella scheda). */
+export function useArchiviazione(ricarica: () => unknown, onNuovi?: (ids: string[]) => void) {
   const qc = useQueryClient();
   const db = sb as any;
   const [archiviando, setArchiviando] = useState(false);
+  /** Lavoratori creati da qui e non ancora segnalati (un attestato fallito non li fa perdere al tentativo dopo). */
+  const nuoviCreati = useRef(new Set<string>());
 
   /** Restituisce true solo se tutte le righe richieste risultano archiviate (o lo erano già). */
   async function archivia(righe: CodaRiga[]): Promise<boolean> {
@@ -32,6 +39,7 @@ export function useArchiviazione(ricarica: () => unknown) {
 
     setArchiviando(true);
     let ok = 0;
+    const nuovi: string[] = [];
     try {
       const { data: listaCorsi } = await sb.from("tipi_corso").select("id, codice");
       const codici = new Map<string, string | null>((listaCorsi ?? []).map((c: any) => [c.id, c.codice ?? null]));
@@ -39,6 +47,8 @@ export function useArchiviazione(ricarica: () => unknown) {
         try {
           if (!r.tipo_corso_id) throw new Error(`${r.cognome}: scegli il tipo di corso`);
           if (!r.data_corso) throw new Error(`${r.cognome}: manca la data del corso`);
+          // Nuovo = il CF non è ancora in anagrafica. Se la ricerca fallisce non lo si considera nuovo.
+          const eraNuovo = await cercaDipendentePerAnagrafica({ codice_fiscale: pulisciCF(r.codice_fiscale) }).then((x) => !x, () => false);
           const dip = await upsertDipendente({
             codice_fiscale: pulisciCF(r.codice_fiscale),
             cognome: r.cognome,
@@ -52,6 +62,7 @@ export function useArchiviazione(ricarica: () => unknown) {
             data_nascita: r.data_nascita || null,
             ...(r.codice_ateco ? { codice_ateco: r.codice_ateco } : {}),
           });
+          if (eraNuovo) nuoviCreati.current.add(dip.id);
           const codiceCorso = r.tipo_corso_codice || codici.get(r.tipo_corso_id) || null;
           const numero = (r.numero_attestato || "").trim() || generaNumeroAttestato(r.data_corso, codiceCorso);
           const { data: gia } = await db
@@ -106,6 +117,7 @@ export function useArchiviazione(ricarica: () => unknown) {
             if (!count) await sb.storage.from("attestati").remove([r.percorso_file]);
           }
           ok++;
+          if (nuoviCreati.current.delete(dip.id)) nuovi.push(dip.id);
         } catch (e) {
           toast.error((e as Error).message);
         }
@@ -113,6 +125,7 @@ export function useArchiviazione(ricarica: () => unknown) {
       if (ok) toast.success(`${ok} attestat${ok === 1 ? "o archiviato" : "i archiviati"} nel database`);
       ricarica();
       qc.invalidateQueries();
+      if (nuovi.length) onNuovi?.(nuovi);
       return ok === daSalvare.length;
     } finally {
       setArchiviando(false);
