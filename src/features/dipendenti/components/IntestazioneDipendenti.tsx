@@ -9,12 +9,15 @@
  *   - Rev 6 (2026-11-06 08:20): Prop onCompletaUnoAUno: dall'esito dell'importazione si apre la finestra «Da completare».
  *   - Rev 8 (2026-11-12): Bottone rinominato «Importazione massiva elenco lavoratori da Word o Excel» (stessa finestra raggiungibile da «Inserimento massivo»).
  *   - Rev 7 (2026-11-07): Backup, impostazioni, stato cartella e avviso ditta sono nel menu «Sistema» della barra; tolta la freccia «Home».
+ *   - Rev 9 (2026-11-21): Bottone «Formazione da valutare» con il numero dei lavoratori in attesa di una decisione dell'operatore.
  */
 import { useState } from "react";
-import { FileUp, Table, Users } from "lucide-react";
+import { ClipboardCheck, FileUp, Table, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MatriceAbilitazioniRuoli } from "../matrice/MatriceAbilitazioniRuoli";
 import { DialogImportaElenco } from "../import-elenco/DialogImportaElenco";
+import { DialogFormazioneDaValutare } from "@/features/formazione-valutazione/DialogFormazioneDaValutare";
+import { useFormazioneDaValutare } from "@/features/formazione-valutazione/useFormazioneDaValutare";
 
 export function IntestazioneDipendenti({
   totale,
@@ -25,6 +28,8 @@ export function IntestazioneDipendenti({
 }) {
   const [apriMatrice, setApriMatrice] = useState(false);
   const [apriImport, setApriImport] = useState(false);
+  const [apriValutazione, setApriValutazione] = useState(false);
+  const { elenco: daValutare } = useFormazioneDaValutare();
 
   return (
     <>
@@ -50,6 +55,14 @@ export function IntestazioneDipendenti({
             >
               <Table className="size-4 text-emerald-600" /> Matrice Abilitazioni e Ruoli
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setApriValutazione(true)} className="gap-1.5">
+              <ClipboardCheck className="size-4" /> Formazione da valutare
+              {daValutare.pendenti.length > 0 && (
+                <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                  {daValutare.pendenti.length}
+                </span>
+              )}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setApriImport(true)} className="gap-1.5">
               <FileUp className="size-4" /> Importazione massiva elenco lavoratori da Word o Excel
             </Button>
@@ -59,6 +72,7 @@ export function IntestazioneDipendenti({
 
       {/* Matrice a tutto schermo */}
       <MatriceAbilitazioniRuoli open={apriMatrice} onClose={() => setApriMatrice(false)} />
+      <DialogFormazioneDaValutare open={apriValutazione} onClose={() => setApriValutazione(false)} />
       <DialogImportaElenco open={apriImport} onClose={() => setApriImport(false)} onCompleta={onCompletaUnoAUno} />
     </>
   );

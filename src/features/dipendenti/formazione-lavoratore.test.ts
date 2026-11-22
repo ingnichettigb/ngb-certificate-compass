@@ -4,10 +4,12 @@
  * Data creazione: 2026-11-21
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura.
+ *   - Rev 2 (2026-11-21): Fase 5 — esiti con le decisioni dell'operatore.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato } from "@/lib/api/attestati";
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
+import type { DecisioneSpecifica, EsitoEquivalenza } from "@/features/formazione-valutazione/decisioni";
 import { corsiSvoltiDa, valutaFormazioneLavoratore } from "./formazione-lavoratore";
 
 let n = 0;
@@ -87,5 +89,61 @@ describe("corsiSvoltiDa", () => {
       "d1",
     );
     expect([...s]).toEqual(["SIC-GEN-04"]);
+  });
+});
+
+describe("valutaFormazioneLavoratore con le decisioni dell'operatore", () => {
+  const dec = (esito: EsitoEquivalenza, extra: Partial<DecisioneSpecifica> = {}): DecisioneSpecifica => ({
+    attestatoId: "a1", esito, corsoSvolto: "SIC-SPE-12", corsoAtteso: "SIC-SPE-08", rischio: "medio", nota: "Valutato", data: "2026-11-21T10:00:00.000Z", ...extra,
+  });
+  const con = (decisioni: DecisioneSpecifica[], rischio: "basso" | "medio" | "alto" = "medio", ...svolti: string[]) =>
+    valutaFormazioneLavoratore({ regole, contesto: { rischioDitta: rischio }, corsiSvolti: new Set(["SIC-GEN-04", ...svolti]), decisioni });
+
+  it("accettata: vale come completa e lo dice", () => {
+    const e = con([dec("accettata")], "medio", "SIC-SPE-12");
+    expect(e.completa).toBe(true);
+    expect(e.specifica).toEqual({ attesa: "SIC-SPE-08", stato: "accettata", trovata: "SIC-SPE-12" });
+    expect(e.motivo).toContain("accettata dall'operatore");
+  });
+
+  it("serve integrazione: non completa", () => {
+    const e = con([dec("integrazione")], "medio", "SIC-SPE-12");
+    expect(e.completa).toBe(false);
+    expect(e.specifica.stato).toBe("integrazione");
+    expect(e.motivo).toContain("serve integrazione");
+  });
+
+  it("non valida: non completa, e non si ripropone da valutare", () => {
+    const e = con([dec("non_valida")], "medio", "SIC-SPE-12");
+    expect(e.completa).toBe(false);
+    expect(e.specifica.stato).toBe("non-valida");
+  });
+
+  it("senza decisione resta «diversa»", () => {
+    expect(con([], "medio", "SIC-SPE-12").specifica.stato).toBe("diversa");
+  });
+
+  it("una decisione presa con un altro rischio non vale più", () => {
+    expect(con([dec("accettata", { rischio: "basso", corsoAtteso: "SIC-SPE-04" })], "medio", "SIC-SPE-12").specifica.stato).toBe("diversa");
+  });
+
+  it("una decisione su un altro corso non vale per questo", () => {
+    expect(con([dec("accettata", { corsoSvolto: "SIC-SPE-04" })], "medio", "SIC-SPE-12").specifica.stato).toBe("diversa");
+  });
+
+  it("con due corsi diversi, uno accettato basta; se uno è senza decisione resta da valutare", () => {
+    const due = ["SIC-SPE-04", "SIC-SPE-12"];
+    expect(con([dec("accettata")], "medio", ...due).specifica.stato).toBe("accettata");
+    expect(con([dec("non_valida")], "medio", ...due).specifica).toMatchObject({ stato: "diversa", trovata: "SIC-SPE-04" });
+  });
+
+  it("se c'è la specifica giusta le decisioni non servono", () => {
+    expect(con([dec("non_valida")], "medio", "SIC-SPE-08", "SIC-SPE-12").specifica.stato).toBe("presente");
+  });
+
+  it("la decisione non sostituisce il corso base", () => {
+    const e = valutaFormazioneLavoratore({ regole, contesto: { rischioDitta: "medio" }, corsiSvolti: new Set(["SIC-SPE-12"]), decisioni: [dec("accettata")] });
+    expect(e.completa).toBe(false);
+    expect(e.base.mancanti).toEqual(["SIC-GEN-04"]);
   });
 });

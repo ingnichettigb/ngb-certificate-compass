@@ -10,19 +10,28 @@
  * Funzioni pure.
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 4).
+ *   - Rev 2 (2026-11-21): Fase 5 — tiene conto delle decisioni dell'operatore sulla specifica «diversa»: accettata (vale come completa),
+ *     serve integrazione, non valida. Una decisione vale solo finché restano uguali corso svolto, corso atteso e rischio della ditta.
  */
 import type { Attestato } from "@/lib/api/attestati";
 import { CODICE_RUOLO, normalizzaCodice } from "@/lib/api/codici-ruoli";
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
+import { decisioneValida, type DecisioneSpecifica } from "@/features/formazione-valutazione/decisioni";
 import { eParametroRischio, regolaApplicabile, type ContestoRegole } from "./matrice/condizioni-regole";
 
 export type StatoSpecifica =
   /** C'è il corso specifico atteso per il rischio della ditta. */
   | "presente"
+  /** C'è un corso specifico di un altro grado e l'operatore l'ha accettato come equivalente: vale come completa. */
+  | "accettata"
   /** Non c'è nessun corso specifico. */
   | "mancante"
-  /** C'è un corso specifico di un altro grado di rischio: serve la decisione dell'operatore. */
+  /** C'è un corso specifico di un altro grado di rischio e nessuna decisione valida: serve la decisione dell'operatore. */
   | "diversa"
+  /** L'operatore ha deciso che quel corso non basta e serve un'integrazione. */
+  | "integrazione"
+  /** L'operatore ha deciso che quel corso non vale per il rischio della ditta. */
+  | "non-valida"
   /** Il grado di rischio della ditta non è impostato: non si può dire quale corso sia atteso. */
   | "non-valutabile";
 
@@ -50,8 +59,10 @@ export function valutaFormazioneLavoratore(input: {
   regole: RegolaRuoloCorso[];
   contesto: ContestoRegole;
   corsiSvolti: ReadonlySet<string>;
+  /** Decisioni dell'operatore registrate sugli attestati del lavoratore (anche non più valide: le scarta la funzione). */
+  decisioni?: readonly DecisioneSpecifica[];
 }): EsitoFormazioneLavoratore {
-  const { regole, contesto, corsiSvolti } = input;
+  const { regole, contesto, corsiSvolti, decisioni = [] } = input;
   const righe = regole.filter((r) => normalizzaCodice(r.ruolo_codice) === CODICE_RUOLO.LAVORATORE);
   const base = (r: RegolaRuoloCorso) => normalizzaCodice(r.corso_base);
 
@@ -65,7 +76,7 @@ export function valutaFormazioneLavoratore(input: {
   const attesa = contesto.rischioDitta
     ? (righeRischio.filter((r) => regolaApplicabile(r, contesto)).map(base).find(Boolean) ?? null)
     : null;
-  const altroGrado = famiglia.find((c) => c !== attesa && corsiSvolti.has(c)) ?? null;
+  const altriGradi = famiglia.filter((c) => c !== attesa && corsiSvolti.has(c));
 
   let stato: StatoSpecifica;
   let trovata: string | null = null;
@@ -73,23 +84,42 @@ export function valutaFormazioneLavoratore(input: {
   else if (corsiSvolti.has(attesa)) {
     stato = "presente";
     trovata = attesa;
-  } else if (altroGrado) {
-    stato = "diversa";
-    trovata = altroGrado;
+  } else if (altriGradi.length > 0) {
+    // La decisione dell'operatore di ciascun corso diverso, se ancora valida per corso atteso e rischio attuali
+    const esaminati = altriGradi.map((c) => ({
+      corso: c,
+      decisione: decisioni.find(
+        (d) => d.corsoSvolto === c && decisioneValida(d, { corsoSvolto: c, corsoAtteso: attesa, rischioDitta: contesto.rischioDitta }),
+      ),
+    }));
+    const accettato = esaminati.find((e) => e.decisione?.esito === "accettata");
+    const senzaDecisione = esaminati.find((e) => !e.decisione);
+    const integrazione = esaminati.find((e) => e.decisione?.esito === "integrazione");
+    if (accettato) [stato, trovata] = ["accettata", accettato.corso];
+    else if (senzaDecisione) [stato, trovata] = ["diversa", senzaDecisione.corso];
+    else if (integrazione) [stato, trovata] = ["integrazione", integrazione.corso];
+    else [stato, trovata] = ["non-valida", esaminati[0]!.corso];
   } else stato = "mancante";
 
-  const completa = baseMancanti.length === 0 && stato === "presente";
+  const completa = baseMancanti.length === 0 && (stato === "presente" || stato === "accettata");
   const parti: string[] = [];
   if (baseMancanti.length > 0) parti.push(`manca il corso base (${baseMancanti.join(", ")})`);
   if (stato === "mancante") parti.push(`manca la formazione specifica (${attesa})`);
   if (stato === "diversa")
     parti.push(`formazione specifica diversa da quella del rischio della ditta: ha ${trovata}, serve ${attesa}; decide l'operatore`);
+  if (stato === "integrazione")
+    parti.push(`serve integrazione: l'operatore ha deciso che ${trovata} non basta al posto di ${attesa}`);
+  if (stato === "non-valida") parti.push(`${trovata} non vale al posto di ${attesa} (decisione dell'operatore)`);
   if (stato === "non-valutabile") parti.push("grado di rischio della ditta non impostato: formazione specifica non valutabile");
 
   return {
     completa,
     base: { attesi: baseAttesi, mancanti: baseMancanti },
     specifica: { attesa, stato, trovata },
-    motivo: completa ? "Formazione lavoratore completa" : parti.join("; "),
+    motivo: !completa
+      ? parti.join("; ")
+      : stato === "accettata"
+        ? `Formazione lavoratore completa (specifica ${trovata} accettata dall'operatore al posto di ${attesa})`
+        : "Formazione lavoratore completa",
   };
 }

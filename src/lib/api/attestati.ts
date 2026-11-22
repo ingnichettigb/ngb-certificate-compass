@@ -32,6 +32,13 @@ export type Attestato = {
   note_rifiuto: string | null;
   data_validazione: string | null;
   numero_attestato?: string | null;
+  /** Decisione dell'operatore su una formazione specifica diversa da quella attesa (migrazione 0018): tutti vuoti o tutti compilati. */
+  equivalenza_esito?: "accettata" | "integrazione" | "non_valida" | null;
+  equivalenza_corso_svolto?: string | null;
+  equivalenza_corso_atteso?: string | null;
+  equivalenza_rischio?: "basso" | "medio" | "alto" | null;
+  equivalenza_nota?: string | null;
+  equivalenza_data?: string | null;
   created_at: string;
   dipendenti?: Dipendente | null;
   tipi_corso?: TipoCorso | null;
@@ -93,7 +100,16 @@ export async function creaAttestato(input: {
   return data;
 }
 
-type AttestatoPatch = Partial<Omit<Attestato, "dipendenti" | "tipi_corso">>;
+/** Campi della decisione dell'operatore sulla formazione specifica (migrazione 0018): si salvano con salvaEquivalenzaAttestato. */
+export type CampiEquivalenza =
+  | "equivalenza_esito"
+  | "equivalenza_corso_svolto"
+  | "equivalenza_corso_atteso"
+  | "equivalenza_rischio"
+  | "equivalenza_nota"
+  | "equivalenza_data";
+
+type AttestatoPatch = Partial<Omit<Attestato, "dipendenti" | "tipi_corso" | CampiEquivalenza>>;
 
 export async function aggiornaAttestato(id: string, patch: AttestatoPatch) {
   const { data, error } = await supabase
@@ -104,6 +120,18 @@ export async function aggiornaAttestato(id: string, patch: AttestatoPatch) {
     .single();
   if (error) throw error;
   return data as unknown as Attestato;
+}
+
+/**
+ * Registra (o annulla, con tutti i campi null) la decisione dell'operatore sulla formazione specifica diversa da quella attesa.
+ * Usa il client senza tipi generati finché types.ts non viene rigenerato dopo la migrazione 0018.
+ */
+export async function salvaEquivalenzaAttestato(
+  id: string,
+  patch: Pick<Attestato, CampiEquivalenza> | Record<CampiEquivalenza, null>,
+): Promise<void> {
+  const { error } = await sb.from("attestati_caricati").update(patch).eq("id", id);
+  if (error) throw error;
 }
 
 export async function eliminaAttestato(id: string): Promise<void> {
