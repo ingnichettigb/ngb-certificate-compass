@@ -11,7 +11,9 @@ import type { ReactElement } from "react";
 
 const { log, makeClient, toast } = vi.hoisted(() => {
   const log: unknown[][] = [];
-  let tabella = "";
+  // Solo per il registro (come prima). Le risposte usano invece la tabella della singola richiesta:
+  // più richieste in parallelo (es. ricerca da CF + ricarica coda) non devono scambiarsi i dati.
+  let tabellaLog = "";
 
   const TIPI = [
     { id: "t1", nome_corso: "Antincendio", macro_categoria: "Antincendio", livello_specifico: "Base", ore_minime_legge: 8, durata_validita_anni: 5 },
@@ -26,7 +28,7 @@ const { log, makeClient, toast } = vi.hoisted(() => {
   ];
 
   const ultimo = (path: string[]) => [...path].reverse().find((p) => p !== "()") ?? "";
-  const risposta = (path: string[]) => {
+  const risposta = (path: string[], tabella: string) => {
     const op = ultimo(path);
     if (path.includes("storage")) {
       if (op === "download") return { data: new Blob(["x"]), error: null };
@@ -35,6 +37,9 @@ const { log, makeClient, toast } = vi.hoisted(() => {
     }
     const scrive = path.some((p) => ["insert", "update", "upsert", "delete"].includes(p));
     if (op === "single" || op === "maybeSingle") {
+      // «dipendenti» + maybeSingle è la ricerca per codice fiscale del modulo: nel test nessun CF è già in anagrafica
+      // (se restituisse sempre VERDI, il riconoscimento da CF sovrascriverebbe cognome e nome digitati).
+      if (tabella === "dipendenti" && op === "maybeSingle") return { data: null, error: null };
       if (tabella === "dipendenti") return { data: { id: "dip-1", codice_fiscale: "VRDLNE80A41H501X", cognome: "VERDI", nome: "ELENA" }, error: null };
       return { data: { id: "nuovo-1" }, error: null };
     }
@@ -42,16 +47,17 @@ const { log, makeClient, toast } = vi.hoisted(() => {
     if (!scrive && tabella === "coda_valutazioni") return { data: CODA, error: null, count: 1 };
     return { data: null, error: null, count: 1 };
   };
-  const make = (path: string[]): any =>
+  const make = (path: string[], tabella = ""): any =>
     new Proxy(function () {}, {
       get(_t, prop) {
-        if (prop === "then") return (ok: (v: unknown) => unknown) => ok(risposta(path));
-        return make([...path, String(prop)]);
+        if (prop === "then") return (ok: (v: unknown) => unknown) => ok(risposta(path, tabella));
+        return make([...path, String(prop)], tabella);
       },
       apply(_t, _this, args) {
-        if (path.length === 1 && path[0] === "from") tabella = String(args[0]);
-        log.push(["sb", path.filter((p) => p !== "()").join("."), tabella, JSON.stringify(args)]);
-        return make([...path, "()"]);
+        const tab = path.length === 1 && path[0] === "from" ? String(args[0]) : tabella;
+        if (path.length === 1 && path[0] === "from") tabellaLog = tab;
+        log.push(["sb", path.filter((p) => p !== "()").join("."), tabellaLog, JSON.stringify(args)]);
+        return make([...path, "()"], tab);
       },
     });
 

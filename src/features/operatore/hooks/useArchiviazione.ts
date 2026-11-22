@@ -4,6 +4,8 @@
  * Archiviazione delle righe della coda nel database (dipendente, attestato, integrazione DVR).
  * Revisioni:
  *   - Rev 2 (2026-10-30 10:40): Numero attestato (automatico AAMMGG-CODICE se assente) e blocco doppioni.
+ *   - Rev 3 (22/11/2026): archivia() restituisce true solo se TUTTE le righe sono state archiviate (serve a
+ *     chi la chiama per non svuotare il modulo quando l'archiviazione fallisce).
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,12 +21,13 @@ export function useArchiviazione(ricarica: () => unknown) {
   const db = sb as any;
   const [archiviando, setArchiviando] = useState(false);
 
-  async function archivia(righe: CodaRiga[]) {
-    if (!righe.length) return;
+  /** Restituisce true solo se tutte le righe richieste risultano archiviate (o lo erano già). */
+  async function archivia(righe: CodaRiga[]): Promise<boolean> {
+    if (!righe.length) return true;
     const daSalvare = righe.filter((r) => !r.archiviato);
     if (daSalvare.length === 0) {
       toast.info("Tutti gli attestati selezionati risultano già archiviati nel database");
-      return;
+      return true;
     }
 
     setArchiviando(true);
@@ -110,6 +113,7 @@ export function useArchiviazione(ricarica: () => unknown) {
       if (ok) toast.success(`${ok} attestat${ok === 1 ? "o archiviato" : "i archiviati"} nel database`);
       ricarica();
       qc.invalidateQueries();
+      return ok === daSalvare.length;
     } finally {
       setArchiviando(false);
     }

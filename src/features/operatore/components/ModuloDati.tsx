@@ -8,8 +8,11 @@
  *   rev 2 — 25/10/2026 10:15 — Reparto scelto da menu (SelezioneRepartoModulo).
  *   rev 3 — 30/10/2026 10:40 — Campo Numero attestato con OCR e proposta automatica AAMMGG-CODICE.
  *   rev 4 — 07/11/2026 13:15 — Aggancio assistito anagrafica: recupero automatico CF e ATECO da DB da Cognome/Nome.
+ *   rev 5 — 22/11/2026 — Riconoscimento immediato dal Codice Fiscale (digitato, incollato o da mirino OCR):
+ *                        compila Cognome, Nome, ATECO, Reparto, Email. Ore corso proposte dal catalogo
+ *                        (ore_minime_legge) alla scelta del corso, senza sovrascrivere ore modificate a mano.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Archive, CheckCircle2, Loader2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +60,43 @@ export function ModuloDati({
   onSalva: (archiviaSubito: boolean) => void;
 }) {
   const [cercandoDb, setCercandoDb] = useState(false);
+  // Ultimo CF già cercato in automatico, e valori più recenti (per non lavorare su dati superati dopo l'attesa).
+  const cfGiaCercato = useRef("");
+  const cfCorrente = useRef(form.codice_fiscale);
+  const formCorrente = useRef(form);
+  cfCorrente.current = form.codice_fiscale;
+  formCorrente.current = form;
+
+  // Appena il CF è completo (16 caratteri), da tastiera, incolla o mirino OCR, cerca il lavoratore nel database.
+  useEffect(() => {
+    const cf = form.codice_fiscale;
+    if (cf.length !== 16 || cfGiaCercato.current === cf) return;
+    cfGiaCercato.current = cf;
+    void (async () => {
+      try {
+        const trovato = await cercaDipendentePerAnagrafica({ codice_fiscale: cf });
+        if (!trovato || cfCorrente.current !== cf) return;
+        const atecoPredefinito = formCorrente.current.codice_ateco ? "" : await recuperaAtecoPredefinito();
+        if (cfCorrente.current !== cf) return;
+        const attuale = formCorrente.current;
+        let compilati = 0;
+        const cognome = (trovato.cognome || "").toUpperCase();
+        const nome = (trovato.nome || "").toUpperCase();
+        if (cognome && attuale.cognome !== cognome) (set("cognome", cognome), compilati++);
+        if (nome && attuale.nome !== nome) (set("nome", nome), compilati++);
+        if (!attuale.codice_ateco) (set("codice_ateco", trovato.codice_ateco || atecoPredefinito), compilati++);
+        if (!attuale.reparto && trovato.reparto) (set("reparto", trovato.reparto), compilati++);
+        if (!attuale.email && trovato.email) (set("email", trovato.email), compilati++);
+        if (!attuale.data_nascita && trovato.data_nascita) set("data_nascita", trovato.data_nascita);
+        if (!attuale.luogo_nascita && trovato.luogo_nascita) set("luogo_nascita", trovato.luogo_nascita);
+        if (compilati) toast.success(`Lavoratore riconosciuto dal codice fiscale: ${cognome} ${nome}`);
+      } catch {
+        /* ricerca di comodo: se fallisce si continua a mano, resta disponibile «Cerca nel DB» */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.codice_fiscale]);
+
   const mirino = (campo: CampoOcr) => (
     <MirinoOcr campo={campo} campoAttivo={campoOcr} disabled={!haAnteprima} onToggle={setCampoOcr} />
   );
@@ -194,9 +234,12 @@ export function ModuloDati({
             value={form.tipo_corso_id ?? ""}
             onValueChange={(val) => {
               const t = tipi.find((x) => x.id === val);
+              const orePrecedenti = tipi.find((x) => x.id === form.tipo_corso_id)?.ore_minime_legge ?? null;
               set("tipo_corso_id", val);
               if (t) set("tipo_corso_nome", t.nome_corso);
               set("tipo_corso_codice", t?.codice ?? null);
+              // Ore di legge del corso: proposte solo se il campo è vuoto o ha ancora il valore automatico del corso precedente.
+              if (t?.ore_minime_legge != null && (form.ore == null || form.ore === orePrecedenti)) set("ore", t.ore_minime_legge);
             }}
           >
             <SelectTrigger>

@@ -2,8 +2,12 @@
  * File:      useSalvataggioCoda.ts
  * Percorso:  src/features/operatore/hooks/useSalvataggioCoda.ts
  * Salvataggio in coda, modifica, duplicazione ed eliminazione delle righe.
+ * Revisioni:
+ *   - Rev 2 (22/11/2026): «Archivia subito» controlla corso e data PRIMA di salvare; il modulo e l'allegato
+ *     vengono svuotati (nuovo) solo se l'archiviazione è riuscita. Se fallisce, la riga già creata in coda
+ *     resta agganciata al modulo (modifica) così un secondo tentativo non crea doppioni né ricarica il file.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { estraiPagine, parsePagine } from "@/lib/pdf-pagine";
 import { estensioneFile, nomeFileStandard } from "../nome-file";
@@ -25,21 +29,29 @@ export function useSalvataggioCoda({
   documento: ReturnType<typeof useDocumento>;
   righeCoda: CodaRiga[];
   ricarica: () => unknown;
-  archivia: (righe: CodaRiga[]) => Promise<void>;
+  archivia: (righe: CodaRiga[]) => Promise<boolean>;
   nuovo: () => void;
 }) {
   const db = sb as any;
   const [salvando, setSalvando] = useState(false);
   const { form, setForm, idInModifica, setIdInModifica } = formRiga;
   const { file, setFile, setAnteprima, setAnteprimaMime, pagine, setPagine, totPagine, setTotPagine } = documento;
+  /** Ultima riga creata in coda da «Archivia subito» andata male: serve a un secondo tentativo senza doppioni. */
+  const ultimaInserita = useRef<{ id: string; percorso: string | null; mime: string | null } | null>(null);
 
   async function salvaInCoda(archiviaSubito: boolean) {
     if (!form.cognome || !form.codice_fiscale) return void toast.error("Servono almeno cognome e codice fiscale");
     if (form.esito === "Non valido" && !form.note.trim()) return void toast.error("Indica il motivo del rifiuto nelle note");
+    if (archiviaSubito) {
+      if (!form.tipo_corso_id) return void toast.error("Scegli il corso identificato prima di archiviare");
+      if (!form.data_corso) return void toast.error("Inserisci la data del corso rilevata dall'attestato prima di archiviare");
+    }
     setSalvando(true);
     try {
-      let percorso: string | null = idInModifica ? righeCoda.find((r) => r.id === idInModifica)?.percorso_file ?? null : null;
-      let mime: string | null = idInModifica ? righeCoda.find((r) => r.id === idInModifica)?.mime_file ?? null : null;
+      const inCoda = idInModifica ? righeCoda.find((r) => r.id === idInModifica) : undefined;
+      const recente = idInModifica && ultimaInserita.current?.id === idInModifica ? ultimaInserita.current : null;
+      let percorso: string | null = idInModifica ? inCoda?.percorso_file ?? recente?.percorso ?? null : null;
+      let mime: string | null = idInModifica ? inCoda?.mime_file ?? recente?.mime ?? null : null;
       if (file) {
         let blob: Blob = file;
         mime = file.type;
@@ -64,8 +76,21 @@ export function useSalvataggioCoda({
         ? await db.from("coda_valutazioni").update(payload).eq("id", idInModifica).select().single()
         : await db.from("coda_valutazioni").insert(payload).select().single();
       if (res.error) throw res.error;
-      if (archiviaSubito) await archivia([{ ...VUOTA, ...res.data } as CodaRiga]);
-      else toast.success(idInModifica ? "Valutazione aggiornata" : "Aggiunto alla coda di lavoro");
+      if (archiviaSubito) {
+        const archiviata = await archivia([{ ...VUOTA, ...res.data } as CodaRiga]);
+        if (!archiviata) {
+          // Archiviazione non riuscita: niente nuovo(). La riga è in coda (file compreso): il modulo resta
+          // compilato e agganciato a quella riga, l'anteprima resta visibile e si può correggere e riprovare.
+          ultimaInserita.current = { id: res.data.id, percorso, mime };
+          setIdInModifica(res.data.id);
+          setFile(null);
+          setPagine("");
+          setTotPagine(0);
+          ricarica();
+          return;
+        }
+      } else toast.success(idInModifica ? "Valutazione aggiornata" : "Aggiunto alla coda di lavoro");
+      ultimaInserita.current = null;
       nuovo();
       ricarica();
     } catch (e) {
