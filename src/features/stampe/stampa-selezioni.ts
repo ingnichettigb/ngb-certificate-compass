@@ -6,7 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: periodi, formazione, stato di validità e selezioni dei lavoratori. Nessun cambio di comportamento.
  *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
  *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
- *   rev 4 — 23/11/2026 14:10 — ordina: lavoratore per cognome/nome; internamente prima il corso base (priorità 0), poi gli aggiornamenti cronologici.
+ *   rev 4 — 23/11/2026 14:15 — ordina: raggruppa per lavoratore (cognome/nome); prima il corso base (priorità 0), poi aggiornamenti per data crescente.
  */
 import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -152,7 +152,7 @@ export function mansioneDi(d: DipMinimo): string {
   return (d.sottoreparto ?? "").trim() || classe;
 }
 
-/** Priorità interna per riga: il corso base (o riga «Manca corso base») ha sempre precedenza 0. Gli aggiornamenti 1. */
+/** Priorità interna: il corso base (o la riga «MANCA» del base) ha priorità 0; gli aggiornamenti hanno priorità 1. */
 function prioritaTipoCorso(r: RigaStampa): number {
   if (r.id.startsWith("manca-base") || r.stato === "manca") return 0;
   const cod = (r.codice ?? "").toUpperCase();
