@@ -4,9 +4,6 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: calcolo delle righe (per attestato e per lavoratore). Nessun cambio di comportamento.
- *   rev 2 — 08/11/2026 — Elenco lavoratori: i ruoli sono forniti anche come elenco (ruoliElenco) per il raggruppamento per funzione.
- *   rev 3 — 09/11/2026 17:30 — Calcolo del campo «inSquadra» per ciascun attestato incrociando corso e ruoli assegnati.
- *   rev 4 — 09/11/2026 17:50 — Campo «inSquadra» calcolato a livello di squadra/gruppo anziché sul singolo corso: esito univoco (Sì/No) per il lavoratore sia su corso base che su aggiornamenti.
  *   rev 5 — 09/11/2026 20:00 — Allineata la chiamata a formazionePerLavoratore (attestati, oggi) alla sua definizione.
  *   rev 6 — 11/11/2026 10:45 — «In squadra» anche per la squadra di evacuazione (gruppo «evacuazione»).
  *   rev 7 — 11/11/2026 17:30 — Filtro «Stato lavoratore»: righeMancanti, calcolaRighe e calcolaRigheLavoratori usano includeLavoratorePerStato.
@@ -16,12 +13,13 @@
  *   rev 10 — 22/11/2026 — Con filtri.senzaFinestra le scadenze non sono limitate ai 12 mesi (vista «Tutti gli addetti»); senza il flag nulla cambia.
  *   rev 11 — 22/11/2026 — Le righe per attestato portano la data di assunzione dall'anagrafica (colonna «Data assunzione» scelta dal «+»).
  *   rev 12 — 23/11/2026 14:15 — righeMancanti e righeMancaBase impostano nome «Corso base – ...» e testoManca «MANCA» in rosso.
+ *   rev 13 — 23/11/2026 15:35 — RigaStampa propaga daRifareBase da applicaScadenzaCicli e per Primo Soccorso scaduto.
  */
 import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
-import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
+import { applicaScadenzaCicli, type AttestatoValutato } from "@/features/scadenze/preposti";
 import { campiMancanti } from "@/features/dipendenti/anagrafica-completa";
 import { includeLavoratorePerStato, TUTTI } from "./stampa-tipi";
 import type { FiltriStampa, RigaStampa, VoceRuolo } from "./stampa-tipi";
@@ -78,34 +76,46 @@ function righeMancanti(
     obbligati = dipendenti;
     corso = ETICHETTA_CORSO_MANCANTE[voce];
     gruppo = "sicurezza-lavoratori";
-    gruppoTitolo = GRUPPI_ARGOMENTO.find((g) => g.chiave === gruppo)?.titolo ?? "Sicurezza lavoratori";
-    haCorso = (a) => !!a.tipi_corso && voceFormazione(a.tipi_corso) === voce;
+    gruppoTitolo = "Sicurezza lavoratori";
+    haCorso = (a) => !a.tipi_corso || voceFormazione(a.tipi_corso) === voce;
   } else if (filtri.gruppo !== TUTTI && filtri.soloIncarichi) {
     const collegati = ruoliDelGruppo(filtri.gruppo, ruoli);
     if (!collegati.length) return [];
-    const con = new Set(assegnazioni.filter((a) => collegati.some((r) => r.id === a.ruolo_id)).map((a) => a.dipendente_id));
-    obbligati = dipendenti.filter((d) => con.has(d.id));
+    const idRuoli = new Set(collegati.map((r) => r.id));
+    const dipendentiConRuoloSet = new Set(
+      assegnazioni.filter((a) => idRuoli.has(a.ruolo_id)).map((a) => a.dipendente_id),
+    );
+    obbligati = dipendenti.filter((d) => dipendentiConRuoloSet.has(d.id));
+    const arg = GRUPPI_ARGOMENTO.find((g) => g.chiave === filtri.gruppo);
+    corso = `Corso base – ${arg?.titolo ?? filtri.gruppo}`;
     gruppo = filtri.gruppo;
-    gruppoTitolo = GRUPPI_ARGOMENTO.find((g) => g.chiave === gruppo)?.titolo ?? gruppo;
-    corso = `Corso base – ${gruppoTitolo}`;
-    haCorso = (a) => assegnaGruppoArgomento(a.tipi_corso ?? {}).chiave === gruppo;
+    gruppoTitolo = arg?.titolo ?? filtri.gruppo;
+    haCorso = (a) => {
+      if (!a.tipi_corso) return false;
+      return assegnaGruppoArgomento(a.tipi_corso).chiave === filtri.gruppo;
+    };
   } else {
     return [];
   }
 
-  const conCorso = new Set(attestati.filter(haCorso).map((a) => a.dipendente_id));
-  const conRuolo = filtri.ruoloId !== TUTTI ? dipendentiConRuolo(filtri.ruoloId, assegnazioni) : null;
+  const approvatiPerDipendente = new Map<string, Attestato[]>();
+  for (const a of attestati) {
+    if (!statoRegistrato(a.stato_validazione)) continue;
+    const lista = approvatiPerDipendente.get(a.dipendente_id) ?? [];
+    lista.push(a);
+    approvatiPerDipendente.set(a.dipendente_id, lista);
+  }
+
   return obbligati
     .filter((d) => includeLavoratorePerStato(d.stato_lavoratore, filtri))
-    .filter((d) => !conCorso.has(d.id))
     .filter((d) => !soloDipendenti || soloDipendenti.has(d.id))
-    .filter((d) => filtri.reparto === TUTTI || d.reparto === filtri.reparto)
-    .filter((d) => filtri.categoria === TUTTI || d.sottoreparto === filtri.categoria)
-    .filter((d) => filtri.classe === TUTTI || d.classe_concorso === filtri.classe)
-    .filter((d) => filtri.dipendenteId === TUTTI || d.id === filtri.dipendenteId)
-    .filter((d) => !conRuolo || conRuolo.has(d.id))
+    .filter((d) => !filtri.reparto || filtri.reparto === TUTTI || d.reparto === filtri.reparto)
+    .filter((d) => !filtri.categoria || filtri.categoria === TUTTI || d.sottoreparto === filtri.categoria)
+    .filter((d) => !filtri.classe || filtri.classe === TUTTI || d.classe_concorso === filtri.classe)
+    .filter((d) => !filtri.dipendenteId || filtri.dipendenteId === TUTTI || d.id === filtri.dipendenteId)
+    .filter((d) => !(approvatiPerDipendente.get(d.id) ?? []).some(haCorso))
     .map((d): RigaStampa => ({
-      id: `manca-${d.id}-${gruppo}-${filtri.soloCorso ?? ""}`,
+      id: `manca-${d.id}-${gruppo}-${filtri.soloCorso ?? "base"}`,
       dipendenteId: d.id,
       cognome: d.cognome ?? "",
       nome: d.nome ?? "",
@@ -132,44 +142,44 @@ function righeMancanti(
       dataCorso: "",
       scadenza: null,
       stato: "manca",
-      giorniAllaScadenza: null,
       testoManca: TESTO_MANCA,
-      inSquadra: calcolaInSquadra(d.id, null, gruppo, ruoli, assegnazioni),
+      giorniAllaScadenza: null,
+      inSquadra: true,
     }));
 }
 
 /**
- * Una riga «Corso base – ...» con MANCA per ogni lavoratore e gruppo che ha l'aggiornamento senza il base (dopo tutti i filtri).
- * Senza data corso, così l'ordinamento la mette sopra l'aggiornamento dello stesso lavoratore.
+ * Per ogni lavoratore con almeno un aggiornamento privo del corso base (aggiornamentoSenzaBase),
+ * genera una riga virtuale «Corso base – ...» con stato «manca» e testoManca «MANCA» da mostrare in cima al gruppo.
  */
 function righeMancaBase(righe: RigaStampa[]): RigaStampa[] {
-  const viste = new Set<string>();
+  const visti = new Set<string>();
   const out: RigaStampa[] = [];
   for (const r of righe) {
     if (!r.aggiornamentoSenzaBase) continue;
     const k = `${r.dipendenteId}|${r.gruppo}`;
-    if (viste.has(k)) continue;
-    viste.add(k);
-    const riga: RigaStampa = { ...r };
-    delete riga.aggiornamentoSenzaBase;
+    if (visti.has(k)) continue;
+    visti.add(k);
     out.push({
-      ...riga,
+      ...r,
       id: `manca-base-${r.dipendenteId}-${r.gruppo}`,
-      corso: `Corso base – ${r.gruppoTitolo}`,
+      corso: `Corso base – ${r.gruppoTitolo || r.gruppo}`,
       codice: "",
       ore: null,
       numero: "",
       dataCorso: "",
       scadenza: null,
       stato: "manca",
-      giorniAllaScadenza: null,
       testoManca: TESTO_MANCA,
+      giorniAllaScadenza: null,
+      senzaFile: false,
+      aggiornamentoSenzaBase: false,
     });
   }
   return out;
 }
 
-/** Converte gli attestati approvati in righe filtrate e ordinate per cognome, nome, corso base e data corso. */
+/** Righe di dettaglio (un record per attestato, o riga sintetica se manca). */
 export function calcolaRighe(
   attestatiGrezzi: Attestato[],
   filtri: FiltriStampa,
@@ -193,6 +203,9 @@ export function calcolaRighe(
       const tc = a.tipi_corso;
       const g = assegnaGruppoArgomento(tc ?? {});
       const { stato, giorni } = statoValidita(a.data_scadenza_calcolata, oggi);
+      const aVal = a as AttestatoValutato;
+      const ePrimoSoccorso = g.chiave === "primo-soccorso";
+      const daRifareBase = Boolean(aVal.daRifareBase || (ePrimoSoccorso && stato === "scaduto"));
       return {
         id: a.id,
         dipendenteId: d.id,
@@ -223,6 +236,7 @@ export function calcolaRighe(
         stato,
         giorniAllaScadenza: giorni,
         inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
+        daRifareBase,
         ...(!a.url_foto_fronte?.trim() || a.stato_validazione === "File Attestato mancante" ? { senzaFile: true } : {}),
         ...(a.esenzioneRspp ? { esenzioneRspp: a.esenzioneRspp } : {}),
         ...(senzaBase.has(`${d.id}|${g.chiave}`) && eAggiornamento(tc)
