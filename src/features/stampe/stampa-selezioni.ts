@@ -6,6 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: periodi, formazione, stato di validità e selezioni dei lavoratori. Nessun cambio di comportamento.
  *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
  *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
+ *   rev 4 — 23/11/2026 14:10 — ordina: lavoratore per cognome/nome; internamente prima il corso base (priorità 0), poi gli aggiornamenti cronologici.
  */
 import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -151,18 +152,27 @@ export function mansioneDi(d: DipMinimo): string {
   return (d.sottoreparto ?? "").trim() || classe;
 }
 
+/** Priorità interna per riga: il corso base (o riga «Manca corso base») ha sempre precedenza 0. Gli aggiornamenti 1. */
+function prioritaTipoCorso(r: RigaStampa): number {
+  if (r.id.startsWith("manca-base") || r.stato === "manca") return 0;
+  const cod = (r.codice ?? "").toUpperCase();
+  const nome = (r.corso ?? "").toLowerCase();
+  if (cod.includes("BAS") || nome.includes("corso base") || cod.startsWith("SIC-GEN")) return 0;
+  return 1;
+}
+
 export function ordina(a: RigaStampa, b: RigaStampa) {
-  return a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it") || a.dataCorso.localeCompare(b.dataCorso);
+  const perNominativo = a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it");
+  if (perNominativo !== 0) return perNominativo;
+  const pA = prioritaTipoCorso(a);
+  const pB = prioritaTipoCorso(b);
+  if (pA !== pB) return pA - pB;
+  return a.dataCorso.localeCompare(b.dataCorso);
 }
 
 const radice = (t: string | null | undefined) =>
   (t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/[aeio]$/, "");
 
-/**
- * Ruoli di sicurezza attivi collegati a un gruppo corsi (macro-categoria o nome del ruolo che coincidono con il gruppo:
- * «Preposti» ↔ Preposto, «Antincendio» ↔ Addetto Antincendio, «Privacy» ↔ un ruolo con macro-categoria Privacy…).
- * Vuoto se nella Matrice non c'è ancora un ruolo collegato: in quel caso «Solo incarichi attualmente assegnati» non si può applicare.
- */
 export function ruoliDelGruppo(chiaveGruppo: string, ruoli: RuoloSicurezza[]): RuoloSicurezza[] {
   if (chiaveGruppo === TUTTI || chiaveGruppo === "altro") return [];
   const g = radice(chiaveGruppo);
