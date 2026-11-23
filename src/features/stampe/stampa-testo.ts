@@ -12,6 +12,7 @@
  *   rev 8 — 23/11/2026 12:05 — Stato: «– Manca attestato» se il corso è registrato senza file collegato.
  *   rev 9 — 23/11/2026 13:35 — Stato: senza file scrive solo «File Attestato mancante» (mai «Valido»).
  *   rev 7 — 22/11/2026 — Stato «In scadenza»: nella casella compare anche la data di scadenza («In scadenza – 15/03/2027»).
+ *   rev 10 — 23/11/2026 15:35 — Colonna Stato per corsi scaduti: «Da rifare corso base» per Primo Soccorso o decadenza; «Scaduto da aggiornare» per gli altri.
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
@@ -21,6 +22,9 @@ import { cellaMancante } from "./stampa-vista";
 import { TESTO_AGGIORNAMENTO_SVOLTO } from "./stampa-senza-base";
 import { ETICHETTA_STATO, dataIt } from "./stampa-formati";
 import { testoCellaSquadra } from "./stampa-squadre";
+
+export const TESTO_SCADUTO_DA_AGGIORNARE = "Scaduto da aggiornare";
+export const TESTO_DA_RIFARE_BASE = "Da rifare corso base";
 
 /** Raggruppa le righe per una chiave mantenendo l'ordine. */
 export function raggruppa<T>(righe: T[], chiave: (r: T) => string): [string, T[]][] {
@@ -129,5 +133,10 @@ function testoStato(r: RigaStampa): string {
   if (r.stato === "manca" && r.testoManca) return r.testoManca;
   if (r.aggiornamentoSenzaBase) return TESTO_AGGIORNAMENTO_SVOLTO;
   if (r.stato === "in_scadenza" && r.scadenza) return `${ETICHETTA_STATO.in_scadenza} – ${dataIt(r.scadenza)}`;
+  if (r.stato === "scaduto") {
+    return r.daRifareBase || r.gruppo === "primo-soccorso"
+      ? TESTO_DA_RIFARE_BASE
+      : TESTO_SCADUTO_DA_AGGIORNARE;
+  }
   return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
 }
