@@ -9,6 +9,7 @@
  *   rev 4 — 05/11/2026 17:50 — Modifica anagrafica per ID con conferma (speciale se cambia il CF).
  *   rev 5 — 06/11/2026 08:20 — Finestra «Da completare» (uno alla volta) apribile dal pulsante dell'elenco e dall'esito dell'importazione;
  *            la modifica anagrafica registra classe e materia nel catalogo quando cambiano.
+ *   rev 6 — 23/11/2026 08:55 — Dopo «Elimina definitivamente lavoratore» la scheda si deseleziona (la colonna destra torna neutra).
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -166,6 +167,7 @@ export function DipendentiPage({
               onSpuntaRuolo={spuntaRuolo}
               onSegnaCompletata={segnaCompletata}
               onModifica={avviaModifica}
+              onEliminato={() => setSel(null)}
             />
           ) : (
             <p className="py-16 text-center text-sm text-muted-foreground">

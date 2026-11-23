@@ -4,6 +4,8 @@
  * Data creaz: 28/10/2026
  * Revisioni:
  *   rev 1 — 28/10/2026 09:50 — Scheda contratto: avviso scadenza, Riconferma, Termina (limbo), Riattiva.
+ *   rev 2 — 23/11/2026 08:55 — In fondo al riquadro la «Zona di pericolo» con «Elimina definitivamente lavoratore» (EliminaLavoratore.tsx),
+ *            visibile sia per i lavoratori in forza sia per i cessati; nuove prop nAttestati e onEliminato.
  */
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { aggiornaContrattoDipendente, formatData, type DatiContratto, type Dipendente } from "@/lib/api";
 import { CampiContratto } from "./CampiContratto";
 import { giorniAllaFine, isCessato, richiedeDecisione } from "./contratto";
+import { EliminaLavoratore } from "./EliminaLavoratore";
 
 const oggiIso = () => new Date().toISOString().slice(0, 10);
 
@@ -26,7 +29,17 @@ function datiDa(d: Dipendente): DatiContratto {
   };
 }
 
-export function BloccoContratto({ corrente }: { corrente: Dipendente }) {
+export function BloccoContratto({
+  corrente,
+  nAttestati = 0,
+  onEliminato,
+}: {
+  corrente: Dipendente;
+  /** Attestati registrati del lavoratore, mostrati nell'avviso prima di eliminarlo. */
+  nAttestati?: number;
+  /** Chiamata dopo l'eliminazione definitiva: la pagina deseleziona la scheda. */
+  onEliminato?: (() => void) | undefined;
+}) {
   const qc = useQueryClient();
   const [modifica, setModifica] = useState(false);
   const [valori, setValori] = useState<DatiContratto>(datiDa(corrente));
@@ -118,6 +131,10 @@ export function BloccoContratto({ corrente }: { corrente: Dipendente }) {
             <Archive className="size-4" /> Termina rapporto
           </Button>
         )
+      )}
+
+      {!modifica && (
+        <EliminaLavoratore corrente={corrente} nAttestati={nAttestati} onEliminato={onEliminato} />
       )}
     </div>
   );

@@ -9,10 +9,13 @@
  *   rev 3 — 05/11/2026 21:30 — Cognome, nome e luogo di nascita salvati sempre in MAIUSCOLO; la modifica anagrafica
  *                              salva anche profilo, classe di concorso e materia; nuova riabilitaDipendenti (cessati che tornano in forza).
  *   rev 4 — 07/11/2026 13:15 — cercaDipendentePerAnagrafica (ricerca flessibile per CF o cognome+nome) e recuperaAtecoPredefinito.
+ *   rev 5 — 23/11/2026 08:55 — eliminaDipendente (cancellazione definitiva dal programma: anagrafica con righe collegate, coda operatore,
+ *                              nominativo nelle voci dell'organigramma; i file nello storage NON si toccano) e togliNominativoDalleVoci.
  */
 import { leggiTutto, sb } from "./client";
 import { registraClasseEMateria } from "./insegnamento";
 import { maiuscolo } from "@/lib/testo-maiuscolo";
+import type { VoceOrganigramma } from "./ditta";
 
 export type Dipendente = {
   id: string;
@@ -244,4 +247,82 @@ export async function riabilitaDipendenti(ids: string[], dataAssunzione: string)
     })
     .in("id", ids);
   if (error) throw error;
+}
+
+const pulisciNome = (s: string) => s.replace(/\s+/g, " ").trim().toUpperCase();
+
+/**
+ * Toglie dalle voci dell'organigramma i nominativi scritti a mano che corrispondono al lavoratore
+ * («COGNOME NOME» oppure «NOME COGNOME», senza badare a maiuscole e spazi in eccesso: stessa regola della migrazione 0016).
+ * Non unisce né divide mai le parole. Le voci senza corrispondenze restano lo stesso oggetto.
+ */
+export function togliNominativoDalleVoci(
+  voci: VoceOrganigramma[],
+  cognome: string,
+  nome: string | null | undefined,
+): { voci: VoceOrganigramma[]; rimossi: number } {
+  const diritto = pulisciNome(`${cognome} ${nome ?? ""}`);
+  const inverso = pulisciNome(`${nome ?? ""} ${cognome}`);
+  let rimossi = 0;
+  const nuove = voci.map((v) => {
+    const nomi = (v.nomi ?? []).filter((n) => {
+      const p = pulisciNome(n);
+      const e = p !== "" && (p === diritto || p === inverso);
+      if (e) rimossi += 1;
+      return !e;
+    });
+    return nomi.length === (v.nomi ?? []).length ? v : { ...v, nomi };
+  });
+  return { voci: nuove, rimossi };
+}
+
+export type EsitoEliminazioneDipendente = {
+  /** Parti collegate che non è stato possibile pulire (il lavoratore è comunque eliminato). */
+  avvisi: string[];
+};
+
+/**
+ * Elimina DEFINITIVAMENTE un lavoratore dal programma (rev 23/11/2026).
+ * 1. Cancella l'anagrafica: ruoli, attestati, documenti PDF registrati e integrazioni DVR seguono per ON DELETE CASCADE.
+ * 2. Cancella le righe della coda operatore con lo stesso codice fiscale.
+ * 3. Toglie il nominativo dalle voci dell'organigramma.
+ * I file già caricati nello storage («attestati») NON vengono toccati: restano dove sono.
+ * Se il punto 1 fallisce l'errore viene rilanciato e non si tocca altro; i punti 2 e 3 non bloccano e riportano un avviso.
+ */
+export async function eliminaDipendente(
+  d: Pick<Dipendente, "id" | "codice_fiscale" | "cognome" | "nome">,
+): Promise<EsitoEliminazioneDipendente> {
+  const { error } = await sb.from("dipendenti").delete().eq("id", d.id);
+  if (error) throw error;
+
+  const avvisi: string[] = [];
+
+  const cf = d.codice_fiscale.trim().toUpperCase();
+  if (cf) {
+    const { error: eCoda } = await sb.from("coda_valutazioni").delete().ilike("codice_fiscale", cf);
+    if (eCoda) avvisi.push("coda dell'operatore");
+  }
+
+  try {
+    const { data, error: eLeggi } = await sb
+      .from("ditta")
+      .select("organigramma_voci")
+      .eq("id", true)
+      .maybeSingle();
+    if (eLeggi) throw eLeggi;
+    const voci = ((data as { organigramma_voci?: VoceOrganigramma[] } | null)?.organigramma_voci ??
+      []) as VoceOrganigramma[];
+    const { voci: nuove, rimossi } = togliNominativoDalleVoci(voci, d.cognome, d.nome);
+    if (rimossi > 0) {
+      const { error: eSalva } = await sb
+        .from("ditta")
+        .update({ organigramma_voci: nuove })
+        .eq("id", true);
+      if (eSalva) throw eSalva;
+    }
+  } catch {
+    avvisi.push("nominativi dell'organigramma");
+  }
+
+  return { avvisi };
 }

@@ -10,6 +10,7 @@
  *   rev 5 — 28/10/2026 21:45 — Integrato SelettoreCorsiDipendente con menu a tendina, spunte
  *            e bottoni attivi sincronizzati con la tabella generale.
  *   rev 6 — 05/11/2026 17:50 — Prop onModifica per «Modifica anagrafica».
+ *   rev 7 — 23/11/2026 08:55 — Prop onEliminato (dopo «Elimina definitivamente lavoratore») e numero attestati passato al riquadro Contratto.
  */
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -46,8 +47,11 @@ export function SchedaDipendente({
   onSpuntaRuolo,
   onSegnaCompletata,
   onModifica,
+  onEliminato,
 }: {
   onModifica?: (() => void) | undefined;
+  /** Chiamata dopo l'eliminazione definitiva del lavoratore: la pagina deseleziona la scheda. */
+  onEliminato?: (() => void) | undefined;
   corrente: Dipendente;
   attestati: Attestato[];
   integrazioni: IntegrazioneDvr[];
@@ -79,7 +83,7 @@ export function SchedaDipendente({
     <div className="space-y-4">
       <AnagraficaDipendente corrente={corrente} onModifica={onModifica} />
       <SelezioneReparto corrente={corrente} repartiAttivi={repartiAttivi} onCambia={onCambiaReparto} />
-      <BloccoContratto corrente={corrente} />
+      <BloccoContratto corrente={corrente} nAttestati={suoi.length} onEliminato={onEliminato} />
 
       {/* Ruoli e Incarichi di sicurezza */}
       <BloccoRuoli
