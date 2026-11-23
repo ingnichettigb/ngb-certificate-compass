@@ -6,7 +6,7 @@
  *   rev 1 — 22/11/2026 — Aggiornamento senza corso base (defibrillatore, antincendio, primo soccorso, preposti): il lavoratore non risulta
  *            «Scaduto» (l'aggiornamento è stato fatto) e riceve, sopra l'aggiornamento, una riga «Manca corso base».
  *   rev 2 — 22/11/2026 — aggiornamentiSenzaBase conta solo gli attestati «Approvato» (un base in attesa o respinto non conta come base presente).
- *   rev 3 — 23/11/2026 14:10 — Costante TESTO_MANCA impostata a «MANCA» in rosso sia per addetti privi di base sia da formare da zero.
+ *   rev 3 — 23/11/2026 14:15 — Costante TESTO_MANCA impostata a «MANCA» in rosso sia per addetti privi di base sia per chi è da formare da zero.
  *
  * Regola per riconoscere l'aggiornamento: il codice del corso contiene «AGG» oppure il livello è «Aggiornamento»
  * (VFF-FOR1A2 e PSO-AgB-04 non contengono «AGG» ma hanno livello «Aggiornamento»; PRP-BAS-12 ha livello «Specifico»).
@@ -17,7 +17,12 @@ import type { Attestato } from "@/lib/api";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 
 /** Gruppi con corso base + aggiornamento (la Privacy è esclusa: i suoi corsi hanno tutti livello Base). */
-export const GRUPPI_CON_BASE_E_AGGIORNAMENTO: ReadonlySet<string> = new Set(["defibrillatore", "antincendio", "primo-soccorso", "preposti"]);
+export const GRUPPI_CON_BASE_E_AGGIORNAMENTO: ReadonlySet<string> = new Set([
+  "defibrillatore",
+  "antincendio",
+  "primo-soccorso",
+  "preposti",
+]);
 
 export const TESTO_MANCA = "MANCA";
 export const TESTO_MANCA_BASE = "MANCA";
