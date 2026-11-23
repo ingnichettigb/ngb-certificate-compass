@@ -14,6 +14,7 @@
  *   rev 7 — 14/11/2026 — RigaStampa.esenzioneRspp: motivo dell'esonero dall'aggiornamento Preposto (RSPP/ASPP valido).
  *   rev 8 — 22/11/2026 — RigaStampa.testoManca (testo al posto di «Manca») e aggiornamentoSenzaBase (aggiornamento svolto, corso base assente).
  *   rev 9 — 22/11/2026 — FiltriStampa.senzaFinestra (facoltativo): nelle scadenze non limita le righe alla finestra di 12 mesi (vista «Tutti gli addetti»).
+ *   rev 10 — 23/11/2026 15:35 — RigaStampa.daRifareBase (Primo Soccorso scaduto o decaduto per ritardo: da rifare il corso base anziché aggiornamento).
  */
 import type { CampoAnagrafica } from "@/features/dipendenti/anagrafica-completa";
 
@@ -172,6 +173,8 @@ export type RigaStampa = {
   senzaFile?: boolean;
   /** Aggiornamento svolto da chi non ha il corso base: non è «Scaduto», Scadenza «—» e Stato «Aggiornamento svolto». */
   aggiornamentoSenzaBase?: boolean;
+  /** true = serve ripetere l'intero corso base (Primo Soccorso scaduto o oltre tolleranza, oppure decaduto per ritardo). */
+  daRifareBase?: boolean;
   /** Solo Organigramma: la squadra di questa riga (una riga per lavoratore e per squadra) e le due celle di formazione. */
   squadra?: string;
   cellaBase?: CellaSquadra;
