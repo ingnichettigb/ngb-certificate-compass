@@ -6,6 +6,7 @@
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: riga di un lavoratore con funzione, ruoli e caselle dei corsi. Nessun cambio di comportamento.
  *   rev 2 — 10/11/2026 — Casella «E» (esente) per l'aggiornamento Preposto di chi ha un RSPP valido.
  *   rev 3 — 21/11/2026 — Il ruolo indicato nel suggerimento della casella segue la Tabella 02 (prop «regole»).
+ *   rev 4 — 22/11/2026 — Casella grigia «…» per un corso dovuto ma «in attesa» della formazione Lavoratore (prop «motivoInAttesa»).
  */
 import { Check } from "lucide-react";
 import type { Dipendente, TipoCorso } from "@/lib/api";
@@ -24,6 +25,8 @@ interface Props {
   mappaAssegnazioni: Set<string>;
   haObbligoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
   motivoEsenzione?: (dipendenteId: string, corso: TipoCorso) => string | null;
+  /** Perché il corso, dovuto e non ancora svolto, è «in attesa» del prerequisito (formazione Lavoratore); null se non lo è. */
+  motivoInAttesa?: ((dipendenteId: string, corso: TipoCorso) => string | null) | undefined;
   haAttestatoCorso: (dipendenteId: string, corso: TipoCorso) => boolean;
   onSeleziona: (id: string) => void;
   onToggleObbligo: (dip: Dipendente, corso: TipoCorso) => void;
@@ -39,6 +42,7 @@ export function RigaLavoratoreMatrice({
   mappaAssegnazioni,
   haObbligoCorso,
   motivoEsenzione,
+  motivoInAttesa,
   haAttestatoCorso,
   onSeleziona,
   onToggleObbligo,
@@ -106,6 +110,7 @@ export function RigaLavoratoreMatrice({
         const fatto = haAttestatoCorso(dip.id, c);
         const ruoloCollegato = trovaRuoloPerCorso(c, ruoli, regole);
         const esente = motivoEsenzione?.(dip.id, c) ?? null;
+        const inAttesa = obbligatorio && !fatto && !esente ? (motivoInAttesa?.(dip.id, c) ?? null) : null;
 
         return (
           <td
@@ -118,6 +123,8 @@ export function RigaLavoratoreMatrice({
             title={
               esente
                 ? esente
+                : inAttesa
+                ? `In attesa della formazione Lavoratore: ${inAttesa}`
                 : ruoloCollegato
                 ? `${obbligatorio ? "Revoca" : "Assegna"} ruolo "${ruoloCollegato.nome}" a ${dip.cognome}`
                 : `Corso: ${c.nome_corso}`
@@ -130,13 +137,15 @@ export function RigaLavoratoreMatrice({
                   obbligatorio
                     ? fatto
                       ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                      : "bg-amber-500/20 border-amber-600 text-amber-700 dark:text-amber-400 font-bold"
+                      : inAttesa
+                        ? "border-slate-400/70 bg-slate-500/15 text-slate-600 dark:text-slate-300 font-bold"
+                        : "bg-amber-500/20 border-amber-600 text-amber-700 dark:text-amber-400 font-bold"
                     : esente
                       ? "border-slate-400/60 bg-slate-500/10 text-slate-600 dark:text-slate-300 text-[10px] font-bold"
                       : "border-muted-foreground/30 hover:border-primary/60"
                 }`}
               >
-                {esente ? "E" : obbligatorio && (fatto ? <Check className="size-3.5 stroke-[3]" /> : "!")}
+                {esente ? "E" : obbligatorio && (fatto ? <Check className="size-3.5 stroke-[3]" /> : inAttesa ? "…" : "!")}
               </button>
             </div>
           </td>

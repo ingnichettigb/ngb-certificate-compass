@@ -8,6 +8,10 @@
  *   - Rev 2 (2026-11-10): Stato «esente» (grigio) per l'aggiornamento Preposto di chi ha un RSPP valido.
  *   - Rev 3 (2026-11-12): La scadenza è quella del ciclo del gruppo (Base + aggiornamenti), non del singolo attestato: un Base
  *     scaduto con un aggiornamento valido risulta valido. Primo Soccorso oltre la tolleranza: «da rifare corso base».
+ *   - Rev 4 (2026-11-22): Punto di verità ruoli-corsi (Fase 6). Il corso svolto si riconosce per CODICE quando ci sono i codici (prima
+ *     bastava lo stesso nome: il corso base faceva risultare «valido» anche il suo aggiornamento, che ha nome uguale). La famiglia di un
+ *     aggiornamento di attrezzatura è la sua attrezzatura, non tutta la macro-categoria «Sicurezza lavoratori», e la famiglia della
+ *     macro-categoria non comprende più le attrezzature. Nuovo stato «in_attesa»: formazione Lavoratore non completa (parametro «attesa»).
  */
 import { type Attestato, type TipoCorso } from "@/lib/api";
 import {
@@ -16,8 +20,9 @@ import {
   type ValiditaRspp,
 } from "@/features/scadenze/esenzioni-rspp";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
+import { codiceRuoloAttrezzatura } from "@/lib/api/codici-ruoli";
 
-export type StatoFabbisogno = "valido" | "in_corso" | "scaduto" | "mancante" | "esente";
+export type StatoFabbisogno = "valido" | "in_corso" | "scaduto" | "mancante" | "esente" | "in_attesa";
 
 export interface EsitoFabbisognoCorso {
   stato: StatoFabbisogno;
@@ -57,6 +62,7 @@ export function valutaStatoFabbisognoCorso({
   dipendenteId,
   oggi = oggiIso(),
   rspp = null,
+  attesa = null,
 }: {
   corso: TipoCorso;
   attestati: Attestato[];
@@ -64,6 +70,11 @@ export function valutaStatoFabbisognoCorso({
   oggi?: string;
   /** RSPP valido del lavoratore: se presente, l'aggiornamento Preposto non è dovuto. */
   rspp?: ValiditaRspp | null;
+  /**
+   * Perché il corso non può ancora essere svolto (es. formazione Lavoratore non completa, prerequisito di un'attrezzatura).
+   * Vale solo se il corso non risulta svolto: al posto di «da svolgere» lo stato è «in attesa».
+   */
+  attesa?: string | null;
 }): EsitoFabbisognoCorso {
   if (rspp && eAggiornamentoPreposto(corso)) {
     return {
@@ -88,7 +99,8 @@ export function valutaStatoFabbisognoCorso({
   const svoltiDiretti = approvati.filter((a) => {
     const nomeA = (a.tipi_corso?.nome_corso || "").toLowerCase().trim();
     const codA = (a.tipi_corso?.codice || "").toLowerCase().trim();
-    if (codC && codA === codC) return true;
+    // Con i codici da entrambe le parti conta solo il codice: base e aggiornamento hanno spesso lo stesso nome
+    if (codC && codA) return codA === codC;
     return nomeA === nomeC;
   });
 
@@ -130,8 +142,13 @@ export function valutaStatoFabbisognoCorso({
 
   // 2. Se è un corso di aggiornamento, cerchiamo nella stessa macro-categoria la formazione pregressa
   const eAggiornamento = nomeC.includes("aggiornamento") || codC.includes("agg");
-  if (eAggiornamento && macroC) {
+  // Attrezzatura (LAV-…): la famiglia è la sua attrezzatura. Per gli altri corsi la macro-categoria, senza le attrezzature.
+  const attrezzatura = codiceRuoloAttrezzatura(corso.codice);
+  if (eAggiornamento && (attrezzatura || macroC)) {
     const pertinentiFamiglia = approvati.filter((a) => {
+      const attrezzaturaA = codiceRuoloAttrezzatura(a.tipi_corso?.codice);
+      if (attrezzatura) return attrezzaturaA === attrezzatura;
+      if (attrezzaturaA) return false;
       const macroA = (a.tipi_corso?.macro_categoria || "").toLowerCase().trim();
       return macroA === macroC;
     });
@@ -167,7 +184,15 @@ export function valutaStatoFabbisognoCorso({
     }
   }
 
-  // 3. Nessuna evidenza formativa trovata
+  // 3. Nessuna evidenza formativa trovata: se c'è un prerequisito mancante, il corso è «in attesa» e non «da svolgere»
+  if (attesa) {
+    return {
+      stato: "in_attesa",
+      colore: "grigio",
+      etichettaData: "in attesa",
+      descrizione: `In attesa della formazione Lavoratore: ${attesa}`,
+    };
+  }
   return {
     stato: "mancante",
     colore: "rosso",

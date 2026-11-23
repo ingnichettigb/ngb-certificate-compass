@@ -11,8 +11,11 @@
  * - Rev 5 (2026-11-12): Tolleranza sul ritardo letta da regole-corso.ts (Primo Soccorso = 4 mesi) e passata al motore.
  * - Rev 6 (2026-11-14 09:25): Ciclo separato per RLS (famiglia:RLS) e Formazione Generale (famiglia:SIC-GEN) così che
  *   l'RLS non contamini la sicurezza lavoratori e il corso base generale resti credito permanente senza scadenza.
+ * - Rev 7 (2026-11-22): Ogni attrezzatura (corsi LAV-…) ha un ciclo proprio: il corso base e il suo aggiornamento stanno insieme, ma non si
+ *   mescolano né alla formazione del Lavoratore né alle altre attrezzature (stessa macro-categoria «Sicurezza lavoratori»).
  */
 import type { Attestato } from "@/lib/api";
+import { codiceRuoloAttrezzatura } from "@/lib/api/codici-ruoli";
 import {
   DECADENZA_PREDEFINITA_ANNI,
   valutaCicloFormativo,
@@ -79,6 +82,9 @@ export function chiaveGruppo(a: Attestato): string {
   if (eCorsoRls(a.tipi_corso)) return `${chi}|famiglia:RLS`;
   // Formazione generale (SIC-GEN): credito formativo permanente a sé, non soggetto a cicli di rinnovo
   if (eCorsoGenerale(a.tipi_corso)) return `${chi}|famiglia:SIC-GEN`;
+  // Attrezzature (LAV-…): un ciclo per ogni attrezzatura, con il suo corso base e il suo aggiornamento (-AGG)
+  const attrezzatura = codiceRuoloAttrezzatura(a.tipi_corso?.codice);
+  if (attrezzatura) return `${chi}|attrezzatura:${attrezzatura}`;
   const macro = a.tipi_corso?.macro_categoria;
   return `${chi}|${macro ? `macro:${macro}` : `tipo:${a.tipo_corso_id}`}`;
 }

@@ -8,6 +8,7 @@
  *   rev 2 — 10/11/2026 — Esenzione dall'aggiornamento Preposto per chi ha un RSPP valido (motivoEsenzione).
  *   rev 3 — 21/11/2026 — Legge la Tabella 02 (regole) e la usa per sapere da quale ruolo dipende ogni corso; la restituisce a chi la serve.
  *   rev 4 — 21/11/2026 — Legge anche il grado di rischio della ditta: un corso è dovuto solo se la sua regola vale per la ditta.
+ *   rev 5 — 22/11/2026 — motivoInAttesa: le attrezzature di chi non ha ancora completato la formazione Lavoratore risultano «in attesa».
  */
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ import {
   trovaRuoloPerChiaveGruppo,
   isCorsoObbligatorioPerDipendente,
 } from "./mappatura-ruoli-corsi";
+import { motivoInAttesaFormazione, valutaFormazioneDelDipendente, type EsitoFormazioneLavoratore } from "../formazione-lavoratore";
 import { useContestoRegole } from "./useContestoRegole";
 import { useRegoleRuoloCorso } from "./useRegoleRuoloCorso";
 
@@ -127,6 +129,24 @@ export function useDatiMatrice() {
     return v && eAggiornamentoPreposto(corso) ? motivoEsenzioneRspp(v) : null;
   }
 
+  // Formazione Lavoratore di ogni lavoratore, calcolata solo quando serve e una volta sola per volta di dati
+  // Le dipendenze non sono lette qui di proposito: servono a svuotare la cache quando cambiano i dati da cui dipende il calcolo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const formazionePerDipendente = useMemo(() => new Map<string, EsitoFormazioneLavoratore>(), [attestati, regole, contesto]);
+
+  /** Perché il corso è «in attesa» (formazione Lavoratore non completa, per i ruoli che la richiedono), oppure null. */
+  function motivoInAttesa(dipendenteId: string, corso: TipoCorso): string | null {
+    if (!regole || regole.length === 0) return null;
+    const ruolo = trovaRuoloPerCorso(corso, ruoli, regole);
+    if (!ruolo?.richiede) return null;
+    let esito = formazionePerDipendente.get(dipendenteId);
+    if (!esito) {
+      esito = valutaFormazioneDelDipendente({ attestati, dipendenteId, regole, contesto });
+      formazionePerDipendente.set(dipendenteId, esito);
+    }
+    return motivoInAttesaFormazione(ruolo, esito);
+  }
+
   function haAttestatoCorso(dipendenteId: string, corso: TipoCorso): boolean {
     const set = mappaAttestatiValidi.get(dipendenteId);
     return set ? set.has(corso.id) : false;
@@ -182,6 +202,7 @@ export function useDatiMatrice() {
     mappaAssegnazioni,
     haObbligoCorso,
     motivoEsenzione,
+    motivoInAttesa,
     haAttestatoCorso,
     haObbligoNelGruppo,
     handleToggleObbligo,

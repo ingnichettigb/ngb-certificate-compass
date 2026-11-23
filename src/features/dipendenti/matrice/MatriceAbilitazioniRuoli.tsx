@@ -16,6 +16,7 @@
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  *   - Rev 11 (2026-11-07): Diviso in file per responsabilità (useDatiMatrice, useColonneMatrice, matrice-lista, esporta-matrice-csv e sottocomponenti). Nessun cambio di comportamento.
  *   - Rev 12 (2026-11-21): Passa la Tabella 02 (regole) alla riga: il ruolo mostrato nel suggerimento segue le regole.
+ *   - Rev 13 (2026-11-22): Passa alla riga motivoInAttesa: casella grigia per le attrezzature di chi non ha completato la formazione Lavoratore.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -59,6 +60,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
     mappaAssegnazioni,
     haObbligoCorso,
     motivoEsenzione,
+    motivoInAttesa,
     haAttestatoCorso,
     haObbligoNelGruppo,
     handleToggleObbligo,
@@ -299,6 +301,7 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
                     mappaAssegnazioni={mappaAssegnazioni}
                     haObbligoCorso={haObbligoCorso}
                     motivoEsenzione={motivoEsenzione}
+                    motivoInAttesa={motivoInAttesa}
                     haAttestatoCorso={haAttestatoCorso}
                     onSeleziona={setRigaSelezionata}
                     onToggleObbligo={handleToggleObbligo}

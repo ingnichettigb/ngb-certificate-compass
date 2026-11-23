@@ -15,6 +15,7 @@
  *     ruolo si collega dalla Tabella 02. Il codice scritto nel nuovo corso viene salvato.
  *   - Rev 5 (2026-11-21): Il ruolo del corso lo indica la Tabella 02 (useRegoleRuoloCorso).
  *   - Rev 6 (2026-11-21): Il corso è dovuto solo se la sua regola vale per la ditta (grado di rischio): come nella Matrice.
+ *   - Rev 7 (2026-11-22): Le attrezzature di chi non ha completato la formazione Lavoratore risultano «in attesa» (badge grigio), non «da svolgere».
  */
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,7 @@ import {
 } from "@/lib/api";
 import { valutaStatoFabbisognoCorso } from "../stato-fabbisogno";
 import { trovaRuoloPerCorso } from "../matrice/mappatura-ruoli-corsi";
+import { motivoInAttesaFormazione, valutaFormazioneDelDipendente } from "../formazione-lavoratore";
 import { corsoApplicabile } from "../matrice/condizioni-regole";
 import { useContestoRegole } from "../matrice/useContestoRegole";
 import { useRegoleRuoloCorso } from "../matrice/useRegoleRuoloCorso";
@@ -98,6 +100,12 @@ export function SelettoreCorsiDipendente({
   const contesto = useContestoRegole();
   const ruoloDelCorso = (corso: TipoCorso): RuoloSicurezza | undefined =>
     trovaRuoloPerCorso(corso, ruoliCatalogo, regole) ?? undefined;
+
+  /** Formazione Lavoratore di questo lavoratore: prerequisito delle attrezzature. */
+  const formazione = useMemo(
+    () => (regole && regole.length > 0 ? valutaFormazioneDelDipendente({ attestati, dipendenteId: corrente.id, regole, contesto }) : null),
+    [attestati, corrente.id, regole, contesto],
+  );
 
   const haObbligoCorso = (corso: TipoCorso): boolean => {
     const ruolo = ruoloDelCorso(corso);
@@ -310,6 +318,7 @@ export function SelettoreCorsiDipendente({
               attestati,
               dipendenteId: corrente.id,
               rspp: rsppDelLavoratore,
+              attesa: motivoInAttesaFormazione(ruoloDelCorso(c), formazione),
             });
             const inLavorazione = salvandoCorsoId === c.id;
 
@@ -335,9 +344,12 @@ export function SelettoreCorsiDipendente({
                 {esito.colore === "arancione" && (
                   <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                 )}
-                {esito.colore === "grigio" && (
-                  <FileCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                )}
+                {esito.colore === "grigio" &&
+                  (esito.stato === "in_attesa" ? (
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  ) : (
+                    <FileCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  ))}
                 {esito.colore === "rosso" && (
                   <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
                 )}

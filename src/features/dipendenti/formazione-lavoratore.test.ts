@@ -5,12 +5,14 @@
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura.
  *   - Rev 2 (2026-11-21): Fase 5 — esiti con le decisioni dell'operatore.
+ *   - Rev 3 (2026-11-22): Fase 6 — valutaFormazioneDelDipendente e motivoInAttesaFormazione.
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato } from "@/lib/api/attestati";
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
 import type { DecisioneSpecifica, EsitoEquivalenza } from "@/features/formazione-valutazione/decisioni";
-import { corsiSvoltiDa, valutaFormazioneLavoratore } from "./formazione-lavoratore";
+import type { RuoloSicurezza } from "@/lib/api/ruoli";
+import { corsiSvoltiDa, motivoInAttesaFormazione, valutaFormazioneDelDipendente, valutaFormazioneLavoratore } from "./formazione-lavoratore";
 
 let n = 0;
 const reg = (ruolo_codice: string, parametro: string, valore: string, corso_base: string | null, corso_aggiornamento: string | null): RegolaRuoloCorso => ({
@@ -145,5 +147,45 @@ describe("valutaFormazioneLavoratore con le decisioni dell'operatore", () => {
     const e = valutaFormazioneLavoratore({ regole, contesto: { rischioDitta: "medio" }, corsiSvolti: new Set(["SIC-SPE-12"]), decisioni: [dec("accettata")] });
     expect(e.completa).toBe(false);
     expect(e.base.mancanti).toEqual(["SIC-GEN-04"]);
+  });
+});
+
+describe("valutaFormazioneDelDipendente", () => {
+  const a = (id: string, dipendente_id: string, codice: string, extra: Record<string, unknown> = {}) =>
+    ({ id, dipendente_id, stato_validazione: "Approvato", data_corso: "2024-01-10", tipi_corso: { codice }, ...extra }) as unknown as Attestato;
+  const vai = (attestati: Attestato[], dipendenteId = "d1") => valutaFormazioneDelDipendente({ attestati, dipendenteId, regole, contesto: { rischioDitta: "medio" } });
+
+  it("legge gli attestati del lavoratore, non quelli degli altri", () => {
+    expect(vai([a("1", "d1", "SIC-GEN-04"), a("2", "d1", "SIC-SPE-08")]).completa).toBe(true);
+    expect(vai([a("1", "d2", "SIC-GEN-04"), a("2", "d2", "SIC-SPE-08")]).completa).toBe(false);
+  });
+
+  it("tiene conto della decisione registrata sull'attestato", () => {
+    const decisa = a("2", "d1", "SIC-SPE-12", {
+      equivalenza_esito: "accettata", equivalenza_corso_svolto: "SIC-SPE-12", equivalenza_corso_atteso: "SIC-SPE-08",
+      equivalenza_rischio: "medio", equivalenza_nota: "Stesso settore", equivalenza_data: "2026-11-21T10:00:00.000Z",
+    });
+    expect(vai([a("1", "d1", "SIC-GEN-04"), decisa]).specifica.stato).toBe("accettata");
+    expect(vai([a("1", "d1", "SIC-GEN-04"), a("2", "d1", "SIC-SPE-12")]).specifica.stato).toBe("diversa");
+  });
+});
+
+describe("motivoInAttesaFormazione", () => {
+  const ruolo = (richiede: string | null) => ({ richiede }) as unknown as RuoloSicurezza;
+  const incompleta = valuta("medio", "SIC-SPE-08");
+  const completa = valuta("medio", "SIC-GEN-04", "SIC-SPE-08");
+
+  it("un ruolo che richiede LAVORATORE è in attesa finché la formazione non è completa", () => {
+    expect(motivoInAttesaFormazione(ruolo("LAVORATORE"), incompleta)).toContain("manca il corso base");
+    expect(motivoInAttesaFormazione(ruolo("lavoratore"), incompleta)).not.toBeNull();
+  });
+  it("completa: nessuna attesa", () => {
+    expect(motivoInAttesaFormazione(ruolo("LAVORATORE"), completa)).toBeNull();
+  });
+  it("un ruolo che non richiede LAVORATORE, o nessuna valutazione: nessuna attesa", () => {
+    expect(motivoInAttesaFormazione(ruolo(null), incompleta)).toBeNull();
+    expect(motivoInAttesaFormazione(ruolo("PREPOSTO"), incompleta)).toBeNull();
+    expect(motivoInAttesaFormazione(ruolo("LAVORATORE"), null)).toBeNull();
+    expect(motivoInAttesaFormazione(null, incompleta)).toBeNull();
   });
 });

@@ -12,11 +12,14 @@
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 4).
  *   - Rev 2 (2026-11-21): Fase 5 — tiene conto delle decisioni dell'operatore sulla specifica «diversa»: accettata (vale come completa),
  *     serve integrazione, non valida. Una decisione vale solo finché restano uguali corso svolto, corso atteso e rischio della ditta.
+ *   - Rev 3 (2026-11-22): valutaFormazioneDelDipendente (legge attestati e decisioni del lavoratore) e motivoInAttesaFormazione: un corso di un ruolo
+ *     che «richiede LAVORATORE» (le attrezzature) è «in attesa» finché la formazione Lavoratore non è completa (Fase 6).
  */
 import type { Attestato } from "@/lib/api/attestati";
 import { CODICE_RUOLO, normalizzaCodice } from "@/lib/api/codici-ruoli";
+import type { RuoloSicurezza } from "@/lib/api/ruoli";
 import type { RegolaRuoloCorso } from "@/lib/api/regole-ruolo-corso";
-import { decisioneValida, type DecisioneSpecifica } from "@/features/formazione-valutazione/decisioni";
+import { decisioneDi, decisioneValida, type DecisioneSpecifica } from "@/features/formazione-valutazione/decisioni";
 import { eParametroRischio, regolaApplicabile, type ContestoRegole } from "./matrice/condizioni-regole";
 
 export type StatoSpecifica =
@@ -122,4 +125,29 @@ export function valutaFormazioneLavoratore(input: {
         ? `Formazione lavoratore completa (specifica ${trovata} accettata dall'operatore al posto di ${attesa})`
         : "Formazione lavoratore completa",
   };
+}
+
+/** Come valutaFormazioneLavoratore, partendo dagli attestati: legge i corsi svolti e le decisioni dell'operatore del lavoratore. */
+export function valutaFormazioneDelDipendente(input: {
+  attestati: Attestato[];
+  dipendenteId: string;
+  regole: RegolaRuoloCorso[];
+  contesto: ContestoRegole;
+}): EsitoFormazioneLavoratore {
+  const { attestati, dipendenteId, regole, contesto } = input;
+  const suoi = attestati.filter((a) => a.dipendente_id === dipendenteId);
+  const decisioni = suoi.map(decisioneDi).filter((d): d is DecisioneSpecifica => d !== null);
+  return valutaFormazioneLavoratore({ regole, contesto, corsiSvolti: corsiSvoltiDa(suoi, dipendenteId), decisioni });
+}
+
+/**
+ * Il corso di questo ruolo è «in attesa»? Solo se il ruolo richiede LAVORATORE (le attrezzature) e la formazione Lavoratore non è completa:
+ * restituisce il motivo, altrimenti null. Per gli altri ruoli, o senza valutazione, null.
+ */
+export function motivoInAttesaFormazione(
+  ruolo: Pick<RuoloSicurezza, "richiede"> | null | undefined,
+  esito: EsitoFormazioneLavoratore | null | undefined,
+): string | null {
+  if (!ruolo || !esito || normalizzaCodice(ruolo.richiede) !== CODICE_RUOLO.LAVORATORE) return null;
+  return esito.completa ? null : esito.motivo;
 }
