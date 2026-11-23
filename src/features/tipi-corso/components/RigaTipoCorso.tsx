@@ -7,6 +7,7 @@
  * - Rev 4: 2026-10-31 13:40 - Corsi standard modificabili (solo eliminazione bloccata).
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-10): Colore dedicato ai corsi ASPP/RSPP e celle senza larghezza minima (colonne ridimensionabili).
+ * - Rev (2026-11-23 10:40): Campi non applicabili mostrati come «N/A» (non applicabile) e non più «—».
  */
 import { GripVertical, Lock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -114,14 +115,19 @@ export function RigaTipoCorso({
       </TableCell>
       <CellaNumerica valore={c.ore_minime_legge} disabled={blocca} onSalva={(v) => onSalvaCampo("ore_minime_legge", v)} />
       <CellaNumerica valore={c.durata_validita_anni} placeholder="N/A" zeroComeVuoto title="Lascia vuoto, scrivi 0 o N/A se il corso non scade" disabled={blocca} onSalva={(v) => onSalvaCampo("durata_validita_anni", v)} />
-      <CellaNumerica valore={c.anni_aggiornamento} placeholder="—" disabled={blocca} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
-      <CellaNumerica valore={c.ore_aggiornamento} placeholder="—" disabled={blocca} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
+      <CellaNumerica valore={c.anni_aggiornamento} placeholder="N/A" title="N/A = non applicabile (corso senza aggiornamento)" disabled={blocca} onSalva={(v) => onSalvaCampo("anni_aggiornamento", v)} />
+      <CellaNumerica valore={c.ore_aggiornamento} placeholder="N/A" title="N/A = non applicabile (corso senza aggiornamento)" disabled={blocca} onSalva={(v) => onSalvaCampo("ore_aggiornamento", v)} />
       <TableCell className="p-1.5">
         <Input
           defaultValue={c.codice_corso_aggiornamento ?? ""}
-          placeholder="—"
+          placeholder="N/A"
+          title="N/A = non applicabile (corso senza aggiornamento)"
           disabled={blocca}
-          onBlur={(e) => onSalvaCampo("codice_corso_aggiornamento", e.target.value.trim() || null)}
+          onBlur={(e) => {
+            const t = e.target.value.trim();
+            if (/^(n\/?a|n\.a\.)$/i.test(t)) e.target.value = "";
+            onSalvaCampo("codice_corso_aggiornamento", /^(n\/?a|n\.a\.)$/i.test(t) ? null : t || null);
+          }}
           className={`h-9 w-full min-w-0 font-mono text-xs ${bloccoCls}`}
         />
       </TableCell>

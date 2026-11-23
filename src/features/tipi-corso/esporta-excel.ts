@@ -5,6 +5,7 @@
  * Revisioni:
  *   rev 1 — 23/10/2026 11:00 — Creazione esportazione CSV compatibile Excel.
  *   rev 2 — 26/10/2026 18:05 — Prefisso 030ArchAttestati_ nel nome file, ordinamento per argomento (1..7) e codice, colonna Argomento.
+ *   rev 4 — 23/11/2026 10:40 — «N/A» anche in Aggiorn. (anni), Aggiorn. (ore) e Codice aggiorn. quando non applicabili.
  *   rev 3 — 15/11/2026 10:50 — Scelta del formato: Excel vero (.xlsx) oppure CSV (invariato); dati comuni in «datiTipiCorso».
  */
 import {
@@ -59,9 +60,9 @@ export function datiTipiCorso(corsi: TipoCorso[]): { intest: string[]; righe: Va
       c.livello_specifico,
       c.ore_minime_legge,
       c.durata_validita_anni ? c.durata_validita_anni : "N/A",
-      c.anni_aggiornamento,
-      c.ore_aggiornamento,
-      c.codice_corso_aggiornamento,
+      c.anni_aggiornamento ?? "N/A",
+      c.ore_aggiornamento ?? "N/A",
+      c.codice_corso_aggiornamento || "N/A",
       c.visibile_lavoratore ? "Sì" : "No",
     ];
   });

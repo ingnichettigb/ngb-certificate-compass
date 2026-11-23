@@ -16,6 +16,7 @@
  *     resta il riconoscimento di prima. trovaRuoloPerChiaveGruppo cerca prima per codice.
  *   - Rev 6 (2026-11-21): Fase 4 — con le regole, l'obbligo vale solo se la regola è applicabile alla ditta (es. la formazione specifica
  *     del Lavoratore: solo le ore del suo grado di rischio). Parametro «contesto» di isCorsoObbligatorioPerDipendente.
+ *   - Rev 7 (2026-11-23 10:40): Prefissi DL-RSPP- (ruolo DL_RSPP) e DL- (ruolo DL).
  */
 
 import type { TipoCorso, RuoloSicurezza } from "@/lib/api";
@@ -37,6 +38,8 @@ export const RUOLO_PER_PREFISSO_CORSO: [string, string][] = [
   ["SIC-ASPP", "ASPP"],
   ["SIC-RSPP", "RSPP"],
   ["PRIVACY-", "INC_PRIVACY"],
+  ["DL-RSPP-", "DL_RSPP"],
+  ["DL-", "DL"],
 ];
 
 /** Ruolo attivo con il codice stabile atteso per il codice del corso, se già presente nel catalogo. */

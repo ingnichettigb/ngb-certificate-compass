@@ -4,6 +4,7 @@
  * Data creazione: 2026-10-27
  * Revisioni:
  *   - Rev 1 (2026-10-27 21:20): Filtri (tutto / categoria / corsi scelti) e CSV Excel dell'elenco attestati.
+ *   - Rev 2 (2026-11-23 10:40): Codice aggiornamento «N/A» = corso senza aggiornamento («No»).
  */
 import type { Attestato, TipoCorso } from "@/lib/api";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
@@ -46,7 +47,7 @@ export function csvElencoAttestati(attestati: Attestato[], corsi: TipoCorso[], c
     const c = a.tipi_corso ?? perId.get(a.tipo_corso_id);
     const d = a.dipendenti;
     const reparto = [d?.reparto, d?.sottoreparto].filter(Boolean).join(" - ");
-    const agg = c?.codice_corso_aggiornamento
+    const agg = c?.codice_corso_aggiornamento && !/^n\/?a$/i.test(c.codice_corso_aggiornamento.trim())
       ? `Sì (${c.codice_corso_aggiornamento}${c.ore_aggiornamento ? ` · ${c.ore_aggiornamento} ore` : ""}${c.anni_aggiornamento ? ` ogni ${c.anni_aggiornamento} anni` : ""})`
       : "No";
     const r: unknown[] = [

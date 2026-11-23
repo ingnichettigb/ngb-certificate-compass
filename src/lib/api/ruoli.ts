@@ -8,8 +8,10 @@
  *   - Rev 4 (2026-11-13): Incarichi per sede (sede_id). Senza sede indicata = sede principale; per togliere senza sede = da tutte le sedi.
  *   - Rev 5 (2026-11-21): RuoloSicurezza con codice, tipo e richiede (colonne già nel database); aggiungiRuolo e
  *     creaRuoloSicurezza accettano il codice stabile del ruolo.
+ *   - Rev 6 (2026-11-23 10:40): DL-RSPP non assegnabile con più di 15 lavoratori (dichiarati o, se non dichiarati, in forza).
  */
 import { leggiTutto, sb } from "./client";
+import { CODICE_RUOLO, dlRsppConsentito, MAX_LAVORATORI_DL_RSPP, normalizzaCodice } from "./codici-ruoli";
 
 /**
  * Chiavi TanStack Query dei ruoli. Matrice abilitazioni, scheda dipendente e impostazioni DEVONO usare queste:
@@ -127,6 +129,7 @@ export async function getAssegnazioniRuoli(): Promise<AssegnazioneRuolo[]> {
  */
 export async function impostaRuoloDipendente(dipendente_id: string, ruolo_id: string, assegnato: boolean, sede_id?: string) {
   if (assegnato) {
+    await verificaSogliaDlRspp(ruolo_id);
     // Senza sede il trigger del DB (imposta_sede_default) assegna la sede principale prima del controllo di unicità
     const { error } = await sb
       .from("dipendenti_ruoli")
@@ -148,4 +151,21 @@ export function ruoliDelDipendente(
 ): RuoloSicurezza[] {
   const ids = new Set(assegnazioni.filter((a) => a.dipendente_id === dipendenteId).map((a) => a.ruolo_id));
   return ruoli.filter((r) => r.attivo && (r.obbligatorio_tutti || ids.has(r.id)));
+}
+
+/** Blocca l'assegnazione del ruolo DL-RSPP quando la ditta supera i 15 lavoratori. */
+async function verificaSogliaDlRspp(ruolo_id: string) {
+  const { data: ruolo } = await sb.from("ruoli_sicurezza").select("codice").eq("id", ruolo_id).maybeSingle();
+  if (normalizzaCodice(ruolo?.codice) !== CODICE_RUOLO.DL_RSPP) return;
+  const { data: ditta } = await sb.from("ditta").select("n_lavoratori_dichiarato").maybeSingle();
+  let n: number | null = ditta?.n_lavoratori_dichiarato ?? null;
+  if (n === null) {
+    const { count } = await sb.from("dipendenti").select("id", { count: "exact", head: true }).eq("stato_lavoratore", "in_forza");
+    n = count ?? null;
+  }
+  if (!dlRsppConsentito(n)) {
+    throw new Error(
+      `Ruolo DL-RSPP non attivabile: la ditta ha ${n} lavoratori. Il datore di lavoro può svolgere i compiti del SPP solo fino a ${MAX_LAVORATORI_DL_RSPP} lavoratori (dal 16° serve un RSPP).`,
+    );
+  }
 }

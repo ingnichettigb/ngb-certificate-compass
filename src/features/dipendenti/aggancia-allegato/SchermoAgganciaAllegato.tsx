@@ -20,7 +20,7 @@ import { MascheraRicerca } from "./MascheraRicerca";
 import { ElencoFileTrovati } from "./ElencoFileTrovati";
 import { ZonaLavoratore, type DatiAllegato } from "./ZonaLavoratore";
 
-const VUOTI: DatiAllegato = { tipo: "", altro: "", dataCorso: "", scadenza: "" };
+const VUOTI: DatiAllegato = { tipo: "", tipoCorsoId: "", altro: "", dataCorso: "", scadenza: "" };
 
 export function SchermoAgganciaAllegato({
   open,
