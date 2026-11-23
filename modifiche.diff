@@ -1,0 +1,50 @@
+diff --git a/src/features/formazione-valutazione/RigaDaValutare.tsx b/src/features/formazione-valutazione/RigaDaValutare.tsx
+index b4ee59b..a5fcc01 100644
+--- a/src/features/formazione-valutazione/RigaDaValutare.tsx
++++ b/src/features/formazione-valutazione/RigaDaValutare.tsx
+@@ -6,6 +6,7 @@
+  * e la nota obbligatoria (da valutare); oppure la decisione già presa con «Annulla decisione» (decise).
+  * Revisioni:
+  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 5).
++ *   - Rev 2 (2026-11-23): Anteprima del documento dell'attestato (fronte e retro) per decidere guardando il corso.
+  */
+ import { useState } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+@@ -19,6 +20,7 @@ import { formatData } from "@/lib/api/formattazione";
+ import type { RischioDitta } from "@/features/dipendenti/matrice/condizioni-regole";
+ import { annullaDecisione, costruisciDecisione, erroreDecisione, ETICHETTA_ESITO, type EsitoEquivalenza } from "./decisioni";
+ import type { VoceDaValutare } from "./elenco";
++import { AnteprimaAttestato } from "./AnteprimaAttestato";
+ 
+ const SCELTE: { esito: EsitoEquivalenza; aiuto: string }[] = [
+   { esito: "accettata", aiuto: "Vale come la formazione attesa: il prerequisito Lavoratore è soddisfatto." },
+@@ -80,6 +82,8 @@ export function RigaDaValutare({
+         attesa è <strong>{nomeCorso(voce.corsoAtteso, nomiCorsi)}</strong>.
+       </p>
+ 
++      <AnteprimaAttestato fronte={a.url_foto_fronte} retro={a.url_foto_retro} />
++
+       {decisione ? (
+         <div className="mt-2 space-y-1 text-sm">
+           <p>
+diff --git a/src/lib/api/cartelle-risoluzione.ts b/src/lib/api/cartelle-risoluzione.ts
+index d5395d7..e82f2f0 100644
+--- a/src/lib/api/cartelle-risoluzione.ts
++++ b/src/lib/api/cartelle-risoluzione.ts
+@@ -4,6 +4,7 @@
+  * Data creaz: 07/11/2026
+  * Revisioni:
+  *   rev 1 — 07/11/2026 — Estratto da cartelle-multiple.ts: risoluzione del documento di un attestato. Nessun cambio di comportamento.
++ *   rev 2 — 23/11/2026 — Il percorso su database «Archivio Attestati Sicurezza/…» è riconosciuto (prima serviva «Archivio Attestati/»), come in TabellaAttestati.
+  */
+ import { supabase } from "@/integrations/supabase/client";
+ import { recuperaFileDaPercorsoInTutte } from "./cartelle-apertura";
+@@ -41,7 +42,7 @@ async function risolviInterno(
+     };
+   }
+ 
+-  if (percorsoPulito.startsWith("Archivio Attestati/") || percorsoPulito.startsWith("Coda/")) {
++  if (percorsoPulito.startsWith("Archivio Attestati") || percorsoPulito.startsWith("Coda/")) {
+     try {
+       const { data } = await supabase.storage.from("attestati").createSignedUrl(percorsoPulito, 3600);
+       if (data?.signedUrl) {

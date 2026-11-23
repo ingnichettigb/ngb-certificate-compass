@@ -6,6 +6,7 @@
  * e la nota obbligatoria (da valutare); oppure la decisione già presa con «Annulla decisione» (decise).
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 5).
+ *   - Rev 2 (2026-11-23): Anteprima del documento dell'attestato (fronte e retro) per decidere guardando il corso.
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import { formatData } from "@/lib/api/formattazione";
 import type { RischioDitta } from "@/features/dipendenti/matrice/condizioni-regole";
 import { annullaDecisione, costruisciDecisione, erroreDecisione, ETICHETTA_ESITO, type EsitoEquivalenza } from "./decisioni";
 import type { VoceDaValutare } from "./elenco";
+import { AnteprimaAttestato } from "./AnteprimaAttestato";
 
 const SCELTE: { esito: EsitoEquivalenza; aiuto: string }[] = [
   { esito: "accettata", aiuto: "Vale come la formazione attesa: il prerequisito Lavoratore è soddisfatto." },
@@ -79,6 +81,8 @@ export function RigaDaValutare({
         {a.data_corso ? ` (del ${formatData(a.data_corso)})` : ""}. La ditta è a rischio <strong>{rischioDitta}</strong>: la formazione specifica
         attesa è <strong>{nomeCorso(voce.corsoAtteso, nomiCorsi)}</strong>.
       </p>
+
+      <AnteprimaAttestato fronte={a.url_foto_fronte} retro={a.url_foto_retro} />
 
       {decisione ? (
         <div className="mt-2 space-y-1 text-sm">

@@ -4,6 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da cartelle-multiple.ts: risoluzione del documento di un attestato. Nessun cambio di comportamento.
+ *   rev 2 — 23/11/2026 — Il percorso su database «Archivio Attestati Sicurezza/…» è riconosciuto (prima serviva «Archivio Attestati/»), come in TabellaAttestati.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { recuperaFileDaPercorsoInTutte } from "./cartelle-apertura";
@@ -41,7 +42,7 @@ async function risolviInterno(
     };
   }
 
-  if (percorsoPulito.startsWith("Archivio Attestati/") || percorsoPulito.startsWith("Coda/")) {
+  if (percorsoPulito.startsWith("Archivio Attestati") || percorsoPulito.startsWith("Coda/")) {
     try {
       const { data } = await supabase.storage.from("attestati").createSignedUrl(percorsoPulito, 3600);
       if (data?.signedUrl) {
