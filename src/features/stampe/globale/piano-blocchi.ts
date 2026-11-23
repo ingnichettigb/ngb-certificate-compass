@@ -6,6 +6,8 @@
  *   rev 1 — 11/11/2026 — «Stampa globale»: ordine alfabetico dei lavoratori, divisione in blocchi sotto un limite di dimensione
  *            (un lavoratore non viene mai spezzato), intervallo di lettere «DA A a D» e nome file
  *            «NN-AAMMGGhh-STAMPA GLOBALE-DITTA-DA X a Y.pdf». Solo logica pura, senza interfaccia né rete.
+ *   rev 2 — 23/11/2026 — Per la nuova «Stampa selezione»: peso fisso e divisione in blocchi anche senza organigramma A3 (parametro `conA3`,
+ *            di default true: la globale non cambia) e tipo di stampa (GLOBALE / SELEZIONE) nel nome file.
  */
 
 export type VoceStima = { id: string; cognome: string; nome: string; byte: number };
@@ -51,15 +53,23 @@ export function iniziale(cognome: string): string {
   return m ? m[0].toUpperCase() : "#";
 }
 
-export function pesoFisso(numero: number): number {
-  return BYTE_COPERTINA + BYTE_FINALE + (numero === 1 ? BYTE_A3 : 0);
+/** Tipo di fascicolo: scrive «STAMPA GLOBALE» o «STAMPA SELEZIONE» nel nome file. */
+export type TipoStampa = "GLOBALE" | "SELEZIONE";
+
+/** `conA3 = false` (Stampa selezione): nessun organigramma A3, quindi nessun peso aggiunto al blocco 1. */
+export function pesoFisso(numero: number, conA3 = true): number {
+  return BYTE_COPERTINA + BYTE_FINALE + (conA3 && numero === 1 ? BYTE_A3 : 0);
 }
 
 /**
  * Divide in blocchi consecutivi, in ordine alfabetico: il blocco si chiude quando il lavoratore successivo
  * lo porterebbe oltre il limite. Un lavoratore non è mai diviso tra due file.
  */
-export function dividiInBlocchi(voci: readonly VoceStima[], limiteByte: number): Blocco[] {
+export function dividiInBlocchi(
+  voci: readonly VoceStima[],
+  limiteByte: number,
+  conA3 = true,
+): Blocco[] {
   const ordinate = ordinaLavoratori(voci);
   const blocchi: Blocco[] = [];
   let correnti: VoceStima[] = [];
@@ -85,10 +95,10 @@ export function dividiInBlocchi(voci: readonly VoceStima[], limiteByte: number):
 
   for (const v of ordinate) {
     const numeroCorrente = blocchi.length + 1;
-    if (!correnti.length) peso = pesoFisso(numeroCorrente);
+    if (!correnti.length) peso = pesoFisso(numeroCorrente, conA3);
     if (correnti.length && peso + v.byte > limiteByte) {
       chiudi();
-      peso = pesoFisso(blocchi.length + 1);
+      peso = pesoFisso(blocchi.length + 1, conA3);
     }
     correnti.push(v);
     peso += v.byte;
@@ -121,14 +131,15 @@ export function etichettaIntervallo(da: string, a: string): string {
   return `DA ${da} a ${a}`;
 }
 
-/** «01-26111114-STAMPA GLOBALE-ROSSI SRL-DA A a D.pdf» */
+/** «01-26111114-STAMPA GLOBALE-ROSSI SRL-DA A a D.pdf» (oppure «STAMPA SELEZIONE» per la selezione). */
 export function nomeFileBlocco(o: {
   numero: number;
   data: Date;
   ditta: string | null | undefined;
   da: string;
   a: string;
+  tipo?: TipoStampa;
 }): string {
   const n = String(o.numero).padStart(2, "0");
-  return `${n}-${timestampAAMMGGhh(o.data)}-STAMPA GLOBALE-${nomeDittaPerFile(o.ditta)}-${etichettaIntervallo(o.da, o.a)}.pdf`;
+  return `${n}-${timestampAAMMGGhh(o.data)}-STAMPA ${o.tipo ?? "GLOBALE"}-${nomeDittaPerFile(o.ditta)}-${etichettaIntervallo(o.da, o.a)}.pdf`;
 }

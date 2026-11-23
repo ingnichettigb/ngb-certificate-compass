@@ -24,6 +24,7 @@ import { Route as StampeIndexRouteImport } from './routes/stampe.index'
 import { Route as StampeGlobaleRouteImport } from './routes/stampe.globale'
 import { Route as StampeOrganigrammaA3RouteImport } from './routes/stampe.organigramma-a3'
 import { Route as StampePersonalizzataRouteImport } from './routes/stampe.personalizzata'
+import { Route as StampeSelezioneRouteImport } from './routes/stampe.selezione'
 import { Route as StampePredefiniteIndexRouteImport } from './routes/stampe.predefinite.index'
 import { Route as StampePredefiniteIdRouteImport } from './routes/stampe.predefinite.$id'
 
@@ -102,6 +103,11 @@ const StampePersonalizzataRoute = StampePersonalizzataRouteImport.update({
   path: '/personalizzata',
   getParentRoute: () => StampeRoute,
 } as any)
+const StampeSelezioneRoute = StampeSelezioneRouteImport.update({
+  id: '/selezione',
+  path: '/selezione',
+  getParentRoute: () => StampeRoute,
+} as any)
 const StampePredefiniteIndexRoute = StampePredefiniteIndexRouteImport.update({
   id: '/predefinite/',
   path: '/predefinite/',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe/selezione': typeof StampeSelezioneRoute
   '/nomine/': typeof NomineIndexRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe/selezione': typeof StampeSelezioneRoute
   '/nomine': typeof NomineIndexRoute
   '/stampe': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/stampe/globale': typeof StampeGlobaleRoute
   '/stampe/organigramma-a3': typeof StampeOrganigrammaA3Route
   '/stampe/personalizzata': typeof StampePersonalizzataRoute
+  '/stampe/selezione': typeof StampeSelezioneRoute
   '/nomine/': typeof NomineIndexRoute
   '/stampe/': typeof StampeIndexRoute
   '/stampe/predefinite/$id': typeof StampePredefiniteIdRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/stampe/selezione'
     | '/nomine/'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/stampe/selezione'
     | '/nomine'
     | '/stampe'
     | '/stampe/predefinite/$id'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/stampe/globale'
     | '/stampe/organigramma-a3'
     | '/stampe/personalizzata'
+    | '/stampe/selezione'
     | '/nomine/'
     | '/stampe/'
     | '/stampe/predefinite/$id'
@@ -346,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StampePersonalizzataRouteImport
       parentRoute: typeof StampeRoute
     }
+    '/stampe/selezione': {
+      id: '/stampe/selezione'
+      path: '/selezione'
+      fullPath: '/stampe/selezione'
+      preLoaderRoute: typeof StampeSelezioneRouteImport
+      parentRoute: typeof StampeRoute
+    }
     '/stampe/predefinite/': {
       id: '/stampe/predefinite/'
       path: '/predefinite'
@@ -380,6 +399,7 @@ interface StampeRouteChildren {
   StampeGlobaleRoute: typeof StampeGlobaleRoute
   StampeOrganigrammaA3Route: typeof StampeOrganigrammaA3Route
   StampePersonalizzataRoute: typeof StampePersonalizzataRoute
+  StampeSelezioneRoute: typeof StampeSelezioneRoute
   StampeIndexRoute: typeof StampeIndexRoute
   StampePredefiniteIdRoute: typeof StampePredefiniteIdRoute
   StampePredefiniteIndexRoute: typeof StampePredefiniteIndexRoute
@@ -389,6 +409,7 @@ const StampeRouteChildren: StampeRouteChildren = {
   StampeGlobaleRoute: StampeGlobaleRoute,
   StampeOrganigrammaA3Route: StampeOrganigrammaA3Route,
   StampePersonalizzataRoute: StampePersonalizzataRoute,
+  StampeSelezioneRoute: StampeSelezioneRoute,
   StampeIndexRoute: StampeIndexRoute,
   StampePredefiniteIdRoute: StampePredefiniteIdRoute,
   StampePredefiniteIndexRoute: StampePredefiniteIndexRoute,

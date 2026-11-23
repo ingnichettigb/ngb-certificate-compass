@@ -6,10 +6,11 @@
  *   rev 1 — 10/11/2026 18:00 — Verifica la sequenza 01–05 di «Anagrafica e organico» e la numerazione continua senza buchi.
  *   rev 2 — 11/11/2026 17:30 — Sequenza 01–06 con la nuova carta 04 «Registro lavoratori cessati»; Scadenze dalla 07, Completati dalla 14.
  *   rev 3 — 22/11/2026 — Nuova carta 13 «Scadenze – defibrillatore»: privacy 14, Completati dalla 15 (Abilitati Defibrillatore = 19).
+ *   rev 4 — 23/11/2026 — «Stampa selezione» è numerata dopo l'ultima carta (21); i numeri 01–20 non cambiano.
  */
 import { describe, expect, it } from "vitest";
 import { STAMPE_PREDEFINITE } from "./stampe-predefinite";
-import { ID_TAVOLA_A3, numeriCarte, tutteLeCarte } from "./numerazione-carte";
+import { ID_STAMPA_SELEZIONE, ID_TAVOLA_A3, numeriCarte, tutteLeCarte } from "./numerazione-carte";
 
 describe("numerazione delle carte", () => {
   const num = numeriCarte();
@@ -32,9 +33,18 @@ describe("numerazione delle carte", () => {
     expect(num["completati-defibrillatore"]).toBe("19");
   });
 
+  it("«Stampa selezione» ha il numero dopo l'ultima carta (21) e non sposta le altre", () => {
+    expect(num[ID_STAMPA_SELEZIONE]).toBe("21");
+    expect(num["completati-defibrillatore"]).toBe("19");
+    expect(tutteLeCarte().some((c) => c.id === ID_STAMPA_SELEZIONE)).toBe(false);
+    expect(new Set(Object.values(num)).size).toBe(Object.values(num).length);
+  });
+
   it("numeri continui e univoci: nessun buco, tutte le stampe predefinite comprese", () => {
     const carte = tutteLeCarte();
     expect(carte).toHaveLength(STAMPE_PREDEFINITE.length + 1);
-    expect(carte.map((c) => num[c.id])).toEqual(carte.map((_, i) => String(i + 1).padStart(2, "0")));
+    expect(carte.map((c) => num[c.id])).toEqual(
+      carte.map((_, i) => String(i + 1).padStart(2, "0")),
+    );
   });
 });

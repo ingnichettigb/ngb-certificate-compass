@@ -13,11 +13,19 @@
  *            Elenco e numeri arrivano da numerazione-carte.ts.
  *   rev 6 — 11/11/2026 — Riquadro «Stampa globale» in testa: fascicolo completo in PDF a blocchi (copertina, organigramma A3, lavoratori con
  *            attestati). Non è una carta numerata, così la numerazione 01–N delle altre non cambia.
+ *   rev 7 — 23/11/2026 — Nuova carta numerata «Stampa selezione» accanto alla «Stampa globale»: scegli uno o più lavoratori e ottieni lo stesso
+ *            fascicolo PDF (schede e attestati) solo per loro. Il numero viene da numerazione-carte.ts (dopo l'ultima carta).
  */
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { carteDellaFamiglia, FAMIGLIE, numeriCarte, type VoceCarta } from "../numerazione-carte";
+import {
+  carteDellaFamiglia,
+  FAMIGLIE,
+  ID_STAMPA_SELEZIONE,
+  numeriCarte,
+  type VoceCarta,
+} from "../numerazione-carte";
 
 /** Numero progressivo a due cifre di ogni carta, nell'ordine di visualizzazione (famiglia per famiglia). */
 const NUMERI = numeriCarte();
@@ -68,22 +76,50 @@ export function ElencoStampePredefinite() {
           <h2 id="stampa-globale" className="mb-3 text-base font-semibold">
             Fascicolo completo
           </h2>
-          <Link to="/stampe/globale" className={`${CLASSI_CARTA} sm:max-w-md`}>
-            <h3 className="text-base font-semibold">Stampa globale</h3>
-            <p className="text-sm">
-              Tutti i lavoratori in un unico fascicolo PDF, diviso in file sotto un limite di
-              dimensione.
-            </p>
-            <p className="flex-1 text-xs text-muted-foreground">
-              <b>Contiene:</b> copertina con logo e indicazioni, organigramma A3, poi per ogni
-              lavoratore (in ordine alfabetico) scheda con dati anagrafici, funzioni e attestati,
-              seguita dai PDF degli attestati.
-            </p>
-            <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-              Prepara il fascicolo{" "}
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-            </span>
-          </Link>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Link to="/stampe/globale" className={CLASSI_CARTA}>
+              <h3 className="text-base font-semibold">Stampa globale</h3>
+              <p className="text-sm">
+                Tutti i lavoratori in un unico fascicolo PDF, diviso in file sotto un limite di
+                dimensione.
+              </p>
+              <p className="flex-1 text-xs text-muted-foreground">
+                <b>Contiene:</b> copertina con logo e indicazioni, organigramma A3, poi per ogni
+                lavoratore (in ordine alfabetico) scheda con dati anagrafici, funzioni e attestati,
+                seguita dai PDF degli attestati.
+              </p>
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                Prepara il fascicolo{" "}
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+            <Link to="/stampe/selezione" className={CLASSI_CARTA}>
+              <span
+                aria-hidden="true"
+                className="absolute -left-2 -top-2 rounded-md bg-primary px-1.5 py-0.5 font-mono text-xs font-bold text-primary-foreground shadow-sm"
+              >
+                {NUMERI[ID_STAMPA_SELEZIONE]}
+              </span>
+              <h3 className="text-base font-semibold">
+                <span className="sr-only">Stampa {NUMERI[ID_STAMPA_SELEZIONE]}: </span>
+                Stampa selezione
+              </h3>
+              <p className="text-sm">
+                Scegli uno o più lavoratori e ottieni lo stesso fascicolo PDF della Stampa globale,
+                solo per loro.
+              </p>
+              <p className="flex-1 text-xs text-muted-foreground">
+                <b>Contiene:</b> copertina con l&apos;elenco dei nomi scelti, poi per ogni
+                lavoratore (in ordine alfabetico) scheda con dati anagrafici, funzioni e attestati,
+                seguita dai PDF degli attestati. Senza organigramma A3. Filtri Tutti, In forza,
+                Nuovi arrivati, Cessati.
+              </p>
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                Scegli i lavoratori{" "}
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          </div>
         </section>
         {FAMIGLIE.map((f) => (
           <section key={f.nome} aria-labelledby={`famiglia-${f.nome}`}>

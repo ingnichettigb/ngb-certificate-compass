@@ -10,6 +10,9 @@
  *   rev 3 — 12/11/2026 — «Torna all'indice» in alto su ogni pagina della scheda (rettangoloTornaIndice, il link lo aggiunge genera.ts);
  *            la pagina finale restituisce dove ha scritto le righe dell'indice, per renderle cliccabili.
  *   rev 4 — 12/11/2026 — Colonna stato dalla scadenza del ciclo del gruppo: «Superato» (Base rinnovato) e «Rifare base» (Primo Soccorso oltre la tolleranza).
+ *   rev 5 — 23/11/2026 — Copertina per la «Stampa selezione»: titolo personalizzabile (`titolo`) ed elenco dei nomi contenuti nel file (`elencoNomi`),
+ *            su due colonne; se non entrano nella copertina continuano su una pagina subito dopo. Senza queste due opzioni la copertina
+ *            della Stampa globale è identica a prima.
  */
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -71,7 +74,60 @@ export type OpzioniCopertina = {
   indicazioni: string;
   /** Indirizzo/riferimenti sotto la ragione sociale (facoltativo). */
   riferimenti?: string;
+  /** Titolo grande della copertina. Assente = «STAMPA GLOBALE». */
+  titolo?: string;
+  /** Se presente (Stampa selezione): elenco dei lavoratori del file, scritto sulla copertina e, se serve, sulla pagina seguente. */
+  elencoNomi?: string[];
 };
+
+const RIGA_NOMI = 15;
+const MIN_RIGHE_NOMI = 3;
+
+/** Elenco numerato dei nomi su due colonne, dalla quota `y` in giù; quello che non entra continua su nuove pagine A4. */
+function disegnaElencoNomi(
+  doc: PDFDocument,
+  c: Caratteri,
+  pagina: PDFPage,
+  y: number,
+  nomi: string[],
+): void {
+  const larghCol = (A4V.l - 2 * M) / 2;
+  const yMin = M + 40;
+  let p = pagina;
+  let top = y;
+  let titolo = "LAVORATORI IN QUESTO FILE";
+  let fatti = 0;
+  while (fatti < nomi.length) {
+    let righe = Math.floor((top - 20 - yMin) / RIGA_NOMI) + 1;
+    if (righe < MIN_RIGHE_NOMI) {
+      p = doc.addPage([A4V.l, A4V.a]);
+      top = A4V.a - M - 10;
+      righe = Math.floor((top - 20 - yMin) / RIGA_NOMI) + 1;
+    }
+    scrivi(p, titolo, M, top, c.b, 13, VERDE);
+    const base = top - 20;
+    const qui = nomi.slice(fatti, fatti + righe * 2);
+    const perColonna = Math.min(righe, Math.ceil(qui.length / 2));
+    qui.forEach((nome, i) => {
+      const col = Math.floor(i / perColonna);
+      const r = i % perColonna;
+      scrivi(
+        p,
+        tagliaAlla(c.n, `${fatti + i + 1}. ${nome}`, 10.5, larghCol - 12),
+        M + col * larghCol,
+        base - r * RIGA_NOMI,
+        c.n,
+        10.5,
+      );
+    });
+    fatti += qui.length;
+    titolo = "LAVORATORI IN QUESTO FILE (continua)";
+    if (fatti < nomi.length) {
+      p = doc.addPage([A4V.l, A4V.a]);
+      top = A4V.a - M - 10;
+    }
+  }
+}
 
 export async function disegnaCopertina(
   doc: PDFDocument,
@@ -102,7 +158,7 @@ export async function disegnaCopertina(
   }
   p.drawRectangle({ x: M, y: y - 4, width: A4V.l - 2 * M, height: 3, color: VERDE });
   y -= 60;
-  centrato(p, "STAMPA GLOBALE", y, c.b, 40, VERDE);
+  centrato(p, o.titolo ?? "STAMPA GLOBALE", y, c.b, 40, VERDE);
   y -= 34;
   centrato(p, "Fascicolo attestati di formazione", y, c.n, 15, GRIGIO);
   y -= 50;
@@ -125,8 +181,13 @@ export async function disegnaCopertina(
     30,
   );
   y -= 66;
-  centrato(p, o.intervallo, y, c.b, 54, VERDE);
-  y -= 42;
+  // Nella selezione i nomi sono scritti per esteso più sotto: niente lettere giganti, così resta più spazio per l'elenco.
+  if (!o.elencoNomi) {
+    centrato(p, o.intervallo, y, c.b, 54, VERDE);
+    y -= 42;
+  } else {
+    y += 20;
+  }
   centrato(
     p,
     `${o.lavoratori} ${o.lavoratori === 1 ? "lavoratore" : "lavoratori"} in ordine alfabetico`,
@@ -148,6 +209,7 @@ export async function disegnaCopertina(
       y -= 16;
     }
   }
+  if (o.elencoNomi?.length) disegnaElencoNomi(doc, c, p, y - 14, o.elencoNomi);
   scrivi(
     p,
     `Stampato il ${dataIt(o.dataStampa.toISOString())} alle ${o.dataStampa.toTimeString().slice(0, 5)}`,

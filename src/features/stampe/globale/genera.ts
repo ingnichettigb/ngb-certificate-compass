@@ -9,6 +9,9 @@
  *            Si può annullare in ogni momento (AbortSignal).
  *   rev 2 — 12/11/2026 06:53 — Logo della copertina dalla stessa anagrafica aziendale dei PDF A3/A4.
  * Rev 12/11/2026 — Le schede mostrano la scadenza del ciclo del gruppo; i Base rinnovati risultano «Superato».
+ *   rev 3 — 23/11/2026 — Per la «Stampa selezione»: opzioni facoltative `soloIds` (solo i lavoratori scelti), `includiOrganigramma`
+ *            (false = niente tavola A3) e `tipo` (GLOBALE / SELEZIONE: titolo copertina, titolo PDF, nome file). La copertina della
+ *            selezione elenca i nomi del blocco. Senza queste opzioni il comportamento della Stampa globale è identico a prima.
  */
 import { PDFDocument } from "pdf-lib";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -34,6 +37,7 @@ import {
   nomeFileBlocco,
   ordinaLavoratori,
   type Blocco,
+  type TipoStampa,
   type VoceStima,
 } from "./piano-blocchi";
 import {
@@ -60,12 +64,21 @@ export type OpzioniStampaGlobale = {
   includiCessati: boolean;
   limiteByte: number;
   indicazioni: string;
+  /** Solo questi lavoratori (id). Assente = tutti (Stampa globale). */
+  soloIds?: string[];
+  /** false = niente organigramma A3 (Stampa selezione). Assente = true (Stampa globale). */
+  includiOrganigramma?: boolean;
+  /** GLOBALE (predefinito) o SELEZIONE: cambia titolo della copertina, titolo del PDF e nome file. */
+  tipo?: TipoStampa;
 };
 
 export type LavoratoreScheda = { dip: Dipendente; attestati: Attestato[] };
 
 export const INDICAZIONI_PREDEFINITE =
   "Fascicolo di tutti i lavoratori in ordine alfabetico.\nPer ciascuno: scheda con dati anagrafici, funzioni a cui è incaricato ed elenco degli attestati, seguita dai documenti.\nL'organigramma della sicurezza (formato A3) è la seconda pagina del primo blocco.";
+
+export const INDICAZIONI_SELEZIONE =
+  "Fascicolo dei soli lavoratori scelti, in ordine alfabetico.\nPer ciascuno: scheda con dati anagrafici, funzioni a cui è incaricato ed elenco degli attestati, seguita dai documenti.\nIn fondo a ogni file trovi l'indice cliccabile e i controlli.";
 
 export type PianoStampa = {
   blocchi: Blocco[];
@@ -77,12 +90,16 @@ export type PianoStampa = {
 export function preparaLavoratori(
   dati: DatiStampaGlobale,
   includiCessati: boolean,
+  soloIds?: readonly string[],
 ): LavoratoreScheda[] {
   const per = new Map<string, Attestato[]>();
   // Scadenza e stato di ogni attestato dal ciclo del suo gruppo (Base + aggiornamenti), non dalla sua sola data.
   for (const a of applicaScadenzaCicli(dati.attestati))
     per.set(a.dipendente_id, [...(per.get(a.dipendente_id) ?? []), a]);
-  const dip = dati.dipendenti.filter((d) => includiCessati || d.stato_lavoratore !== "cessato");
+  const scelti = soloIds ? new Set(soloIds) : null;
+  const dip = dati.dipendenti.filter(
+    (d) => (includiCessati || d.stato_lavoratore !== "cessato") && (!scelti || scelti.has(d.id)),
+  );
   return ordinaLavoratori(dip).map((d) => ({ dip: d, attestati: per.get(d.id) ?? [] }));
 }
 
@@ -112,7 +129,7 @@ export async function stimaPiano(
   avanzamento?: (fatti: number, totale: number) => void,
   segnale?: AbortSignal,
 ): Promise<PianoStampa> {
-  const lavoratori = preparaLavoratori(dati, opz.includiCessati);
+  const lavoratori = preparaLavoratori(dati, opz.includiCessati, opz.soloIds);
   const compiti = lavoratori.flatMap((l) =>
     l.attestati.flatMap((a) => fileDi(a).map((p) => ({ id: l.dip.id, p }))),
   );
@@ -139,7 +156,7 @@ export async function stimaPiano(
     nome: l.dip.nome,
     byte: (byte.get(l.dip.id) ?? 0) + BYTE_SCHEDA * (1 + Math.ceil(l.attestati.length / 20)),
   }));
-  const blocchi = dividiInBlocchi(voci, opz.limiteByte);
+  const blocchi = dividiInBlocchi(voci, opz.limiteByte, opz.includiOrganigramma !== false);
   return { blocchi, lavoratori, byteTotali: blocchi.reduce((s, b) => s + b.byte, 0), senzaFile };
 }
 
@@ -209,8 +226,12 @@ export async function generaBlocco(
   avanzamento?: (testo: string, fatti: number, totale: number) => void,
   segnale?: AbortSignal,
 ): Promise<RisultatoBlocco> {
+  const tipo: TipoStampa = opz.tipo ?? "GLOBALE";
+  const conA3 = opz.includiOrganigramma !== false;
   const doc = await PDFDocument.create();
-  doc.setTitle(`Stampa globale – blocco ${blocco.numero}`);
+  doc.setTitle(
+    `${tipo === "SELEZIONE" ? "Stampa selezione" : "Stampa globale"} – blocco ${blocco.numero}`,
+  );
   doc.setCreationDate(dataStampa);
   const c = await caricaCaratteri(doc);
   const intervallo = etichettaIntervallo(blocco.da, blocco.a);
@@ -227,9 +248,16 @@ export async function generaBlocco(
     dataStampa,
     indicazioni: opz.indicazioni,
     ...(riferimenti ? { riferimenti } : {}),
+    ...(tipo === "SELEZIONE"
+      ? {
+          titolo: "STAMPA SELEZIONE",
+          elencoNomi: blocco.voci.map((v) => `${v.cognome.trim()} ${v.nome.trim()}`),
+        }
+      : {}),
   });
 
-  if (blocco.numero === 1) {
+  const paginaA3 = doc.getPageCount();
+  if (blocco.numero === 1 && conA3) {
     avanzamento?.("Organigramma A3", 0, blocco.voci.length);
     const a3 = await PDFDocument.load(await pdfOrganigramma(dati));
     const [pagina] = await doc.copyPages(a3, [0]);
@@ -239,7 +267,8 @@ export async function generaBlocco(
   const perId = new Map(piano.lavoratori.map((l) => [l.dip.id, l]));
   const indice: VoceIndice[] = [];
   const segnalibri: Segnalibro[] = [{ titolo: "Copertina", pagina: 0 }];
-  if (blocco.numero === 1) segnalibri.push({ titolo: "Organigramma A3", pagina: 1 });
+  if (blocco.numero === 1 && conA3)
+    segnalibri.push({ titolo: "Organigramma A3", pagina: paginaA3 });
   /** Pagine (da 0) di ogni scheda: servono per il link «Torna all'indice». */
   const pagineSchede: number[] = [];
   const problemi: Problema[] = [];
@@ -342,6 +371,7 @@ export async function generaBlocco(
       ditta: d?.ragione_sociale,
       da: blocco.da,
       a: blocco.a,
+      tipo,
     }),
     bytes,
     pagine: doc.getPageCount(),

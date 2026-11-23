@@ -4,6 +4,7 @@
  * Data creaz: 11/11/2026
  * Revisioni:
  *   rev 1 — 11/11/2026 — Test di ordine alfabetico, divisione in blocchi, intervalli di lettere e nome file.
+ *   rev 2 — 23/11/2026 — Test della «Stampa selezione»: blocco 1 senza peso A3 e nome file «STAMPA SELEZIONE».
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -15,6 +16,7 @@ import {
   nomeDittaPerFile,
   nomeFileBlocco,
   ordinaLavoratori,
+  pesoFisso,
   timestampAAMMGGhh,
   type VoceStima,
 } from "./piano-blocchi";
@@ -80,6 +82,20 @@ describe("divisione in blocchi", () => {
     expect(b[0]?.byte).toBe(fisso1 + 100);
   });
 
+  it("senza organigramma A3 (Stampa selezione) nemmeno il primo blocco porta il peso dell'A3", () => {
+    expect(pesoFisso(1)).toBe(fisso1);
+    expect(pesoFisso(1, false)).toBe(fisso);
+    const b = dividiInBlocchi([v("1", "A", 100)], 1e9, false);
+    expect(b[0]?.byte).toBe(fisso + 100);
+  });
+
+  it("senza A3 il primo blocco può contenere un lavoratore in più rispetto alla globale", () => {
+    const limite = fisso1 + 1500; // con l'A3 ci sta un solo lavoratore da 1000
+    const voci = [v("1", "Alpha", 1000), v("2", "Bravo", 1000)];
+    expect(dividiInBlocchi(voci, limite)).toHaveLength(2);
+    expect(dividiInBlocchi(voci, limite, false)).toHaveLength(1);
+  });
+
   it("un lavoratore più grande del limite ha un blocco tutto suo, segnalato", () => {
     const b = dividiInBlocchi([v("1", "Alpha", 50_000_000), v("2", "Bravo", 10)], 1_000_000);
     expect(b).toHaveLength(2);
@@ -115,5 +131,17 @@ describe("nome del file", () => {
     expect(
       nomeFileBlocco({ numero: 12, data: new Date(2026, 10, 11, 9), ditta: "X", da: "S", a: "Z" }),
     ).toBe("12-26111109-STAMPA GLOBALE-X-DA S a Z.pdf");
+  });
+  it("selezione: NN-AAMMGGhh-STAMPA SELEZIONE-DITTA-DA X a Y.pdf", () => {
+    expect(
+      nomeFileBlocco({
+        numero: 1,
+        data: new Date(2026, 10, 23, 9),
+        ditta: "Rossi Srl",
+        da: "B",
+        a: "V",
+        tipo: "SELEZIONE",
+      }),
+    ).toBe("01-26112309-STAMPA SELEZIONE-ROSSI SRL-DA B a V.pdf");
   });
 });
