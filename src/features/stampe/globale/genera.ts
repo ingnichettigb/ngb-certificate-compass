@@ -8,10 +8,11 @@
  *            per ogni lavoratore scheda + PDF degli attestati → indice e controlli. Un blocco alla volta in memoria.
  *            Si può annullare in ogni momento (AbortSignal).
  *   rev 2 — 12/11/2026 06:53 — Logo della copertina dalla stessa anagrafica aziendale dei PDF A3/A4.
- * Rev 12/11/2026 — Le schede mostrano la scadenza del ciclo del gruppo; i Base rinnovati risultano «Superato».
- *   rev 3 — 23/11/2026 — Per la «Stampa selezione»: opzioni facoltative `soloIds` (solo i lavoratori scelti), `includiOrganigramma`
+ *   rev 3 — 23/11/2026 10:30 — Per la «Stampa selezione»: opzioni facoltative `soloIds` (solo i lavoratori scelti), `includiOrganigramma`
  *            (false = niente tavola A3) e `tipo` (GLOBALE / SELEZIONE: titolo copertina, titolo PDF, nome file). La copertina della
  *            selezione elenca i nomi del blocco. Senza queste opzioni il comportamento della Stampa globale è identico a prima.
+ *   rev 4 — 23/11/2026 17:25 — Opzione `filtroArgomento` in `OpzioniStampaGlobale` e `preparaLavoratori`: filtra gli attestati di ogni
+ *            lavoratore per includere e allegare solo i corsi e i PDF dell'argomento scelto (`appartieneAGruppo`).
  */
 import { PDFDocument } from "pdf-lib";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -30,6 +31,7 @@ import { raggruppaPerFunzione } from "./ordine-attestati";
 import { applicaScadenzaCicli } from "@/features/scadenze/preposti";
 import { aggiungiLink, aggiungiSegnalibri, type Segnalibro } from "./segnalibri";
 import { dataIt } from "../stampa-formati";
+import { appartieneAGruppo } from "@/features/tipi-corso/tipi-raggruppamento";
 import {
   BYTE_SCHEDA,
   dividiInBlocchi,
@@ -70,6 +72,8 @@ export type OpzioniStampaGlobale = {
   includiOrganigramma?: boolean;
   /** GLOBALE (predefinito) o SELEZIONE: cambia titolo della copertina, titolo del PDF e nome file. */
   tipo?: TipoStampa;
+  /** Se impostato (1..11), include solo gli attestati di questo argomento (scheda e PDF allegati). */
+  filtroArgomento?: number | null;
 };
 
 export type LavoratoreScheda = { dip: Dipendente; attestati: Attestato[] };
@@ -91,10 +95,17 @@ export function preparaLavoratori(
   dati: DatiStampaGlobale,
   includiCessati: boolean,
   soloIds?: readonly string[],
+  filtroArgomento?: number | null,
 ): LavoratoreScheda[] {
   const per = new Map<string, Attestato[]>();
   // Scadenza e stato di ogni attestato dal ciclo del suo gruppo (Base + aggiornamenti), non dalla sua sola data.
-  for (const a of applicaScadenzaCicli(dati.attestati))
+  const conScadenza = applicaScadenzaCicli(dati.attestati);
+  const daConsiderare =
+    filtroArgomento != null
+      ? conScadenza.filter((a) => appartieneAGruppo(a.tipi_corso, filtroArgomento))
+      : conScadenza;
+
+  for (const a of daConsiderare)
     per.set(a.dipendente_id, [...(per.get(a.dipendente_id) ?? []), a]);
   const scelti = soloIds ? new Set(soloIds) : null;
   const dip = dati.dipendenti.filter(
@@ -129,7 +140,7 @@ export async function stimaPiano(
   avanzamento?: (fatti: number, totale: number) => void,
   segnale?: AbortSignal,
 ): Promise<PianoStampa> {
-  const lavoratori = preparaLavoratori(dati, opz.includiCessati, opz.soloIds);
+  const lavoratori = preparaLavoratori(dati, opz.includiCessati, opz.soloIds, opz.filtroArgomento);
   const compiti = lavoratori.flatMap((l) =>
     l.attestati.flatMap((a) => fileDi(a).map((p) => ({ id: l.dip.id, p }))),
   );
