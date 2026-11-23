@@ -1,13 +1,16 @@
 /*
- * File:      TabellaTipiCorso.tsx
- * Percorso:  src/features/tipi-corso/TabellaTipiCorso.tsx
+ * File:           TabellaTipiCorso.tsx
+ * Percorso:       src/features/tipi-corso/TabellaTipiCorso.tsx
+ * Data creazione: 2026-10-26
+ *
  * Tabella completa dei tipi di corso: intestazioni, righe, aggiunta e note.
  * Revisioni:
- * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
- * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
- * - Rev (2026-11-10): Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
- * - Rev (2026-11-23 10:50): Legenda «10. DL - Dir - ASPP - RSPP» prima di «11. Cantieri».
- * - Rev (2026-11-16 19:58): Aggiunta corso con controllo dei corsi già in archivio.
+ * - Rev 1: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
+ * - Rev 2: 2026-11-04 08:40 - Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
+ * - Rev 3: 2026-11-10 12:00 - Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
+ * - Rev 4: 2026-11-16 19:58 - Aggiunta corso con controllo dei corsi già in archivio.
+ * - Rev 5: 2026-11-23 10:50 - Legenda «10. DL - Dir - ASPP - RSPP» prima di «11. Cantieri».
+ * - Rev 6: 2026-11-23 11:10 - Badge trasformati in bottoni interattivi con pulsante «Tutti» e filtro esclusivo per argomento.
  */
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
@@ -27,6 +30,7 @@ import { useLarghezzeColonne } from "./components/useLarghezzeColonne";
 import {
   GRUPPI_ARGOMENTO,
   GRUPPO_ASPP_RSPP_VISIVO,
+  appartieneAGruppo,
   assegnaGruppoArgomento,
   isCorsoAsppRspp,
 } from "./tipi-raggruppamento";
@@ -70,6 +74,7 @@ export function ordina(corsi: TipoCorso[], ord: Ord): TipoCorso[] {
 
 export function TabellaTipiCorso() {
   const [ord, setOrd] = useState<Ord>({ chiave: "codice", dir: "asc" });
+  const [filtroArgomento, setFiltroArgomento] = useState<number | null>(null);
   const { larghezze, totale, maniglia, ripristina, modificate } = useLarghezzeColonne(
     CHIAVE_LARGHEZZE,
     LARGHEZZE_INIZIALI,
@@ -114,7 +119,13 @@ export function TabellaTipiCorso() {
     );
   }
 
-  const righe = ordina(corsi, ord);
+  const corsiFiltrati = corsi.filter((c) => appartieneAGruppo(c, filtroArgomento));
+  const righe = ordina(corsiFiltrati, ord);
+
+  const toggleFiltro = (ordine: number) => {
+    setFiltroArgomento((prev) => (prev === ordine ? null : ordine));
+  };
+
   const renderManiglia = (indice: number) => (
     <span
       role="separator"
@@ -125,6 +136,7 @@ export function TabellaTipiCorso() {
       {...maniglia(indice)}
     />
   );
+
   const intest = (chiave: Chiave, testo: string, indice: number, cls = "") => (
     <TableHead className={`relative overflow-hidden ${cls}`}>
       <button
@@ -147,24 +159,83 @@ export function TabellaTipiCorso() {
 
   return (
     <div className="min-w-0 space-y-3">
+      {/* Barra pulsanti argomento */}
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="font-medium text-muted-foreground">Argomenti:</span>
-        {GRUPPI_ARGOMENTO.filter((g) => g.ordine < 10).map((g) => (
-          <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
-            {g.ordine}. {g.titolo}
-          </span>
-        ))}
-        <span
-          className={`rounded border border-border/40 px-2 py-0.5 font-medium ${GRUPPO_ASPP_RSPP_VISIVO.coloreSfondo} ${GRUPPO_ASPP_RSPP_VISIVO.coloreTesto}`}
-          title="Fanno parte di «Sicurezza lavoratori» per stampe, matrici ed esportazioni"
+
+        {/* Pulsante «Tutti» */}
+        <button
+          type="button"
+          onClick={() => setFiltroArgomento(null)}
+          className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${
+            filtroArgomento === null
+              ? "border-primary bg-primary/15 text-primary shadow-xs ring-1 ring-primary"
+              : "border-border/60 bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+          title="Mostra tutti i tipi di corso"
         >
-          {GRUPPO_ASPP_RSPP_VISIVO.titolo}
-        </span>
-        {GRUPPI_ARGOMENTO.filter((g) => g.ordine > 10).map((g) => (
-          <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
-            {g.ordine}. {g.titolo}
-          </span>
-        ))}
+          Tutti
+        </button>
+
+        {/* Gruppi 1-9 */}
+        {GRUPPI_ARGOMENTO.filter((g) => g.ordine < 10).map((g) => {
+          const attivo = filtroArgomento === g.ordine;
+          return (
+            <button
+              key={g.chiave}
+              type="button"
+              onClick={() => toggleFiltro(g.ordine)}
+              className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${g.coloreSfondo} ${g.coloreTesto} ${
+                attivo
+                  ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                  : "border-border/40 hover:opacity-90"
+              }`}
+              title={`Filtra: ${g.ordine}. ${g.titolo} (clicca di nuovo per mostrare tutti)`}
+            >
+              {g.ordine}. {g.titolo}
+            </button>
+          );
+        })}
+
+        {/* Gruppo 10. DL - Dir - ASPP - RSPP */}
+        {(() => {
+          const attivo = filtroArgomento === 10;
+          return (
+            <button
+              type="button"
+              onClick={() => toggleFiltro(10)}
+              className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${GRUPPO_ASPP_RSPP_VISIVO.coloreSfondo} ${GRUPPO_ASPP_RSPP_VISIVO.coloreTesto} ${
+                attivo
+                  ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                  : "border-border/40 hover:opacity-90"
+              }`}
+              title="Filtra: 10. DL - Dir - ASPP - RSPP (clicca di nuovo per mostrare tutti)"
+            >
+              {GRUPPO_ASPP_RSPP_VISIVO.titolo}
+            </button>
+          );
+        })()}
+
+        {/* Gruppo 11. Cantieri */}
+        {GRUPPI_ARGOMENTO.filter((g) => g.ordine > 10).map((g) => {
+          const attivo = filtroArgomento === g.ordine;
+          return (
+            <button
+              key={g.chiave}
+              type="button"
+              onClick={() => toggleFiltro(g.ordine)}
+              className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${g.coloreSfondo} ${g.coloreTesto} ${
+                attivo
+                  ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                  : "border-border/40 hover:opacity-90"
+              }`}
+              title={`Filtra: ${g.ordine}. ${g.titolo} (clicca di nuovo per mostrare tutti)`}
+            >
+              {g.ordine}. {g.titolo}
+            </button>
+          );
+        })}
+
         {modificate && (
           <button
             type="button"
@@ -175,6 +246,7 @@ export function TabellaTipiCorso() {
           </button>
         )}
       </div>
+
       <div className="rounded-lg border border-border [&>div]:max-h-[60vh]">
         <Table className="table-fixed" style={{ width: totale }}>
           <colgroup>
@@ -204,29 +276,31 @@ export function TabellaTipiCorso() {
             {righe.map((c, n) => {
               const i = corsi.findIndex((x) => x.id === c.id);
               return (
-              <RigaTipoCorso
-                key={c.id}
-                numero={n + 1}
-                c={c}
-                indice={i}
-                totale={corsi.length}
-                occupata={busy === c.id}
-                inTrascinamento={sopra === c.id}
-                onSalvaCampo={(campo, valore) => salvaCampo(c, campo, valore)}
-                onRimuovi={() => rimuovi(c)}
-                onSposta={(direzione) => sposta(i, direzione)}
-                onIniziaTrascinamento={() => iniziaTrascinamento(c.id)}
-                onFinisciTrascinamento={finisciTrascinamento}
-                onTrascinaSopra={() => trascinaSopra(c.id)}
-                onLasciaRiga={() => lasciaRiga(c.id)}
-                onRilascia={() => rilasciaSu(c.id)}
-              />
+                <RigaTipoCorso
+                  key={c.id}
+                  numero={n + 1}
+                  c={c}
+                  indice={i}
+                  totale={corsi.length}
+                  occupata={busy === c.id}
+                  inTrascinamento={sopra === c.id}
+                  onSalvaCampo={(campo, valore) => salvaCampo(c, campo, valore)}
+                  onRimuovi={() => rimuovi(c)}
+                  onSposta={(direzione) => sposta(i, direzione)}
+                  onIniziaTrascinamento={() => iniziaTrascinamento(c.id)}
+                  onFinisciTrascinamento={finisciTrascinamento}
+                  onTrascinaSopra={() => trascinaSopra(c.id)}
+                  onLasciaRiga={() => lasciaRiga(c.id)}
+                  onRilascia={() => rilasciaSu(c.id)}
+                />
               );
             })}
-            {!corsi.length && (
+            {!righe.length && (
               <TableRow>
                 <TableCell colSpan={11} className="py-6 text-center text-sm text-muted-foreground">
-                  Nessun corso in tabella.
+                  {filtroArgomento !== null
+                    ? "Nessun corso presente per l'argomento selezionato."
+                    : "Nessun corso in tabella."}
                 </TableCell>
               </TableRow>
             )}
