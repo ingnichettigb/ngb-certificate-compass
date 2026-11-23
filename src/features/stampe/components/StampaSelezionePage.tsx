@@ -10,6 +10,9 @@
  *   rev 2 — 23/11/2026 17:25 — Selezione per argomenti (barra 11 pulsanti con i colori ufficiali): al clic seleziona automaticamente i
  *            lavoratori con corsi dell'argomento. Due bottoni mutuamente esclusivi «Tutti i corsi» e «Solo argomento» per allegare e
  *            specificare tutti i corsi oppure filtrare scheda e copie PDF solo su quelli dell'argomento prescelto.
+ *   rev 3 — 23/11/2026 17:45 — Selezione per argomenti ancorata alla matrice ruoli di sicurezza (dipendenti_ruoli / ruoli_sicurezza):
+ *            seleziona solo gli addetti formalmente incaricati (es. 12 DAE) filtrati per stato; fallback su attestati per argomenti
+ *            senza ruolo. Risolto errore di compilazione TS2345 su tipo corso opzionale.
  */
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +28,7 @@ import {
   CHIAVE_RUOLI,
   getAssegnazioniRuoli,
   getRuoliSicurezza,
+  type RuoloSicurezza,
 } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
 import { filtraPerStato, isCessato, type FiltroStato } from "@/features/contratti/contratto";
@@ -69,6 +73,41 @@ function scarica(bytes: Uint8Array, nome: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Verifica se un ruolo di sicurezza appartiene a uno degli 11 gruppi di argomento */
+function ruoloAppartieneAGruppo(r: RuoloSicurezza, ordine: number | null): boolean {
+  if (ordine === null) return true;
+  const cod = (r.codice ?? "").toUpperCase();
+  const nome = (r.nome ?? "").toLowerCase();
+  const macro = (r.macro_categoria ?? "").toLowerCase();
+
+  switch (ordine) {
+    case 1: // Sicurezza lavoratori
+      return cod === "LAVORATORE" || nome === "lavoratore" || macro.includes("sicurezza lavoratori");
+    case 2: // Preposti
+      return cod === "PREPOSTO" || nome.includes("preposto") || macro.includes("preposto");
+    case 3: // Evacuazione
+      return cod === "ADD_EVACUAZIONE" || nome.includes("evacuaz") || macro.includes("emergenz");
+    case 4: // Antincendio
+      return cod.includes("ANTINCENDIO") || nome.includes("antincendio") || macro.includes("antincendio");
+    case 5: // Primo soccorso
+      return cod === "ADD_PRIMO_SOCCORSO" || nome.includes("primo soccorso") || macro.includes("primo soccorso");
+    case 6: // Defibrillatore
+      return cod === "ADD_DAE" || nome.includes("defibrillat") || nome.includes("blsd") || macro.includes("defibrillat");
+    case 7: // Privacy
+      return cod === "INC_PRIVACY" || nome.includes("privacy") || macro.includes("privacy");
+    case 8: // Covid
+      return false;
+    case 9: // Altro
+      return false;
+    case 10: // DL - Dir - ASPP - RSPP
+      return ["DL", "DL_RSPP", "ASPP", "RSPP", "DSGA", "VICEDSGA"].includes(cod) || /^(dl|dir|aspp|rspp)/i.test(nome);
+    case 11: // Cantieri
+      return cod.startsWith("OPER_") || macro.includes("attrezzatur");
+    default:
+      return false;
+  }
 }
 
 export function StampaSelezionePage() {
@@ -118,17 +157,34 @@ export function StampaSelezionePage() {
     ) as Record<FiltroStato, number>;
   }, [dip.data]);
 
-  /** Lavoratori con corsi nell'argomento selezionato */
+  /** Lavoratori collegati all'argomento: primariamente da matrice ruoli di sicurezza, con fallback su attestati */
   const idsArgomento = useMemo(() => {
-    if (filtroArgomento === null || !att.data) return null;
+    if (filtroArgomento === null) return null;
     const s = new Set<string>();
-    for (const a of att.data) {
-      if (a.dipendente_id && appartieneAGruppo(a.tipi_corso, filtroArgomento)) {
-        s.add(a.dipendente_id);
+
+    // 1. Cerca nella matrice ruoli di sicurezza assegnati
+    if (ruoli.data && ass.data) {
+      const ruoliGruppo = ruoli.data.filter((r) => ruoloAppartieneAGruppo(r, filtroArgomento));
+      if (ruoliGruppo.length > 0) {
+        const rIds = new Set(ruoliGruppo.map((r) => r.id));
+        for (const a of ass.data) {
+          if (rIds.has(a.ruolo_id) && a.dipendente_id) {
+            s.add(a.dipendente_id);
+          }
+        }
+      }
+    }
+
+    // 2. Se l'argomento non ha ruoli (es. Covid, Altro), ripiega sui corsi svolti
+    if (s.size === 0 && att.data) {
+      for (const a of att.data) {
+        if (a.dipendente_id && appartieneAGruppo(a.tipi_corso ?? {}, filtroArgomento)) {
+          s.add(a.dipendente_id);
+        }
       }
     }
     return s;
-  }, [att.data, filtroArgomento]);
+  }, [filtroArgomento, ruoli.data, ass.data, att.data]);
 
   /** Titolo visuale dell'argomento attivo */
   const titoloArgomentoAttivo = useMemo(() => {
@@ -152,7 +208,6 @@ export function StampaSelezionePage() {
   }, [dip.data, filtro, ricerca, idsArgomento]);
 
   const opzioni: OpzioniStampaGlobale = {
-    // Un lavoratore cessato che hai spuntato va incluso: la scelta è esplicita.
     includiCessati: true,
     soloIds: [...scelti],
     includiOrganigramma: false,
@@ -162,7 +217,7 @@ export function StampaSelezionePage() {
     filtroArgomento: modalitaCorsi === "solo_argomento" ? filtroArgomento : null,
   };
 
-  /** Ogni cambio di scelta rende vecchio il piano già calcolato. */
+  /** Ogni cambio di scelta rende vecchio il piano già calcolato */
   const cambiaScelti = (nuovi: Set<string>) => {
     setScelti(nuovi);
     setPiano(null);
@@ -177,15 +232,34 @@ export function StampaSelezionePage() {
       setModalitaCorsi("tutto");
       return;
     }
-    // Seleziona automaticamente tutti i lavoratori con corsi dell'argomento
-    const ids = new Set<string>();
-    (att.data ?? []).forEach((a) => {
-      if (a.dipendente_id && appartieneAGruppo(a.tipi_corso, ordine)) {
-        ids.add(a.dipendente_id);
-      }
-    });
-    cambiaScelti(ids);
     setModalitaCorsi("solo_argomento");
+
+    // Individua i candidati dell'argomento dalla matrice ruoli (o dai corsi se non ci sono ruoli)
+    const candidati = new Set<string>();
+    if (ruoli.data && ass.data) {
+      const ruoliGruppo = ruoli.data.filter((r) => ruoloAppartieneAGruppo(r, ordine));
+      if (ruoliGruppo.length > 0) {
+        const rIds = new Set(ruoliGruppo.map((r) => r.id));
+        for (const a of ass.data) {
+          if (rIds.has(a.ruolo_id) && a.dipendente_id) {
+            candidati.add(a.dipendente_id);
+          }
+        }
+      }
+    }
+    if (candidati.size === 0 && att.data) {
+      for (const a of att.data) {
+        if (a.dipendente_id && appartieneAGruppo(a.tipi_corso ?? {}, ordine)) {
+          candidati.add(a.dipendente_id);
+        }
+      }
+    }
+
+    // Rispetta il filtro di stato (es. solo in forza se siamo su «In forza» o «Tutti»)
+    const base = filtraPerStato(dip.data ?? [], filtro === "tutti" ? "in_forza" : filtro, new Date());
+    const validi = new Set(base.map((d) => d.id));
+    const sceltiFiltrati = new Set([...candidati].filter((id) => validi.has(id)));
+    cambiaScelti(sceltiFiltrati.size > 0 ? sceltiFiltrati : candidati);
   };
 
   const alterna = (id: string) => {
@@ -249,7 +323,7 @@ export function StampaSelezionePage() {
         scarica(r.bytes, r.nomeFile);
         tuttiProblemi.push(...r.problemi);
         setStato(`Blocco ${blocco.numero} pronto: ${mb(r.bytes.length)}, ${r.pagine} pagine`);
-        await new Promise((ok) => setTimeout(ok, 700)); // il browser scarica un file alla volta
+        await new Promise((ok) => setTimeout(ok, 700));
       }
       setProblemi(tuttiProblemi);
       toast.success(
@@ -319,7 +393,7 @@ export function StampaSelezionePage() {
                       ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
                       : "border-border/40 hover:opacity-90"
                   }`}
-                  title={`Seleziona lavoratori con corsi: ${g.ordine}. ${g.titolo}`}
+                  title={`Seleziona addetti e corsi del tema: ${g.ordine}. ${g.titolo}`}
                 >
                   {g.ordine}. {g.titolo}
                 </button>
@@ -358,7 +432,7 @@ export function StampaSelezionePage() {
                       ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
                       : "border-border/40 hover:opacity-90"
                   }`}
-                  title={`Seleziona lavoratori con corsi: ${g.ordine}. ${g.titolo}`}
+                  title={`Seleziona addetti e corsi del tema: ${g.ordine}. ${g.titolo}`}
                 >
                   {g.ordine}. {g.titolo}
                 </button>
