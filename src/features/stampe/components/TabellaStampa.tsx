@@ -10,11 +10,10 @@
  *   rev 5 — 06/11/2026 — Clic sull'intestazione per ordinare A→Z / Z→A / nessuno (frecce non stampate).
  *   rev 6 — 06/11/2026 — Neretto (anche in stampa) per l'attestato presente senza il ruolo di sicurezza assegnato.
  *   rev 7 — 07/11/2026 — Larghezza delle colonne: si trascina il bordo dell'intestazione, doppio clic = adatta al contenuto più lungo.
- *                        Pulsante «+» in fondo all'intestazione per aggiungere/togliere colonne. Tutto facoltativo: senza le
- *                        nuove proprietà la tabella si comporta e si stampa come prima.
+ *                        Pulsante «+» in fondo all'intestazione per aggiungere/togliere colonne. Tutto facoltativo.
  *   rev 8 — 09/11/2026 20:00 — Testo, colore e grassetto delle celle da righeCella (lo stesso del PDF); celle su due righe
  *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
- *   rev 9 — 23/11/2026 14:10 — Soppressione delle colonne anagrafiche (lavoratore, CF, reparto) per righe successive dello stesso lavoratore.
+ *   rev 9 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero vuoto e colonne anagrafiche con «—».
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
@@ -117,7 +116,6 @@ export function TabellaStampa({
     onLarghezze({ ...base, [c]: adattaColonna(c) });
   }
 
-  // Mappa dei numeri progressivi per lavoratore distinto
   const progressivoPerRiga = useMemo(() => {
     let prog = 0;
     return righe.map((r, i) => {
@@ -250,13 +248,13 @@ export function TabellaStampa({
           const num = progressivoPerRiga[i];
           return (
             <tr key={r.id} className="odd:bg-muted/30" style={{ breakInside: "avoid" }}>
-              <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono">
-                {num != null ? num : ""}
+              <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono text-muted-foreground/50">
+                {num != null ? num : "—"}
               </td>
               {colonne.map((c) => {
                 if (stessoLavoratore && COLONNE_ANAGRAFICHE_DIPENDENTE.has(c)) {
                   return (
-                    <td key={c} className="border border-foreground/40 px-1.5 py-0.5 text-muted-foreground/40">
+                    <td key={c} className="border border-foreground/40 px-1.5 py-0.5 text-center text-muted-foreground/35">
                       —
                     </td>
                   );
