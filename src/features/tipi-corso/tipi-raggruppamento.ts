@@ -8,6 +8,7 @@
  * - Rev 2: 2026-10-27 20:55 - Evacuazione viola, Defibrillatore teal, protetti EME-PRO-02/EME-EAA-02.
  * - Rev 3: 2026-11-01 11:00 - Antincendio solo codici VVF (VFF-FOR…): rimossi vecchi ANT-L…
  * - Rev 4: 2026-11-04 08:00 - Gruppi e colori dedicati per Privacy (Indaco) e Covid (Fucsia).
+ * - Rev 6: 2026-11-23 10:50 - Gruppo 11 «Cantieri» (codici LAV-, categoria Cantieri); legenda 10 DL/Dir/ASPP/RSPP.
  * - Rev 5: 2026-11-10 - Colore dedicato (lime) ai corsi ASPP/RSPP nella sola tabella corsi: per stampe, matrici ed esportazioni restano in «Sicurezza lavoratori».
  */
 
@@ -29,6 +30,7 @@ export const GRUPPI_ARGOMENTO: GruppoArgomento[] = [
   { chiave: "privacy", titolo: "Privacy", ordine: 7, coloreSfondo: "bg-indigo-500/15 hover:bg-indigo-500/20", coloreTesto: "text-indigo-700 dark:text-indigo-300" },
   { chiave: "covid", titolo: "Covid", ordine: 8, coloreSfondo: "bg-fuchsia-500/15 hover:bg-fuchsia-500/20", coloreTesto: "text-fuchsia-700 dark:text-fuchsia-300" },
   { chiave: "altro", titolo: "Altro", ordine: 9, coloreSfondo: "bg-slate-500/10 hover:bg-slate-500/15", coloreTesto: "text-slate-700 dark:text-slate-300" },
+  { chiave: "cantieri", titolo: "Cantieri", ordine: 11, coloreSfondo: "bg-orange-500/15 hover:bg-orange-500/20", coloreTesto: "text-orange-800 dark:text-orange-300" },
 ];
 
 /** Codici dei corsi standard del programma: non modificabili né eliminabili. */
@@ -48,6 +50,7 @@ export function assegnaGruppoArgomento(c: {
   const cat = (c.macro_categoria ?? "").toLowerCase();
   const cod = (c.codice ?? "").toUpperCase();
   const nome = (c.nome_corso ?? "").toLowerCase();
+  if (cat.includes("cantier") || cod.startsWith("LAV-")) return GRUPPI_ARGOMENTO[9]!;
   if (cat.includes("sicurezza") || cod.startsWith("SIC-")) return GRUPPI_ARGOMENTO[0]!;
   if (cat.includes("preposto") || cod.startsWith("PRP-") || nome.includes("preposto")) return GRUPPI_ARGOMENTO[1]!;
   if (cat.includes("evacuaz") || cat.includes("emergenz") || cod.startsWith("EME-") || nome.includes("evacuazione")) return GRUPPI_ARGOMENTO[2]!;
@@ -65,12 +68,12 @@ export function isCorsoProtetto(c: { codice?: string | null }): boolean {
 
 /** Corsi ASPP / RSPP (codici SIC-ASPP-… e SIC-RSPP-…). */
 export function isCorsoAsppRspp(c: { codice?: string | null }): boolean {
-  return /^SIC-(ASPP|RSPP)-/i.test((c.codice ?? "").trim());
+  return /^(SIC-(ASPP|RSPP)-|DL-|DIR-)/i.test((c.codice ?? "").trim());
 }
 
 /** Voce di legenda e colori dedicati ai corsi ASPP/RSPP (solo aspetto grafico). */
 export const GRUPPO_ASPP_RSPP_VISIVO: Pick<GruppoArgomento, "titolo" | "coloreSfondo" | "coloreTesto"> = {
-  titolo: "ASPP / RSPP",
+  titolo: "10. DL - Dir - ASPP - RSPP",
   coloreSfondo: "bg-lime-500/20 hover:bg-lime-500/25",
   coloreTesto: "text-lime-800 dark:text-lime-300",
 };

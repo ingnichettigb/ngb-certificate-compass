@@ -6,6 +6,7 @@
  * - Rev 3: 2026-10-26 17:15 - Raggruppamento per 7 argomenti con sfondi tenui e legenda.
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-10): Colonne ridimensionabili (trascina il bordo dell'intestazione) e legenda ASPP/RSPP.
+ * - Rev (2026-11-23 10:50): Legenda «10. DL - Dir - ASPP - RSPP» prima di «11. Cantieri».
  * - Rev (2026-11-16 19:58): Aggiunta corso con controllo dei corsi già in archivio.
  */
 import { useState } from "react";
@@ -148,7 +149,7 @@ export function TabellaTipiCorso() {
     <div className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="font-medium text-muted-foreground">Argomenti:</span>
-        {GRUPPI_ARGOMENTO.map((g) => (
+        {GRUPPI_ARGOMENTO.filter((g) => g.ordine < 10).map((g) => (
           <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
             {g.ordine}. {g.titolo}
           </span>
@@ -157,8 +158,13 @@ export function TabellaTipiCorso() {
           className={`rounded border border-border/40 px-2 py-0.5 font-medium ${GRUPPO_ASPP_RSPP_VISIVO.coloreSfondo} ${GRUPPO_ASPP_RSPP_VISIVO.coloreTesto}`}
           title="Fanno parte di «Sicurezza lavoratori» per stampe, matrici ed esportazioni"
         >
-          ASPP / RSPP
+          {GRUPPO_ASPP_RSPP_VISIVO.titolo}
         </span>
+        {GRUPPI_ARGOMENTO.filter((g) => g.ordine > 10).map((g) => (
+          <span key={g.chiave} className={`rounded border border-border/40 px-2 py-0.5 font-medium ${g.coloreSfondo} ${g.coloreTesto}`}>
+            {g.ordine}. {g.titolo}
+          </span>
+        ))}
         {modificate && (
           <button
             type="button"
