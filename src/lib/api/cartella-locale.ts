@@ -14,6 +14,8 @@
  *   - Rev 9 (2026-10-30 20:30): Evento «cartelle:cambiate» (notificaCartelleCambiate) per aggiornare gli indicatori.
  *   - Rev 10 (2026-11-01 12:20): Salvataggio e lettura del percorso testuale esteso in IndexedDB.
  *   - Rev 11 (2026-11-22): apriDb con apriDbConTabella: se la tabella mancasse nel database già esistente viene creata.
+ *   - Rev 12 (2026-11-22): Ricerca nei file con scansionaCartella: più cartelle in parallelo, contatore di avanzamento, annullamento e limite di tempo
+ *     (180 s), cartelle non leggibili saltate; cercaFileRicorsivo resta come funzione compatibile.
  */
 
 import { apriDbConTabella } from "./idb-tabella";
@@ -215,7 +217,176 @@ function normalizzaTesto(t: string): string {
     .trim();
 }
 
-/** Cerca ricorsivamente i file nella cartella che contengono tutte le parole chiave nel nome. */
+export type AvanzamentoRicerca = { cartelle: number; file: number; trovati: number };
+export type MotivoInterruzione = "annullata" | "tempo";
+
+export type OpzioniScansione = {
+  prefisso?: string | undefined;
+  profondita?: number | undefined;
+  maxProfondita?: number | undefined;
+  maxRisultati?: number | undefined;
+  /** Quante cartelle leggere contemporaneamente (default 6). */
+  concorrenza?: number | undefined;
+  /** Dopo questo tempo la ricerca si ferma e restituisce quanto trovato (default 180 000 ms). */
+  limiteMs?: number | undefined;
+  segnale?: AbortSignal | undefined;
+  onAvanzamento?: ((a: AvanzamentoRicerca) => void) | undefined;
+  /** Elenco a cui aggiungere i file trovati (default: nuovo elenco). */
+  risultati?: FileTrovato[] | undefined;
+};
+
+export type EsitoScansione = {
+  risultati: FileTrovato[];
+  interrotta: MotivoInterruzione | null;
+  avanzamento: AvanzamentoRicerca;
+};
+
+type LavoroCartella = { dir: FileSystemDirectoryHandle; prefisso: string; profondita: number };
+
+/**
+ * Cerca i file della cartella (e sottocartelle) che contengono tutte le parole chiave nel nome.
+ * Legge più cartelle in parallelo, riferisce l'avanzamento, si può annullare e si ferma da sola dopo il limite di tempo
+ * (anche se una lettura del disco non risponde): restituisce sempre quanto trovato fino a quel momento.
+ */
+export async function scansionaCartella(
+  radice: FileSystemDirectoryHandle,
+  chiaveRicerca: string,
+  opz: OpzioniScansione = {},
+): Promise<EsitoScansione> {
+  const maxProfondita = opz.maxProfondita ?? 8;
+  const maxRisultati = opz.maxRisultati ?? 60;
+  const concorrenza = Math.max(1, opz.concorrenza ?? 6);
+  const limiteMs = opz.limiteMs ?? 180_000;
+  const risultati = opz.risultati ?? [];
+  const profonditaIniziale = opz.profondita ?? 0;
+  const avanzamento: AvanzamentoRicerca = { cartelle: 0, file: 0, trovati: risultati.length };
+
+  if (profonditaIniziale > maxProfondita || risultati.length >= maxRisultati) {
+    return { risultati, interrotta: null, avanzamento };
+  }
+
+  const parole = normalizzaTesto(chiaveRicerca).split(/\s+/).filter(Boolean);
+  const coda: LavoroCartella[] = [{ dir: radice, prefisso: opz.prefisso ?? "", profondita: profonditaIniziale }];
+  const inizio = Date.now();
+  let interrotta = null as MotivoInterruzione | null;
+  let inCorso = 0;
+  let ultimoAvviso = 0;
+
+  const avvisa = (forza = false) => {
+    if (!opz.onAvanzamento) return;
+    const ora = Date.now();
+    if (!forza && ora - ultimoAvviso < 150) return;
+    ultimoAvviso = ora;
+    opz.onAvanzamento({ ...avanzamento });
+  };
+
+  const devoFermarmi = (): boolean => {
+    if (interrotta) return true;
+    if (opz.segnale?.aborted) {
+      interrotta = "annullata";
+      return true;
+    }
+    if (Date.now() - inizio > limiteMs) {
+      interrotta = "tempo";
+      return true;
+    }
+    return risultati.length >= maxRisultati;
+  };
+
+  const esamina = async (lavoro: LavoroCartella): Promise<void> => {
+    const sorgente = lavoro.dir as unknown as { values?: () => AsyncIterable<FileSystemHandle> };
+    if (!sorgente.values) return;
+    avanzamento.cartelle += 1;
+    try {
+      for await (const entry of sorgente.values()) {
+        if (devoFermarmi()) break;
+        const percorso = lavoro.prefisso ? `${lavoro.prefisso}/${entry.name}` : entry.name;
+
+        if (entry.kind === "file") {
+          avanzamento.file += 1;
+          if (haEstensioneValida(entry.name)) {
+            const nomeNorm = normalizzaTesto(entry.name);
+            if (parole.length === 0 || parole.every((p) => nomeNorm.includes(p))) {
+              try {
+                const fileHandle = entry as FileSystemFileHandle;
+                const file = await fileHandle.getFile();
+                if (devoFermarmi()) break;
+                risultati.push({
+                  nome: entry.name,
+                  percorsoRelativo: percorso,
+                  dimensione: file.size,
+                  dataModifica: new Date(file.lastModified),
+                  tipo: file.type || "application/octet-stream",
+                  handle: fileHandle,
+                });
+                avanzamento.trovati = risultati.length;
+              } catch {
+                // Ignora file non leggibili
+              }
+            }
+          }
+        } else if (entry.kind === "directory") {
+          if (entry.name.startsWith(".") || entry.name.toLowerCase() === "node_modules") continue;
+          if (lavoro.profondita + 1 <= maxProfondita) {
+            coda.push({ dir: entry as FileSystemDirectoryHandle, prefisso: percorso, profondita: lavoro.profondita + 1 });
+          }
+        }
+        avvisa();
+      }
+    } catch {
+      // Cartella non leggibile (permessi, percorso troppo lungo…): si prosegue con le altre.
+    }
+  };
+
+  const lavoratore = async (): Promise<void> => {
+    for (;;) {
+      if (devoFermarmi()) return;
+      const lavoro = coda.shift();
+      if (!lavoro) {
+        if (inCorso === 0) return;
+        await new Promise<void>((r) => setTimeout(r, 4)); // un altro lavoratore può ancora aggiungere cartelle
+        continue;
+      }
+      inCorso += 1;
+      try {
+        await esamina(lavoro);
+      } finally {
+        inCorso -= 1;
+      }
+    }
+  };
+
+  // Annullamento e limite di tempo valgono anche se una lettura del disco non risponde più.
+  let sblocca: () => void = () => undefined;
+  const interruzione = new Promise<void>((resolve) => {
+    sblocca = resolve;
+  });
+  const timer = setTimeout(() => {
+    if (!interrotta) interrotta = "tempo";
+    sblocca();
+  }, limiteMs);
+  const alAnnullo = () => {
+    if (!interrotta) interrotta = "annullata";
+    sblocca();
+  };
+  opz.segnale?.addEventListener("abort", alAnnullo);
+  if (opz.segnale?.aborted) alAnnullo();
+
+  avvisa(true);
+  try {
+    await Promise.race([Promise.all(Array.from({ length: concorrenza }, lavoratore)), interruzione]);
+  } finally {
+    clearTimeout(timer);
+    opz.segnale?.removeEventListener("abort", alAnnullo);
+  }
+
+  if (risultati.length > maxRisultati) risultati.length = maxRisultati;
+  avanzamento.trovati = risultati.length;
+  avvisa(true);
+  return { risultati, interrotta, avanzamento };
+}
+
+/** Cerca ricorsivamente i file nella cartella che contengono tutte le parole chiave nel nome (aggiunge a `risultati`). */
 export async function cercaFileRicorsivo(
   dir: FileSystemDirectoryHandle,
   chiaveRicerca: string,
@@ -225,61 +396,7 @@ export async function cercaFileRicorsivo(
   maxProfondita = 8,
   maxRisultati = 60,
 ): Promise<FileTrovato[]> {
-  if (profondita > maxProfondita || risultati.length >= maxRisultati) {
-    return risultati;
-  }
-
-  const parole = normalizzaTesto(chiaveRicerca).split(/\s+/).filter(Boolean);
-
-  const entriesIter = dir as unknown as {
-    values: () => AsyncIterable<FileSystemHandle>;
-  };
-
-  if (!entriesIter.values) return risultati;
-
-  for await (const entry of entriesIter.values()) {
-    if (risultati.length >= maxRisultati) break;
-
-    const percorso = prefisso ? `${prefisso}/${entry.name}` : entry.name;
-
-    if (entry.kind === "file") {
-      if (!haEstensioneValida(entry.name)) continue;
-
-      const nomeNorm = normalizzaTesto(entry.name);
-      const corrisponde = parole.length === 0 || parole.every((p) => nomeNorm.includes(p));
-
-      if (corrisponde) {
-        try {
-          const fileHandle = entry as FileSystemFileHandle;
-          const file = await fileHandle.getFile();
-          risultati.push({
-            nome: entry.name,
-            percorsoRelativo: percorso,
-            dimensione: file.size,
-            dataModifica: new Date(file.lastModified),
-            tipo: file.type || "application/octet-stream",
-            handle: fileHandle,
-          });
-        } catch {
-          // Ignora file non leggibili
-        }
-      }
-    } else if (entry.kind === "directory") {
-      if (entry.name.startsWith(".") || entry.name.toLowerCase() === "node_modules") {
-        continue;
-      }
-      await cercaFileRicorsivo(
-        entry as FileSystemDirectoryHandle,
-        chiaveRicerca,
-        percorso,
-        risultati,
-        profondita + 1,
-        maxProfondita,
-        maxRisultati,
-      );
-    }
-  }
-
+  await scansionaCartella(dir, chiaveRicerca, { prefisso, risultati, profondita, maxProfondita, maxRisultati });
   return risultati;
 }
 

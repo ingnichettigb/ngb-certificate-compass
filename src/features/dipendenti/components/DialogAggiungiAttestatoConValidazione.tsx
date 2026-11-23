@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-11-06 17:15): Flusso unificato di caricamento attestato da archivio con validazione immediata tramite DettaglioAttestato.
  *   - Rev 2 (2026-11-22 18:30): Tipo di equivalenza_esito allineato ad Attestato (errore di compilazione).
+ *   - Rev 3 (2026-11-22): Passa avanzamento e annulla della ricerca alla maschera.
  * Descrizione:   Seleziona un PDF dalle cartelle collegate, crea il record in attesa e apre direttamente la maschera di validazione HR.
  */
 import { useState } from "react";
@@ -156,6 +157,8 @@ export function DialogAggiungiAttestatoConValidazione({
               chiave={r.chiave}
               setChiave={r.setChiave}
               inRicerca={r.inRicerca}
+              avanzamento={r.avanzamento}
+              onAnnulla={r.annulla}
               statoCartelle={r.statoCartelle}
               onCerca={r.cerca}
               onScegliCartella={r.scegliCartella}

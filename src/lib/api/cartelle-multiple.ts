@@ -16,11 +16,12 @@
  *   - Rev 11 (2026-10-30 21:00): recuperaFileDaPercorsoInTutte in sola lettura senza richiedere permessi.
  *   - Rev 12 (2026-11-01 12:20): Aggiunta gestione percorsi completi per cartelle secondarie (aggiornaPercorsoCartella).
  *   Rev 13 (2026-11-07): Diviso in file per responsabilità (cartelle-*.ts); questo file riesporta gli stessi nomi di prima.
+ *   Rev 14 (2026-11-22): Riesportata cercaInTutteLeCartelleConEsito (ricerca con avanzamento e annullamento).
  */
 
 export { verificaPermessi, apriFileLocale } from "./cartella-locale";
-export { elencoCartelle, aggiungiCartella, aggiornaPercorsoCartella, rimuoviCartella, rimuoviCartellaAggiuntiva, cercaInTutteLeCartelle } from "./cartelle-archivio";
-export type { CartellaCollegata } from "./cartelle-archivio";
+export { elencoCartelle, aggiungiCartella, aggiornaPercorsoCartella, rimuoviCartella, rimuoviCartellaAggiuntiva, cercaInTutteLeCartelle, cercaInTutteLeCartelleConEsito } from "./cartelle-archivio";
+export type { CartellaCollegata, EsitoRicercaCartelle, OpzioniRicercaCartelle } from "./cartelle-archivio";
 export { apriFileConControllo, apriDaPercorsoInTutte, recuperaFileDaPercorsoInTutte } from "./cartelle-apertura";
 export type { MotivoApertura, EsitoApertura } from "./cartelle-apertura";
 export { rinominaFileNelPercorso, duplicaFileNelPercorso } from "./cartelle-rinomina";

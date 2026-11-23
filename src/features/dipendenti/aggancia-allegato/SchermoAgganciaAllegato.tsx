@@ -5,8 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-26 15:40): Schermata a tutto schermo "Aggancia attestato come allegato".
  *   - Rev 2 (2026-10-26 16:45): z-index corretto a z-40 per apertura visibile dei menu a tendina.
- *   - Rev 3 (2026-11-22): Il corso si identifica per identificativo (tipoCorsoId) e il nome del file scelto arriva alla zona lavoratore
- *     per proporre il corso.
+ *   - Rev 3 (2026-11-22): Passa avanzamento e annulla della ricerca alla maschera.
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -21,7 +20,7 @@ import { MascheraRicerca } from "./MascheraRicerca";
 import { ElencoFileTrovati } from "./ElencoFileTrovati";
 import { ZonaLavoratore, type DatiAllegato } from "./ZonaLavoratore";
 
-const VUOTI: DatiAllegato = { tipo: "", tipoCorsoId: "", altro: "", dataCorso: "", scadenza: "" };
+const VUOTI: DatiAllegato = { tipo: "", altro: "", dataCorso: "", scadenza: "" };
 
 export function SchermoAgganciaAllegato({
   open,
@@ -100,13 +99,15 @@ export function SchermoAgganciaAllegato({
             chiave={r.chiave}
             setChiave={r.setChiave}
             inRicerca={r.inRicerca}
+            avanzamento={r.avanzamento}
+            onAnnulla={r.annulla}
             statoCartelle={r.statoCartelle}
             onCerca={r.cerca}
             onScegliCartella={r.scegliCartella}
             onAutorizza={r.autorizzaCartelle}
           />
           <ElencoFileTrovati risultati={r.risultati} chiave={r.chiave} selezionato={r.selezionato} onScegli={r.scegli} />
-          <ZonaLavoratore dipendente={dipendente} dati={dati} onCambia={setDati} nomeFile={r.selezionato?.nome ?? null} />
+          <ZonaLavoratore dipendente={dipendente} dati={dati} onCambia={setDati} />
         </aside>
         <section className="flex min-h-[60vh] flex-col overflow-hidden">
           {r.selezionato ? (

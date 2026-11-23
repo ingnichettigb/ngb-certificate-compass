@@ -10,6 +10,7 @@
  *   - Rev 5 (2026-10-25 21:45): Finestra a sé stante a tutto schermo (100vw x 100vh) senza vincoli modali stretti.
  *   - Rev 6 (2026-10-27 10:38): Aggiunto attributo title su nome file e percorso per visualizzazione per esteso al passaggio del mouse.
  *   - Rev 7 (2026-10-30 20:30): Ricerca e stato cartelle condivisi con useRicercaArchivio (avviso nessuna cartella / da autorizzare).
+ *   - Rev 8 (2026-11-22): Riga di avanzamento con pulsante Annulla durante la ricerca.
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -19,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { apriFileConControllo } from "@/lib/api/cartelle-multiple";
 import { type FileTrovato } from "@/lib/api/cartella-locale";
 import { AvvisoCartelle } from "@/features/cartelle/AvvisoCartelle";
+import { IndicatoreRicerca } from "@/features/cartelle/IndicatoreRicerca";
 import { avvisoPopupBloccato } from "@/features/cartelle/avvisi-cartella";
 import { useRicercaArchivio } from "../aggancia-allegato/useRicercaArchivio";
 import { type Attestato, type Dipendente } from "@/lib/api";
@@ -41,6 +43,8 @@ export function DialogCercaAgganciaAttestato({
     chiave,
     setChiave,
     inRicerca,
+    avanzamento,
+    annulla,
     risultati,
     statoCartelle,
     selezionato,
@@ -134,6 +138,7 @@ export function DialogCercaAgganciaAttestato({
               {inRicerca ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Cerca
             </Button>
           </div>
+          {inRicerca && <IndicatoreRicerca avanzamento={avanzamento} onAnnulla={annulla} />}
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span>Aggiungi rapidamente alla ricerca:</span>
             {[dipendente.nome, codice, dipendente.codice_fiscale].filter(Boolean).map((t) => (

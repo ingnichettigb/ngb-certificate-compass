@@ -6,9 +6,10 @@
  *   rev 1 — 07/11/2026 — Estratto da cartelle-multiple.ts: elenco, aggiunta e rimozione delle cartelle collegate e ricerca per nome. Nessun cambio di comportamento.
  *   rev 2 — 22/11/2026 — apriDb con apriDbConTabella: se il database creato il 27/10 ha ancora la vecchia tabella «cartelle», crea «cartelle_collegate»
  *            (prima: «One of the specified object stores was not found» e impossibile aggiungere cartelle).
+ *   rev 3 — 22/11/2026 — cercaInTutteLeCartelleConEsito: avanzamento, annullamento e limite di tempo; cercaInTutteLeCartelle resta com'era per chi la usa.
  */
-import { getCartellaArchivio, leggiPercorsoTestuale, cercaFileRicorsivo, verificaPermessi, notificaCartelleCambiate } from "./cartella-locale";
-import type { FileTrovato } from "./cartella-locale";
+import { getCartellaArchivio, leggiPercorsoTestuale, scansionaCartella, verificaPermessi, notificaCartelleCambiate } from "./cartella-locale";
+import type { AvanzamentoRicerca, FileTrovato, MotivoInterruzione } from "./cartella-locale";
 import { apriDbConTabella } from "./idb-tabella";
 
 const DB_NOME = "app_archivio_cartelle";
@@ -151,17 +152,48 @@ export async function rimuoviCartella(id: string): Promise<void> {
 
 export const rimuoviCartellaAggiuntiva = rimuoviCartella;
 
-export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovato[]> {
+export type OpzioniRicercaCartelle = {
+  segnale?: AbortSignal | undefined;
+  onAvanzamento?: ((a: AvanzamentoRicerca) => void) | undefined;
+};
+
+export type EsitoRicercaCartelle = {
+  risultati: FileTrovato[];
+  /** Diverso da null se la ricerca è stata fermata (annullata o troppo lunga): i risultati sono parziali. */
+  interrotta: MotivoInterruzione | null;
+};
+
+/** Cerca in tutte le cartelle collegate e autorizzate, riferendo l'avanzamento e rispettando annullamento e limite di tempo. */
+export async function cercaInTutteLeCartelleConEsito(chiave: string, opz: OpzioniRicercaCartelle = {}): Promise<EsitoRicercaCartelle> {
   const cartelle = await elencoCartelle();
   const risultati: FileTrovato[] = [];
+  const totale: AvanzamentoRicerca = { cartelle: 0, file: 0, trovati: 0 };
+  let interrotta = null as MotivoInterruzione | null;
 
   for (const c of cartelle) {
+    if (opz.segnale?.aborted) {
+      interrotta = "annullata";
+      break;
+    }
     if (!(await verificaPermessi(c.handle, false, "read"))) continue;
-    const trovati = await cercaFileRicorsivo(c.handle, chiave);
-    for (const t of trovati) {
-      risultati.push({ ...t, cartella: c.nome });
+    const esito = await scansionaCartella(c.handle, chiave, {
+      segnale: opz.segnale,
+      onAvanzamento: (a) =>
+        opz.onAvanzamento?.({ cartelle: totale.cartelle + a.cartelle, file: totale.file + a.file, trovati: risultati.length + a.trovati }),
+    });
+    totale.cartelle += esito.avanzamento.cartelle;
+    totale.file += esito.avanzamento.file;
+    for (const t of esito.risultati) risultati.push({ ...t, cartella: c.nome });
+    if (esito.interrotta) {
+      interrotta = esito.interrotta;
+      if (esito.interrotta === "annullata") break;
     }
   }
 
-  return risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
+  risultati.sort((a, b) => b.dataModifica.getTime() - a.dataModifica.getTime());
+  return { risultati, interrotta };
+}
+
+export async function cercaInTutteLeCartelle(chiave: string): Promise<FileTrovato[]> {
+  return (await cercaInTutteLeCartelleConEsito(chiave)).risultati;
 }

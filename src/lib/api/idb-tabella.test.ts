@@ -5,9 +5,10 @@
  * Revisioni:
  *   - Rev 1 (2026-11-22): Database già esistente senza la tabella (caso reale: «cartelle» → «cartelle_collegate»): si riapre con la
  *     versione successiva e la tabella viene creata; database nuovo o già a posto: nessun aggiornamento inutile.
+ *   - Rev 2 (2026-11-22): Se il browser non risponde entro 5 secondi l'apertura si ferma con un messaggio chiaro.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apriDbConTabella } from "./idb-tabella";
+import { apriDbConTabella, ATTESA_APERTURA_MS } from "./idb-tabella";
 
 type Iniziale = { versione: number; tabelle: string[] } | null;
 
@@ -86,5 +87,20 @@ describe("apriDbConTabella", () => {
       },
     });
     await expect(apriDbConTabella("x", "t")).rejects.toThrow(/Chiudi le altre schede/);
+  });
+
+  it("il browser non risponde (aggiornamento in coda dietro un'altra scheda): dopo 5 secondi errore chiaro, non attesa senza fine", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("indexedDB", { open: () => ({}) }); // la richiesta non riceve mai risposta
+      const esito = apriDbConTabella("x", "t").then(
+        () => "aperto",
+        (e: Error) => e.message,
+      );
+      await vi.advanceTimersByTimeAsync(ATTESA_APERTURA_MS + 1);
+      expect(await esito).toMatch(/non risponde/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
