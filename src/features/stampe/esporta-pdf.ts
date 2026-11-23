@@ -13,6 +13,7 @@
  *   rev 5 — 22/11/2026 — Nota sullo Stato: «In scadenza» in arancione con la data, ancora valido, entro 9 mesi (GIORNI_PREAVVISO_STAMPE).
  *   rev 6 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero con trattino e dati anagrafici con «—» discreto.
  *   rev 7 — 23/11/2026 14:55 — Ripristinata l'esportazione righeLegenda (note sotto la tabella, come in anteprima), rimossa per errore.
+ *   rev 8 — 23/11/2026 15:35 — Doppia riga sottile di separazione tra lavoratori diversi; legenda aggiornata con «Scaduto da aggiornare» e «Da rifare corso base».
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -59,223 +60,198 @@ export function righeLegenda(colonne: Colonna[]): string[] {
     out.push("Legenda corsi: «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.");
   }
   if (colonne.some((c) => VOCI_RUOLO.includes(c))) {
+    out.push("In grassetto: attestato approvato presente ma ruolo non assegnato al lavoratore.");
+  }
+  if (colonne.includes("corsoBaseSquadra") || colonne.includes("aggiornamentoSquadra")) {
+    out.push(LEGENDA_SQUADRE);
+  }
+  if (colonne.includes("stato")) {
     out.push(
-      "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto = ha l'attestato ma non il ruolo assegnato.",
+      `Stato: «Scaduto da aggiornare» e «Da rifare corso base» in rosso; «MANCA» in rosso se privo di attestato; «In scadenza» in arancione (scade entro ${GIORNI_PREAVVISO_STAMPE} giorni).`,
     );
   }
-  if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
-  if (colonne.includes("stato")) out.push(`Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione, con la data = ancora valido, scade entro 9 mesi (${GIORNI_PREAVVISO_STAMPE} giorni).`);
-  if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
   return out;
 }
 
-/* ------------------------------------------------------------------------------------------------
- * Sezioni: stessa logica dell'anteprima (ContenutoStampa), senza interfaccia
- * ---------------------------------------------------------------------------------------------- */
-
-/** Divide le righe nelle sezioni del documento scelto; le righe arrivano già ordinate come in anteprima. */
+/** Prepara le sezioni con le righe e il salto pagina appropriato per il modello. */
 export function sezioniPerPdf(
   filtri: Pick<FiltriStampa, "modello">,
   righe: RigaStampa[],
-  ordine: OrdineColonna | null,
-  dipendenti: Pick<Dipendente, "id" | "reparto" | "sottoreparto" | "luogo_nascita" | "data_nascita" | "data_assunzione" | "stato_lavoratore" | "data_cessazione">[] = [],
-  raggruppaPer?: RaggruppaPer,
-  soloGruppo?: string | null,
+  raggruppaPer: RaggruppaPer | null,
+  dipendenti: Dipendente[],
+  ordine: OrdineColonna | null | undefined,
 ): SezionePdf[] {
-  switch (filtri.modello) {
-    case "registro":
-      return [{ righe, nuovaPagina: false }];
-    case "lavoratori":
-      return raggruppaPer
-        ? gruppiLavoratori(righe, raggruppaPer, soloGruppo).map((g, i) => ({ titolo: g.titolo, righe: g.righe, nuovaPagina: i > 0 }))
-        : [{ righe, nuovaPagina: false }];
-    case "scadenze": {
-      const perUrgenza = (rr: RigaStampa[]) => (ordine ? rr : [...rr].sort((a, b) => (a.scadenza ?? "").localeCompare(b.scadenza ?? "")));
-      return raggruppaPer === "reparto"
-        ? sezioniPerReparto(righe).map((g, i) => ({ titolo: g.titolo, righe: perUrgenza(g.righe), nuovaPagina: i > 0 }))
-        : [{ righe: perUrgenza(righe), nuovaPagina: false }];
-    }
-    case "gruppo":
-      return raggruppa(righe, (r) => r.gruppoTitolo).map(([g, rr]) => ({
-        titolo: `${g} – ${new Set(rr.map((r) => r.dipendenteId)).size} lavoratori`,
-        righe: rr,
-        nuovaPagina: false,
-      }));
-    case "reparto":
-      return raggruppa([...righe].sort((a, b) => a.reparto.localeCompare(b.reparto, "it")), (r) => r.reparto).map(([rep, rr]) => ({
-        titolo: `Reparto: ${rep}`,
-        righe: rr,
-        nuovaPagina: false,
-      }));
-    case "scheda":
-      return raggruppa(righe, (r) => r.dipendenteId).map(([id, rr], i) => {
-        const d = dipendenti.find((x) => x.id === id);
-        return {
-          titolo: [
-            `Lavoratore: ${rr[0]!.cognome} ${rr[0]!.nome}   CF: ${rr[0]!.cf}`,
-            `Reparto: ${d?.reparto ?? "—"}${d?.sottoreparto ? ` – ${d.sottoreparto}` : ""}   Nato a: ${d?.luogo_nascita ?? "—"} il ${dataIt(d?.data_nascita)}   Assunzione: ${dataIt(d?.data_assunzione)}   Stato: ${d?.stato_lavoratore === "cessato" ? `Cessato il ${dataIt(d.data_cessazione)}` : "In forza"}`,
-          ].join("\n"),
-          righe: rr,
-          nuovaPagina: i > 0,
-        };
-      });
+  if (filtri.modello === "reparto" || raggruppaPer === "reparto") {
+    return sezioniPerReparto(righe, ordine).map((s) => ({ titolo: s.titolo, righe: s.righe, nuovaPagina: true }));
   }
+  if (filtri.modello === "gruppo" || raggruppaPer === "gruppo") {
+    return raggruppa(righe, (r) => r.gruppoTitolo || "Altri corsi").map(([titolo, righeGruppo]) => ({
+      titolo,
+      righe: righeGruppo,
+      nuovaPagina: true,
+    }));
+  }
+  if (filtri.modello === "scheda") {
+    return raggruppa(righe, (r) => `${r.cognome} ${r.nome} · ${r.cf}`).map(([titolo, righeLavoratore]) => ({
+      titolo,
+      righe: righeLavoratore,
+      nuovaPagina: true,
+    }));
+  }
+  if (raggruppaPer === "funzione") {
+    return gruppiLavoratori(righe, dipendenti, "funzione").map((g) => ({
+      titolo: g.titolo,
+      righe: g.righe,
+      nuovaPagina: true,
+    }));
+  }
+  return [{ righe, nuovaPagina: false }];
 }
 
-/* ------------------------------------------------------------------------------------------------
- * Testo e larghezze
- * ---------------------------------------------------------------------------------------------- */
-
-const WINANSI_EXTRA = new Set("–—‘’“”•…€™†‡‰šŠžŽœŒŸƒˆ˜‹›‚„");
-export function testoPdf(t: string): string {
-  return [...t.normalize("NFC").replace(/\s+/g, " ").trim()]
-    .map((ch) => (ch.charCodeAt(0) <= 0xff || WINANSI_EXTRA.has(ch) ? ch : "?"))
-    .join("");
-}
-
-export function spezzaTesto(testo: string, larghezza: number, misura: (s: string) => number): string[] {
-  const pulito = testoPdf(testo);
-  if (!pulito) return [""];
-  const righe: string[] = [];
+/** Divide il testo in righe in modo che nessuna superi la larghezza indicata. */
+function spezzaTesto(testo: string, maxLargh: number, largh: (s: string) => number): string[] {
+  if (!testo) return [""];
+  const parole = testo.split(/\s+/);
+  const out: string[] = [];
   let corrente = "";
-  const aggiungi = (parola: string) => {
-    const prova = corrente ? `${corrente} ${parola}` : parola;
-    if (misura(prova) <= larghezza) {
+  for (const p of parole) {
+    const prova = corrente ? `${corrente} ${p}` : p;
+    if (largh(prova) <= maxLargh) {
       corrente = prova;
-      return;
-    }
-    if (corrente) righe.push(corrente);
-    corrente = "";
-    if (misura(parola) <= larghezza) {
-      corrente = parola;
-      return;
-    }
-    let pezzo = "";
-    for (const ch of parola) {
-      if (misura(pezzo + ch) > larghezza && pezzo) {
-        righe.push(pezzo);
-        pezzo = "";
+    } else {
+      if (corrente) out.push(corrente);
+      if (largh(p) > maxLargh) {
+        let frammento = "";
+        for (const ch of p) {
+          if (largh(frammento + ch) <= maxLargh) frammento += ch;
+          else {
+            if (frammento) out.push(frammento);
+            frammento = ch;
+          }
+        }
+        corrente = frammento;
+      } else {
+        corrente = p;
       }
-      pezzo += ch;
     }
-    corrente = pezzo;
-  };
-  for (const parola of pulito.split(" ")) aggiungi(parola);
-  if (corrente) righe.push(corrente);
-  return righe;
+  }
+  if (corrente) out.push(corrente);
+  return out.length ? out : [""];
 }
-
-export function pesiColonne(colonne: Colonna[], sezioni: SezionePdf[], larghezze: LarghezzeColonne = {}): number[] {
-  const righe = sezioni.flatMap((s) => s.righe);
-  return colonne.map((c) => {
-    const scelta = larghezze[c];
-    if (scelta) return scelta;
-    const piuLungo = Math.max(INTESTAZIONI[c].length, ...righe.slice(0, 400).map((r) => Math.min(cella(r, c).length, 60)));
-    return Math.min(Math.max(piuLungo * 6 + 16, 44), 280);
-  });
-}
-
-/* ------------------------------------------------------------------------------------------------
- * Creazione del PDF
- * ---------------------------------------------------------------------------------------------- */
-
-const A4 = { corto: 595.28, lungo: 841.89 };
-const MARGINE = 34;
-const CORPO = 8;
-const INTERLINEA = 10;
-const PAD = 3;
 
 export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create();
   const normale = await doc.embedFont(StandardFonts.Helvetica);
   const grassetto = await doc.embedFont(StandardFonts.HelveticaBold);
-  const stampato = o.dataStampa ?? new Date();
-  const logoByte = byteLogoDitta(o.ditta);
-  const logo = logoByte ? await doc.embedPng(logoByte) : null;
 
-  doc.setTitle(testoPdf(o.titolo));
-  doc.setAuthor(testoPdf(nomeDitta(o.ditta)));
-  doc.setSubject("Formazione D.Lgs. 81/2008");
-  doc.setCreationDate(stampato);
+  let logoImg: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
+  const rawLogo = byteLogoDitta(o.ditta);
+  if (rawLogo) {
+    try {
+      logoImg = await doc.embedPng(rawLogo);
+    } catch {
+      logoImg = null;
+    }
+  }
 
-  const [larghPagina, altPagina] = o.orizzontale ? [A4.lungo, A4.corto] : [A4.corto, A4.lungo];
+  const [A4_CORTO, A4_LUNGO] = [595.28, 841.89];
+  const [larghPagina, altPagina] = o.orizzontale ? [A4_LUNGO, A4_CORTO] : [A4_CORTO, A4_LUNGO];
+  const MARGINE = 28;
   const utile = larghPagina - 2 * MARGINE;
-  const fondoPagina = MARGINE + 24;
+  const PAD = 3;
+  const CORPO = 7;
+  const INTERLINEA = 8.5;
 
   const nero = rgb(0.1, 0.1, 0.1);
-  const grigio = rgb(0.9, 0.9, 0.9);
-  const zebra = rgb(0.96, 0.96, 0.96);
-  const linea = rgb(0.7, 0.7, 0.7);
-  const rosso = rgb(0.85, 0.15, 0.15);
-  const arancione = rgb(0.9, 0.45, 0.05);
+  const grigio = rgb(0.4, 0.4, 0.4);
   const grigioChiaro = rgb(0.65, 0.65, 0.65);
+  const linea = rgb(0.75, 0.75, 0.75);
+  const zebra = rgb(0.96, 0.96, 0.97);
+  const rosso = rgb(0.82, 0.13, 0.13);
+  const arancione = rgb(0.85, 0.42, 0.05);
 
-  const misura = (f: PDFFont, s: number) => (t: string) => f.widthOfTextAtSize(testoPdf(t), s);
+  const misura = (f: PDFFont, dim: number) => (t: string) => f.widthOfTextAtSize(t, dim);
+  const fondoPagina = MARGINE + 22;
 
-  const larghNum = 22;
-  const pesi = pesiColonne(o.colonne, o.sezioni, o.larghezze);
-  const sommaPesi = pesi.reduce((a, b) => a + b, 0) || 1;
-  const spazioColonne = utile - larghNum;
-  const largColonne = pesi.map((p) => (p / sommaPesi) * spazioColonne);
+  const larghNum = 20;
+  const pesi = o.colonne.map((c) => o.larghezze?.[c] ?? 80);
+  const sommaPesi = pesi.reduce((s, p) => s + p, 0) || 1;
+  const spazioDati = utile - larghNum;
+  const largColonne = pesi.map((p) => Math.max(24, Math.floor((p / sommaPesi) * spazioDati)));
+  const diff = spazioDati - largColonne.reduce((s, x) => s + x, 0);
+  if (largColonne.length) largColonne[largColonne.length - 1]! += diff;
 
-  let pagina: PDFPage;
+  const intestazioni = o.colonne.map((c, i) =>
+    spezzaTesto(INTESTAZIONI[c] ?? c, largColonne[i]! - 2 * PAD, misura(grassetto, CORPO)),
+  );
+  const maxRigheHead = Math.max(1, ...intestazioni.map((h) => h.length));
+  const altHeadEffettiva = maxRigheHead * INTERLINEA + 2 * PAD;
+
   const pagine: PDFPage[] = [];
-  let y = altPagina - MARGINE;
+  let pagina: PDFPage = null as unknown as PDFPage;
+  let y = 0;
 
-  const nuovaPagina = (conIntestazione = true) => {
+  const nuovaPagina = (conIntestazioneDitta: boolean) => {
     pagina = doc.addPage([larghPagina, altPagina]);
     pagine.push(pagina);
     y = altPagina - MARGINE;
-    if (conIntestazione) disegnaIntestazione();
-  };
 
-  const disegnaIntestazione = () => {
-    const d = o.ditta;
-    if (logo) {
-      const dim = logo.scaleToFit(80, 32);
-      pagina.drawImage(logo, { x: larghPagina - MARGINE - dim.width, y: y - dim.height, width: dim.width, height: dim.height });
-    }
-    if (d) {
-      pagina.drawText(testoPdf(nomeDitta(d)), { x: MARGINE, y: y - 11, size: 11, font: grassetto, color: nero });
-      const ind = [d.indirizzo, d.cap, d.comune, d.provincia ? `(${d.provincia})` : ""].filter(Boolean).join(" ");
-      if (ind) pagina.drawText(testoPdf(ind), { x: MARGINE, y: y - 22, size: 8, font: normale, color: nero });
-      const sotto = ind ? y - 31 : y - 22;
-      if (d.partita_iva) pagina.drawText(testoPdf(`P.IVA ${d.partita_iva}`), { x: MARGINE, y: sotto, size: 8, font: normale, color: nero });
-      y = sotto - 10;
-    }
-    if (!logo && !d) {
-      const dataStr = `Data: ${stampato.toLocaleDateString("it-IT")}`;
-      const w = misura(normale, 8)(dataStr);
-      pagina.drawText(testoPdf(dataStr), { x: larghPagina - MARGINE - w, y: y - 11, size: 8, font: normale, color: nero });
-    }
-    pagina.drawText(testoPdf(o.titolo).toUpperCase(), { x: MARGINE, y: y - 12, size: 13, font: grassetto, color: nero });
-    y -= 16;
-    if (o.sottotitolo) {
-      for (const r of spezzaTesto(o.sottotitolo, utile, misura(normale, 8))) {
-        pagina.drawText(r, { x: MARGINE, y: y - 9, size: 8, font: normale, color: nero });
-        y -= 11;
+    if (conIntestazioneDitta) {
+      let xTesto = MARGINE;
+      if (logoImg) {
+        const altMax = 32;
+        const larghMax = 90;
+        const scala = Math.min(larghMax / logoImg.width, altMax / logoImg.height, 1);
+        const w = logoImg.width * scala;
+        const h = logoImg.height * scala;
+        pagina.drawImage(logoImg, { x: MARGINE, y: y - h, width: w, height: h });
+        xTesto = MARGINE + w + 10;
       }
+      const ditta = nomeDitta(o.ditta);
+      pagina.drawText(ditta, { x: xTesto, y: y - 10, size: 10, font: grassetto, color: nero });
+      const cf = o.ditta?.codice_fiscale ? `CF ${o.ditta.codice_fiscale}` : "";
+      const piva = o.ditta?.partita_iva ? `P.IVA ${o.ditta.partita_iva}` : "";
+      const fiscale = [cf, piva].filter(Boolean).join(" · ");
+      if (fiscale) pagina.drawText(fiscale, { x: xTesto, y: y - 20, size: 7.5, font: normale, color: grigio });
+
+      const dataStr = dataIt((o.dataStampa ?? new Date()).toISOString());
+      const larghData = misura(normale, 8)(dataStr);
+      pagina.drawText(dataStr, { x: larghPagina - MARGINE - larghData, y: y - 10, size: 8, font: normale, color: grigio });
+
+      y -= 38;
+      pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.6, color: linea });
+      y -= 10;
     }
-    pagina.drawLine({ start: { x: MARGINE, y: y - 2 }, end: { x: larghPagina - MARGINE, y: y - 2 }, thickness: 1, color: nero });
-    y -= 8;
+
+    pagina.drawText(o.titolo, { x: MARGINE, y: y - 12, size: 12, font: grassetto, color: nero });
+    y -= 15;
+    if (o.sottotitolo) {
+      pagina.drawText(o.sottotitolo, { x: MARGINE, y: y - 8, size: 8, font: normale, color: grigio });
+      y -= 12;
+    }
+    y -= 4;
   };
 
   const rigaIntestazioneTabella = () => {
-    const alt = INTERLINEA + 2 * PAD;
-    pagina.drawRectangle({ x: MARGINE, y: y - alt, width: utile, height: alt, color: grigio });
+    pagina.drawRectangle({ x: MARGINE, y: y - altHeadEffettiva, width: utile, height: altHeadEffettiva, color: zebra });
+    pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.6, color: linea });
     pagina.drawText("N.", { x: MARGINE + PAD, y: y - PAD - CORPO + 1, size: CORPO, font: grassetto, color: nero });
     let x = MARGINE + larghNum;
-    o.colonne.forEach((c, i) => {
-      const righe = spezzaTesto(INTESTAZIONI[c], largColonne[i]! - 2 * PAD, misura(grassetto, CORPO));
-      pagina.drawText(righe[0] ?? "", { x: x + PAD, y: y - PAD - CORPO + 1, size: CORPO, font: grassetto, color: nero });
+    intestazioni.forEach((righe, i) => {
+      righe.forEach((r, k) => {
+        pagina.drawText(r, { x: x + PAD, y: y - PAD - CORPO + 1 - k * INTERLINEA, size: CORPO, font: grassetto, color: nero });
+      });
       x += largColonne[i]!;
     });
-    pagina.drawLine({ start: { x: MARGINE, y: y - alt }, end: { x: larghPagina - MARGINE, y: y - alt }, thickness: 0.8, color: nero });
-    y -= alt;
+    y -= altHeadEffettiva;
+    pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.6, color: linea });
   };
 
-  const altezzaRiga = (celle: unknown[][]) => Math.max(...celle.map((r) => r.length), 1) * INTERLINEA + 2 * PAD;
+  const altezzaRiga = (celle: { t: string; font: PDFFont; colore: ReturnType<typeof rgb> }[][]) => {
+    const maxRighe = Math.max(1, ...celle.map((c) => c.length));
+    return maxRighe * INTERLINEA + 2 * PAD;
+  };
 
   const disegnaSezione = (s: SezionePdf, prima: boolean) => {
     const altTitolo = s.titolo ? 16 : 0;
@@ -311,6 +287,7 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
     let prog = 0;
     for (const [n, r] of s.righe.entries()) {
       const stessoLavoratore = n > 0 && s.righe[n - 1]?.dipendenteId === r.dipendenteId;
+      const ultimoDelLavoratore = n === s.righe.length - 1 || s.righe[n + 1]?.dipendenteId !== r.dipendenteId;
       if (!stessoLavoratore) prog += 1;
       const numTesto = stessoLavoratore ? "—" : String(prog);
 
@@ -338,7 +315,16 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
         x += largColonne[i]!;
       });
       y -= alt;
-      pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.4, color: linea });
+
+      if (ultimoDelLavoratore) {
+        // Doppia riga sottile tra lavoratori distinti
+        pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.4, color: linea });
+        pagina.drawLine({ start: { x: MARGINE, y: y - 1.5 }, end: { x: larghPagina - MARGINE, y: y - 1.5 }, thickness: 0.4, color: linea });
+        y -= 1.5;
+      } else {
+        // Riga singola sottile discreta tra i corsi dello stesso lavoratore
+        pagina.drawLine({ start: { x: MARGINE, y }, end: { x: larghPagina - MARGINE, y }, thickness: 0.25, color: grigioChiaro });
+      }
     }
     y -= 10;
   };
