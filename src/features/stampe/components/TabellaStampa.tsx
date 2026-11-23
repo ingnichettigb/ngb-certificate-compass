@@ -14,6 +14,7 @@
  *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
  *   rev 9 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero vuoto e colonne anagrafiche con «—».
  *   rev 10 — 23/11/2026 14:55 — Larghezze colonne allineate al tipo DimensioniTabella (px, percentuali, totale).
+ *   rev 12 — 23/11/2026 16:05 — Ripristinata la chiamata corretta a dimensioniTabella (la pagina stampe andava in errore) e l'etichetta «Sposta la colonna».
  *   rev 11 — 23/11/2026 15:35 — Sfondi alternati per lavoratore (stesso sfondo su tutte le righe dell'addetto) e doppia riga sottile divisoria tra lavoratori.
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
@@ -78,11 +79,11 @@ export function TabellaStampa({
   const dim = useMemo(
     () => {
       if (!personalizzata) return null;
-      const mis = creaMisura(tabRef.current);
-      const px = colonne.map((c) => larghezze?.[c] ?? adattaColonna(c, mis));
-      return dimensioniTabella(px, conSelettore);
+      const misura = creaMisura(tabRef.current);
+      return dimensioniTabella(colonne, larghezze ?? {}, (c) => adattaColonna(c, misura));
     },
-    [colonne, larghezze, personalizzata, misuraSu, conSelettore],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colonne, larghezze, personalizzata, misuraSu],
   );
 
   function larghezzeAttuali(): LarghezzeColonne {
@@ -190,7 +191,7 @@ export function TabellaStampa({
                         e.dataTransfer.effectAllowed = "move";
                       }}
                       title="Trascina per spostare la colonna"
-                      aria-label={`Trascina colonna ${INTESTAZIONI[c]}`}
+                      aria-label={`Sposta la colonna ${INTESTAZIONI[c]}`}
                       className="cursor-grab p-0.5 text-muted-foreground/60 hover:text-foreground active:cursor-grabbing print:hidden"
                     >
                       <GripVertical className="size-3" />

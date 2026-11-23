@@ -59,7 +59,7 @@ describe("preavviso di 9 mesi", () => {
     const rossi = dip("Rossi");
     const f = { ...trovaPredefinita("scadenze-tutte")!.filtri, finestra: "365" as const };
     const [r] = calcolaRighe([attConScadenza("a", rossi, "2026-10-01")], f, OGGI, [], null, [], [rossi]);
-    expect(cella(r!, "stato")).toBe("Scaduto");
+    expect(cella(r!, "stato")).toBe("Scaduto da aggiornare");
     expect(righeCella(r!, "stato")[0]).toMatchObject({ colore: "rosso" });
   });
 

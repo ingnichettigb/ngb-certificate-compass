@@ -183,6 +183,6 @@ describe("Preposto esonerato dall'aggiornamento per RSPP/ASPP valido", () => {
   it("senza RSPP valido la colonna Stato resta quella di sempre", () => {
     const riga = calcolaRighe([prep], FILTRI_INIZIALI, OGGI).find((x) => x.codice === "PRP-BAS-12")!;
     expect(riga.esenzioneRspp).toBeUndefined();
-    expect(cella(riga, "stato")).toBe("Scaduto");
+    expect(cella(riga, "stato")).toBe("Scaduto da aggiornare");
   });
 });
