@@ -226,6 +226,7 @@ export function calcolaRighe(
         stato,
         giorniAllaScadenza: giorni,
         inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
+        ...(!a.url_foto_fronte?.trim() ? { senzaFile: true } : {}),
         ...(a.esenzioneRspp ? { esenzioneRspp: a.esenzioneRspp } : {}),
         ...(senzaBase.has(`${d.id}|${g.chiave}`) && eAggiornamento(tc)
           ? { aggiornamentoSenzaBase: true, scadenza: null, stato: "senza_scadenza" as const, giorniAllaScadenza: null }

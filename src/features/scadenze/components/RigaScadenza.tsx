@@ -8,6 +8,7 @@
  * - Rev 3 (2026-11-06 12:00): Riga per lavoratore + corso con ciclo già calcolato; badge di conformità e ore parziali.
  * - Rev 4 (2026-11-06 14:00): Pulsante per espandere/comprimere la linea temporale del ciclo (LineaCicloFormativo).
  * - Rev 5 (2026-11-06 16:00): Nota «termine transitorio» quando la scadenza è portata alla data di taglio (Preposti).
+ * Rev 23/11/2026 12:05 — Avviso «Manca attestato» se l'attestato più recente non ha il file collegato.
  * Rev 12/11/2026 — Mostra il limite di recupero (Primo Soccorso) e «rifare il corso base» se decaduto per ritardo.
  */
 import { useState } from "react";
@@ -58,6 +59,9 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
         <td className="px-3 py-2 text-muted-foreground">{a.dipendenti?.reparto ?? "—"}</td>
         <td className="px-3 py-2">
           <div>{a.tipi_corso?.nome_corso ?? "—"}</div>
+          {!a.url_foto_fronte?.trim() && (
+            <div className="text-xs font-semibold text-destructive">Manca attestato</div>
+          )}
           {ciclo.dataAncora && (
             <div className="text-xs text-muted-foreground">
               Ancora Base: {formatData(ciclo.dataAncora)}

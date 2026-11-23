@@ -294,6 +294,14 @@ export function TabellaAttestati({
                           )
                         )}
 
+                        {!haFile && (
+                          <span
+                            className="inline-flex items-center rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+                            data-aiuto="Il corso è registrato ma il file dell'attestato non è collegato: non è possibile visualizzarlo"
+                          >
+                            Manca attestato
+                          </span>
+                        )}
                         {/* Modifica dati attestato (matita) */}
                         {dipendente && (
                           <button

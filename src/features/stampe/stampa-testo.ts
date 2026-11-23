@@ -9,6 +9,7 @@
  *   rev 4 — 09/11/2026 20:00 — Colonne dell'Organigramma (Squadra, Corso base, Aggiornamento); totale con lavoratori distinti.
  *   rev 5 — 14/11/2026 — Colonna Stato: per il Preposto esonerato dall'aggiornamento (RSPP/ASPP valido) si indica il motivo, non solo «Valido».
  *   rev 6 — 22/11/2026 — Scadenza e Stato: «Manca corso base» (testoManca) e «Aggiornamento svolto» per l'aggiornamento senza corso base.
+ *   rev 8 — 23/11/2026 12:05 — Stato: «– Manca attestato» se il corso è registrato senza file collegato.
  *   rev 7 — 22/11/2026 — Stato «In scadenza»: nella casella compare anche la data di scadenza («In scadenza – 15/03/2027»).
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
@@ -71,11 +72,10 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "numero": return r.numero || "—";
     case "data": return dataIt(r.dataCorso);
     case "scadenza": return r.stato === "manca" ? (r.testoManca ?? "Manca") : r.aggiornamentoSenzaBase ? "—" : dataIt(r.scadenza);
-    case "stato":
-      if (r.stato === "manca" && r.testoManca) return r.testoManca;
-      if (r.aggiornamentoSenzaBase) return TESTO_AGGIORNAMENTO_SVOLTO;
-      if (r.stato === "in_scadenza" && r.scadenza) return `${ETICHETTA_STATO.in_scadenza} – ${dataIt(r.scadenza)}`;
-      return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
+    case "stato": {
+      const base = testoStato(r);
+      return r.senzaFile && r.stato !== "manca" ? `${base} – Manca attestato` : base;
+    }
     case "categoria": return r.sottoreparto || "—";
     case "argomento": return r.gruppoTitolo || "—";
     case "giorni": return r.giorniAllaScadenza != null ? String(r.giorniAllaScadenza) : "—";
@@ -122,4 +122,11 @@ function cellaConMancanti(r: RigaStampa, c: Colonna): string {
 export function testoMancanti(r: RigaStampa): string {
   const t = r.mancanti.map((m) => ETICHETTA_CAMPO[m]).join(", ");
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : "—";
+}
+
+function testoStato(r: RigaStampa): string {
+  if (r.stato === "manca" && r.testoManca) return r.testoManca;
+  if (r.aggiornamentoSenzaBase) return TESTO_AGGIORNAMENTO_SVOLTO;
+  if (r.stato === "in_scadenza" && r.scadenza) return `${ETICHETTA_STATO.in_scadenza} – ${dataIt(r.scadenza)}`;
+  return r.esenzioneRspp ? `${ETICHETTA_STATO[r.stato]} – ${r.esenzioneRspp}` : ETICHETTA_STATO[r.stato];
 }

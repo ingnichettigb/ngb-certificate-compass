@@ -26,7 +26,7 @@ function dip(id: string): Dipendente {
 function attConScadenza(id: string, d: Dipendente, scad: string): Attestato {
   return {
     id, dipendente_id: d.id, codice_fiscale: d.codice_fiscale, tipo_corso_id: `t-${id}`, data_corso: "2024-01-10", data_scadenza_calcolata: scad,
-    ore_dichiarate: 4, stato_validazione: "Approvato", created_at: "2024-01-10",
+    ore_dichiarate: 4, url_foto_fronte: "x.pdf", stato_validazione: "Approvato", created_at: "2024-01-10",
     dipendenti: { id: d.id, cognome: d.cognome, nome: d.nome, codice_fiscale: d.codice_fiscale, reparto: d.reparto, sottoreparto: null, classe_concorso: d.classe_concorso, stato_lavoratore: d.stato_lavoratore },
     // senza durata: il motore dei cicli lascia la data salvata
     tipi_corso: { id: `t-${id}`, nome_corso: "Corso X", codice: `ALT-${id}`, macro_categoria: "Altro", livello_specifico: "Base", durata_validita_anni: null, ore_aggiornamento: null, ore_minime_legge: 4 },

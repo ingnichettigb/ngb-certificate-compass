@@ -25,7 +25,7 @@ function dip(id: string, reparto = "ATA"): Dipendente {
 function att(id: string, d: Dipendente, codice: string, macro: string, livello: string, data: string, scad: string | null, ore = 3): Attestato {
   return {
     id, dipendente_id: d.id, codice_fiscale: d.codice_fiscale, tipo_corso_id: `t-${codice}`, data_corso: data, data_scadenza_calcolata: scad,
-    ore_dichiarate: ore, stato_validazione: "Approvato", created_at: data,
+    ore_dichiarate: ore, url_foto_fronte: "x.pdf", stato_validazione: "Approvato", created_at: data,
     dipendenti: { id: d.id, cognome: d.cognome, nome: d.nome, codice_fiscale: d.codice_fiscale, reparto: d.reparto, sottoreparto: null, classe_concorso: d.classe_concorso, stato_lavoratore: d.stato_lavoratore },
     tipi_corso: { id: `t-${codice}`, nome_corso: codice, codice, macro_categoria: macro, livello_specifico: livello, durata_validita_anni: 2, ore_aggiornamento: 3, ore_minime_legge: ore },
   } as unknown as Attestato;

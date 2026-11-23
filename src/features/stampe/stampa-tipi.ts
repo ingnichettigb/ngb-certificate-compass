@@ -168,6 +168,8 @@ export type RigaStampa = {
   esenzioneRspp?: string;
   /** Riga «Manca» del corso base: testo mostrato in Scadenza e Stato al posto di «Manca» (es. «Manca corso base»). */
   testoManca?: string;
+  /** Corso registrato ma senza file dell'attestato collegato: in Stato compare «Manca attestato». */
+  senzaFile?: boolean;
   /** Aggiornamento svolto da chi non ha il corso base: non è «Scaduto», Scadenza «—» e Stato «Aggiornamento svolto». */
   aggiornamentoSenzaBase?: boolean;
   /** Solo Organigramma: la squadra di questa riga (una riga per lavoratore e per squadra) e le due celle di formazione. */
