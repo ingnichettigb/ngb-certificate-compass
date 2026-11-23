@@ -14,6 +14,7 @@
  *                        nuove proprietà la tabella si comporta e si stampa come prima.
  *   rev 8 — 09/11/2026 20:00 — Testo, colore e grassetto delle celle da righeCella (lo stesso del PDF); celle su due righe
  *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
+ *   rev 9 — 23/11/2026 14:10 — Soppressione delle colonne anagrafiche (lavoratore, CF, reparto) per righe successive dello stesso lavoratore.
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
@@ -31,34 +32,29 @@ type Props = {
   righe: RigaStampa[];
   colonne: Colonna[];
   onRimuoviColonna?: ((c: Colonna) => void) | undefined;
-  /** Ordinamento attivo (se c'è) e gestore del clic sull'intestazione. */
   ordine?: OrdineColonna | null | undefined;
   onOrdina?: ((c: Colonna) => void) | undefined;
-  /** Larghezze scelte dall'utente (px). Senza nessuna colonna ridimensionata la tabella resta a larghezza automatica. */
   larghezze?: LarghezzeColonne | undefined;
-  /** Se presente compaiono le maniglie sul bordo delle intestazioni. */
   onLarghezze?: ((l: LarghezzeColonne) => void) | undefined;
-  /** Righe di tutto il documento: la colonna si adatta al contenuto più lungo anche se sta in un'altra sezione. */
   righeMisura?: RigaStampa[] | undefined;
-  /** Se presenti (con onAlternaColonna) compare il «+» in fondo all'intestazione. */
   gruppiColonne?: GruppoColonne[] | undefined;
   onAlternaColonna?: ((c: Colonna) => void) | undefined;
-  /** Se presente compare la maniglia per trascinare una colonna in un'altra posizione: (colonna presa, colonna sopra cui è lasciata). */
   onSposta?: ((da: Colonna, a: Colonna) => void) | undefined;
-  /** Frecce «sposta a sinistra / a destra» nel selettore colonne (utili dove il trascinamento è scomodo). */
   onSpostaDi?: ((c: Colonna, passo: -1 | 1) => void) | undefined;
 };
 
 const TIPO_TRASCINAMENTO = "application/x-colonna-stampa";
 
-/** Stesse regole di neretto della cella disegnata sotto: servono a misurare il testo come verrà mostrato. */
+const COLONNE_ANAGRAFICHE_DIPENDENTE: ReadonlySet<Colonna> = new Set([
+  "lavoratore", "cf", "reparto", "mansione", "nascita", "luogoNascita", "dataNascita", "assunzione",
+]);
+
 function inGrassetto(r: RigaStampa, c: Colonna): boolean {
   return righeCella(r, c).some((v) => v.grassetto);
 }
 
 const variabili = (px: number, pct: number) => ({ "--w": `${px}px`, "--p": `${pct}%` }) as CSSProperties;
 
-/** Classi di colore e grassetto di una riga di testo (le stesse scelte vengono usate nel PDF). */
 function classiTesto(t: RigaVisuale): string {
   return [
     t.colore === "rosso" ? "text-destructive" : t.colore === "arancione" ? "text-orange-600 dark:text-orange-400" : "",
@@ -79,7 +75,6 @@ export function TabellaStampa({
   const adattaColonna = (c: Colonna, misura = creaMisura(tabRef.current)) =>
     larghezzaAdattata(INTESTAZIONI[c], misuraSu.map((r) => ({ testo: cella(r, c), grassetto: inGrassetto(r, c) })), misura);
 
-  // Larghezze fisse solo se qualcuna è stata scelta; le colonne senza larghezza propria si adattano al contenuto.
   const dim = useMemo(
     () => {
       if (!personalizzata) return null;
@@ -90,7 +85,6 @@ export function TabellaStampa({
     [personalizzata, colonne, larghezze, misuraSu],
   );
 
-  /** Fotografia delle larghezze di adesso: passando alle larghezze fisse nessuna colonna deve spostarsi. */
   function larghezzeAttuali(): LarghezzeColonne {
     const base: LarghezzeColonne = { ...(larghezze ?? {}) };
     tabRef.current?.querySelectorAll<HTMLElement>("thead th[data-col]").forEach((th) => {
@@ -119,34 +113,49 @@ export function TabellaStampa({
 
   function adatta(c: Colonna) {
     if (!onLarghezze) return;
-    onLarghezze({ ...larghezzeAttuali(), [c]: adattaColonna(c) });
+    const base = larghezzeAttuali();
+    onLarghezze({ ...base, [c]: adattaColonna(c) });
   }
+
+  // Mappa dei numeri progressivi per lavoratore distinto
+  const progressivoPerRiga = useMemo(() => {
+    let prog = 0;
+    return righe.map((r, i) => {
+      const stessoDelPrecedente = i > 0 && righe[i - 1]?.dipendenteId === r.dipendenteId;
+      if (!stessoDelPrecedente) prog += 1;
+      return stessoDelPrecedente ? null : prog;
+    });
+  }, [righe]);
 
   return (
     <table
       ref={tabRef}
-      className={`border-collapse text-[11px] [-webkit-print-color-adjust:exact] [print-color-adjust:exact] ${dim ? "w-[var(--tw)] print:w-full" : "w-full"}`}
-      style={dim ? ({ tableLayout: "fixed", "--tw": `${dim.totale + (conSelettore ? 32 : 0)}px` } as CSSProperties) : undefined}
+      className="w-full border-collapse border border-foreground/60 text-xs"
+      style={dim ? { width: `${dim.totalePx}px`, maxWidth: `${dim.totalePx}px` } : undefined}
     >
-      {dim && (
-        <colgroup>
-          <col className="w-[var(--w)] print:w-[var(--p)]" style={variabili(LARGHEZZA_NUMERO, dim.percentuali.numero)} />
-          {colonne.map((c, i) => (
-            <col key={c} className="w-[var(--w)] print:w-[var(--p)]" style={variabili(dim.px[i]!, dim.percentuali.colonne[i]!)} />
-          ))}
-          {conSelettore && <col className="w-8 print:hidden" />}
-        </colgroup>
-      )}
-      <thead className="table-header-group sticky top-0 z-10 bg-background print:static">
+      <colgroup>
+        <col style={{ width: `${LARGHEZZA_NUMERO}px` }} />
+        {colonne.map((c) => {
+          const w = dim?.colonne[c];
+          return (
+            <col
+              key={c}
+              style={w ? variabili(w.px, w.pct) : undefined}
+              className={w ? "w-[var(--w)] [max-width:var(--w)]" : undefined}
+            />
+          );
+        })}
+        {conSelettore && <col className="w-8 print:hidden" />}
+      </colgroup>
+      <thead>
         <tr>
-          <th className="sticky top-0 z-10 w-8 border border-foreground/60 bg-muted px-1.5 py-1 text-center font-semibold print:static">
-            N°
+          <th className="sticky top-0 z-10 w-9 border border-foreground/60 bg-muted px-1 py-1 text-center font-semibold print:static">
+            N.
           </th>
           {colonne.map((c) => (
             <th
               key={c}
               data-col={c}
-              aria-sort={ordine?.colonna === c ? (ordine.direzione === "asc" ? "ascending" : "descending") : undefined}
               className={`sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static ${sopra === c ? "ring-2 ring-inset ring-primary" : ""}`}
               {...(onSposta
                 ? {
@@ -188,13 +197,6 @@ export function TabellaStampa({
                   <button
                     type="button"
                     onClick={() => onOrdina(c)}
-                    title={
-                      ordine?.colonna === c
-                        ? ordine.direzione === "asc"
-                          ? `Ordinata dalla A alla Z: clic per Z→A`
-                          : `Ordinata dalla Z alla A: clic per togliere l'ordine`
-                        : `Ordina «${INTESTAZIONI[c]}» dalla A alla Z`
-                    }
                     className="flex items-center gap-1 text-left font-semibold hover:text-primary print:pointer-events-none"
                   >
                     <span>{INTESTAZIONI[c]}</span>
@@ -243,24 +245,37 @@ export function TabellaStampa({
         </tr>
       </thead>
       <tbody>
-        {righe.map((r, i) => (
-          <tr key={r.id} className="odd:bg-muted/30" style={{ breakInside: "avoid" }}>
-            <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono">{i + 1}</td>
-            {colonne.map((c) => {
-              const righeTesto = righeCella(r, c);
-              const unica = righeTesto.length === 1 ? righeTesto[0]! : null;
-              return (
-                <td
-                  key={c}
-                  className={`border border-foreground/40 px-1.5 py-0.5 ${unica ? classiTesto(unica) : ""}`}
-                >
-                  {unica ? unica.testo : righeTesto.map((t, k) => <div key={k} className={classiTesto(t)}>{t.testo}</div>)}
-                </td>
-              );
-            })}
-            {conSelettore && <td aria-hidden="true" className="print:hidden" />}
-          </tr>
-        ))}
+        {righe.map((r, i) => {
+          const stessoLavoratore = i > 0 && righe[i - 1]?.dipendenteId === r.dipendenteId;
+          const num = progressivoPerRiga[i];
+          return (
+            <tr key={r.id} className="odd:bg-muted/30" style={{ breakInside: "avoid" }}>
+              <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono">
+                {num != null ? num : ""}
+              </td>
+              {colonne.map((c) => {
+                if (stessoLavoratore && COLONNE_ANAGRAFICHE_DIPENDENTE.has(c)) {
+                  return (
+                    <td key={c} className="border border-foreground/40 px-1.5 py-0.5 text-muted-foreground/40">
+                      —
+                    </td>
+                  );
+                }
+                const righeTesto = righeCella(r, c);
+                const unica = righeTesto.length === 1 ? righeTesto[0]! : null;
+                return (
+                  <td
+                    key={c}
+                    className={`border border-foreground/40 px-1.5 py-0.5 ${unica ? classiTesto(unica) : ""}`}
+                  >
+                    {unica ? unica.testo : righeTesto.map((t, k) => <div key={k} className={classiTesto(t)}>{t.testo}</div>)}
+                  </td>
+                );
+              })}
+              {conSelettore && <td aria-hidden="true" className="print:hidden" />}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
