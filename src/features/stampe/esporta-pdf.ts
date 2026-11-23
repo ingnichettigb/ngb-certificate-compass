@@ -11,6 +11,7 @@
  *   rev 3 — 09/11/2026 21:55 — Legenda coerente con i colori: «in grassetto» (non più «sull'anteprima») e riga «Stato» con rosso/arancione.
  *   rev 4 — 12/11/2026 06:53 — Logo dall'anagrafica e copyright su ogni pagina PDF.
  *   rev 5 — 22/11/2026 — Nota sullo Stato: «In scadenza» in arancione con la data, ancora valido, entro 9 mesi (GIORNI_PREAVVISO_STAMPE).
+ *   rev 6 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero con trattino e dati anagrafici con «—» discreto.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -42,6 +43,10 @@ export type OpzioniPdf = {
   legenda?: string[];
   dataStampa?: Date;
 };
+
+const COLONNE_ANAGRAFICHE_PDF: ReadonlySet<Colonna> = new Set([
+  "lavoratore", "cf", "reparto", "mansione", "nascita", "luogoNascita", "dataNascita", "assunzione",
+]);
 
 /* ------------------------------------------------------------------------------------------------
  * Sezioni: stessa logica dell'anteprima (ContenutoStampa), senza interfaccia
@@ -84,45 +89,22 @@ export function sezioniPerPdf(
     case "scheda":
       return raggruppa(righe, (r) => r.dipendenteId).map(([id, rr], i) => {
         const d = dipendenti.find((x) => x.id === id);
-        const p = rr[0]!;
-        const parti = [
-          `${p.cognome} ${p.nome}`,
-          `CF ${p.cf || "—"}`,
-          `Reparto ${d?.reparto ?? "—"}${d?.sottoreparto ? ` – ${d.sottoreparto}` : ""}`,
-          `Nato a ${d?.luogo_nascita ?? "—"} il ${dataIt(d?.data_nascita)}`,
-          `Assunzione ${dataIt(d?.data_assunzione)}`,
-          d?.stato_lavoratore === "cessato" ? `Cessato il ${dataIt(d.data_cessazione)}` : "In forza",
-        ];
-        return { titolo: parti.join(" · "), righe: rr, nuovaPagina: i > 0 };
+        return {
+          titolo: [
+            `Lavoratore: ${rr[0]!.cognome} ${rr[0]!.nome}   CF: ${rr[0]!.cf}`,
+            `Reparto: ${d?.reparto ?? "—"}${d?.sottoreparto ? ` – ${d.sottoreparto}` : ""}   Nato a: ${d?.luogo_nascita ?? "—"} il ${dataIt(d?.data_nascita)}   Assunzione: ${dataIt(d?.data_assunzione)}   Stato: ${d?.stato_lavoratore === "cessato" ? `Cessato il ${dataIt(d.data_cessazione)}` : "In forza"}`,
+          ].join("\n"),
+          righe: rr,
+          nuovaPagina: i > 0,
+        };
       });
   }
-}
-
-const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
-const VOCI_RUOLO: Colonna[] = ["preposto", "antincendio", "primoSoccorso", "defibrillatore"];
-
-/** Le stesse note sotto la tabella dell'anteprima, come testo semplice. */
-export function righeLegenda(colonne: Colonna[]): string[] {
-  const out: string[] = [];
-  if (colonne.some((c) => VOCI_CORSO.includes(c))) {
-    out.push("Legenda corsi: «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.");
-  }
-  if (colonne.some((c) => VOCI_RUOLO.includes(c))) {
-    out.push(
-      "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto = ha l'attestato ma non il ruolo assegnato.",
-    );
-  }
-  if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
-  if (colonne.includes("stato")) out.push(`Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione, con la data = ancora valido, scade entro 9 mesi (${GIORNI_PREAVVISO_STAMPE} giorni).`);
-  if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
-  return out;
 }
 
 /* ------------------------------------------------------------------------------------------------
  * Testo e larghezze
  * ---------------------------------------------------------------------------------------------- */
 
-/** Caratteri fuori dal set dei font standard del PDF (WinAnsi) diventano «?», così non si rompe la generazione. */
 const WINANSI_EXTRA = new Set("–—‘’“”•…€™†‡‰šŠžŽœŒŸƒˆ˜‹›‚„");
 export function testoPdf(t: string): string {
   return [...t.normalize("NFC").replace(/\s+/g, " ").trim()]
@@ -130,7 +112,6 @@ export function testoPdf(t: string): string {
     .join("");
 }
 
-/** Spezza il testo in righe che stanno nella larghezza data (va a capo sugli spazi, e dentro le parole troppo lunghe). */
 export function spezzaTesto(testo: string, larghezza: number, misura: (s: string) => number): string[] {
   const pulito = testoPdf(testo);
   if (!pulito) return [""];
@@ -163,7 +144,6 @@ export function spezzaTesto(testo: string, larghezza: number, misura: (s: string
   return righe;
 }
 
-/** Peso di ogni colonna: la larghezza scelta in anteprima, altrimenti una stima dal contenuto più lungo (con tetto). */
 export function pesiColonne(colonne: Colonna[], sezioni: SezionePdf[], larghezze: LarghezzeColonne = {}): number[] {
   const righe = sezioni.flatMap((s) => s.righe);
   return colonne.map((c) => {
@@ -198,85 +178,79 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   doc.setSubject("Formazione D.Lgs. 81/2008");
   doc.setCreationDate(stampato);
 
-  const larghPagina = o.orizzontale ? A4.lungo : A4.corto;
-  const altPagina = o.orizzontale ? A4.corto : A4.lungo;
+  const [larghPagina, altPagina] = o.orizzontale ? [A4.lungo, A4.corto] : [A4.corto, A4.lungo];
   const utile = larghPagina - 2 * MARGINE;
-  const fondoPagina = MARGINE + 14; // spazio per «Pagina X di Y»
+  const fondoPagina = MARGINE + 24;
 
-  const pesi = pesiColonne(o.colonne, o.sezioni, o.larghezze);
-  const somma = pesi.reduce((a, b) => a + b, 0) || 1;
-  const largColonne = pesi.map((p) => (p / somma) * utile);
-
-  const misura = (f: PDFFont, dim: number) => (s: string) => f.widthOfTextAtSize(s, dim);
+  const nero = rgb(0.1, 0.1, 0.1);
   const grigio = rgb(0.9, 0.9, 0.9);
-  const linea = rgb(0.75, 0.75, 0.75);
-  const nero = rgb(0, 0, 0);
-  // Stessi colori dell'anteprima: rosso = text-destructive, arancione = avviso «In scadenza», righe alternate = odd:bg-muted/30.
-  const rosso = rgb(0.78, 0.1, 0.1);
-  const arancione = rgb(0.85, 0.42, 0.02);
-  const zebra = rgb(0.955, 0.955, 0.955);
+  const zebra = rgb(0.96, 0.96, 0.96);
+  const linea = rgb(0.7, 0.7, 0.7);
+  const rosso = rgb(0.85, 0.15, 0.15);
+  const arancione = rgb(0.9, 0.45, 0.05);
+  const grigioChiaro = rgb(0.65, 0.65, 0.65);
+
+  const misura = (f: PDFFont, s: number) => (t: string) => f.widthOfTextAtSize(testoPdf(t), s);
+
+  const larghNum = 22;
+  const pesi = pesiColonne(o.colonne, o.sezioni, o.larghezze);
+  const sommaPesi = pesi.reduce((a, b) => a + b, 0) || 1;
+  const spazioColonne = utile - larghNum;
+  const largColonne = pesi.map((p) => (p / sommaPesi) * spazioColonne);
 
   let pagina: PDFPage;
-  let y = 0;
   const pagine: PDFPage[] = [];
+  let y = altPagina - MARGINE;
 
-  const nuovaPagina = (primaIntestazione: boolean) => {
+  const nuovaPagina = (conIntestazione = true) => {
     pagina = doc.addPage([larghPagina, altPagina]);
     pagine.push(pagina);
     y = altPagina - MARGINE;
-    if (primaIntestazione) intestazione();
-    else {
-      pagina.drawText(testoPdf(o.titolo), { x: MARGINE, y: y - 9, size: 9, font: grassetto, color: nero });
-      y -= 18;
-    }
+    if (conIntestazione) disegnaIntestazione();
   };
 
-  const intestazione = () => {
+  const disegnaIntestazione = () => {
     const d = o.ditta;
     if (logo) {
-      const dimensioni = logo.scaleToFit(120, 40);
-      pagina.drawImage(logo, { x: MARGINE, y: y - dimensioni.height, ...dimensioni });
-      y -= dimensioni.height + 8;
+      const dim = logo.scaleToFit(80, 32);
+      pagina.drawImage(logo, { x: larghPagina - MARGINE - dim.width, y: y - dim.height, width: dim.width, height: dim.height });
     }
-    const ind = [d?.indirizzo, [d?.cap, d?.comune].filter(Boolean).join(" "), d?.provincia && `(${d.provincia})`].filter(Boolean).join(" ");
-    pagina.drawText(testoPdf(nomeDitta(d)), { x: MARGINE, y: y - 11, size: 11, font: grassetto, color: nero });
-    pagina.drawText(testoPdf(ind), { x: MARGINE, y: y - 22, size: 8, font: normale, color: nero });
-    let sotto = y - 22;
-    if (d?.partita_iva) {
-      sotto -= 10;
-      pagina.drawText(testoPdf(`P.IVA ${d.partita_iva}`), { x: MARGINE, y: sotto, size: 8, font: normale, color: nero });
+    if (d) {
+      pagina.drawText(testoPdf(nomeDitta(d)), { x: MARGINE, y: y - 11, size: 11, font: grassetto, color: nero });
+      const ind = [d.indirizzo, d.cap, d.comune, d.provincia ? `(${d.provincia})` : ""].filter(Boolean).join(" ");
+      if (ind) pagina.drawText(testoPdf(ind), { x: MARGINE, y: y - 22, size: 8, font: normale, color: nero });
+      const sotto = ind ? y - 31 : y - 22;
+      if (d.partita_iva) pagina.drawText(testoPdf(`P.IVA ${d.partita_iva}`), { x: MARGINE, y: sotto, size: 8, font: normale, color: nero });
+      y = sotto - 10;
     }
-    const destra = [
-      "Formazione D.Lgs. 81/2008 – Accordo Stato-Regioni",
-      `Stampato il ${stampato.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}`,
-    ];
-    destra.forEach((t, i) => {
-      const w = normale.widthOfTextAtSize(testoPdf(t), 8);
-      pagina.drawText(testoPdf(t), { x: larghPagina - MARGINE - w, y: y - 11 - i * 10, size: 8, font: normale, color: nero });
-    });
-    y = sotto - 10;
+    if (!logo && !d) {
+      const dataStr = `Data: ${stampato.toLocaleDateString("it-IT")}`;
+      const w = misura(normale, 8)(dataStr);
+      pagina.drawText(testoPdf(dataStr), { x: larghPagina - MARGINE - w, y: y - 11, size: 8, font: normale, color: nero });
+    }
     pagina.drawText(testoPdf(o.titolo).toUpperCase(), { x: MARGINE, y: y - 12, size: 13, font: grassetto, color: nero });
-    y -= 17;
+    y -= 16;
     if (o.sottotitolo) {
       for (const r of spezzaTesto(o.sottotitolo, utile, misura(normale, 8))) {
         pagina.drawText(r, { x: MARGINE, y: y - 9, size: 8, font: normale, color: nero });
-        y -= 10;
+        y -= 11;
       }
     }
-    pagina.drawLine({ start: { x: MARGINE, y: y - 3 }, end: { x: larghPagina - MARGINE, y: y - 3 }, thickness: 1.2, color: nero });
-    y -= 12;
+    pagina.drawLine({ start: { x: MARGINE, y: y - 2 }, end: { x: larghPagina - MARGINE, y: y - 2 }, thickness: 1, color: nero });
+    y -= 8;
   };
 
   const rigaIntestazioneTabella = () => {
     const alt = INTERLINEA + 2 * PAD;
     pagina.drawRectangle({ x: MARGINE, y: y - alt, width: utile, height: alt, color: grigio });
-    let x = MARGINE;
+    pagina.drawText("N.", { x: MARGINE + PAD, y: y - PAD - CORPO + 1, size: CORPO, font: grassetto, color: nero });
+    let x = MARGINE + larghNum;
     o.colonne.forEach((c, i) => {
-      const w = largColonne[i]!;
-      const righe = spezzaTesto(INTESTAZIONI[c], w - 2 * PAD, misura(grassetto, CORPO));
+      const righe = spezzaTesto(INTESTAZIONI[c], largColonne[i]! - 2 * PAD, misura(grassetto, CORPO));
       pagina.drawText(righe[0] ?? "", { x: x + PAD, y: y - PAD - CORPO + 1, size: CORPO, font: grassetto, color: nero });
-      x += w;
+      x += largColonne[i]!;
     });
+    pagina.drawLine({ start: { x: MARGINE, y: y - alt }, end: { x: larghPagina - MARGINE, y: y - alt }, thickness: 0.8, color: nero });
     y -= alt;
   };
 
@@ -285,18 +259,22 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
   const disegnaSezione = (s: SezionePdf, prima: boolean) => {
     const altTitolo = s.titolo ? 16 : 0;
     const altHead = INTERLINEA + 2 * PAD;
-    // Ogni cella = righe di testo già spezzate alla larghezza della colonna, ciascuna con il proprio font e colore.
-    const celleDi = (r: RigaStampa) =>
-      o.colonne.map((c, i) =>
-        righeCella(r, c).flatMap((v) =>
+
+    const celleDi = (r: RigaStampa, stessoLavoratore: boolean) =>
+      o.colonne.map((c, i) => {
+        if (stessoLavoratore && COLONNE_ANAGRAFICHE_PDF.has(c)) {
+          return [{ t: "—", font: normale, colore: grigioChiaro }];
+        }
+        return righeCella(r, c).flatMap((v) =>
           spezzaTesto(v.testo, largColonne[i]! - 2 * PAD, misura(v.grassetto ? grassetto : normale, CORPO)).map((t) => ({
             t,
             font: v.grassetto ? grassetto : normale,
             colore: v.colore === "rosso" ? rosso : v.colore === "arancione" ? arancione : nero,
           })),
-        ),
-      );
-    const primaRiga = s.righe[0] ? altezzaRiga(celleDi(s.righe[0])) : 0;
+        );
+      });
+
+    const primaRiga = s.righe[0] ? altezzaRiga(celleDi(s.righe[0], false)) : 0;
 
     if (prima || s.nuovaPagina || y - altTitolo - altHead - primaRiga < fondoPagina) nuovaPagina(prima && pagine.length === 0);
     if (s.titolo) {
@@ -308,15 +286,30 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
       y -= 4;
     }
     rigaIntestazioneTabella();
+
+    let prog = 0;
     for (const [n, r] of s.righe.entries()) {
-      const celle = celleDi(r);
+      const stessoLavoratore = n > 0 && s.righe[n - 1]?.dipendenteId === r.dipendenteId;
+      if (!stessoLavoratore) prog += 1;
+      const numTesto = stessoLavoratore ? "—" : String(prog);
+
+      const celle = celleDi(r, stessoLavoratore);
       const alt = altezzaRiga(celle);
       if (y - alt < fondoPagina) {
         nuovaPagina(false);
         rigaIntestazioneTabella();
       }
-      if (n % 2 === 0) pagina.drawRectangle({ x: MARGINE, y: y - alt, width: utile, height: alt, color: zebra });
-      let x = MARGINE;
+      if (prog % 2 === 0) pagina.drawRectangle({ x: MARGINE, y: y - alt, width: utile, height: alt, color: zebra });
+
+      pagina.drawText(numTesto, {
+        x: MARGINE + PAD,
+        y: y - PAD - CORPO + 1,
+        size: CORPO,
+        font: normale,
+        color: stessoLavoratore ? grigioChiaro : nero,
+      });
+
+      let x = MARGINE + larghNum;
       celle.forEach((righe, i) => {
         righe.forEach((v, k) => {
           pagina.drawText(v.t, { x: x + PAD, y: y - PAD - CORPO + 1 - k * INTERLINEA, size: CORPO, font: v.font, color: v.colore });
@@ -342,19 +335,18 @@ export async function creaPdf(o: OpzioniPdf): Promise<Uint8Array> {
     }
   }
 
-  pagine.forEach((p, i) => {
+  pagine.forEach((p, idx) => {
+    p.drawLine({ start: { x: MARGINE, y: MARGINE + 8 }, end: { x: larghPagina - MARGINE, y: MARGINE + 8 }, thickness: 0.4, color: linea });
     p.drawText(COPYRIGHT_STAMPE, { x: MARGINE, y: MARGINE - 2, size: 8, font: normale, color: nero });
-    const t = `Pagina ${i + 1} di ${pagine.length}`;
-    const w = normale.widthOfTextAtSize(t, 8);
+    const t = `Pagina ${idx + 1} di ${pagine.length}`;
+    const w = misura(normale, 8)(t);
     p.drawText(t, { x: larghPagina - MARGINE - w, y: MARGINE - 2, size: 8, font: normale, color: nero });
   });
 
   return doc.save();
 }
 
-/** Crea il PDF e lo scarica come file (nessuna finestra di stampa). */
-export async function scaricaPdf(nomeBase: string, opzioni: OpzioniPdf) {
-  const byte = await creaPdf(opzioni);
-  scarica(new Blob([byte as BlobPart], { type: "application/pdf" }), nomeFileEsportazione(nomeBase, "pdf"));
+export async function scaricaPdf(o: OpzioniPdf, nomeBase: string): Promise<void> {
+  const bytes = await creaPdf(o);
+  scarica(new Blob([bytes as BlobPart], { type: "application/pdf" }), nomeFileEsportazione(nomeBase, "pdf"));
 }
-
