@@ -4,7 +4,6 @@
  * Data creaz: 02/11/2026
  * Revisioni:
  *   rev 1 — 02/11/2026 11:10 — Tabella righe attestati per i modelli di stampa.
- *   rev 2 — 03/11/2026 20:50 — Pulsante ✕ su ogni intestazione per togliere la colonna (non stampato).
  *   rev 3 — 04/11/2026 10:20 — Intestazione fissa sticky con sfondo opaco per scorrimento record.
  *   rev 4 — 05/11/2026 19:50 — Celle con dato anagrafico mancante in rosso grassetto (anche in stampa).
  *   rev 5 — 06/11/2026 — Clic sull'intestazione per ordinare A→Z / Z→A / nessuno (frecce non stampate).
@@ -15,6 +14,7 @@
  *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
  *   rev 9 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero vuoto e colonne anagrafiche con «—».
  *   rev 10 — 23/11/2026 14:55 — Larghezze colonne allineate al tipo DimensioniTabella (px, percentuali, totale).
+ *   rev 11 — 23/11/2026 15:35 — Sfondi alternati per lavoratore (stesso sfondo su tutte le righe dell'addetto) e doppia riga sottile divisoria tra lavoratori.
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
@@ -78,23 +78,23 @@ export function TabellaStampa({
   const dim = useMemo(
     () => {
       if (!personalizzata) return null;
-      const misura = creaMisura(tabRef.current);
-      return dimensioniTabella(colonne, larghezze ?? {}, (c) => adattaColonna(c, misura));
+      const mis = creaMisura(tabRef.current);
+      const px = colonne.map((c) => larghezze?.[c] ?? adattaColonna(c, mis));
+      return dimensioniTabella(px, conSelettore);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [personalizzata, colonne, larghezze, misuraSu],
+    [colonne, larghezze, personalizzata, misuraSu, conSelettore],
   );
 
   function larghezzeAttuali(): LarghezzeColonne {
-    const base: LarghezzeColonne = { ...(larghezze ?? {}) };
-    tabRef.current?.querySelectorAll<HTMLElement>("thead th[data-col]").forEach((th) => {
-      const c = th.dataset["col"] as Colonna;
-      if (base[c] == null) base[c] = limitaLarghezza(th.getBoundingClientRect().width);
+    const mis = creaMisura(tabRef.current);
+    const out: LarghezzeColonne = {};
+    colonne.forEach((c) => {
+      out[c] = larghezze?.[c] ?? adattaColonna(c, mis);
     });
-    return base;
+    return out;
   }
 
-  function iniziaTrascinamento(e: PuntatoreReact<HTMLElement>, c: Colonna) {
+  function iniziaTrascinamento(e: PuntatoreReact, c: Colonna) {
     if (!onLarghezze) return;
     e.preventDefault();
     const base = larghezzeAttuali();
@@ -117,12 +117,18 @@ export function TabellaStampa({
     onLarghezze({ ...base, [c]: adattaColonna(c) });
   }
 
-  const progressivoPerRiga = useMemo(() => {
+  const metaPerRiga = useMemo(() => {
     let prog = 0;
     return righe.map((r, i) => {
       const stessoDelPrecedente = i > 0 && righe[i - 1]?.dipendenteId === r.dipendenteId;
       if (!stessoDelPrecedente) prog += 1;
-      return stessoDelPrecedente ? null : prog;
+      const ultimoDelLavoratore = i === righe.length - 1 || righe[i + 1]?.dipendenteId !== r.dipendenteId;
+      return {
+        prog,
+        num: stessoDelPrecedente ? null : prog,
+        stessoLavoratore: stessoDelPrecedente,
+        ultimoDelLavoratore,
+      };
     });
   }, [righe]);
 
@@ -158,60 +164,56 @@ export function TabellaStampa({
               data-col={c}
               {...(ordine?.colonna === c ? { "aria-sort": ordine.direzione === "asc" ? ("ascending" as const) : ("descending" as const) } : {})}
               className={`sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static ${sopra === c ? "ring-2 ring-inset ring-primary" : ""}`}
-              {...(onSposta
-                ? {
-                    onDragOver: (e: React.DragEvent) => {
-                      e.preventDefault();
-                      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-                      if (sopra !== c) setSopra(c);
-                    },
-                    onDragLeave: () => setSopra((s) => (s === c ? null : s)),
-                    onDrop: (e: React.DragEvent) => {
-                      e.preventDefault();
-                      const da = e.dataTransfer?.getData(TIPO_TRASCINAMENTO) as Colonna | undefined;
-                      setSopra(null);
-                      if (da && da !== c) onSposta(da, c);
-                    },
-                  }
-                : {})}
+              onDragOver={(e) => {
+                if (onSposta && e.dataTransfer.types.includes(TIPO_TRASCINAMENTO)) {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (sopra !== c) setSopra(c);
+                }
+              }}
+              onDragLeave={() => sopra === c && setSopra(null)}
+              onDrop={(e) => {
+                if (!onSposta) return;
+                const da = e.dataTransfer.getData(TIPO_TRASCINAMENTO) as Colonna;
+                setSopra(null);
+                if (da && da !== c) onSposta(da, c);
+              }}
             >
               <div className="flex items-center justify-between gap-1">
-                <div className="flex items-center gap-0.5">
-                {onSposta && (
-                  <span
-                    draggable
-                    role="button"
-                    tabIndex={-1}
-                    aria-label={`Sposta la colonna ${INTESTAZIONI[c]}`}
-                    title="Trascina per spostare la colonna"
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData(TIPO_TRASCINAMENTO, c);
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    onDragEnd={() => setSopra(null)}
-                    className="cursor-grab rounded p-0.5 opacity-50 hover:bg-primary/15 hover:opacity-100 active:cursor-grabbing print:hidden"
-                  >
-                    <GripVertical className="size-3" />
-                  </span>
-                )}
-                {onOrdina ? (
-                  <button
-                    type="button"
-                    onClick={() => onOrdina(c)}
-                    className="flex items-center gap-1 text-left font-semibold hover:text-primary print:pointer-events-none"
-                  >
+                <div className="flex min-w-0 items-center gap-1">
+                  {onSposta && colonne.length > 1 && (
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(TIPO_TRASCINAMENTO, c);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      title="Trascina per spostare la colonna"
+                      aria-label={`Trascina colonna ${INTESTAZIONI[c]}`}
+                      className="cursor-grab p-0.5 text-muted-foreground/60 hover:text-foreground active:cursor-grabbing print:hidden"
+                    >
+                      <GripVertical className="size-3" />
+                    </button>
+                  )}
+                  {onOrdina ? (
+                    <button
+                      type="button"
+                      onClick={() => onOrdina(c)}
+                      className="flex items-center gap-1 text-left font-semibold hover:text-primary print:pointer-events-none"
+                    >
+                      <span>{INTESTAZIONI[c]}</span>
+                      <span className="print:hidden">
+                        {ordine?.colonna === c ? (
+                          ordine.direzione === "asc" ? <ArrowUp className="size-3 text-primary" /> : <ArrowDown className="size-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="size-3 opacity-40" />
+                        )}
+                      </span>
+                    </button>
+                  ) : (
                     <span>{INTESTAZIONI[c]}</span>
-                    <span className="print:hidden">
-                      {ordine?.colonna === c ? (
-                        ordine.direzione === "asc" ? <ArrowUp className="size-3 text-primary" /> : <ArrowDown className="size-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="size-3 opacity-40" />
-                      )}
-                    </span>
-                  </button>
-                ) : (
-                  <span>{INTESTAZIONI[c]}</span>
-                )}
+                  )}
                 </div>
                 {onRimuoviColonna && colonne.length > 1 && (
                   <button
@@ -247,17 +249,20 @@ export function TabellaStampa({
       </thead>
       <tbody>
         {righe.map((r, i) => {
-          const stessoLavoratore = i > 0 && righe[i - 1]?.dipendenteId === r.dipendenteId;
-          const num = progressivoPerRiga[i];
+          const meta = metaPerRiga[i]!;
+          const sfondoClasse = meta.prog % 2 === 0 ? "bg-muted/35 print:bg-muted/35" : "bg-background";
+          const bordoCella = meta.ultimoDelLavoratore
+            ? "border-b-[3px] border-b-double border-b-foreground/60"
+            : "border-b border-b-foreground/25";
           return (
-            <tr key={r.id} className="odd:bg-muted/30" style={{ breakInside: "avoid" }}>
-              <td className="border border-foreground/40 px-1.5 py-0.5 text-center font-mono text-muted-foreground/50">
-                {num != null ? num : "—"}
+            <tr key={r.id} className={sfondoClasse} style={{ breakInside: "avoid" }}>
+              <td className={`border-l border-r border-foreground/40 px-1.5 py-0.5 text-center font-mono text-muted-foreground/60 ${bordoCella}`}>
+                {meta.num != null ? meta.num : "—"}
               </td>
               {colonne.map((c) => {
-                if (stessoLavoratore && COLONNE_ANAGRAFICHE_DIPENDENTE.has(c)) {
+                if (meta.stessoLavoratore && COLONNE_ANAGRAFICHE_DIPENDENTE.has(c)) {
                   return (
-                    <td key={c} className="border border-foreground/40 px-1.5 py-0.5 text-center text-muted-foreground/35">
+                    <td key={c} className={`border-l border-r border-foreground/40 px-1.5 py-0.5 text-center text-muted-foreground/35 ${bordoCella}`}>
                       —
                     </td>
                   );
@@ -267,13 +272,13 @@ export function TabellaStampa({
                 return (
                   <td
                     key={c}
-                    className={`border border-foreground/40 px-1.5 py-0.5 ${unica ? classiTesto(unica) : ""}`}
+                    className={`border-l border-r border-foreground/40 px-1.5 py-0.5 ${bordoCella} ${unica ? classiTesto(unica) : ""}`}
                   >
                     {unica ? unica.testo : righeTesto.map((t, k) => <div key={k} className={classiTesto(t)}>{t.testo}</div>)}
                   </td>
                 );
               })}
-              {conSelettore && <td aria-hidden="true" className="print:hidden" />}
+              {conSelettore && <td aria-hidden="true" className={`print:hidden ${bordoCella}`} />}
             </tr>
           );
         })}
