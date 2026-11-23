@@ -8,8 +8,9 @@
  * - Rev 2: 2026-10-27 20:55 - Evacuazione viola, Defibrillatore teal, protetti EME-PRO-02/EME-EAA-02.
  * - Rev 3: 2026-11-01 11:00 - Antincendio solo codici VVF (VFF-FOR…): rimossi vecchi ANT-L…
  * - Rev 4: 2026-11-04 08:00 - Gruppi e colori dedicati per Privacy (Indaco) e Covid (Fucsia).
+ * - Rev 5: 2026-11-10 12:00 - Colore dedicato (lime) ai corsi ASPP/RSPP nella sola tabella corsi.
  * - Rev 6: 2026-11-23 10:50 - Gruppo 11 «Cantieri» (codici LAV-, categoria Cantieri); legenda 10 DL/Dir/ASPP/RSPP.
- * - Rev 5: 2026-11-10 - Colore dedicato (lime) ai corsi ASPP/RSPP nella sola tabella corsi: per stampe, matrici ed esportazioni restano in «Sicurezza lavoratori».
+ * - Rev 7: 2026-11-23 11:10 - Funzione appartieneAGruppo: filtro bottoni con esclusione rigida per gruppo 1, 10 e 11.
  */
 
 export type GruppoArgomento = {
@@ -66,7 +67,7 @@ export function isCorsoProtetto(c: { codice?: string | null }): boolean {
   return Boolean(c.codice && CODICI_STANDARD_PROTETTI.has(c.codice.trim().toUpperCase()));
 }
 
-/** Corsi ASPP / RSPP (codici SIC-ASPP-… e SIC-RSPP-…). */
+/** Corsi DL, Dirigenti, ASPP e RSPP (codici DL-*, DIR-*, SIC-ASPP-* e SIC-RSPP-*). */
 export function isCorsoAsppRspp(c: { codice?: string | null }): boolean {
   return /^(SIC-(ASPP|RSPP)-|DL-|DIR-)/i.test((c.codice ?? "").trim());
 }
@@ -80,8 +81,7 @@ export const GRUPPO_ASPP_RSPP_VISIVO: Pick<GruppoArgomento, "titolo" | "coloreSf
 
 /**
  * Gruppo con cui disegnare la riga nella tabella corsi. Coincide con il gruppo logico, tranne per
- * ASPP/RSPP che hanno un colore e un'etichetta propri. `chiave` e `ordine` restano quelli di
- * «Sicurezza lavoratori»: filtri, stampe e matrici non cambiano.
+ * ASPP/RSPP/DL/DIR che hanno un colore e un'etichetta propri.
  */
 export function gruppoVisuale(c: {
   macro_categoria?: string | null;
@@ -90,4 +90,22 @@ export function gruppoVisuale(c: {
 }): GruppoArgomento {
   const g = assegnaGruppoArgomento(c);
   return isCorsoAsppRspp(c) ? { ...g, ...GRUPPO_ASPP_RSPP_VISIVO } : g;
+}
+
+/**
+ * Determina se un corso appartiene al gruppo selezionato tramite i pulsanti argomento.
+ * - ordineGruppo === null: nessun filtro (Pulsante «Tutti», tutti i 100 corsi).
+ * - ordineGruppo === 10: solo corsi DL, Dirigente, ASPP, RSPP (esclusi dal gruppo 1).
+ * - ordineGruppo === 1: solo corsi sicurezza lavoratori generici/specifici (esclude 10, 11 e altri).
+ * - ordineGruppo === 11: solo corsi cantieri (codici LAV-).
+ * - altri (2..9): corsi del rispettivo argomento, escludendo rigorosamente i corsi ASPP/RSPP.
+ */
+export function appartieneAGruppo(
+  c: { macro_categoria?: string | null; codice?: string | null; nome_corso?: string | null },
+  ordineGruppo: number | null
+): boolean {
+  if (ordineGruppo === null) return true;
+  if (ordineGruppo === 10) return isCorsoAsppRspp(c);
+  if (isCorsoAsppRspp(c)) return false;
+  return assegnaGruppoArgomento(c).ordine === ordineGruppo;
 }
