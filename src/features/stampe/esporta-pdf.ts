@@ -12,6 +12,7 @@
  *   rev 4 — 12/11/2026 06:53 — Logo dall'anagrafica e copyright su ogni pagina PDF.
  *   rev 5 — 22/11/2026 — Nota sullo Stato: «In scadenza» in arancione con la data, ancora valido, entro 9 mesi (GIORNI_PREAVVISO_STAMPE).
  *   rev 6 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero con trattino e dati anagrafici con «—» discreto.
+ *   rev 7 — 23/11/2026 14:55 — Ripristinata l'esportazione righeLegenda (note sotto la tabella, come in anteprima), rimossa per errore.
  */
 import type { PDFFont, PDFPage } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -47,6 +48,26 @@ export type OpzioniPdf = {
 const COLONNE_ANAGRAFICHE_PDF: ReadonlySet<Colonna> = new Set([
   "lavoratore", "cf", "reparto", "mansione", "nascita", "luogoNascita", "dataNascita", "assunzione",
 ]);
+
+const VOCI_CORSO: Colonna[] = ["corsoBase", "corsoSpecifico", "preposto", "antincendio", "primoSoccorso", "defibrillatore"];
+const VOCI_RUOLO: Colonna[] = ["preposto", "antincendio", "primoSoccorso", "defibrillatore"];
+
+/** Le stesse note sotto la tabella dell'anteprima, come testo semplice. */
+export function righeLegenda(colonne: Colonna[]): string[] {
+  const out: string[] = [];
+  if (colonne.some((c) => VOCI_CORSO.includes(c))) {
+    out.push("Legenda corsi: «Sì – data» = data dell'ultimo corso approvato; «Scaduto – data» = corso da rifare; «No» = nessun attestato in archivio.");
+  }
+  if (colonne.some((c) => VOCI_RUOLO.includes(c))) {
+    out.push(
+      "Preposto, Antincendio, Primo soccorso, Defibrillatore: «NA» = ruolo di sicurezza non assegnato; «No» = ruolo assegnato ma attestato mancante; in grassetto = ha l'attestato ma non il ruolo assegnato.",
+    );
+  }
+  if (colonne.some((c) => c === "corsoBaseSquadra" || c === "aggiornamentoSquadra")) out.push(LEGENDA_SQUADRE);
+  if (colonne.includes("stato")) out.push(`Stato: «Scaduto» e «Manca» in rosso; «In scadenza» in arancione, con la data = ancora valido, scade entro 9 mesi (${GIORNI_PREAVVISO_STAMPE} giorni).`);
+  if (colonne.includes("mancano")) out.push("Anagrafica: «MANCA» = dato assente nell'anagrafica del lavoratore.");
+  return out;
+}
 
 /* ------------------------------------------------------------------------------------------------
  * Sezioni: stessa logica dell'anteprima (ContenutoStampa), senza interfaccia

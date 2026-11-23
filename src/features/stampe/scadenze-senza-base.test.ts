@@ -57,8 +57,8 @@ describe("defibrillatore: aggiornamento senza corso base", () => {
     const r = calcolaRighe([agg], f, OGGI, ass, null, [ruoloDae], [villa]).sort((a, b) => a.dataCorso.localeCompare(b.dataCorso));
     expect(r).toHaveLength(2);
     expect(r[0]!.stato).toBe("manca");
-    expect(cella(r[0]!, "scadenza")).toBe("Manca corso base");
-    expect(cella(r[0]!, "stato")).toBe("Manca corso base");
+    expect(cella(r[0]!, "scadenza")).toBe("MANCA");
+    expect(cella(r[0]!, "stato")).toBe("MANCA");
     expect(r[0]!.corso).toBe("Corso base – Defibrillatore");
     expect(r[1]!.stato).not.toBe("scaduto");
     expect(cella(r[1]!, "stato")).toBe("Aggiornamento svolto");

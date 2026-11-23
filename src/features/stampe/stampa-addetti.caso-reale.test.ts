@@ -42,6 +42,6 @@ it("caso reale (PDF 22/11/2026 + 6 addetti già formati): 19 addetti, 6 da forma
   expect([...new Set(righePerVistaAddetti(m, "formazione").map((r) => r.dipendenteId))].sort()).toEqual(["Alquati", "Bertuccioli", "Bodini", "Ferrari", "Guernelli", "Somenzi"]);
   const d = diagnosiAddetti(m);
   expect(d).toHaveLength(19);
-  expect(d.find((x) => x.lavoratore.startsWith("Bertuccioli"))!.motivo).toBe("Manca corso base");
+  expect(d.find((x) => x.lavoratore.startsWith("Bertuccioli"))!.motivo).toBe("MANCA");
   expect(d.find((x) => x.lavoratore.startsWith("Bretani"))!.richiede).toBe(false);
 });

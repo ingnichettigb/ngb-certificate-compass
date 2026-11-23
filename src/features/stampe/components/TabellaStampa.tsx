@@ -14,6 +14,7 @@
  *   rev 8 — 09/11/2026 20:00 — Testo, colore e grassetto delle celle da righeCella (lo stesso del PDF); celle su due righe
  *                        (data + avviso) per l'Organigramma; colori e sfondi mantenuti anche in stampa dal browser.
  *   rev 9 — 23/11/2026 14:15 — Per righe secondarie dello stesso lavoratore, numero vuoto e colonne anagrafiche con «—».
+ *   rev 10 — 23/11/2026 14:55 — Larghezze colonne allineate al tipo DimensioniTabella (px, percentuali, totale).
  */
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as PuntatoreReact } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, X } from "lucide-react";
@@ -129,17 +130,18 @@ export function TabellaStampa({
     <table
       ref={tabRef}
       className="w-full border-collapse border border-foreground/60 text-xs"
-      style={dim ? { width: `${dim.totalePx}px`, maxWidth: `${dim.totalePx}px` } : undefined}
+      style={dim ? { width: `${dim.totale}px`, maxWidth: `${dim.totale}px` } : undefined}
     >
       <colgroup>
         <col style={{ width: `${LARGHEZZA_NUMERO}px` }} />
-        {colonne.map((c) => {
-          const w = dim?.colonne[c];
+        {colonne.map((c, i) => {
+          const px = dim?.px[i];
+          const pct = dim?.percentuali.colonne[i];
           return (
             <col
               key={c}
-              style={w ? variabili(w.px, w.pct) : undefined}
-              className={w ? "w-[var(--w)] [max-width:var(--w)]" : undefined}
+              style={px != null && pct != null ? variabili(px, pct) : undefined}
+              className={px != null ? "w-[var(--w)] [max-width:var(--w)]" : undefined}
             />
           );
         })}
@@ -154,6 +156,7 @@ export function TabellaStampa({
             <th
               key={c}
               data-col={c}
+              {...(ordine?.colonna === c ? { "aria-sort": ordine.direzione === "asc" ? ("ascending" as const) : ("descending" as const) } : {})}
               className={`sticky top-0 z-10 border border-foreground/60 bg-muted px-1.5 py-1 text-left font-semibold print:static ${sopra === c ? "ring-2 ring-inset ring-primary" : ""}`}
               {...(onSposta
                 ? {

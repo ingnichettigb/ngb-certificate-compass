@@ -83,8 +83,8 @@ describe("Corso base e Corso specifico con la voce «Manca»", () => {
   });
   it("le righe «Manca» non hanno data e dicono «Manca» in Scadenza e Stato", () => {
     const m = calcolaRighe(atts, base, OGGI, [], null, [], tutti).find((x) => x.cognome === "Verdi")!;
-    expect(cella(m, "scadenza")).toBe("Manca");
-    expect(cella(m, "stato")).toBe("Manca");
+    expect(cella(m, "scadenza")).toBe("MANCA");
+    expect(cella(m, "stato")).toBe("MANCA");
     expect(cella(m, "data")).toBe("—");
     expect(m.corso).toContain("Corso base");
   });

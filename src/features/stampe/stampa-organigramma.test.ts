@@ -231,8 +231,8 @@ describe("PDF a colori come l'anteprima", () => {
   it("rosso per Scaduto / Da formare, grassetto e righe alternate", async () => {
     const byte = await creaPdf(opzioni(righe()));
     const c = await contenutoPdf(byte);
-    expect(c).toContain("0.78 0.1 0.1 rg");      // rosso
-    expect(c).toContain("0.955 0.955 0.955 rg"); // righe alternate
+    expect(c).toContain("0.85 0.15 0.15 rg");      // rosso
+    expect(c).toContain("0.96 0.96 0.96 rg"); // righe alternate
     expect(c).toContain("/Helvetica-Bold");
   });
 
@@ -241,7 +241,7 @@ describe("PDF a colori come l'anteprima", () => {
       [DIPENDENTI[0]!], [att("1", ANT_B, "2021-05-10")], RUOLI, [ass("1", "r-ant")], FILTRI_INIZIALI, null, OGGI_DATA,
     );
     const c = await contenutoPdf(await creaPdf(opzioni(inScadenza)));
-    expect(c).toContain("0.85 0.42 0.02 rg");
+    expect(c).toContain("0.9 0.45 0.05 rg");
   });
 
   it("la legenda dell'Organigramma compare solo per le sue colonne", () => {

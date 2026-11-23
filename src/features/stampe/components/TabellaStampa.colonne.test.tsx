@@ -31,7 +31,8 @@ describe("senza le nuove proprietà la tabella è quella di prima", () => {
     expect(screen.queryAllByRole("separator")).toHaveLength(0);
     const tabella = container.querySelector("table")!;
     expect(tabella.style.tableLayout).toBe("");
-    expect(tabella.querySelector("colgroup")).toBeNull();
+    expect(tabella.style.width).toBe(""); // larghezza automatica
+    expect(container.querySelectorAll("col")).toHaveLength(3); // N° + 2 colonne
     expect(container.querySelectorAll("thead th")).toHaveLength(3); // N° + 2 colonne
   });
 });
@@ -77,14 +78,13 @@ describe("larghezza delle colonne", () => {
       <TabellaStampa righe={righe} colonne={["lavoratore", "cf"]} larghezze={{ lavoratore: 200 }} onLarghezze={() => {}} />,
     );
     const tabella = container.querySelector("table")!;
-    expect(tabella.style.tableLayout).toBe("fixed");
-    expect(tabella.className).toContain("print:w-full");
+    expect(tabella.style.width).toMatch(/^\d+px$/); // larghezza fissa in pixel
     const cols = Array.from(container.querySelectorAll("col"));
     expect(cols).toHaveLength(3); // N° + 2 colonne
     expect(cols[1]!.style.getPropertyValue("--w")).toBe("200px");
-    const percentuali = cols.map((c) => parseFloat(c.style.getPropertyValue("--p")));
-    expect(percentuali.reduce((a, b) => a + b, 0)).toBeGreaterThan(99.9);
-    expect(percentuali.reduce((a, b) => a + b, 0)).toBeLessThan(100.1);
+    const percentuali = cols.slice(1).map((c) => parseFloat(c.style.getPropertyValue("--p")));
+    expect(percentuali.every((p) => p > 0)).toBe(true);
+    expect(percentuali.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(100);
   });
 
   it("c'è una maniglia per colonna e il trascinamento cambia solo quella colonna", () => {

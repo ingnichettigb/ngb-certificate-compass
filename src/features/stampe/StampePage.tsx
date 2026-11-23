@@ -29,6 +29,7 @@
  *                         tabella, Stampa, PDF, Excel e CSV seguono la vista attiva; titolo e nome file con il suffisso della vista;
  *                         il totale «N addetti» conta i lavoratori distinti; pannello «Controllo addetti» (righe e motivo per ogni addetto).
  *   rev 16 — 22/11/2026 — Se il caricamento degli attestati o dei lavoratori fallisce compare un avviso rosso con il motivo, invece di numeri e righe «Manca» falsi.
+ *   rev 17 — 23/11/2026 14:55 — Corretta la chiamata a scaricaPdf: opzioni prima, nome file dopo (come da firma della funzione).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -244,7 +245,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
 
   async function pdf() {
     try {
-      await scaricaPdf(nomeBase, {
+      await scaricaPdf({
         titolo,
         sottotitolo,
         ditta: ditta.data,
@@ -254,7 +255,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
         sezioni: sezioniPerPdf(filtri, righeFile, ordineAttivo, tutti, predefinita?.raggruppaPer, gruppoScelto),
         totale: testoTotale(filtri.modello, righe),
         legenda: righeLegenda(colonne),
-      });
+      }, nomeBase);
     } catch (e) {
       toast.error(`Creazione del PDF non riuscita: ${(e as Error).message}`);
     }
