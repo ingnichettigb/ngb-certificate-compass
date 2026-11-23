@@ -15,7 +15,7 @@
  *            riga «Manca corso base» sopra l'aggiornamento (stampa-senza-base.ts). Il motore dei cicli non cambia. Ordine delle revisioni ripristinato.
  *   rev 10 — 22/11/2026 — Con filtri.senzaFinestra le scadenze non sono limitate ai 12 mesi (vista «Tutti gli addetti»); senza il flag nulla cambia.
  *   rev 11 — 22/11/2026 — Le righe per attestato portano la data di assunzione dall'anagrafica (colonna «Data assunzione» scelta dal «+»).
- *   rev 12 — 23/11/2026 14:10 — righeMancanti e righeMancaBase impostano corso con «Corso base – ...» e testoManca «MANCA» in rosso.
+ *   rev 12 — 23/11/2026 14:15 — righeMancanti e righeMancaBase impostano nome «Corso base – ...» e testoManca «MANCA» in rosso.
  */
 import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
