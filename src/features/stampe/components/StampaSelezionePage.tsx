@@ -3,10 +3,13 @@
  * Percorso:  src/features/stampe/components/StampaSelezionePage.tsx
  * Data creaz: 23/11/2026
  * Revisioni:
- *   rev 1 — 23/11/2026 — Pagina «Stampa selezione»: scelta di uno o più lavoratori (filtri Tutti / In forza / Nuovi arrivati / Cessati,
+ *   rev 1 — 23/11/2026 10:30 — Pagina «Stampa selezione»: scelta di uno o più lavoratori (filtri Tutti / In forza / Nuovi arrivati / Cessati,
  *            ricerca, seleziona visibili / nessuno), poi lo stesso fascicolo della Stampa globale ma solo per quelli scelti:
  *            copertina con l'elenco dei nomi, schede e PDF degli attestati, indice finale. Niente organigramma A3.
  *            Se superano il limite di MB il fascicolo si divide in blocchi. Usa il motore di ../globale/genera.
+ *   rev 2 — 23/11/2026 17:25 — Selezione per argomenti (barra 11 pulsanti con i colori ufficiali): al clic seleziona automaticamente i
+ *            lavoratori con corsi dell'argomento. Due bottoni mutuamente esclusivi «Tutti i corsi» e «Solo argomento» per allegare e
+ *            specificare tutti i corsi oppure filtrare scheda e copie PDF solo su quelli dell'argomento prescelto.
  */
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +28,11 @@ import {
 } from "@/lib/api/ruoli";
 import { CHIAVE_DITTA, getDitta } from "@/lib/api/ditta";
 import { filtraPerStato, isCessato, type FiltroStato } from "@/features/contratti/contratto";
+import {
+  GRUPPI_ARGOMENTO,
+  GRUPPO_ASPP_RSPP_VISIVO,
+  appartieneAGruppo,
+} from "@/features/tipi-corso/tipi-raggruppamento";
 import {
   INDICAZIONI_SELEZIONE,
   generaBlocco,
@@ -75,6 +83,8 @@ export function StampaSelezionePage() {
 
   const [filtro, setFiltro] = useState<FiltroStato>("tutti");
   const [ricerca, setRicerca] = useState("");
+  const [filtroArgomento, setFiltroArgomento] = useState<number | null>(null);
+  const [modalitaCorsi, setModalitaCorsi] = useState<"tutto" | "solo_argomento">("solo_argomento");
   const [scelti, setScelti] = useState<Set<string>>(new Set());
   const [limiteMb, setLimiteMb] = useState(LIMITE_PREDEFINITO_MB);
   const [indicazioni, setIndicazioni] = useState(INDICAZIONI_SELEZIONE);
@@ -108,15 +118,38 @@ export function StampaSelezionePage() {
     ) as Record<FiltroStato, number>;
   }, [dip.data]);
 
-  /** Lavoratori mostrati: filtro di stato + ricerca su cognome e nome, in ordine alfabetico. */
+  /** Lavoratori con corsi nell'argomento selezionato */
+  const idsArgomento = useMemo(() => {
+    if (filtroArgomento === null || !att.data) return null;
+    const s = new Set<string>();
+    for (const a of att.data) {
+      if (a.dipendente_id && appartieneAGruppo(a.tipi_corso, filtroArgomento)) {
+        s.add(a.dipendente_id);
+      }
+    }
+    return s;
+  }, [att.data, filtroArgomento]);
+
+  /** Titolo visuale dell'argomento attivo */
+  const titoloArgomentoAttivo = useMemo(() => {
+    if (filtroArgomento === null) return "Tutti";
+    if (filtroArgomento === 10) return GRUPPO_ASPP_RSPP_VISIVO.titolo;
+    const g = GRUPPI_ARGOMENTO.find((x) => x.ordine === filtroArgomento);
+    return g ? `${g.ordine}. ${g.titolo}` : `Argomento ${filtroArgomento}`;
+  }, [filtroArgomento]);
+
+  /** Lavoratori mostrati: filtro di stato + eventuale filtro argomento + ricerca */
   const visibili = useMemo(() => {
     const base = filtraPerStato(dip.data ?? [], filtro, new Date());
     const q = ricerca.trim().toLowerCase();
-    const trovati = q
+    let trovati = q
       ? base.filter((d) => `${d.cognome} ${d.nome}`.toLowerCase().includes(q))
       : base;
+    if (idsArgomento !== null) {
+      trovati = trovati.filter((d) => idsArgomento.has(d.id));
+    }
     return ordinaLavoratori(trovati);
-  }, [dip.data, filtro, ricerca]);
+  }, [dip.data, filtro, ricerca, idsArgomento]);
 
   const opzioni: OpzioniStampaGlobale = {
     // Un lavoratore cessato che hai spuntato va incluso: la scelta è esplicita.
@@ -126,6 +159,7 @@ export function StampaSelezionePage() {
     tipo: "SELEZIONE",
     limiteByte: mbInByte(Math.max(5, limiteMb || LIMITE_PREDEFINITO_MB)),
     indicazioni,
+    filtroArgomento: modalitaCorsi === "solo_argomento" ? filtroArgomento : null,
   };
 
   /** Ogni cambio di scelta rende vecchio il piano già calcolato. */
@@ -134,6 +168,26 @@ export function StampaSelezionePage() {
     setPiano(null);
     setProblemi([]);
   };
+
+  const applicaArgomento = (ordine: number | null) => {
+    setFiltroArgomento(ordine);
+    setPiano(null);
+    setProblemi([]);
+    if (ordine === null) {
+      setModalitaCorsi("tutto");
+      return;
+    }
+    // Seleziona automaticamente tutti i lavoratori con corsi dell'argomento
+    const ids = new Set<string>();
+    (att.data ?? []).forEach((a) => {
+      if (a.dipendente_id && appartieneAGruppo(a.tipi_corso, ordine)) {
+        ids.add(a.dipendente_id);
+      }
+    });
+    cambiaScelti(ids);
+    setModalitaCorsi("solo_argomento");
+  };
+
   const alterna = (id: string) => {
     const n = new Set(scelti);
     if (n.has(id)) n.delete(id);
@@ -232,6 +286,128 @@ export function StampaSelezionePage() {
           degli attestati, e in fondo l&apos;indice. Niente organigramma A3. Se superano il limite
           scelto il fascicolo si divide in più file; un lavoratore non viene mai spezzato.
         </p>
+
+        {/* Barra di selezione per argomenti con colori e i 2 bottoni mutuamente esclusivi */}
+        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="font-medium text-muted-foreground">Argomenti:</span>
+
+            {/* Pulsante «Tutti» */}
+            <button
+              type="button"
+              onClick={() => applicaArgomento(null)}
+              className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${
+                filtroArgomento === null
+                  ? "border-primary bg-primary/15 text-primary shadow-xs ring-1 ring-primary"
+                  : "border-border/60 bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              title="Mostra tutti i lavoratori"
+            >
+              Tutti
+            </button>
+
+            {/* Gruppi 1-9 */}
+            {GRUPPI_ARGOMENTO.filter((g) => g.ordine < 10).map((g) => {
+              const attivo = filtroArgomento === g.ordine;
+              return (
+                <button
+                  key={g.chiave}
+                  type="button"
+                  onClick={() => applicaArgomento(g.ordine)}
+                  className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${g.coloreSfondo} ${g.coloreTesto} ${
+                    attivo
+                      ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                      : "border-border/40 hover:opacity-90"
+                  }`}
+                  title={`Seleziona lavoratori con corsi: ${g.ordine}. ${g.titolo}`}
+                >
+                  {g.ordine}. {g.titolo}
+                </button>
+              );
+            })}
+
+            {/* Gruppo 10. DL - Dir - ASPP - RSPP */}
+            {(() => {
+              const attivo = filtroArgomento === 10;
+              return (
+                <button
+                  type="button"
+                  onClick={() => applicaArgomento(10)}
+                  className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${GRUPPO_ASPP_RSPP_VISIVO.coloreSfondo} ${GRUPPO_ASPP_RSPP_VISIVO.coloreTesto} ${
+                    attivo
+                      ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                      : "border-border/40 hover:opacity-90"
+                  }`}
+                  title="Seleziona lavoratori DL, Dirigente, ASPP, RSPP"
+                >
+                  {GRUPPO_ASPP_RSPP_VISIVO.titolo}
+                </button>
+              );
+            })()}
+
+            {/* Gruppo 11. Cantieri */}
+            {GRUPPI_ARGOMENTO.filter((g) => g.ordine > 10).map((g) => {
+              const attivo = filtroArgomento === g.ordine;
+              return (
+                <button
+                  key={g.chiave}
+                  type="button"
+                  onClick={() => applicaArgomento(g.ordine)}
+                  className={`cursor-pointer rounded border px-2 py-0.5 font-medium transition-all ${g.coloreSfondo} ${g.coloreTesto} ${
+                    attivo
+                      ? "border-current shadow-xs ring-2 ring-current/40 font-semibold"
+                      : "border-border/40 hover:opacity-90"
+                  }`}
+                  title={`Seleziona lavoratori con corsi: ${g.ordine}. ${g.titolo}`}
+                >
+                  {g.ordine}. {g.titolo}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* I due bottoni mutuamente esclusivi: Tutto vs Solo argomento */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+            <span className="text-xs font-medium text-muted-foreground">Fascicolo PDF:</span>
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5 shadow-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalitaCorsi("tutto");
+                  setPiano(null);
+                }}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  modalitaCorsi === "tutto"
+                    ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Include tutti i corsi svolti e allega tutte le copie PDF dei certificati"
+              >
+                Tutti i corsi (scheda completa + tutte le copie PDF)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalitaCorsi("solo_argomento");
+                  setPiano(null);
+                }}
+                disabled={filtroArgomento === null}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  modalitaCorsi === "solo_argomento"
+                    ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                }`}
+                title={
+                  filtroArgomento === null
+                    ? "Seleziona prima un argomento per limitare la stampa a quel tema"
+                    : `Filtra scheda e copie PDF solo per ${titoloArgomentoAttivo}`
+                }
+              >
+                Solo argomento (scheda e copie PDF solo di questo tema)
+              </button>
+            </div>
+          </div>
+        </section>
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
           <div className="flex flex-wrap gap-1.5">
