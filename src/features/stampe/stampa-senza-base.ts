@@ -11,6 +11,7 @@
  * (VFF-FOR1A2 e PSO-AgB-04 non contengono «AGG» ma hanno livello «Aggiornamento»; PRP-BAS-12 ha livello «Specifico»).
  * Tutto il resto dello stesso gruppo è considerato corso base. Funzioni pure: non toccano il motore dei cicli.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato } from "@/lib/api";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
 
@@ -40,7 +41,7 @@ export function gruppoConBase(a: Pick<Attestato, "tipi_corso">): string | null {
 export function aggiornamentiSenzaBase(attestati: Attestato[]): Set<string> {
   const conta = new Map<string, { agg: number; base: number }>();
   for (const a of attestati) {
-    if (a.stato_validazione !== "Approvato") continue;
+    if (!statoRegistrato(a.stato_validazione)) continue;
     const g = gruppoConBase(a);
     if (!g) continue;
     const k = `${a.dipendente_id}|${g}`;

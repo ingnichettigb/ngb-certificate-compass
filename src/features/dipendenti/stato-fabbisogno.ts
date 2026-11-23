@@ -13,6 +13,7 @@
  *     aggiornamento di attrezzatura è la sua attrezzatura, non tutta la macro-categoria «Sicurezza lavoratori», e la famiglia della
  *     macro-categoria non comprende più le attrezzature. Nuovo stato «in_attesa»: formazione Lavoratore non completa (parametro «attesa»).
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import { type Attestato, type TipoCorso } from "@/lib/api";
 import {
   eAggiornamentoPreposto,
@@ -91,7 +92,7 @@ export function valutaStatoFabbisognoCorso({
 
   // Attestati approvati del dipendente
   const approvati = applicaScadenzaCicli(
-    attestati.filter((a) => a.stato_validazione === "Approvato" && a.dipendente_id === dipendenteId),
+    attestati.filter((a) => statoRegistrato(a.stato_validazione) && a.dipendente_id === dipendenteId),
     oggi ? new Date(`${oggi}T12:00:00`) : new Date(),
   );
 

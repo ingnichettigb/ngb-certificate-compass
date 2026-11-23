@@ -4,10 +4,13 @@
  * Formattazione date e classi dei badge di stato.
  * Revisioni:
  *   - Rev 2 (2026-10-28 11:50): Badge ambra per «In attesa di integrazione».
+ *   - Rev 3 (2026-11-23 13:35): Badge rosso per «File Attestato mancante».
  */
 
 export function statoBadgeClass(stato: string) {
   if (stato === "Approvato") return "bg-success/12 text-success border-success/30";
+  if (stato === "File Attestato mancante")
+    return "bg-destructive/15 text-destructive border-destructive/40 font-semibold";
   if (stato === "Respinto") return "bg-destructive/12 text-destructive border-destructive/30";
   if (stato === "In attesa di integrazione")
     return "bg-amber-500/15 text-amber-800 border-amber-500/40 dark:text-amber-300";

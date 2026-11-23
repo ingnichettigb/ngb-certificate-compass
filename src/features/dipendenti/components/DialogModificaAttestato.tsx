@@ -214,6 +214,7 @@ export function DialogModificaAttestato({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="Approvato">Approvato</option>
+              <option value="File Attestato mancante">File Attestato mancante</option>
               <option value="In attesa">In attesa</option>
               <option value="Respinto">Respinto</option>
             </select>

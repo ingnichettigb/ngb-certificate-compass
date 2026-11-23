@@ -227,7 +227,7 @@ export function useDecisioneAttestato({
       await aggiornaAttestato(attestato.id, {
         url_foto_fronte: null,
         url_foto_retro: null,
-        stato_validazione: "Approvato",
+        stato_validazione: "File Attestato mancante",
         data_validazione: new Date().toISOString(),
       });
       toast.success("Link rimosso ed attestato escluso dall'attesa", {

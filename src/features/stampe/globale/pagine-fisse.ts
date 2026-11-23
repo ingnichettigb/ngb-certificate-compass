@@ -13,6 +13,7 @@
  *   rev 5 — 23/11/2026 — Copertina per la «Stampa selezione»: titolo personalizzabile (`titolo`) ed elenco dei nomi contenuti nel file (`elencoNomi`),
  *            su due colonne; se non entrano nella copertina continuano su una pagina subito dopo. Senza queste due opzioni la copertina
  *            della Stampa globale è identica a prima.
+ *   rev 6 — 23/11/2026 13:35 — Colonna Stato: senza file (o «File Attestato mancante» nel database) scrive «File mancante» in rosso, mai «Valido».
  */
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
@@ -360,8 +361,13 @@ export async function disegnaScheda(
           : a.data_scadenza_calcolata
             ? statoScadenza(a.data_scadenza_calcolata)
             : "senza";
+      const esitoFile = o.esitoPerAttestato.get(a.id) ?? "";
+      const senzaFile =
+        a.stato_validazione === "File Attestato mancante" || esitoFile === "file mancante" || !a.url_foto_fronte?.trim();
       const [testoStato, colore] =
-        stato === "superato"
+        senzaFile && (stato === "valido" || stato === "senza" || stato === "in-scadenza")
+          ? ["File mancante", ROSSO]
+          : stato === "superato"
           ? ["Superato", GRIGIO]
           : stato === "da-rifare"
             ? ["Rifare base", ROSSO]

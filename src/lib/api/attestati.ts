@@ -12,13 +12,29 @@
  *                              i link, imposta «Approvato» e registra la data di validazione.
  *   - Rev 6 (2026-11-22): Relazione con tipi_corso resa esplicita (…!attestati_caricati_tipo_corso_id_fkey): la migrazione 0018
  *                              ha aggiunto altre due chiavi verso tipi_corso e la query dava PGRST201 (relazione ambigua).
+ *   - Rev 7 (2026-11-23 13:35): Stato «File Attestato mancante» salvato nel database per i corsi registrati senza file:
+ *                              statoRegistrato() per i calcoli, statoPerFile() applicato in aggiornaAttestato, scollegamento e filtro «Approvato».
  */
 import { supabase } from "@/integrations/supabase/client";
 import { leggiTutto, sb } from "./client";
 import type { Dipendente } from "./dipendenti";
 import type { TipoCorso } from "./tipi-corso";
 
-export type Stato = "In attesa" | "Approvato" | "Respinto" | "In attesa di integrazione";
+export type Stato = "In attesa" | "Approvato" | "Respinto" | "In attesa di integrazione" | "File Attestato mancante";
+
+/** Stato salvato nel database per un corso registrato e verificato ma senza il file dell'attestato collegato. */
+export const STATO_FILE_MANCANTE = "File Attestato mancante" as const;
+
+/** Corso registrato e verificato (con o senza file): vale per scadenze, ruoli e stampe. */
+export function statoRegistrato(stato: string | null | undefined): boolean {
+  return stato === "Approvato" || stato === STATO_FILE_MANCANTE;
+}
+
+/** Stato coerente con la presenza del file: «Approvato» senza file diventa «File Attestato mancante» e viceversa. */
+export function statoPerFile(stato: Stato, urlFronte: string | null | undefined): Stato {
+  if (!statoRegistrato(stato)) return stato;
+  return urlFronte?.trim() ? "Approvato" : STATO_FILE_MANCANTE;
+}
 
 export type Attestato = {
   id: string;
@@ -65,7 +81,8 @@ export async function getAttestati(stato?: FiltroAttestati): Promise<Attestato[]
       .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)")
       .order("created_at", { ascending: false })
       .order("id");
-    if (stato && stato !== "Tutti") q = q.eq("stato_validazione", stato);
+    if (stato === "Approvato") q = q.in("stato_validazione", ["Approvato", STATO_FILE_MANCANTE]);
+    else if (stato && stato !== "Tutti") q = q.eq("stato_validazione", stato);
     return q;
   });
 }
@@ -114,9 +131,13 @@ export type CampiEquivalenza =
 type AttestatoPatch = Partial<Omit<Attestato, "dipendenti" | "tipi_corso" | CampiEquivalenza>>;
 
 export async function aggiornaAttestato(id: string, patch: AttestatoPatch) {
+  const corretto = { ...patch };
+  if (corretto.stato_validazione && "url_foto_fronte" in corretto) {
+    corretto.stato_validazione = statoPerFile(corretto.stato_validazione, corretto.url_foto_fronte);
+  }
   const { data, error } = await supabase
     .from("attestati_caricati")
-    .update(patch)
+    .update(corretto)
     .eq("id", id)
     .select("*, dipendenti!attestati_caricati_dipendente_id_fkey(*), tipi_corso!attestati_caricati_tipo_corso_id_fkey(*)")
     .single();
@@ -143,7 +164,7 @@ export async function eliminaAttestato(id: string): Promise<void> {
 
 /**
  * Scollega i file senza eliminare i dati del corso: il link viene azzerato,
- * l'attestato esce dall'attesa di verifica passando ad «Approvato».
+ * l'attestato esce dall'attesa di verifica passando a «File Attestato mancante».
  */
 export async function scollegaDocumentoAttestato(id: string): Promise<void> {
   const { error } = await supabase
@@ -151,7 +172,7 @@ export async function scollegaDocumentoAttestato(id: string): Promise<void> {
     .update({
       url_foto_fronte: null,
       url_foto_retro: null,
-      stato_validazione: "Approvato",
+      stato_validazione: STATO_FILE_MANCANTE,
       data_validazione: new Date().toISOString(),
     })
     .eq("id", id);

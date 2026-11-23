@@ -13,6 +13,7 @@
  *   rev 8 — 13/11/2026 — calcolaBlocchiA3: filtro facoltativo per sede (sedeFiltroId); senza filtro tutte le sedi.
  *   rev 9 — 16/11/2026 — Voci azzurre con ruolo_id: i nominativi vengono dal DB (dipendenti_ruoli) tramite nomiVoceRuolo/dipendentiDelRuolo.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
 import { sb } from "@/lib/api/client";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -157,7 +158,7 @@ export function calcolaBlocchiA3(
 ): BloccoOrganigramma[] {
   const oggiIso = isoOggi(oggi);
   // Scadenza del ciclo del gruppo (non del singolo attestato); i Base già rinnovati non contano.
-  const correnti = attestatiCorrenti(attestati.filter((a) => a.stato_validazione === "Approvato"), oggi);
+  const correnti = attestatiCorrenti(attestati.filter((a) => statoRegistrato(a.stato_validazione)), oggi);
   const perId = new Map(dipendenti.filter((d) => d.stato_lavoratore !== "cessato").map((d) => [d.id, d]));
   // Con una sede scelta contano solo gli incarichi di quella sede
   const assegnazioniSede = sedeFiltroId ? assegnazioni.filter((a) => a.sede_id === sedeFiltroId) : assegnazioni;
@@ -177,7 +178,7 @@ export function calcolaBlocchiA3(
       const valido = correnti.some(
         (a) =>
           a.dipendente_id === d.id &&
-          a.stato_validazione === "Approvato" &&
+          statoRegistrato(a.stato_validazione) &&
           assegnaGruppoArgomento(a.tipi_corso ?? {}).chiave === chiave &&
           (!a.data_scadenza_calcolata || a.data_scadenza_calcolata >= oggiIso),
       );

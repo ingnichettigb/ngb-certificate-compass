@@ -10,6 +10,7 @@
  *   rev 5 — 14/11/2026 — Colonna Stato: per il Preposto esonerato dall'aggiornamento (RSPP/ASPP valido) si indica il motivo, non solo «Valido».
  *   rev 6 — 22/11/2026 — Scadenza e Stato: «Manca corso base» (testoManca) e «Aggiornamento svolto» per l'aggiornamento senza corso base.
  *   rev 8 — 23/11/2026 12:05 — Stato: «– Manca attestato» se il corso è registrato senza file collegato.
+ *   rev 9 — 23/11/2026 13:35 — Stato: senza file scrive solo «File Attestato mancante» (mai «Valido»).
  *   rev 7 — 22/11/2026 — Stato «In scadenza»: nella casella compare anche la data di scadenza («In scadenza – 15/03/2027»).
  */
 import { ETICHETTA_CAMPO } from "@/features/dipendenti/anagrafica-completa";
@@ -74,7 +75,7 @@ export function cella(r: RigaStampa, c: Colonna): string {
     case "scadenza": return r.stato === "manca" ? (r.testoManca ?? "Manca") : r.aggiornamentoSenzaBase ? "—" : dataIt(r.scadenza);
     case "stato": {
       const base = testoStato(r);
-      return r.senzaFile && r.stato !== "manca" ? `${base} – Manca attestato` : base;
+      return r.senzaFile && r.stato !== "manca" ? "File Attestato mancante" : base;
     }
     case "categoria": return r.sottoreparto || "—";
     case "argomento": return r.gruppoTitolo || "—";

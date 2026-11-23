@@ -11,6 +11,7 @@
  * Revisioni:
  *   - Rev 1 (2026-11-22): Prima stesura (punto di verità ruoli-corsi, Fase 7).
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato } from "@/lib/api/attestati";
 import { normalizzaCodice } from "@/lib/api/codici-ruoli";
 import { normalizzaNome } from "@/lib/api/documenti";
@@ -94,7 +95,7 @@ export function corsiProposti(input: {
 }): CorsoProposto[] {
   const { ruoli, assegnazioni, dipendenteId, regole, contesto, corsi, attestati, oggi = oggiIso() } = input;
   const perCodice = new Map(corsi.filter((c) => normalizzaCodice(c.codice)).map((c) => [normalizzaCodice(c.codice), c] as const));
-  const approvati = attestati.filter((a) => a.dipendente_id === dipendenteId && a.stato_validazione === "Approvato");
+  const approvati = attestati.filter((a) => a.dipendente_id === dipendenteId && statoRegistrato(a.stato_validazione));
   const evidenze = (codici: string[]) =>
     approvati
       .filter((a) => codici.includes(normalizzaCodice(a.tipi_corso?.codice)))

@@ -7,6 +7,7 @@
  *            compare in entrambe). Componente = ruolo di squadra assegnato in «Piano Fabbisogno Formativo e Ruoli».
  *   rev 2 — 11/11/2026 17:30 — Filtro «Stato lavoratore» (includeLavoratorePerStato) al posto della sola esclusione dei cessati.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
@@ -34,7 +35,7 @@ export function calcolaRigheOrganigramma(
   oggi = new Date(),
 ): RigaStampa[] {
   const oggiIso = isoLocale(oggi);
-  const approvati = attestati.filter((a) => a.stato_validazione === "Approvato");
+  const approvati = attestati.filter((a) => statoRegistrato(a.stato_validazione));
   const righe: RigaStampa[] = [];
 
   for (const squadra of SQUADRE) {

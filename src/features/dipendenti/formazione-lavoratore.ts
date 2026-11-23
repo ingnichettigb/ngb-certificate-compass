@@ -15,6 +15,7 @@
  *   - Rev 3 (2026-11-22): valutaFormazioneDelDipendente (legge attestati e decisioni del lavoratore) e motivoInAttesaFormazione: un corso di un ruolo
  *     che «richiede LAVORATORE» (le attrezzature) è «in attesa» finché la formazione Lavoratore non è completa (Fase 6).
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato } from "@/lib/api/attestati";
 import { CODICE_RUOLO, normalizzaCodice } from "@/lib/api/codici-ruoli";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
@@ -51,7 +52,7 @@ export type EsitoFormazioneLavoratore = {
 export function corsiSvoltiDa(attestati: Attestato[], dipendenteId: string): Set<string> {
   const out = new Set<string>();
   for (const a of attestati) {
-    if (a.dipendente_id !== dipendenteId || a.stato_validazione !== "Approvato") continue;
+    if (a.dipendente_id !== dipendenteId || !statoRegistrato(a.stato_validazione)) continue;
     const cod = normalizzaCodice(a.tipi_corso?.codice);
     if (cod) out.add(cod);
   }

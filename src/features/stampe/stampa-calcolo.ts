@@ -16,6 +16,7 @@
  *   rev 10 — 22/11/2026 — Con filtri.senzaFinestra le scadenze non sono limitate ai 12 mesi (vista «Tutti gli addetti»); senza il flag nulla cambia.
  *   rev 11 — 22/11/2026 — Le righe per attestato portano la data di assunzione dall'anagrafica (colonna «Data assunzione» scelta dal «+»).
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente, TipoCorso } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento, GRUPPI_ARGOMENTO } from "@/features/tipi-corso/tipi-raggruppamento";
@@ -182,13 +183,13 @@ export function calcolaRighe(
 ): RigaStampa[] {
   // Solo attestati approvati; i Preposti hanno data e stato dal motore dei cicli (regime transitorio).
   const attestati = applicaScadenzaCicli(
-    attestatiGrezzi.filter((a) => a.stato_validazione === "Approvato"),
+    attestatiGrezzi.filter((a) => statoRegistrato(a.stato_validazione)),
     oggi,
   );
   // Solo nelle scadenze: chi ha l'aggiornamento senza il corso base non è «scaduto», gli manca il base.
   const senzaBase = filtri.modello === "scadenze" ? aggiornamentiSenzaBase(attestati) : new Set<string>();
   let righe = attestati
-    .filter((a) => a.stato_validazione === "Approvato" && a.dipendenti)
+    .filter((a) => statoRegistrato(a.stato_validazione) && a.dipendenti)
     .filter((a) => includeLavoratorePerStato(a.dipendenti!.stato_lavoratore, filtri))
     .filter((a) => !filtri.soloCorso || (!!a.tipi_corso && voceFormazione(a.tipi_corso) === filtri.soloCorso))
     .map((a): RigaStampa => {
@@ -226,7 +227,7 @@ export function calcolaRighe(
         stato,
         giorniAllaScadenza: giorni,
         inSquadra: calcolaInSquadra(d.id, tc, g.chiave, ruoli, assegnazioni),
-        ...(!a.url_foto_fronte?.trim() ? { senzaFile: true } : {}),
+        ...(!a.url_foto_fronte?.trim() || a.stato_validazione === "File Attestato mancante" ? { senzaFile: true } : {}),
         ...(a.esenzioneRspp ? { esenzioneRspp: a.esenzioneRspp } : {}),
         ...(senzaBase.has(`${d.id}|${g.chiave}`) && eAggiornamento(tc)
           ? { aggiornamentoSenzaBase: true, scadenza: null, stato: "senza_scadenza" as const, giorniAllaScadenza: null }

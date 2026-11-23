@@ -7,6 +7,7 @@
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 5).
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato } from "@/lib/api/attestati";
 import { normalizzaCodice } from "@/lib/api/codici-ruoli";
 import type { Dipendente } from "@/lib/api/dipendenti";
@@ -39,7 +40,7 @@ const STATI_DECISI: StatoSpecifica[] = ["accettata", "integrazione", "non-valida
 /** Attestato approvato del corso più recente (per data del corso). */
 function attestatoDelCorso(attestati: Attestato[], dipendenteId: string, codice: string): Attestato | undefined {
   return attestati
-    .filter((a) => a.dipendente_id === dipendenteId && a.stato_validazione === "Approvato" && normalizzaCodice(a.tipi_corso?.codice) === codice)
+    .filter((a) => a.dipendente_id === dipendenteId && statoRegistrato(a.stato_validazione) && normalizzaCodice(a.tipi_corso?.codice) === codice)
     .sort((a, b) => (b.data_corso ?? "").localeCompare(a.data_corso ?? ""))[0];
 }
 

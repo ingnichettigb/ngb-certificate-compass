@@ -7,6 +7,7 @@
  *            pagina Scadenze), non più ogni singolo attestato: un Base scaduto con un aggiornamento valido non è uno scaduto.
  *            Primo Soccorso oltre la tolleranza = scaduto. Esclusi i lavoratori cessati e gli attestati non approvati.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getAttestati } from "@/lib/api";
@@ -48,7 +49,7 @@ export function useStatisticheHome() {
 
       // Un conteggio per lavoratore + corso (gruppo Base/aggiornamenti), con la scadenza del ciclo.
       const attivi = attestati.filter(
-        (a) => a.stato_validazione === "Approvato" && a.dipendenti?.stato_lavoratore !== "cessato",
+        (a) => statoRegistrato(a.stato_validazione) && a.dipendenti?.stato_lavoratore !== "cessato",
       );
       let scaduti = 0;
       let inScadenza6m = 0;

@@ -49,6 +49,7 @@ export function SchermoVerificaAttestato({
         .from("attestati_caricati")
         .update({
           url_foto_fronte: fileTrovato.percorsoRelativo,
+          ...(attestato.stato_validazione === "File Attestato mancante" ? { stato_validazione: "Approvato" } : {}),
           data_corso: dati.dataCorso,
           data_scadenza_calcolata: dati.senzaScadenza ? null : dati.dataScadenza || null,
           ore_dichiarate: dati.ore === "" ? null : Number(dati.ore),

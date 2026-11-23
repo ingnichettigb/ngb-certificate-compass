@@ -96,7 +96,7 @@ export function useArchiviazione(ricarica: () => unknown, onNuovi?: (ids: string
             numero_attestato: numero,
             url_foto_fronte: percorsoFinale,
             url_foto_retro: null,
-            stato_validazione: r.esito === "Non valido" ? "Respinto" : "Approvato",
+            stato_validazione: r.esito === "Non valido" ? "Respinto" : percorsoFinale ? "Approvato" : "File Attestato mancante",
             note_rifiuto: r.esito === "Valido" ? r.note || null : riepilogo(r),
             data_validazione: new Date().toISOString(),
           }).select("id").single();

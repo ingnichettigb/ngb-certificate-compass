@@ -7,6 +7,7 @@
  *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
  *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
@@ -80,7 +81,7 @@ export function formazionePerLavoratore(attestatiGrezzi: Attestato[], oggi: Date
   const attestati = applicaScadenzaCicli(attestatiGrezzi, oggi);
   const ultimo = new Map<string, Map<VoceFormazione, Attestato>>();
   for (const a of attestati) {
-    if (a.stato_validazione !== "Approvato" || !a.tipi_corso) continue;
+    if (!statoRegistrato(a.stato_validazione) || !a.tipi_corso) continue;
     const v = voceFormazione(a.tipi_corso);
     if (!v) continue;
     const m = ultimo.get(a.dipendente_id) ?? new Map<VoceFormazione, Attestato>();

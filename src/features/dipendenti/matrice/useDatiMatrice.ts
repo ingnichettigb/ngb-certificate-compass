@@ -10,6 +10,7 @@
  *   rev 4 — 21/11/2026 — Legge anche il grado di rischio della ditta: un corso è dovuto solo se la sua regola vale per la ditta.
  *   rev 5 — 22/11/2026 — motivoInAttesa: le attrezzature di chi non ha ancora completato la formazione Lavoratore risultano «in attesa».
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -98,7 +99,7 @@ export function useDatiMatrice() {
   const mappaAttestatiValidi = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const att of attestati) {
-      if (att.stato_validazione !== "Approvato" && att.stato_validazione !== "In attesa") continue;
+      if (!statoRegistrato(att.stato_validazione) && att.stato_validazione !== "In attesa") continue;
       if (!att.dipendente_id || !att.tipo_corso_id) continue;
       if (!map.has(att.dipendente_id)) {
         map.set(att.dipendente_id, new Set());

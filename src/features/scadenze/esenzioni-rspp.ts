@@ -15,6 +15,7 @@
  *   Il solo modulo A (RSPP e ASPP) e il solo modulo B dell'RSPP non bastano: non qualificano.
  * L'esenzione riguarda solo l'AGGIORNAMENTO Preposto. Il corso Preposto base resta obbligatorio.
  */
+import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato } from "@/lib/api";
 import type { PosizioneCiclo } from "./types";
 
@@ -80,7 +81,7 @@ export function eAggiornamentoPreposto(c: CorsoLike | null | undefined): boolean
 
 function eRsppQualificante(a: Attestato): boolean {
   const cod = (a.tipi_corso?.codice ?? "").trim().toUpperCase();
-  return a.stato_validazione === "Approvato" && CODICI_RSPP_QUALIFICANTI.includes(cod);
+  return statoRegistrato(a.stato_validazione) && CODICI_RSPP_QUALIFICANTI.includes(cod);
 }
 
 /**
