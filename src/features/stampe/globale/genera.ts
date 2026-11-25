@@ -13,6 +13,7 @@
  *            selezione elenca i nomi del blocco. Senza queste opzioni il comportamento della Stampa globale è identico a prima.
  *   rev 4 — 23/11/2026 17:25 — Opzione `filtroArgomento` in `OpzioniStampaGlobale` e `preparaLavoratori`: filtra gli attestati di ogni
  *            lavoratore per includere e allegare solo i corsi e i PDF dell'argomento scelto (`appartieneAGruppo`).
+ *   rev 5 — 25/11/2026 21:12 — Attestati senza tipo corso esclusi dal filtro argomento (corretto errore di tipi).
  */
 import { PDFDocument } from "pdf-lib";
 import type { Attestato, Dipendente } from "@/lib/api";
@@ -102,7 +103,7 @@ export function preparaLavoratori(
   const conScadenza = applicaScadenzaCicli(dati.attestati);
   const daConsiderare =
     filtroArgomento != null
-      ? conScadenza.filter((a) => appartieneAGruppo(a.tipi_corso, filtroArgomento))
+      ? conScadenza.filter((a) => a.tipi_corso != null && appartieneAGruppo(a.tipi_corso, filtroArgomento))
       : conScadenza;
 
   for (const a of daConsiderare)
