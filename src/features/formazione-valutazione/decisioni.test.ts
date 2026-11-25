@@ -4,6 +4,7 @@
  * Data creazione: 2026-11-21
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura.
+ *   - Rev 2 (2026-11-25 21:08): Test «Già valutato / Ignora».
  */
 import { describe, expect, it } from "vitest";
 import type { Attestato } from "@/lib/api/attestati";
@@ -59,5 +60,21 @@ describe("dati da salvare", () => {
     const a = annullaDecisione();
     expect(Object.keys(a)).toHaveLength(6);
     expect(Object.values(a).every((v) => v === null)).toBe(true);
+  });
+});
+
+describe("Già valutato / Ignora", () => {
+  const base = { esito: "ignorata" as const, corsoSvolto: "SIC-SPE-12", corsoAtteso: "SIC-SPE-08", rischio: "medio" as const, adesso: new Date("2026-11-25T10:00:00Z") };
+  it("non richiede la nota", () => expect(erroreDecisione("ignorata", "")).toBeNull());
+  it("si salva come non_valida con marcatore e si rilegge come ignorata", () => {
+    const patch = costruisciDecisione({ ...base, nota: "" });
+    expect(patch.equivalenza_esito).toBe("non_valida");
+    const d = decisioneDi(att(patch as Partial<Attestato>));
+    expect(d?.esito).toBe("ignorata");
+    expect(d?.nota).toBe("Già valutato: nessuna azione");
+  });
+  it("una «Non valida» normale resta non valida", () => {
+    const d = decisioneDi(att(costruisciDecisione({ ...base, esito: "non_valida", nota: "Altro settore" }) as Partial<Attestato>));
+    expect(d?.esito).toBe("non_valida");
   });
 });

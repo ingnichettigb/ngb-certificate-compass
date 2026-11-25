@@ -7,6 +7,7 @@
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 5).
  *   - Rev 2 (2026-11-23): Anteprima del documento dell'attestato (fronte e retro) per decidere guardando il corso.
+ *   - Rev 3 (2026-11-25 21:08): Pulsante «Già valutato / Ignora»: sposta il caso in «Decise» (nota facoltativa), annullabile.
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,6 +72,13 @@ export function RigaDaValutare({
     );
   }
 
+  function ignora() {
+    void esegui(
+      costruisciDecisione({ esito: "ignorata", corsoSvolto: voce.corsoSvolto, corsoAtteso: voce.corsoAtteso, rischio: rischioDitta, nota, adesso: new Date() }),
+      "Segnato come già valutato",
+    );
+  }
+
   return (
     <li className="rounded-xl border border-border bg-card p-3 shadow-xs">
       <p className="font-medium">
@@ -119,6 +127,15 @@ export function RigaDaValutare({
           </div>
           <Button size="sm" disabled={salvataggio || !esito || !nota.trim()} onClick={salva}>
             Salva decisione
+          </Button>{" "}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={salvataggio}
+            onClick={ignora}
+            data-aiuto="Segna il caso come già valutato: esce da «Da valutare», resta in «Decise» e si può annullare. La nota è facoltativa."
+          >
+            Già valutato / Ignora
           </Button>
         </div>
       )}
