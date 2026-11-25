@@ -31,23 +31,23 @@ const corso = (codice: string, nome: string, macro = "Sicurezza Lavoratori") =>
 const lavoratore = ruolo("LAVORATORE", "Lavoratore", { obbligatorio_tutti: true, macro_categoria: "Sicurezza Lavoratori" });
 const catalogo = [
   lavoratore,
-  ruolo("ADD_DAE", "Nome cambiato che non somiglia a niente"),
+  ruolo("ADD-DAE", "Nome cambiato che non somiglia a niente"),
   ruolo("PREPOSTO", "Preposto"),
-  ruolo("OPER_CAR_CP_II_8311", "OPERATORE CARRIPONTE CP"),
+  ruolo("OPER-CAR-CP-II-8311", "OPERATORE CARRIPONTE CP"),
 ];
 
 describe("trovaRuoloPerCorso: per codice", () => {
   it("un ruolo rinominato si aggancia ancora al suo corso", () => {
-    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "Corso BLSD"), catalogo)?.codice).toBe("ADD_DAE");
+    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "Corso BLSD"), catalogo)?.codice).toBe("ADD-DAE");
   });
 
-  it("il corso dell'attrezzatura va al suo ruolo OPER_, base e aggiornamento", () => {
-    expect(trovaRuoloPerCorso(corso("LAV-CAR-CP-II-8311", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER_CAR_CP_II_8311");
-    expect(trovaRuoloPerCorso(corso("LAV-CAR-CP-II-8311-AGG", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER_CAR_CP_II_8311");
+  it("il corso dell'attrezzatura va al suo ruolo OPER-, base e aggiornamento", () => {
+    expect(trovaRuoloPerCorso(corso("LAV-CAR-CP-II-8311", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER-CAR-CP-II-8311");
+    expect(trovaRuoloPerCorso(corso("LAV-CAR-CP-II-8311-AGG", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER-CAR-CP-II-8311");
   });
 
   it("il codice del corso in minuscolo o misto non cambia l'esito", () => {
-    expect(trovaRuoloPerCorso(corso("lav-car-cp-ii-8311", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER_CAR_CP_II_8311");
+    expect(trovaRuoloPerCorso(corso("lav-car-cp-ii-8311", "Carriponte (CP)"), catalogo)?.codice).toBe("OPER-CAR-CP-II-8311");
   });
 
   it("un'attrezzatura senza ruolo non va al Lavoratore: nessun ruolo", () => {
@@ -55,7 +55,7 @@ describe("trovaRuoloPerCorso: per codice", () => {
   });
 
   it("un ruolo disattivato non viene agganciato", () => {
-    const disattivo = catalogo.map((r) => (r.codice === "OPER_CAR_CP_II_8311" ? { ...r, attivo: false } : r));
+    const disattivo = catalogo.map((r) => (r.codice === "OPER-CAR-CP-II-8311" ? { ...r, attivo: false } : r));
     expect(trovaRuoloPerCorso(corso("LAV-CAR-CP-II-8311", "Carriponte (CP)"), disattivo)).toBeNull();
   });
 
@@ -67,13 +67,13 @@ describe("trovaRuoloPerCorso: per codice", () => {
 describe("isCorsoObbligatorioPerDipendente: attrezzature", () => {
   const ass = (...ids: string[]) => new Set(ids.map((i) => `d1_${i}`));
 
-  it("senza il ruolo OPER_ assegnato il corso attrezzatura non è obbligatorio", () => {
+  it("senza il ruolo OPER- assegnato il corso attrezzatura non è obbligatorio", () => {
     expect(isCorsoObbligatorioPerDipendente("d1", corso("LAV-CAR-CP-II-8311", "Carriponte"), catalogo, ass())).toBe(false);
   });
 
-  it("con il ruolo OPER_ assegnato lo diventa", () => {
+  it("con il ruolo OPER- assegnato lo diventa", () => {
     expect(
-      isCorsoObbligatorioPerDipendente("d1", corso("LAV-CAR-CP-II-8311", "Carriponte"), catalogo, ass("r-OPER_CAR_CP_II_8311")),
+      isCorsoObbligatorioPerDipendente("d1", corso("LAV-CAR-CP-II-8311", "Carriponte"), catalogo, ass("r-OPER-CAR-CP-II-8311")),
     ).toBe(true);
   });
 
@@ -88,8 +88,8 @@ const regola = (ruolo_codice: string, corso_base: string | null, corso_aggiornam
 });
 const tabella02 = [
   regola("LAVORATORE", "SIC-GEN-04", "SIC-AGG-06"),
-  regola("ADD_DAE", "BLS-BAS-05", "BLS-AGG-05"),
-  regola("OPER_CAR_CP_II_8311", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
+  regola("ADD-DAE", "BLS-BAS-05", "BLS-AGG-05"),
+  regola("OPER-CAR-CP-II-8311", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
 ];
 
 describe("trovaRuoloPerCorso: con la Tabella 02", () => {
@@ -103,19 +103,19 @@ describe("trovaRuoloPerCorso: con la Tabella 02", () => {
   });
 
   it("i corsi della tabella vanno al loro ruolo, base e aggiornamento", () => {
-    expect(trovaRuoloPerCorso(corso("BLS-AGG-05", "Aggiornamento BLSD"), catalogo, tabella02)?.codice).toBe("ADD_DAE");
+    expect(trovaRuoloPerCorso(corso("BLS-AGG-05", "Aggiornamento BLSD"), catalogo, tabella02)?.codice).toBe("ADD-DAE");
     expect(trovaRuoloPerCorso(corso("SIC-GEN-04", "Formazione generale"), catalogo, tabella02)?.codice).toBe("LAVORATORE");
   });
 
   it("se il ruolo indicato dalla tabella è disattivato o non esiste: nessun ruolo", () => {
-    const spento = catalogo.map((r) => (r.codice === "ADD_DAE" ? { ...r, attivo: false } : r));
+    const spento = catalogo.map((r) => (r.codice === "ADD-DAE" ? { ...r, attivo: false } : r));
     expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "BLSD"), spento, tabella02)).toBeNull();
     expect(trovaRuoloPerCorso(corso("X-1", "X"), catalogo, [regola("NON_ESISTE", "X-1", null)])).toBeNull();
   });
 
   it("con la tabella vuota o non caricata vale il riconoscimento di prima", () => {
-    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "BLSD"), catalogo, [])?.codice).toBe("ADD_DAE");
-    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "BLSD"), catalogo, undefined)?.codice).toBe("ADD_DAE");
+    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "BLSD"), catalogo, [])?.codice).toBe("ADD-DAE");
+    expect(trovaRuoloPerCorso(corso("BLS-BAS-05", "BLSD"), catalogo, undefined)?.codice).toBe("ADD-DAE");
   });
 
   it("obbligatorietà: un corso fuori tabella non è dovuto da nessuno, nemmeno dal Lavoratore", () => {
@@ -127,7 +127,7 @@ describe("trovaRuoloPerCorso: con la Tabella 02", () => {
 
 describe("trovaRuoloPerChiaveGruppo: per codice", () => {
   it("trova il ruolo del gruppo anche se rinominato", () => {
-    expect(trovaRuoloPerChiaveGruppo("defibrillatore", catalogo)?.codice).toBe("ADD_DAE");
+    expect(trovaRuoloPerChiaveGruppo("defibrillatore", catalogo)?.codice).toBe("ADD-DAE");
     expect(trovaRuoloPerChiaveGruppo("preposti", catalogo)?.codice).toBe("PREPOSTO");
     expect(trovaRuoloPerChiaveGruppo("sicurezza-lavoratori", catalogo)?.codice).toBe("LAVORATORE");
   });

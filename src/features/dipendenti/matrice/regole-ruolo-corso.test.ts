@@ -17,15 +17,15 @@ const reg = (ruolo_codice: string, corso_base: string | null, corso_aggiornament
 const regole = [
   reg("LAVORATORE", "SIC-GEN-04", "SIC-AGG-06"),
   reg("LAVORATORE", "SIC-SPE-04", "SIC-AGG-06"),
-  reg("ADD_DAE", "BLS-BAS-05", "BLS-AGG-05"),
-  reg("OPER_CAR_CP_II_8311", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
+  reg("ADD-DAE", "BLS-BAS-05", "BLS-AGG-05"),
+  reg("OPER-CAR-CP-II-8311", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
 ];
 
 describe("regole ruolo -> corso (Tabella 02)", () => {
   it("dal corso risale al ruolo, base o aggiornamento, senza badare alle maiuscole", () => {
-    expect(ruoloCodicePerCorso(regole, "BLS-BAS-05")).toBe("ADD_DAE");
-    expect(ruoloCodicePerCorso(regole, "bls-agg-05")).toBe("ADD_DAE");
-    expect(ruoloCodicePerCorso(regole, "LAV-CAR-CP-II-8311-AGG")).toBe("OPER_CAR_CP_II_8311");
+    expect(ruoloCodicePerCorso(regole, "BLS-BAS-05")).toBe("ADD-DAE");
+    expect(ruoloCodicePerCorso(regole, "bls-agg-05")).toBe("ADD-DAE");
+    expect(ruoloCodicePerCorso(regole, "LAV-CAR-CP-II-8311-AGG")).toBe("OPER-CAR-CP-II-8311");
   });
 
   it("un corso che nessuna regola cita non ha ruolo", () => {

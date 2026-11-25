@@ -18,7 +18,7 @@ const att = (d: Dipendente, codice: string, livello: string, data: string, scad:
   dipendenti: { id: d.id, cognome: d.cognome, nome: d.nome, codice_fiscale: d.codice_fiscale, reparto: d.reparto, sottoreparto: null, classe_concorso: null, stato_lavoratore: "in_forza" },
   tipi_corso: { id: `t-${codice}`, nome_corso: codice, codice, macro_categoria: "Defibrillatore", livello_specifico: livello, durata_validita_anni: 2, ore_aggiornamento: 3, ore_minime_legge: 5 },
 }) as unknown as Attestato;
-const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD_DAE" } as never;
+const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD-DAE" } as never;
 it("caso reale (PDF 22/11/2026 + 6 addetti già formati): 19 addetti, 6 da formare", () => {
   const D = (n: string) => dip(n, "Docente");
   const lista: [Dipendente, Attestato[]][] = [

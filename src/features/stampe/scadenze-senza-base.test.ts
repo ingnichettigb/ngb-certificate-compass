@@ -34,7 +34,7 @@ function att(id: string, d: Dipendente, codice: string, macro: string, livello: 
 const defib = trovaPredefinita("scadenze-defibrillatore")!.filtri;
 const tutte = trovaPredefinita("scadenze-tutte")!.filtri;
 
-const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD_DAE" } as never;
+const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD-DAE" } as never;
 
 describe("riconoscimento dell'aggiornamento", () => {
   it("«AGG» nel codice oppure livello «Aggiornamento»", () => {

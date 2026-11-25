@@ -29,13 +29,13 @@ const { dati } = vi.hoisted(() => {
         ],
         ruoli_sicurezza: [
           { id: "r-lav", ordine: 1, nome: "Lavoratore", codice: "LAVORATORE", attivo: true, obbligatorio_tutti: true },
-          { id: "r-cp", ordine: 2, nome: "OPERATORE CARRIPONTE CP", codice: "OPER_CAR_CP_II_8311", attivo: true, obbligatorio_tutti: false },
+          { id: "r-cp", ordine: 2, nome: "OPERATORE CARRIPONTE CP", codice: "OPER-CAR-CP-II-8311", attivo: true, obbligatorio_tutti: false },
         ],
         dipendenti_ruoli: [{ id: "as1", dipendente_id: "d1", ruolo_id: "r-cp" }],
         regole_ruolo_corso: [
           regola(1, "LAVORATORE", "nessuno", "—", "SIC-GEN-04", null),
           regola(2, "LAVORATORE", "rischio ATECO", "medio", "SIC-SPE-08", null),
-          regola(3, "OPER_CAR_CP_II_8311", "nessuno", "—", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
+          regola(3, "OPER-CAR-CP-II-8311", "nessuno", "—", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
         ],
         attestati_caricati: [
           { id: "a1", dipendente_id: "d1", stato_validazione: "Approvato", data_corso: "2020-01-10", data_scadenza_calcolata: null, tipi_corso: { codice: "SIC-GEN-04", nome_corso: "Formazione generale" } },

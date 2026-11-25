@@ -30,7 +30,7 @@ function att(id: string, d: Dipendente, codice: string, livello: string, data: s
   } as unknown as Attestato;
 }
 
-const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD_DAE" } as never;
+const ruoloDae = { id: "r-dae", nome: "Addetto BLSD / Defibrillatore", descrizione: null, macro_categoria: "Defibrillatore", obbligatorio_tutti: false, attivo: true, ordine: 0, codice: "ADD-DAE" } as never;
 const defib = trovaPredefinita("scadenze-defibrillatore")!;
 
 // Valido (scade 2030), In scadenza (entro 9 mesi), Scaduto, Senza corso, Aggiornamento senza base.

@@ -7,6 +7,7 @@
  * I menu a tendina Radix sono sostituiti da elenchi semplici: in jsdom non si aprono come nel browser.
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura.
+ *   - Rev 2 (2026-11-23): Convenzione unica dei codici col trattino: un codice con spazi si salva col trattino; accenti e simboli no.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,7 +18,7 @@ const { dati, toasts } = vi.hoisted(() => ({
     singoli: {} as Record<string, unknown>,
     tabelle: {
       ruoli_sicurezza: [
-        { id: "r1", ordine: 1, nome: "Addetto DAE", codice: "ADD_DAE", tipo: "ruolo", richiede: null, obbligatorio_tutti: false, attivo: true, applica: false },
+        { id: "r1", ordine: 1, nome: "Addetto DAE", codice: "ADD-DAE", tipo: "ruolo", richiede: null, obbligatorio_tutti: false, attivo: true, applica: false },
         { id: "r2", ordine: 2, nome: "Lavoratore", codice: "LAVORATORE", tipo: "ruolo", richiede: null, obbligatorio_tutti: true, attivo: true, applica: false },
         { id: "r3", ordine: 3, nome: "Vecchio senza codice", codice: null, tipo: "ruolo", richiede: null, obbligatorio_tutti: false, attivo: true, applica: false },
       ],
@@ -26,7 +27,7 @@ const { dati, toasts } = vi.hoisted(() => ({
         { id: "c2", ordine: 2, codice: "BLS-AGG-05", nome_corso: "BLSD aggiornamento" },
       ],
       regole_ruolo_corso: [
-        { id: "g1", ordine: 1, ruolo_codice: "ADD_DAE", ruolo: "Addetto DAE", parametro: "nessuno", valore: "—", corso_base: "BLS-BAS-05", corso_aggiornamento: "BLS-AGG-05", applica: false },
+        { id: "g1", ordine: 1, ruolo_codice: "ADD-DAE", ruolo: "Addetto DAE", parametro: "nessuno", valore: "—", corso_base: "BLS-BAS-05", corso_aggiornamento: "BLS-AGG-05", applica: false },
       ],
     } as Record<string, unknown[]>,
     // Solo quando il test lo chiede: negli altri casi la tabella si legge normalmente
@@ -96,7 +97,7 @@ describe("Tabella 02: ruolo e corsi come elenco", () => {
   it("nelle celle si vedono i nomi, non solo i codici", async () => {
     monta(); await attendi(); await vai02();
     const riga = document.querySelector("tbody tr")!.textContent!;
-    expect(riga).toContain("Addetto DAE (ADD_DAE)");
+    expect(riga).toContain("Addetto DAE (ADD-DAE)");
     expect(riga).toContain("BLS-BAS-05 – BLSD base");
     expect(riga).toContain("BLS-AGG-05 – BLSD aggiornamento");
   });
@@ -142,10 +143,19 @@ describe("Tabella 02: ruolo e corsi come elenco", () => {
 });
 
 describe("Tabella 01: codice dei ruoli", () => {
-  it("un codice con spazi non si salva", async () => {
+  it("un codice con spazi si salva col trattino", async () => {
     monta(); await attendi();
     await clic(screen.getByRole("button", { name: /Aggiungi/ }));
-    await scrivi(screen.getByLabelText(/^Codice/), "add dae");
+    await scrivi(screen.getByLabelText(/^Codice/), "add dae 2");
+    await scrivi(screen.getByLabelText(/^Ruolo/), "Nuovo ruolo");
+    await clic(screen.getByRole("button", { name: "Salva" }));
+    expect(scritture("ruoli_sicurezza", "insert").at(-1)).toContain('"codice":"ADD-DAE-2"');
+  });
+
+  it("un codice con accenti o simboli non si salva", async () => {
+    monta(); await attendi();
+    await clic(screen.getByRole("button", { name: /Aggiungi/ }));
+    await scrivi(screen.getByLabelText(/^Codice/), "àdd/dae");
     await scrivi(screen.getByLabelText(/^Ruolo/), "Nuovo ruolo");
     await clic(screen.getByRole("button", { name: "Salva" }));
     expect(toasts).toContain("errore:«Codice» non valido");
@@ -160,7 +170,7 @@ describe("Tabella 01: codice dei ruoli", () => {
     await scrivi(screen.getByLabelText(/^Richiede/), "LAVORATORE");
     await clic(screen.getByRole("button", { name: "Salva" }));
     const insert = scritture("ruoli_sicurezza", "insert").at(-1)!;
-    expect(insert).toContain('"codice":"OPER_X_1"');
+    expect(insert).toContain('"codice":"OPER-X-1"');
     expect(insert).toContain('"richiede":"LAVORATORE"');
     expect(invalida.mock.calls.some(([f]) => JSON.stringify((f as { queryKey: unknown }).queryKey) === '["ruoli-sicurezza"]')).toBe(true);
   });
@@ -190,7 +200,7 @@ describe("Tabella 01: codice dei ruoli", () => {
     await clic(screen.getByRole("button", { name: /Modifica/ }));
     const valori = [...(screen.getByLabelText(/^Richiede/) as HTMLSelectElement).options].map((o) => o.value);
     expect(valori).toContain("LAVORATORE");
-    expect(valori).not.toContain("ADD_DAE");
+    expect(valori).not.toContain("ADD-DAE");
   });
 
   it("non cancella un ruolo che ha regole nella Tabella 02", async () => {

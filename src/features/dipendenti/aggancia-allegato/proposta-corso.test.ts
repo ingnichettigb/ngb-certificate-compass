@@ -69,9 +69,9 @@ const ruolo = (codice: string, nome: string, extra: Partial<RuoloSicurezza> = {}
   ({ id: `r-${codice}`, nome, codice, attivo: true, obbligatorio_tutti: false, ordine: ++n, ...extra }) as unknown as RuoloSicurezza;
 const ruoli = [
   ruolo("LAVORATORE", "Lavoratore", { obbligatorio_tutti: true }),
-  ruolo("ADD_DAE", "Addetto DAE"),
-  ruolo("OPER_CAR_CP_II_8311", "OPERATORE CARRIPONTE CP"),
-  ruolo("ADD_ANTINCENDIO", "Addetto Antincendio"),
+  ruolo("ADD-DAE", "Addetto DAE"),
+  ruolo("OPER-CAR-CP-II-8311", "OPERATORE CARRIPONTE CP"),
+  ruolo("ADD-ANTINCENDIO", "Addetto Antincendio"),
   ruolo("ASPP", "ASPP"),
 ];
 const reg = (ruolo_codice: string, parametro: string, valore: string, corso_base: string | null, corso_aggiornamento: string | null): RegolaRuoloCorso => ({
@@ -82,9 +82,9 @@ const regole = [
   reg("LAVORATORE", "rischio ATECO", "basso", "SIC-SPE-04", null),
   reg("LAVORATORE", "rischio ATECO", "medio", "SIC-SPE-08", null),
   reg("LAVORATORE", "rischio ATECO", "alto", "SIC-SPE-12", null),
-  reg("ADD_DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05"),
-  reg("OPER_CAR_CP_II_8311", "nessuno", "—", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
-  reg("ADD_ANTINCENDIO", "nessuno", "—", "SIC-GEN-04", null),
+  reg("ADD-DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05"),
+  reg("OPER-CAR-CP-II-8311", "nessuno", "—", "LAV-CAR-CP-II-8311", "LAV-CAR-CP-II-8311-AGG"),
+  reg("ADD-ANTINCENDIO", "nessuno", "—", "SIC-GEN-04", null),
   reg("ASPP", "modulo", "A", "SIC-ASPP-A", null),
 ];
 const assegna = (...r: string[]): AssegnazioneRuolo[] => r.map((x) => ({ id: `as-${x}`, dipendente_id: "d1", ruolo_id: `r-${x}` }));
@@ -96,8 +96,8 @@ const codici = (p: ReturnType<typeof proponi>) => p.map((x) => x.corso.codice);
 
 describe("ruoliDelLavoratore", () => {
   it("il ruolo per tutti più quelli assegnati, solo se attivi", () => {
-    const attivi = ruoliDelLavoratore(ruoli.map((r) => (r.codice === "ADD_DAE" ? { ...r, attivo: false } : r)), assegna("ADD_DAE", "OPER_CAR_CP_II_8311"), "d1");
-    expect(attivi.map((r) => r.codice)).toEqual(["LAVORATORE", "OPER_CAR_CP_II_8311"]);
+    const attivi = ruoliDelLavoratore(ruoli.map((r) => (r.codice === "ADD-DAE" ? { ...r, attivo: false } : r)), assegna("ADD-DAE", "OPER-CAR-CP-II-8311"), "d1");
+    expect(attivi.map((r) => r.codice)).toEqual(["LAVORATORE", "OPER-CAR-CP-II-8311"]);
   });
 });
 
@@ -117,18 +117,18 @@ describe("corsiProposti", () => {
   });
 
   it("propone solo i ruoli del lavoratore: l'antincendio non assegnato non compare", () => {
-    expect(codici(proponi(assegna("ADD_DAE"), [att("SIC-GEN-04", "2020-01-10"), att("SIC-SPE-08", "2024-01-10")]))).toEqual(["BLS-BAS-05"]);
+    expect(codici(proponi(assegna("ADD-DAE"), [att("SIC-GEN-04", "2020-01-10"), att("SIC-SPE-08", "2024-01-10")]))).toEqual(["BLS-BAS-05"]);
   });
 
   it("un'attrezzatura del ruolo assegnato: base da svolgere", () => {
-    const p = proponi(assegna("OPER_CAR_CP_II_8311"), [att("SIC-GEN-04", "2020-01-10"), att("SIC-SPE-08", "2024-01-10")]);
+    const p = proponi(assegna("OPER-CAR-CP-II-8311"), [att("SIC-GEN-04", "2020-01-10"), att("SIC-SPE-08", "2024-01-10")]);
     expect(p).toHaveLength(1);
     expect(p[0]).toMatchObject({ motivo: "da-svolgere", dettaglio: "OPERATORE CARRIPONTE CP: da svolgere" });
     expect(p[0]!.corso.codice).toBe("LAV-CAR-CP-II-8311");
   });
 
   it("evidenza scaduta: propone l'aggiornamento (se c'è), prima dei corsi da svolgere", () => {
-    const p = proponi(assegna("OPER_CAR_CP_II_8311", "ADD_DAE"), [
+    const p = proponi(assegna("OPER-CAR-CP-II-8311", "ADD-DAE"), [
       att("SIC-GEN-04", "2020-01-10"),
       att("SIC-SPE-08", "2024-01-10"),
       att("LAV-CAR-CP-II-8311", "2019-05-02", { data_scadenza_calcolata: "2024-05-02" }),
@@ -138,7 +138,7 @@ describe("corsiProposti", () => {
   });
 
   it("conta l'attestato più recente tra base e aggiornamento: base scaduto ma aggiornamento valido = a posto", () => {
-    const p = proponi(assegna("OPER_CAR_CP_II_8311"), [
+    const p = proponi(assegna("OPER-CAR-CP-II-8311"), [
       att("SIC-GEN-04", "2020-01-10"),
       att("SIC-SPE-08", "2024-01-10"),
       att("LAV-CAR-CP-II-8311", "2015-05-02", { data_scadenza_calcolata: "2020-05-02" }),
@@ -157,6 +157,6 @@ describe("corsiProposti", () => {
   });
 
   it("un corso previsto da più ruoli si propone una volta sola", () => {
-    expect(codici(proponi(assegna("ADD_ANTINCENDIO"), [att("SIC-SPE-08", "2024-01-10")])).filter((c) => c === "SIC-GEN-04")).toHaveLength(1);
+    expect(codici(proponi(assegna("ADD-ANTINCENDIO"), [att("SIC-SPE-08", "2024-01-10")])).filter((c) => c === "SIC-GEN-04")).toHaveLength(1);
   });
 });

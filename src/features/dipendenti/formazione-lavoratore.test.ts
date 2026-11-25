@@ -23,7 +23,7 @@ const regole = [
   reg("LAVORATORE", "rischio ATECO", "basso", "SIC-SPE-04", "SIC-AGG-06"),
   reg("LAVORATORE", "rischio ATECO", "medio", "SIC-SPE-08", "SIC-AGG-06"),
   reg("LAVORATORE", "rischio ATECO", "alto", "SIC-SPE-12", "SIC-AGG-06"),
-  reg("ADD_DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05"),
+  reg("ADD-DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05"),
 ];
 const valuta = (rischio: "basso" | "medio" | "alto" | null, ...svolti: string[]) =>
   valutaFormazioneLavoratore({ regole, contesto: { rischioDitta: rischio }, corsiSvolti: new Set(svolti) });

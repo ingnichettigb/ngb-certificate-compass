@@ -6,6 +6,7 @@
  * formazione del Lavoratore né alle altre attrezzature, pur avendo la stessa macro-categoria «Sicurezza lavoratori».
  * Revisioni:
  *   - Rev 1 (2026-11-22): Prima stesura.
+ *   - Rev 2 (2026-11-23): Corso base ripetuto: riparte da capo solo se il corso base ha livello «Base» (migrazione 0019: i corsi LAV-… avevano «Specifico»).
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -36,7 +37,7 @@ const aggLavoratore = att("agg", "SIC-AGG-06", "2026-06-01", "Aggiornamento", { 
 describe("chiaveGruppo: le attrezzature", () => {
   it("base e aggiornamento della stessa attrezzatura stanno insieme", () => {
     expect(chiaveGruppo(carripontBase)).toBe(chiaveGruppo(carripontAgg));
-    expect(chiaveGruppo(carripontBase)).toBe("d1|attrezzatura:OPER_CAR_CP_II_8311");
+    expect(chiaveGruppo(carripontBase)).toBe("d1|attrezzatura:OPER-CAR-CP-II-8311");
   });
 
   it("attrezzature diverse, e la formazione del Lavoratore, sono gruppi diversi", () => {
@@ -56,7 +57,7 @@ describe("chiaveGruppo: le attrezzature", () => {
 
 describe("costruisciRighe: scadenze separate", () => {
   const scadenzaDi = (righe: ReturnType<typeof costruisciRighe>, chiave: string) => righe.find((r) => r.chiave === chiave)!.ciclo.scadenzaEffettiva;
-  const K_CP = "d1|attrezzatura:OPER_CAR_CP_II_8311";
+  const K_CP = "d1|attrezzatura:OPER-CAR-CP-II-8311";
 
   it("l'aggiornamento della formazione del Lavoratore non prolunga la scadenza del carriponte", () => {
     const solo = costruisciRighe([carripontBase], OGGI);
@@ -78,5 +79,13 @@ describe("costruisciRighe: scadenze separate", () => {
     expect(con).toHaveLength(1);
     expect(scadenzaDi(con, K_CP)! > scadenzaDi(senza, K_CP)!).toBe(true);
     expect(scadenzaDi(con, K_CP)! > "2026-11-22").toBe(true);
+  });
+
+  it("un corso base ripetuto riparte da capo: la validità è quella del corso più recente (richiede livello «Base»)", () => {
+    const vecchio = att("b1", "LAV-CAR-CP-II-8311", "2018-03-01", "Base", {}, 12);
+    const rifatto = att("b2", "LAV-CAR-CP-II-8311", "2025-02-10", "Base", {}, 12);
+    const righe = costruisciRighe([vecchio, rifatto], OGGI);
+    expect(righe).toHaveLength(1);
+    expect(scadenzaDi(righe, K_CP)).toBe("2030-02-10");
   });
 });

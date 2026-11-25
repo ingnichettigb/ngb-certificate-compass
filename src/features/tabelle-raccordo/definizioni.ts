@@ -34,7 +34,7 @@ export interface Colonna {
   riferimento?: FonteRiferimento;
   /** Una volta valorizzato non si cambia più (es. il codice di un ruolo: è la chiave stabile). */
   soloLetturaInModifica?: boolean;
-  /** Testo libero che è un codice: si porta in maiuscolo e ammette solo lettere, numeri e trattino basso. */
+  /** Testo libero che è un codice: si porta in maiuscolo e ammette solo lettere, numeri e il trattino (spazi e trattini bassi diventano trattini). */
   codice?: boolean;
 }
 
@@ -75,7 +75,7 @@ export const TABELLE_RACCORDO: DefinizioneTabella[] = [
     titolo: "Ruoli di sicurezza",
     tabella: "ruoli_sicurezza",
     descrizione:
-      "Ruoli e incarichi del programma. Il codice è la chiave stabile per le regole (maiuscolo, senza spazi, non si cambia più); «Richiede» indica il ruolo necessario. Non si cancella un ruolo con assegnazioni, con regole nella 02 o richiesto da altri ruoli.",
+      "Ruoli e incarichi del programma. Il codice è la chiave stabile per le regole (maiuscolo, con il trattino al posto degli spazi, non si cambia più); «Richiede» indica il ruolo necessario. Non si cancella un ruolo con assegnazioni, con regole nella 02 o richiesto da altri ruoli.",
     chiaviCollegate: [CHIAVE_RUOLI, CHIAVE_REGOLE_RUOLO_CORSO],
     ordinaPer: ["nome"],
     colonne: [

@@ -24,14 +24,14 @@ describe("trovaRuoloFunzione: per codice", () => {
   });
 
   it("trova il ruolo anche se il nome è stato cambiato", () => {
-    const ruoli = [r("ADD_ANTINCENDIO", "Squadra emergenza fuoco"), r("INC_PRIVACY", "Privacy")];
-    expect(trovaRuoloFunzione(ruoli, "antincendio")?.codice).toBe("ADD_ANTINCENDIO");
-    expect(trovaRuoloFunzione(ruoli, "privacy")?.codice).toBe("INC_PRIVACY");
+    const ruoli = [r("ADD-ANTINCENDIO", "Squadra emergenza fuoco"), r("INC-PRIVACY", "Privacy")];
+    expect(trovaRuoloFunzione(ruoli, "antincendio")?.codice).toBe("ADD-ANTINCENDIO");
+    expect(trovaRuoloFunzione(ruoli, "privacy")?.codice).toBe("INC-PRIVACY");
   });
 
   it("il codice vince sul nome quando due ruoli potrebbero andare bene", () => {
-    const ruoli = [r(null, "Addetto Antincendio vecchio"), r("ADD_ANTINCENDIO", "Squadra fuoco")];
-    expect(trovaRuoloFunzione(ruoli, "antincendio")?.codice).toBe("ADD_ANTINCENDIO");
+    const ruoli = [r(null, "Addetto Antincendio vecchio"), r("ADD-ANTINCENDIO", "Squadra fuoco")];
+    expect(trovaRuoloFunzione(ruoli, "antincendio")?.codice).toBe("ADD-ANTINCENDIO");
   });
 
   it("senza codici nel catalogo resta il riconoscimento per nome", () => {
@@ -39,7 +39,7 @@ describe("trovaRuoloFunzione: per codice", () => {
   });
 
   it("le attrezzature non vengono scambiate per una funzione", () => {
-    const ruoli = [r("OPER_PLE_II_831", "OPERATORE PLE", { macro_categoria: "Attrezzature" })];
+    const ruoli = [r("OPER-PLE-II-831", "OPERATORE PLE", { macro_categoria: "Attrezzature" })];
     for (const f of FUNZIONI) expect(trovaRuoloFunzione(ruoli, f.chiave)).toBeUndefined();
   });
 });

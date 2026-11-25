@@ -16,7 +16,7 @@ import { RigaLavoratoreMatrice } from "./RigaLavoratoreMatrice";
 
 const dip = { id: "d1", cognome: "Rossi", nome: "Mario", codice_fiscale: "RSSMRA80A01H501Z", reparto: "Officina" } as unknown as Dipendente;
 const corso = (codice: string) => ({ id: `c-${codice}`, codice, nome_corso: `Corso ${codice}`, macro_categoria: "Sicurezza Lavoratori" }) as unknown as TipoCorso;
-const ruoli = [{ id: "r1", nome: "OPERATORE CARRIPONTE", codice: "OPER_CAR_CP_II_8311", attivo: true, obbligatorio_tutti: false, richiede: "LAVORATORE" }] as unknown as RuoloSicurezza[];
+const ruoli = [{ id: "r1", nome: "OPERATORE CARRIPONTE", codice: "OPER-CAR-CP-II-8311", attivo: true, obbligatorio_tutti: false, richiede: "LAVORATORE" }] as unknown as RuoloSicurezza[];
 const corsi = [corso("A-FATTO"), corso("B-DA-FARE"), corso("C-ATTESA"), corso("D-ESENTE"), corso("E-NON-DOVUTO")];
 
 function monta(extra: { motivoInAttesa?: (d: string, c: TipoCorso) => string | null } = {}) {

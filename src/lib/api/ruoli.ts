@@ -28,7 +28,7 @@ export type RuoloSicurezza = {
   obbligatorio_tutti: boolean;
   attivo: boolean;
   ordine: number;
-  /** Codice stabile del ruolo (es. ADD_DAE): è lui il riferimento, il nome si può cambiare. */
+  /** Codice stabile del ruolo (es. ADD-DAE): è lui il riferimento, il nome si può cambiare. */
   codice?: string | null;
   /** «ruolo» o «incarico». */
   tipo?: string;

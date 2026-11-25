@@ -4,6 +4,7 @@
  * Data creazione: 2026-11-21
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura.
+ *   - Rev 2 (2026-11-23): Convenzione unica dei codici col trattino (ADD-DAE): spazi e trattini bassi diventano trattini.
  */
 import { describe, expect, it } from "vitest";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
@@ -17,9 +18,9 @@ const corso = (codice: string | null, nome_corso: string) => ({ id: nome_corso, 
 
 describe("opzioni dei ruoli", () => {
   it("solo ruoli con codice, in ordine alfabetico, con nome e codice", () => {
-    const o = opzioniRuoli([ruolo("RLS", "RLS"), ruolo(null, "Senza codice"), ruolo("ADD_DAE", "Addetto DAE")]);
+    const o = opzioniRuoli([ruolo("RLS", "RLS"), ruolo(null, "Senza codice"), ruolo("ADD-DAE", "Addetto DAE")]);
     expect(o).toEqual([
-      { valore: "ADD_DAE", etichetta: "Addetto DAE (ADD_DAE)" },
+      { valore: "ADD-DAE", etichetta: "Addetto DAE (ADD-DAE)" },
       { valore: "RLS", etichetta: "RLS (RLS)" },
     ]);
   });
@@ -38,9 +39,9 @@ describe("opzioni dei corsi", () => {
 });
 
 describe("etichettaRiferimento", () => {
-  const o = opzioniRuoli([ruolo("ADD_DAE", "Addetto DAE")]);
+  const o = opzioniRuoli([ruolo("ADD-DAE", "Addetto DAE")]);
   it("mostra il nome del ruolo, anche con maiuscole diverse", () => {
-    expect(etichettaRiferimento(o, "add_dae")).toBe("Addetto DAE (ADD_DAE)");
+    expect(etichettaRiferimento(o, "add-dae")).toBe("Addetto DAE (ADD-DAE)");
   });
   it("un codice che l'elenco non conosce si mostra com'è, mai vuoto", () => {
     expect(etichettaRiferimento(o, "VECCHIO_RUOLO")).toBe("VECCHIO_RUOLO");
@@ -52,11 +53,17 @@ describe("etichettaRiferimento", () => {
 });
 
 describe("codiceValido", () => {
-  it("porta in maiuscolo e accetta lettere, numeri e trattino basso", () => {
-    expect(codiceValido(" oper_ple_831 ")).toBe("OPER_PLE_831");
+  it("porta in maiuscolo; spazi e trattini bassi diventano trattini", () => {
+    expect(codiceValido(" oper-ple-831 ")).toBe("OPER-PLE-831");
+    expect(codiceValido("add dae")).toBe("ADD-DAE");
+    expect(codiceValido("oper_ple_831")).toBe("OPER-PLE-831");
   });
-  it("rifiuta spazi, trattini, accenti e il vuoto", () => {
-    for (const t of ["add dae", "ADD-DAE", "àdd", ""]) expect(codiceValido(t), t).toBeNull();
+  it("un solo trattino tra le parti e nessuno ai bordi", () => {
+    expect(codiceValido("ADD--DAE")).toBe("ADD-DAE");
+    expect(codiceValido("  -add _ dae- ")).toBe("ADD-DAE");
+  });
+  it("rifiuta accenti, simboli, e il vuoto", () => {
+    for (const t of ["àdd", "add/dae", "add.dae", "ADD+DAE", "", "---", "   "]) expect(codiceValido(t), t).toBeNull();
   });
 });
 

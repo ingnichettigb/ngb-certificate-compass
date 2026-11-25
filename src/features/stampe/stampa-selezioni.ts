@@ -4,7 +4,7 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da dati-stampa.ts: periodi, formazione, stato di validità e selezioni dei lavoratori. Nessun cambio di comportamento.
- *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD_DAE, PREPOSTO, …); per nome solo se il codice manca.
+ *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD-DAE, PREPOSTO, …); per nome solo se il codice manca.
  *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
  *   rev 4 — 23/11/2026 14:15 — ordina: raggruppa per lavoratore (cognome/nome); prima il corso base (priorità 0), poi aggiornamenti per data crescente.
  */
@@ -58,10 +58,10 @@ export function voceFormazione(tc: Pick<TipoCorso, "codice" | "nome_corso" | "ma
 
 /** Codice stabile del ruolo -> voce della stampa. */
 const VOCE_PER_CODICE_RUOLO: Record<string, VoceRuolo> = {
-  ADD_DAE: "defibrillatore",
+  "ADD-DAE": "defibrillatore",
   PREPOSTO: "preposto",
-  ADD_ANTINCENDIO: "antincendio",
-  ADD_PRIMO_SOCCORSO: "primoSoccorso",
+  "ADD-ANTINCENDIO": "antincendio",
+  "ADD-PRIMO-SOCCORSO": "primoSoccorso",
 };
 
 /** A quale voce corrisponde un ruolo di sicurezza (stesse parole usate da trovaRuoloPerCorso); null = nessuna delle quattro. */

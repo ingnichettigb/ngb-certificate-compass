@@ -232,7 +232,7 @@ export function TabellaRaccordo({ def }: { def: DefinizioneTabella }) {
       const testo = String(modulo[c.chiave] ?? "").trim();
       if (c.codice && !fisse.has(c.chiave) && testo !== "" && codiceValido(testo) === null) {
         toast.error(`«${c.etichetta}» non valido`, {
-          description: "Usa solo lettere, numeri e il trattino basso (es. ADD_DAE), senza spazi né accenti.",
+          description: "Usa solo lettere e numeri non accentati, separati da trattini (es. ADD-DAE).",
         });
         return;
       }

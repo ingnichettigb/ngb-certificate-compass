@@ -5,6 +5,7 @@
  * Messaggi comprensibili per gli errori del database nelle tabelle di raccordo e controllo dei codici scritti a mano.
  * Revisioni:
  *   - Rev 1 (2026-11-21): Prima stesura (punto di verità ruoli-corsi, Fase 3).
+ *   - Rev 2 (2026-11-23): Convenzione unica dei codici: maiuscolo con il TRATTINO (ADD-DAE). Spazi e trattini bassi scritti a mano diventano trattini.
  */
 
 /** Messaggio da mostrare per un errore di salvataggio: i casi dei vincoli del database in italiano semplice. */
@@ -18,10 +19,14 @@ export function messaggioErrore(e: unknown): string {
 }
 
 /**
- * Codice scritto a mano: si porta in maiuscolo e si accetta solo con lettere, numeri e trattino basso (come ADD_DAE).
- * Restituisce il codice pronto da salvare, oppure null se non è valido.
+ * Codice scritto a mano: maiuscolo, con il TRATTINO tra le parti (es. ADD-DAE, OPER-PLE-II-831). Spazi e trattini bassi diventano trattini
+ * (una sola volta, mai ai bordi); sono ammesse solo lettere e numeri non accentati. Restituisce il codice pronto da salvare, oppure null.
  */
 export function codiceValido(testo: string): string | null {
-  const cod = testo.trim().toUpperCase();
-  return /^[A-Z0-9_]+$/.test(cod) ? cod : null;
+  const cod = testo
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return /^[A-Z0-9]+(-[A-Z0-9]+)*$/.test(cod) ? cod : null;
 }

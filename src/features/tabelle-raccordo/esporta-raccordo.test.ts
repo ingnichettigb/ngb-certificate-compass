@@ -30,7 +30,7 @@ describe("dati esportati dalle tabelle di raccordo", () => {
     const righe: Riga[] = [
       {
         id: "1",
-        codice: "OPER_PLE_II_831",
+        codice: "OPER-PLE-II-831",
         nome: "OPERATORE PLE",
         tipo: "ruolo",
         richiede: "LAVORATORE",
@@ -62,7 +62,7 @@ describe("dati esportati dalle tabelle di raccordo", () => {
     ]);
     // «Richiede» è una colonna «riferimento»: si esporta il codice, che è la chiave stabile
     expect(t.righe).toEqual([
-      [1, "OPER_PLE_II_831", "OPERATORE PLE", "ruolo", "LAVORATORE", false, true, false],
+      [1, "OPER-PLE-II-831", "OPERATORE PLE", "ruolo", "LAVORATORE", false, true, false],
       [2, null, "ASPP", "ruolo", null, false, false, true],
     ]);
   });
@@ -72,7 +72,7 @@ describe("dati esportati dalle tabelle di raccordo", () => {
     const t = tabellaRaccordoDaEsportare(d, d.colonne, [
       {
         id: "1",
-        ruolo_codice: "ADD_DAE",
+        ruolo_codice: "ADD-DAE",
         parametro: "nessuno",
         valore: "—",
         corso_base: "BLS-BAS-05",
@@ -81,7 +81,7 @@ describe("dati esportati dalle tabelle di raccordo", () => {
       },
     ]);
     expect(t.intestazioni).toEqual(["N", "Ruolo", "Parametro", "Valore", "Corso base", "Aggiornamento", "Applica"]);
-    expect(t.righe[0]).toEqual([1, "ADD_DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05", false]);
+    expect(t.righe[0]).toEqual([1, "ADD-DAE", "nessuno", "—", "BLS-BAS-05", "BLS-AGG-05", false]);
   });
 
   it("usa l'ordine delle colonne scelto dall'utente", () => {

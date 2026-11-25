@@ -70,20 +70,20 @@ const CORSI = [
 const RUOLI = [
   { codice: "LAVORATORE", macro_categoria: "Sicurezza Lavoratori", attivo: true },
   { codice: "PREPOSTO", macro_categoria: "Sicurezza Lavoratori", attivo: true },
-  { codice: "OPER_PLE_II_831", macro_categoria: "Attrezzature", attivo: true },
-  { codice: "INC_PRIVACY", macro_categoria: "Privacy", attivo: true },
-  { codice: "ADD_DAE", macro_categoria: "Defibrillatore", attivo: false },
+  { codice: "OPER-PLE-II-831", macro_categoria: "Attrezzature", attivo: true },
+  { codice: "INC-PRIVACY", macro_categoria: "Privacy", attivo: true },
+  { codice: "ADD-DAE", macro_categoria: "Defibrillatore", attivo: false },
 ];
 const REGOLE = [
   { ruolo_codice: "LAVORATORE", corso_base: "SIC-GEN-04", corso_aggiornamento: "SIC-AGG-06" },
   {
-    ruolo_codice: "OPER_PLE_II_831",
+    ruolo_codice: "OPER-PLE-II-831",
     corso_base: "LAV-PLE-II-831",
     corso_aggiornamento: "LAV-PLE-II-831-AGG",
   },
   { ruolo_codice: "PREPOSTO", corso_base: "PRP-BAS-12", corso_aggiornamento: null },
-  { ruolo_codice: "INC_PRIVACY", corso_base: "PRIVACY-B04", corso_aggiornamento: null },
-  { ruolo_codice: "ADD_DAE", corso_base: "BLS-BAS-05", corso_aggiornamento: null },
+  { ruolo_codice: "INC-PRIVACY", corso_base: "PRIVACY-B04", corso_aggiornamento: null },
+  { ruolo_codice: "ADD-DAE", corso_base: "BLS-BAS-05", corso_aggiornamento: null },
   { ruolo_codice: "RUOLO_INESISTENTE", corso_base: "COVID19-02", corso_aggiornamento: null },
 ];
 const LEGAMI = costruisciLegami(REGOLE, RUOLI);

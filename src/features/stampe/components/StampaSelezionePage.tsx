@@ -88,23 +88,23 @@ function ruoloAppartieneAGruppo(r: RuoloSicurezza, ordine: number | null): boole
     case 2: // Preposti
       return cod === "PREPOSTO" || nome.includes("preposto") || macro.includes("preposto");
     case 3: // Evacuazione
-      return cod === "ADD_EVACUAZIONE" || nome.includes("evacuaz") || macro.includes("emergenz");
+      return cod === "ADD-EVACUAZIONE" || nome.includes("evacuaz") || macro.includes("emergenz");
     case 4: // Antincendio
       return cod.includes("ANTINCENDIO") || nome.includes("antincendio") || macro.includes("antincendio");
     case 5: // Primo soccorso
-      return cod === "ADD_PRIMO_SOCCORSO" || nome.includes("primo soccorso") || macro.includes("primo soccorso");
+      return cod === "ADD-PRIMO-SOCCORSO" || nome.includes("primo soccorso") || macro.includes("primo soccorso");
     case 6: // Defibrillatore
-      return cod === "ADD_DAE" || nome.includes("defibrillat") || nome.includes("blsd") || macro.includes("defibrillat");
+      return cod === "ADD-DAE" || nome.includes("defibrillat") || nome.includes("blsd") || macro.includes("defibrillat");
     case 7: // Privacy
-      return cod === "INC_PRIVACY" || nome.includes("privacy") || macro.includes("privacy");
+      return cod === "INC-PRIVACY" || nome.includes("privacy") || macro.includes("privacy");
     case 8: // Covid
       return false;
     case 9: // Altro
       return false;
     case 10: // DL - Dir - ASPP - RSPP
-      return ["DL", "DL_RSPP", "ASPP", "RSPP", "DSGA", "VICEDSGA"].includes(cod) || /^(dl|dir|aspp|rspp)/i.test(nome);
+      return ["DL", "DL-RSPP", "ASPP", "RSPP", "DSGA", "VICEDSGA"].includes(cod) || /^(dl|dir|aspp|rspp)/i.test(nome);
     case 11: // Cantieri
-      return cod.startsWith("OPER_") || macro.includes("attrezzatur");
+      return cod.startsWith("OPER-") || macro.includes("attrezzatur");
     default:
       return false;
   }

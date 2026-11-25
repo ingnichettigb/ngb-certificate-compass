@@ -10,9 +10,9 @@ import { voceDelRuolo } from "./stampa-selezioni";
 
 describe("voceDelRuolo", () => {
   it("per codice, anche se il nome è stato cambiato", () => {
-    expect(voceDelRuolo({ nome: "Squadra emergenza", macro_categoria: null, codice: "ADD_ANTINCENDIO" })).toBe("antincendio");
-    expect(voceDelRuolo({ nome: "Cuore", macro_categoria: null, codice: "ADD_DAE" })).toBe("defibrillatore");
-    expect(voceDelRuolo({ nome: "Soccorritori", macro_categoria: null, codice: "add_primo_soccorso" })).toBe("primoSoccorso");
+    expect(voceDelRuolo({ nome: "Squadra emergenza", macro_categoria: null, codice: "ADD-ANTINCENDIO" })).toBe("antincendio");
+    expect(voceDelRuolo({ nome: "Cuore", macro_categoria: null, codice: "ADD-DAE" })).toBe("defibrillatore");
+    expect(voceDelRuolo({ nome: "Soccorritori", macro_categoria: null, codice: "add-primo-soccorso" })).toBe("primoSoccorso");
     expect(voceDelRuolo({ nome: "Capo", macro_categoria: null, codice: "PREPOSTO" })).toBe("preposto");
   });
 
@@ -22,6 +22,6 @@ describe("voceDelRuolo", () => {
   });
 
   it("un ruolo di attrezzatura non corrisponde a nessuna voce", () => {
-    expect(voceDelRuolo({ nome: "OPERATORE PLE", macro_categoria: "Attrezzature", codice: "OPER_PLE_II_831" })).toBeNull();
+    expect(voceDelRuolo({ nome: "OPERATORE PLE", macro_categoria: "Attrezzature", codice: "OPER-PLE-II-831" })).toBeNull();
   });
 });
