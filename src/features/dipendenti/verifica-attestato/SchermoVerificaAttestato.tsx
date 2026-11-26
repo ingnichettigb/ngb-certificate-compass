@@ -5,6 +5,7 @@
  * Revisioni:
  *   - Rev 1 (2026-10-25 21:35): Schermata a tutto schermo per verifica documento e aggancio nel database.
  *   - Rev 2 (2026-10-25 21:45): Vista intera (100vw x 100vh) con suddivisione a 2 colonne reali (PDF 70% e dati 30%).
+ *   - Rev 3 (2026-11-26 21:10): Salva anche il tipo di corso scelto nel pannello.
  */
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -31,6 +32,7 @@ export function SchermoVerificaAttestato({
   onConfermato: (percorso: string) => void;
 }) {
   const [dati, setDati] = useState<DatiVerifica>({
+    tipoCorsoId: attestato.tipo_corso_id || "",
     dataCorso: attestato.data_corso || "",
     dataScadenza: attestato.data_scadenza_calcolata || "",
     senzaScadenza: !attestato.data_scadenza_calcolata,
@@ -48,6 +50,7 @@ export function SchermoVerificaAttestato({
       const { error } = await supabase
         .from("attestati_caricati")
         .update({
+          ...(dati.tipoCorsoId ? { tipo_corso_id: dati.tipoCorsoId } : {}),
           url_foto_fronte: fileTrovato.percorsoRelativo,
           ...(attestato.stato_validazione === "File Attestato mancante" ? { stato_validazione: "Approvato" } : {}),
           data_corso: dati.dataCorso,

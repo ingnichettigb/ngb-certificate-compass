@@ -4,12 +4,17 @@
  * Data creazione: 2026-10-25
  * Revisioni:
  *   - Rev 1 (2026-10-25 21:35): Pannello dati lavoratore/corso con campi rettificabili.
+ *   - Rev 2 (2026-11-26 21:10): Tipo di corso modificabile con SelettoreCorso; al cambio ricalcola la scadenza.
  */
 import { User, BookOpen, Calendar, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { type Attestato, type Dipendente } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { getTipiCorso, type Attestato, type Dipendente } from "@/lib/api";
+import { SelettoreCorso } from "@/features/selezione-corso/SelettoreCorso";
+import { useLegamiCorsi } from "@/features/selezione-corso/useLegamiCorsi";
 
 export type DatiVerifica = {
+  tipoCorsoId: string;
   dataCorso: string;
   dataScadenza: string;
   senzaScadenza: boolean;
@@ -32,6 +37,18 @@ export function PannelloDatiVerifica({
   onCambia: (d: DatiVerifica) => void;
 }) {
   const set = (p: Partial<DatiVerifica>) => onCambia({ ...dati, ...p });
+  const { data: tipiCorso = [] } = useQuery({ queryKey: ["tipi_corso"], queryFn: getTipiCorso });
+  const legami = useLegamiCorsi(true);
+
+  function scadenzaPer(corsoId: string, dataRif: string): Partial<DatiVerifica> {
+    const corso = tipiCorso.find((c) => c.id === corsoId);
+    if (!corso || !corso.durata_validita_anni) return { senzaScadenza: true, dataScadenza: "" };
+    if (!dataRif) return {};
+    const d = new Date(dataRif);
+    if (isNaN(d.getTime())) return {};
+    d.setFullYear(d.getFullYear() + corso.durata_validita_anni);
+    return { senzaScadenza: false, dataScadenza: d.toISOString().slice(0, 10) };
+  }
 
   return (
     <div className="flex h-full flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-sm">
@@ -47,17 +64,19 @@ export function PannelloDatiVerifica({
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <BookOpen className="size-3.5 text-primary" /> Corso
         </div>
-        <div className="font-semibold">
-          {attestato.tipi_corso?.nome_corso ?? "Corso"}{" "}
-          {attestato.tipi_corso?.codice && (
-            <span className="font-mono text-xs text-muted-foreground">({attestato.tipi_corso.codice})</span>
-          )}
-        </div>
+        <SelettoreCorso
+          id="verifica-tipo-corso"
+          corsi={tipiCorso}
+          legami={legami}
+          valore={dati.tipoCorsoId}
+          onScegli={(tc) => set({ tipoCorsoId: tc.id, ...scadenzaPer(tc.id, dati.dataCorso) })}
+          segnaposto={attestato.tipi_corso?.nome_corso ?? "-- Seleziona corso --"}
+        />
       </div>
 
       <div className="space-y-1.5">
         <label className="flex items-center gap-1.5 text-xs font-semibold"><Calendar className="size-3.5 text-primary" /> Data svolgimento corso</label>
-        <Input type="date" value={dati.dataCorso} onChange={(e) => set({ dataCorso: e.target.value })} />
+        <Input type="date" value={dati.dataCorso} onChange={(e) => set({ dataCorso: e.target.value, ...(dati.tipoCorsoId ? scadenzaPer(dati.tipoCorsoId, e.target.value) : {}) })} />
       </div>
 
       <div className="space-y-1.5">
