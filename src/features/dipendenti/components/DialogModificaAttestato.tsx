@@ -6,6 +6,8 @@
  *   - Rev 1 (2026-10-25 20:30): Dialog per modifica corso, date, ore e stato di validazione dell'attestato.
  *   - Rev 2 (2026-11-22): Campo «Tipo di corso» con pulsanti delle categorie (dal database), ricerca, ultimo scelto per
  *            primo, corsi e poi aggiornamenti (SelettoreCorso). Date, ore, stato e ricalcolo scadenza invariati.
+ *   - Rev 3 (2026-11-26 21:00): Aggiunta opzione «In attesa di integrazione» allo stato: prima il menu mostrava
+ *            «Approvato» per un valore non in elenco, disallineato dal database.
  */
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -216,6 +218,7 @@ export function DialogModificaAttestato({
               <option value="Approvato">Approvato</option>
               <option value="File Attestato mancante">File Attestato mancante</option>
               <option value="In attesa">In attesa</option>
+              <option value="In attesa di integrazione">In attesa di integrazione</option>
               <option value="Respinto">Respinto</option>
             </select>
           </div>
