@@ -13,6 +13,7 @@
  *   l'RLS non contamini la sicurezza lavoratori e il corso base generale resti credito permanente senza scadenza.
  * - Rev 7 (2026-11-22): Ogni attrezzatura (corsi LAV-…) ha un ciclo proprio: il corso base e il suo aggiornamento stanno insieme, ma non si
  *   mescolano né alla formazione del Lavoratore né alle altre attrezzature (stessa macro-categoria «Sicurezza lavoratori»).
+ * - Rev 8 (2026-11-27 07:51): Specifico è formazione iniziale; solo aggiornamenti espliciti rinnovano il ciclo, senza raddoppiare la validità.
  */
 import type { Attestato } from "@/lib/api";
 import { codiceRuoloAttrezzatura } from "@/lib/api/codici-ruoli";
@@ -56,7 +57,16 @@ export function ePreposto(a: Attestato): boolean {
 }
 
 function eBase(a: Attestato): boolean {
-  return (a.tipi_corso?.livello_specifico ?? "").toLowerCase() === "base";
+  if (eAggiornamento(a)) return false;
+  const livello = (a.tipi_corso?.livello_specifico ?? "").trim().toLowerCase();
+  return livello === "base" || livello === "specifico";
+}
+
+/** Solo corsi dichiarati aggiornamenti possono assolvere il rinnovo. */
+function eAggiornamento(a: Attestato): boolean {
+  const livello = (a.tipi_corso?.livello_specifico ?? "").trim().toLowerCase();
+  const codice = (a.tipi_corso?.codice ?? "").trim().toUpperCase();
+  return livello === "aggiornamento" || /(?:^|-)AGG(?:-|$)/.test(codice);
 }
 
 /** Riconosce i corsi della famiglia RLS (codici RLS-… o denominazione contenente RLS). */
@@ -105,8 +115,9 @@ export function aAttestatoCiclo(a: Attestato): AttestatoCiclo {
 /** Durata ciclo, ore richieste e decadenza del gruppo, letti dal tipo di corso del Base. */
 export function parametriDaGruppo(gruppoOrdinato: Attestato[]) {
   const basi = gruppoOrdinato.filter(eBase);
-  const base = (basi.length > 0 ? basi[basi.length - 1] : gruppoOrdinato[0])!;
-  const ultimoAgg = [...gruppoOrdinato].reverse().find((a) => a !== base && !eBase(a));
+  const base = basi[basi.length - 1] ?? gruppoOrdinato[0];
+  if (!base) throw new Error("Gruppo attestati vuoto");
+  const ultimoAgg = [...gruppoOrdinato].reverse().find(eAggiornamento);
 
   const durataCicloAnni =
     base.tipi_corso?.durata_validita_anni ??
@@ -168,7 +179,7 @@ export function costruisciRighe(
     gruppo.sort((a, b) => (a.data_corso ?? "").localeCompare(b.data_corso ?? ""));
     const p = parametriDaGruppo(gruppo);
     let ciclo = valutaCicloFormativo({
-      attestati: gruppo.map(aAttestatoCiclo),
+      attestati: gruppo.filter((a) => eBase(a) || eAggiornamento(a)).map(aAttestatoCiclo),
       durataCicloAnni: p.durataCicloAnni,
       oreRichiesteAggiornamento: p.oreRichiesteAggiornamento,
       decadenzaAnni: p.decadenzaAnni,
