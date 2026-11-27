@@ -2,6 +2,8 @@
  * File:      HomePage.tsx
  * Percorso:  src/features/home/HomePage.tsx
  * Pagina iniziale: testata, contatori e tre schede di accesso (lavoratore, HR, operatore).
+ * Revisioni:
+ *   rev 4 — 27/11/2026 — La scheda «Senza PDF» apre l'elenco Dipendenti con il filtro «Senza PDF» già attivo (non più /hr).
  */
 import { AlertTriangle, CalendarClock, Clock, FileCheck2, FileX, ShieldCheck } from "lucide-react";
 import { IntestazioneHome } from "./components/IntestazioneHome";
@@ -51,7 +53,13 @@ export function HomePage() {
             tone="destructive"
             to="/scadenze"
           />
-          <CardStatistica label="Senza PDF" value={stats?.senzaPdf} icon={FileX} to="/hr" />
+          <CardStatistica
+            label="Senza PDF"
+            value={stats?.senzaPdf}
+            icon={FileX}
+            to="/dipendenti"
+            search={{ stato: "senza_pdf" }}
+          />
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">

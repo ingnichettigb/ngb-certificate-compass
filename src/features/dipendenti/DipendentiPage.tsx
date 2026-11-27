@@ -10,8 +10,11 @@
  *   rev 5 — 06/11/2026 08:20 — Finestra «Da completare» (uno alla volta) apribile dal pulsante dell'elenco e dall'esito dell'importazione;
  *            la modifica anagrafica registra classe e materia nel catalogo quando cambiano.
  *   rev 6 — 23/11/2026 08:55 — Dopo «Elimina definitivamente lavoratore» la scheda si deseleziona (la colonna destra torna neutra).
+ *   rev 7 — 27/11/2026 — Il filtro stato iniziale può arrivare dall'indirizzo (?stato=senza_pdf, usato dalla scheda «Senza PDF» della Home);
+ *            con «Senza PDF» attivo le righe mostrano quanti PDF mancano o «Nessun attestato».
  */
 import { useMemo, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { aggiornaAnagraficaDipendente, registraClasseEMateria, type Dipendente } from "@/lib/api";
@@ -28,7 +31,7 @@ import { useOrdinamentoAttestati } from "./hooks/useOrdinamentoAttestati";
 import { useAzioniDipendente } from "./hooks/useAzioniDipendente";
 import { SelettoreStato } from "@/features/contratti/SelettoreStato";
 import { DialogDaCompletare } from "@/features/da-completare/DialogDaCompletare";
-import { filtraPerStato, type FiltroStato } from "@/features/contratti/contratto";
+import { filtraPerStato, parseFiltroStato, type FiltroStato } from "@/features/contratti/contratto";
 
 export function DipendentiPage({
   senzaIntestazione = false,
@@ -39,7 +42,11 @@ export function DipendentiPage({
   const [form, setForm] = useState<Omit<Dipendente, "id"> | null>(null);
   const [filtroReparto, setFiltroReparto] = useState(TUTTI);
   const [filtroRuolo, setFiltroRuolo] = useState(TUTTI);
-  const [filtroStato, setFiltroStato] = useState<FiltroStato>("in_forza");
+  // Filtro iniziale dall'indirizzo (?stato=…). Senza router (es. nei test) o con valore non valido resta «In forza».
+  const router = useRouter({ warn: false });
+  const [filtroStato, setFiltroStato] = useState<FiltroStato>(
+    () => parseFiltroStato((router?.state.location.search as Record<string, unknown> | undefined)?.["stato"]) ?? "in_forza",
+  );
   const [modifica, setModifica] = useState(false);
   const [savingMod, setSavingMod] = useState(false);
   const [codaAperta, setCodaAperta] = useState(false);
@@ -135,7 +142,14 @@ export function DipendentiPage({
             attestati={attestati}
             onCompletaUnoAUno={() => setCodaAperta(true)}
           />
-          <ListaDipendenti isLoading={isLoading} filtrati={filtrati} attestati={attestati} sel={sel} setSel={setSel} />
+          <ListaDipendenti
+            isLoading={isLoading}
+            filtrati={filtrati}
+            attestati={attestati}
+            sel={sel}
+            setSel={setSel}
+            mostraPdfMancanti={filtroStato === "senza_pdf"}
+          />
         </div>
 
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-card)]">

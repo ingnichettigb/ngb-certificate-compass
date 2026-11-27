@@ -6,11 +6,14 @@
  *   rev 3 — 12/11/2026 — «Scaduti» e «In scadenza» contano i corsi per lavoratore (ciclo Base + aggiornamenti, stesso calcolo della
  *            pagina Scadenze), non più ogni singolo attestato: un Base scaduto con un aggiornamento valido non è uno scaduto.
  *            Primo Soccorso oltre la tolleranza = scaduto. Esclusi i lavoratori cessati e gli attestati non approvati.
+ *   rev 4 — 27/11/2026 — «Senza PDF» conta i lavoratori in forza (non più i singoli attestati), con la stessa regola del filtro
+ *            «Senza PDF» dell'elenco Dipendenti (lavoratoriSenzaPdf): attestato registrato senza file oppure nessun attestato.
  */
 import { statoRegistrato } from "@/lib/api/attestati";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getAttestati } from "@/lib/api";
+import { getAttestati, getDipendenti } from "@/lib/api";
+import { lavoratoriSenzaPdf } from "@/features/contratti/contratto";
 import { costruisciRighe } from "@/features/scadenze/raggruppa";
 
 export interface StatisticheHome {
@@ -19,7 +22,7 @@ export interface StatisticheHome {
   scaduti: number;
   inScadenza6m: number;
   attestati: number;
-  /** Rev 2 (2026-10-28 10:55): attestati senza file collegato. */
+  /** Rev 4 (2026-11-27): lavoratori in forza senza PDF (con attestati senza file, o senza alcun attestato). */
   senzaPdf: number;
 }
 
@@ -33,18 +36,15 @@ export function useStatisticheHome() {
       in6m.setMonth(in6m.getMonth() + 6);
       const in6mStr = in6m.toISOString().slice(0, 10);
 
-      const [dip, attesa, tot, senzaPdf, attestati] = await Promise.all([
+      const [dip, attesa, tot, attestati, elencoDipendenti] = await Promise.all([
         supabase.from("dipendenti").select("id", { count: "exact", head: true }),
         supabase
           .from("attestati_caricati")
           .select("id", { count: "exact", head: true })
           .eq("stato_validazione", "In attesa"),
         supabase.from("attestati_caricati").select("id", { count: "exact", head: true }),
-        supabase
-          .from("attestati_caricati")
-          .select("id", { count: "exact", head: true })
-          .or("url_foto_fronte.is.null,url_foto_fronte.eq."),
         getAttestati(),
+        getDipendenti(),
       ]);
 
       // Un conteggio per lavoratore + corso (gruppo Base/aggiornamenti), con la scadenza del ciclo.
@@ -65,7 +65,7 @@ export function useStatisticheHome() {
         scaduti,
         inScadenza6m,
         attestati: tot.count ?? 0,
-        senzaPdf: senzaPdf.count ?? 0,
+        senzaPdf: lavoratoriSenzaPdf(elencoDipendenti, attestati).length,
       };
     },
   });

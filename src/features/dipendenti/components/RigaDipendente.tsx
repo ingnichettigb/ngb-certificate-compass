@@ -2,22 +2,28 @@
  * File:      RigaDipendente.tsx
  * Percorso:  src/features/dipendenti/components/RigaDipendente.tsx
  * Una riga dell'elenco dipendenti: nominativo, reparto, ruoli con scadenza e numero attestati.
+ * Revisioni:
+ *   rev 2 — 27/11/2026 — Con «Senza PDF» attivo: etichetta «N PDF mancanti» oppure «Nessun attestato».
  */
 import { riepilogoIncarichi, scadenzaBadgeClass, type Dipendente, type Attestato } from "@/lib/api";
+import { contaPdfMancanti } from "@/features/contratti/contratto";
 
 export function RigaDipendente({
   d,
   attestatiDip,
   selezionato,
   onSel,
+  mostraPdfMancanti = false,
 }: {
   d: Dipendente;
   attestatiDip: Attestato[];
   selezionato: boolean;
   onSel: () => void;
+  mostraPdfMancanti?: boolean;
 }) {
   const suoiD = attestatiDip;
   const ruoli = riepilogoIncarichi(suoiD).filter((r) => r.ricoperto);
+  const pdfMancanti = contaPdfMancanti(suoiD);
   return (
     <li>
       <button
@@ -45,6 +51,13 @@ export function RigaDipendente({
                 {r.incarico.label}
               </span>
             ))}
+            {mostraPdfMancanti && (
+              <span className="rounded-full border border-warning/40 px-1.5 py-0.5 text-[10px] text-warning">
+                {suoiD.length === 0
+                  ? "Nessun attestato"
+                  : `${pdfMancanti} ${pdfMancanti === 1 ? "PDF mancante" : "PDF mancanti"}`}
+              </span>
+            )}
           </span>
         </span>
         <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">

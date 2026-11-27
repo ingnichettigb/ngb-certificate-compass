@@ -2,6 +2,8 @@
  * File:      ListaDipendenti.tsx
  * Percorso:  src/features/dipendenti/components/ListaDipendenti.tsx
  * Elenco dei dipendenti filtrati.
+ * Revisioni:
+ *   rev 2 — 27/11/2026 — Prop mostraPdfMancanti: passata alle righe quando è attivo il filtro «Senza PDF».
  */
 import { Loader2 } from "lucide-react";
 import { type Dipendente, type Attestato } from "@/lib/api";
@@ -13,12 +15,14 @@ export function ListaDipendenti({
   attestati,
   sel,
   setSel,
+  mostraPdfMancanti = false,
 }: {
   isLoading: boolean;
   filtrati: Dipendente[];
   attestati: Attestato[];
   sel: string | null;
   setSel: (id: string) => void;
+  mostraPdfMancanti?: boolean;
 }) {
   return (
     <>
@@ -35,6 +39,7 @@ export function ListaDipendenti({
             attestatiDip={attestati.filter((a) => a.dipendente_id === d.id)}
             selezionato={sel === d.id}
             onSel={() => setSel(d.id)}
+            mostraPdfMancanti={mostraPdfMancanti}
           />
         ))}
         {!filtrati.length && (
