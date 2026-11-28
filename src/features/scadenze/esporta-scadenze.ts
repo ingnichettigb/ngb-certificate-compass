@@ -1,12 +1,13 @@
 /*
  * File:      esporta-scadenze.ts
  * Percorso:  src/features/scadenze/esporta-scadenze.ts
- * Revisione: 1 — 28/11/2026 09:11
+ * Revisione: 2 — 28/11/2026 10:01
  * Data creazione: 28/11/2026 09:11
  * Esportazione (Excel o CSV) dell'elenco mostrato nella pagina Scadenze, con le stesse righe e lo stesso ordine dello schermo.
  * Usa l'esportatore comune delle tabelle (nome file 030ArchAttestati_AAMMGGhhmm_<nome>.<estensione>).
  * Revisioni:
  * - Rev 1 (28/11/2026 09:11): Prima stesura.
+ * - Rev 2 (28/11/2026 10:01): Righe «Da formare»: stato «Da formare», «Da svolgere entro…» al posto della scadenza, nota «Nessun attestato registrato».
  */
 import { formatData } from "@/lib/api";
 import {
@@ -15,6 +16,7 @@ import {
   type FormatoEsportazione,
   type TabellaDaEsportare,
 } from "@/components/tabella-comune/esporta-tabella";
+import { testoDaSvolgere } from "./da-formare";
 import type { RigaScadenzaDati, StatoConformita, Vista } from "./types";
 
 const ETICHETTA_STATO: Record<StatoConformita, string> = {
@@ -24,6 +26,7 @@ const ETICHETTA_STATO: Record<StatoConformita, string> = {
   decaduto: "Decaduto (rifare corso base)",
   incompleto_ore: "Parziale",
   senza_scadenza: "Permanente",
+  da_formare: "Da formare",
 };
 
 export interface OpzioniEsportaScadenze {
@@ -36,6 +39,7 @@ export interface OpzioniEsportaScadenze {
 function noteRiga(r: RigaScadenzaDati): string {
   const { attestato: a, ciclo } = r;
   const note: string[] = [];
+  if (r.daFormare) return "Nessun attestato registrato";
   if (!a.url_foto_fronte?.trim()) note.push("Manca attestato");
   if (ciclo.stato === "scaduto_sanabile" && ciclo.limiteRecupero) {
     note.push(`Recuperabile con aggiornamento entro il ${formatData(ciclo.limiteRecupero)}`);
@@ -80,9 +84,13 @@ export function tabellaScadenze(righe: RigaScadenzaDati[], { vista, ruoloNome }:
         a.dipendenti?.reparto ?? "",
         ...(conRuolo ? [ruoloNome] : []),
         a.tipi_corso?.nome_corso ?? "",
-        formatData(a.data_corso),
+        r.daFormare ? "" : formatData(a.data_corso),
         r.ciclo.dataAncora ? formatData(r.ciclo.dataAncora) : "",
-        r.ciclo.scadenzaEffettiva ? formatData(r.ciclo.scadenzaEffettiva) : "Non scade",
+        r.daFormare
+          ? testoDaSvolgere(r.daFormare.dataAssunzione)
+          : r.ciclo.scadenzaEffettiva
+            ? formatData(r.ciclo.scadenzaEffettiva)
+            : "Non scade",
         ETICHETTA_STATO[r.ciclo.stato],
         noteRiga(r),
       ];

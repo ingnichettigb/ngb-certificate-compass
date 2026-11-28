@@ -127,6 +127,7 @@ exports[`Scadenze: percorso d'uso completo > registra tutto quello che la pagina
     "opzioni periodo",
     [
       "Scaduti",
+      "Da formare / Mancanti",
       "In scadenza (90 gg)",
       "In scadenza (6 mesi)",
       "In scadenza (1 anno)",

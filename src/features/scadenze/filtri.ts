@@ -1,7 +1,7 @@
 /*
  * File:      filtri.ts
  * Percorso:  src/features/scadenze/filtri.ts
- * Revisione: 5 — 28/11/2026 09:11
+ * Revisione: 6 — 28/11/2026 10:01
  * Data creazione: 2026-10-15
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Funzioni pure per elenchi, filtri e ordinamento.
@@ -11,6 +11,8 @@
  * - Rev 5 (28/11/2026 09:11): Filtro «Ruolo» (un solo ruolo): restano le persone con l'incarico realmente assegnato e i corsi
  *   di quel ruolo; elenco corsi limitato al ruolo; viste «Scaduti o in scadenza»; ordinamento «ruolo»
  *   (per persona, prima il corso base poi gli altri per data). Con un ruolo scelto la riga mostra il corso del ruolo.
+ * - Rev 6 (28/11/2026 10:01): Vista «Da formare / Mancanti»: parte dalle righe già calcolate (parametro «righeDaFormare») invece che dagli
+ *   attestati; reparto, ruolo, corso, ricerca e ordinamento valgono come per le altre viste. Le altre viste non cambiano.
  */
 import {
   repartoLeggibile,
@@ -25,6 +27,7 @@ import { costruisciRighe } from "./raggruppa";
 import { attestatiDelRuolo, haIncaricoAssegnato, mappaIncarichiAssegnati } from "./ruolo-corsi";
 import {
   TUTTI,
+  VISTA_DA_FORMARE,
   type ColonnaSort,
   type DirezioneSort,
   type PosizioneCiclo,
@@ -70,6 +73,8 @@ function entroGiorni(c: PosizioneCiclo, max: number): boolean {
 
 function corrispondeVista(c: PosizioneCiclo, vista: Vista): boolean {
   switch (vista) {
+    case VISTA_DA_FORMARE:
+      return c.stato === "da_formare";
     case "Scaduti":
       return c.stato === "scaduto_sanabile";
     case "Decaduti (> 10 anni)":
@@ -94,6 +99,7 @@ function corrispondeVista(c: PosizioneCiclo, vista: Vista): boolean {
 }
 
 const ORDINE_STATO: Record<StatoConformita, number> = {
+  da_formare: -1,
   decaduto: 0,
   scaduto_sanabile: 1,
   incompleto_ore: 2,
@@ -117,6 +123,7 @@ export function filtraScadenze({
   ruoliCatalogo = [],
   assegnazioni = [],
   regole,
+  righeDaFormare = [],
 }: {
   attestati: Attestato[];
   vista: Vista;
@@ -133,12 +140,15 @@ export function filtraScadenze({
   assegnazioni?: AssegnazioneRuolo[];
   /** Tabella 02: indica il ruolo di ogni corso (undefined = non ancora caricata). */
   regole?: RegolaRuoloCorso[] | undefined;
+  /** Righe «Da formare» già calcolate (da-formare.ts): servono solo alla vista «Da formare / Mancanti». */
+  righeDaFormare?: RigaScadenzaDati[];
 }): RigaScadenzaDati[] {
   const ruolo = ruoloSelezionato !== TUTTI ? ruoliCatalogo.find((r) => r.id === ruoloSelezionato) : undefined;
   // Ruolo scelto ma non (più) nel catalogo: nessun risultato, mai l'elenco completo per errore.
   if (ruoloSelezionato !== TUTTI && !ruolo) return [];
 
-  const righe = costruisciRighe(attestati, oggi);
+  // «Da formare / Mancanti» parte dai lavoratori con un corso dovuto e nessun attestato; le altre viste dagli attestati.
+  const righe = vista === VISTA_DA_FORMARE ? righeDaFormare : costruisciRighe(attestati, oggi);
 
   // Insieme "dipendente_ruolo" per il controllo rapido degli incarichi realmente assegnati (dipendenti_ruoli)
   const mappaAssegnati = mappaIncarichiAssegnati(assegnazioni);

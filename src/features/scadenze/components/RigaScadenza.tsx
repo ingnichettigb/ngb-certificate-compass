@@ -1,6 +1,7 @@
 /*
  * File:      RigaScadenza.tsx
  * Percorso:  src/features/scadenze/components/RigaScadenza.tsx
+ * Revisione: 8 — 28/11/2026 10:01
  * Data creazione: 2026-10-15
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Riga base tabella scadenze.
@@ -10,17 +11,21 @@
  * - Rev 5 (2026-11-06 16:00): Nota «termine transitorio» quando la scadenza è portata alla data di taglio (Preposti).
  * Rev 23/11/2026 12:05 — Avviso «Manca attestato» se l'attestato più recente non ha il file collegato.
  * Rev 12/11/2026 — Mostra il limite di recupero (Primo Soccorso) e «rifare il corso base» se decaduto per ritardo.
+ * - Rev 8 (28/11/2026 10:01): Righe «Da formare»: corso atteso senza data corso, «Da svolgere entro…» al posto della scadenza, badge rosso «Da formare».
  */
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { formatData } from "@/lib/api";
 import type { RigaScadenzaDati, StatoConformita } from "../types";
+import { testoDaSvolgere } from "../da-formare";
 import { LineaCicloFormativo } from "./LineaCicloFormativo";
 
 export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?: number }) {
   const [aperto, setAperto] = useState(false);
-  const { attestato: a, ciclo } = riga;
-  const scaduta = ciclo.stato === "scaduto_sanabile" || ciclo.stato === "decaduto";
+  const { attestato: a, ciclo, daFormare } = riga;
+  // Riga «Da formare»: il termine (data di assunzione) è rosso solo se è già passato.
+  const termineSuperato = !!daFormare?.dataAssunzione && daFormare.dataAssunzione < ciclo.dataValutazione;
+  const scaduta = ciclo.stato === "scaduto_sanabile" || ciclo.stato === "decaduto" || termineSuperato;
   const haLinea = ciclo.cicli.length > 0;
 
   return (
@@ -59,8 +64,10 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
         <td className="px-3 py-2 text-muted-foreground">{a.dipendenti?.reparto ?? "—"}</td>
         <td className="px-3 py-2">
           <div>{a.tipi_corso?.nome_corso ?? "—"}</div>
-          {!a.url_foto_fronte?.trim() && (
-            <div className="text-xs font-semibold text-destructive">Manca attestato</div>
+          {daFormare ? (
+            <div className="text-xs text-muted-foreground">Nessun attestato registrato</div>
+          ) : (
+            !a.url_foto_fronte?.trim() && <div className="text-xs font-semibold text-destructive">Manca attestato</div>
           )}
           {ciclo.dataAncora && (
             <div className="text-xs text-muted-foreground">
@@ -68,9 +75,13 @@ export function RigaScadenza({ riga, numero }: { riga: RigaScadenzaDati; numero?
             </div>
           )}
         </td>
-        <td className="px-3 py-2">{formatData(a.data_corso)}</td>
+        <td className="px-3 py-2">{daFormare ? "—" : formatData(a.data_corso)}</td>
         <td className={`px-3 py-2 font-mono ${scaduta ? "text-destructive" : ""}`}>
-          {ciclo.scadenzaEffettiva ? formatData(ciclo.scadenzaEffettiva) : "Non scade"}
+          {daFormare
+            ? testoDaSvolgere(daFormare.dataAssunzione)
+            : ciclo.scadenzaEffettiva
+              ? formatData(ciclo.scadenzaEffettiva)
+              : "Non scade"}
           {ciclo.motivoScadenza && (
             <div
               title={ciclo.motivoScadenza}
@@ -159,5 +170,11 @@ function BadgeStatoConformita({
       );
     case "senza_scadenza":
       return <span className="text-xs text-muted-foreground">Permanente</span>;
+    case "da_formare":
+      return (
+        <span className="inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+          Da formare
+        </span>
+      );
   }
 }

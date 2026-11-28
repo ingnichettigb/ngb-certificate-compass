@@ -1,7 +1,7 @@
 /*
  * File:      types.ts
  * Percorso:  src/features/scadenze/types.ts
- * Revisione: 6 — 28/11/2026 09:11
+ * Revisione: 7 — 28/11/2026 10:01
  * Data creazione: 2026-10-15
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Struttura base tipi per la pagina Scadenze.
@@ -12,11 +12,17 @@
  * - Rev 5 (2026-11-10): PosizioneCiclo.esenteRspp (aggiornamento Preposto non dovuto per RSPP valido).
  * - Rev 6 (28/11/2026 09:11): Viste «Scaduti o in scadenza» (90 gg, 6 mesi, 1 anno); colonna di ordinamento «ruolo»
  *   (ordine predefinito quando è scelto un ruolo: per persona, prima il corso base, poi gli altri in ordine di data).
+ * - Rev 7 (28/11/2026 10:01): Vista «Da formare / Mancanti», stato «da_formare» e dati facoltativi «daFormare» della riga: lavoratori con un corso
+ *   dovuto (secondo la matrice abilitazioni e ruoli) e nessun attestato nel ciclo, quindi senza riga nata dagli attestati.
  */
 import type { Attestato } from "@/lib/api";
 
+/** Voce del menù periodo che elenca chi deve ancora iniziare la formazione (nessun attestato nel ciclo). */
+export const VISTA_DA_FORMARE = "Da formare / Mancanti" as const;
+
 export type Vista =
   | "Scaduti"
+  | typeof VISTA_DA_FORMARE
   | "Decaduti (> 10 anni)"
   | "In scadenza (90 gg)"
   | "In scadenza (6 mesi)"
@@ -28,7 +34,7 @@ export type Vista =
   | "Tutti con scadenza";
 
 export type StatoConformita =
-  "valido" | "in_scadenza" | "scaduto_sanabile" | "decaduto" | "incompleto_ore" | "senza_scadenza";
+  "valido" | "in_scadenza" | "scaduto_sanabile" | "decaduto" | "incompleto_ore" | "senza_scadenza" | "da_formare";
 
 /** Stato di un singolo ciclo nella linea temporale. */
 export type StatoCiclo = "completato" | "da_completare" | "scaduto" | "futuro" | "decaduto";
@@ -114,13 +120,24 @@ export interface PosizioneCiclo {
   eventi: EventoCiclo[];
 }
 
+/** Dati delle righe «Da formare»: lavoratore con un corso dovuto e nessun attestato nel ciclo. */
+export interface DatiDaFormare {
+  /** Data di assunzione (YYYY-MM-DD) se in anagrafica: è il termine indicato come «Da svolgere entro…». null = nessuna data. */
+  dataAssunzione: string | null;
+}
+
 /** Una riga della tabella: un lavoratore + un corso (o macro-categoria), non un singolo attestato. */
 export interface RigaScadenzaDati {
   chiave: string;
-  /** Attestato più recente del gruppo (usato per mostrare dati del dipendente e del corso). */
+  /**
+   * Attestato più recente del gruppo (usato per mostrare dati del dipendente e del corso).
+   * Nelle righe «Da formare» è un attestato fittizio (mai salvato) che porta solo lavoratore e corso atteso.
+   */
   attestato: Attestato;
   attestatiGruppo: Attestato[];
   ciclo: PosizioneCiclo;
+  /** Presente solo nelle righe «Da formare» (non nate da un attestato). */
+  daFormare?: DatiDaFormare;
 }
 
 export type ColonnaSort =

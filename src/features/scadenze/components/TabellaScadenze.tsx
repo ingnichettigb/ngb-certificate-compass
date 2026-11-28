@@ -1,13 +1,14 @@
 /*
  * File:      TabellaScadenze.tsx
  * Percorso:  src/features/scadenze/components/TabellaScadenze.tsx
- * Revisione: 3 — 28/11/2026 09:11
+ * Revisione: 4 — 28/11/2026 10:01
  * Tabella delle scadenze con intestazioni ordinabili.
  * Revisioni:
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-06 16:00): Righe raggruppate (riga={r}, key=r.chiave), colonna ordinabile «Stato», colSpan 8.
  *   Corregge il crash «Cannot destructure property 'attestato' of 'riga' as it is undefined».
  * - Rev 3 (28/11/2026 09:11): Stampa: tabella a tutta altezza e senza scorrimento (classi print:).
+ * - Rev 4 (28/11/2026 10:01): Messaggio di elenco vuoto personalizzabile (parametro facoltativo «messaggioVuoto»).
  */
 import { type ColonnaSort, type DirezioneSort, type RigaScadenzaDati } from "../types";
 import { RigaScadenza } from "./RigaScadenza";
@@ -18,11 +19,13 @@ export function TabellaScadenze({
   sortCol,
   sortDir,
   onOrdina,
+  messaggioVuoto = "Nessun attestato in questa vista",
 }: {
   righe: RigaScadenzaDati[];
   sortCol: ColonnaSort;
   sortDir: DirezioneSort;
   onOrdina: (colonna: ColonnaSort) => void;
+  messaggioVuoto?: string;
 }) {
   return (
     <div className="mt-4 max-h-[calc(100vh-220px)] min-h-[320px] overflow-auto rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] print:mt-2 print:max-h-none print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none">
@@ -49,7 +52,7 @@ export function TabellaScadenze({
                 colSpan={8}
                 className="px-3 py-12 text-center text-muted-foreground"
               >
-                Nessun attestato in questa vista
+                {messaggioVuoto}
               </td>
             </tr>
           )}

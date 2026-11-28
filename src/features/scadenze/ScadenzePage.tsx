@@ -1,17 +1,18 @@
 /*
  * File:      ScadenzePage.tsx
  * Percorso:  src/features/scadenze/ScadenzePage.tsx
- * Revisione: 3 — 28/11/2026 09:11
+ * Revisione: 4 — 28/11/2026 10:01
  * Pagina Scadenze attestati: compone filtri e tabella con la logica dell'hook.
  * Revisioni:
  * - Rev 2 (2026-11-06 18:30): Connessione del filtro «Solo incarichi attualmente assegnati».
  * - Rev 3 (28/11/2026 09:11): Filtro «Ruolo»; barra con «Esporta» (Excel/CSV) e «Stampa» dell'elenco filtrato;
  *   l'intestazione riporta reparto, ruolo e corso scelti.
+ * - Rev 4 (28/11/2026 10:01): Vista «Da formare / Mancanti»: messaggio di elenco vuoto dedicato; Esporta e Stampa includono le righe.
  */
 import { Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PulsanteEsporta } from "@/components/tabella-comune/PulsanteEsporta";
-import { TUTTI } from "./types";
+import { TUTTI, VISTA_DA_FORMARE } from "./types";
 import { esportaScadenze } from "./esporta-scadenze";
 import { IntestazioneScadenze } from "./components/IntestazioneScadenze";
 import { FiltriScadenze } from "./components/FiltriScadenze";
@@ -98,7 +99,13 @@ export function ScadenzePage() {
           </div>
         ) : (
           /* Contenitore vincolato alla finestra: scrollbar orizzontale SEMPRE a vista */
-          <TabellaScadenze righe={righe} sortCol={sortCol} sortDir={sortDir} onOrdina={cambiaOrdinamento} />
+          <TabellaScadenze
+            righe={righe}
+            sortCol={sortCol}
+            sortDir={sortDir}
+            onOrdina={cambiaOrdinamento}
+            messaggioVuoto={vista === VISTA_DA_FORMARE ? "Nessun lavoratore da formare con questi filtri" : "Nessun attestato in questa vista"}
+          />
         )}
       </section>
     </main>

@@ -1,13 +1,14 @@
 /*
  * File:      FiltriScadenze.tsx
  * Percorso:  src/features/scadenze/components/FiltriScadenze.tsx
- * Revisione: 3 — 28/11/2026 09:11
+ * Revisione: 4 — 28/11/2026 10:01
  * Menù a tendina per periodo, reparto, ruolo e corso (in quest'ordine), ricerca per testo e spunta incarichi.
  * Revisioni:
  * - Rev 2 (2026-11-06 18:30): Aggiunta spunta «Solo incarichi attualmente assegnati» (attiva di default).
  * - Rev 3 (28/11/2026 09:11): Ordine dei filtri Periodo → Reparto → Ruolo → Corso; nuovo menù «Ruolo» (un solo ruolo);
  *   opzioni «Scaduti o in scadenza»; con un ruolo scelto la spunta incarichi è sempre attiva (e bloccata);
  *   i filtri non si stampano.
+ * - Rev 4 (28/11/2026 10:01): Nuova voce «Da formare / Mancanti» nel menù periodo (dopo «Scaduti»).
  */
 import { CalendarClock, Search, ShieldCheck } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TUTTI, type Vista } from "../types";
+import { TUTTI, VISTA_DA_FORMARE, type Vista } from "../types";
 
 export function FiltriScadenze({
   vista,
@@ -68,6 +69,7 @@ export function FiltriScadenze({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="Scaduti">Scaduti</SelectItem>
+          <SelectItem value={VISTA_DA_FORMARE}>{VISTA_DA_FORMARE}</SelectItem>
           <SelectItem value="In scadenza (90 gg)">
             In scadenza (90 gg)
           </SelectItem>
