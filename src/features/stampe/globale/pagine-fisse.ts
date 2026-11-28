@@ -14,7 +14,9 @@
  *            su due colonne; se non entrano nella copertina continuano su una pagina subito dopo. Senza queste due opzioni la copertina
  *            della Stampa globale è identica a prima.
  *   rev 6 — 23/11/2026 13:35 — Colonna Stato: senza file (o «File Attestato mancante» nel database) scrive «File mancante» in rosso, mai «Valido».
+ *   rev N — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Dipendente } from "@/lib/api";
 import { statoScadenza } from "@/lib/api/incarichi";
@@ -296,7 +298,7 @@ export async function disegnaScheda(
     ["Nato/a a", o.dip.luogo_nascita ?? "—"],
     ["Data di nascita", dataIt(o.dip.data_nascita)],
     ["Reparto", [o.dip.reparto, o.dip.sottoreparto].filter(Boolean).join(" – ") || "—"],
-    ["Classe di concorso", o.dip.classe_concorso || "—"],
+    ["Classe di concorso", etichettaClasse(o.dip.classe_concorso) || "—"],
     ["Materia", o.dip.materia || "—"],
     ["Assunzione", dataIt(o.dip.data_assunzione)],
     [

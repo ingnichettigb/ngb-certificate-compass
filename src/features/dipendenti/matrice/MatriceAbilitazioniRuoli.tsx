@@ -17,7 +17,9 @@
  *   - Rev 11 (2026-11-07): Diviso in file per responsabilità (useDatiMatrice, useColonneMatrice, matrice-lista, esporta-matrice-csv e sottocomponenti). Nessun cambio di comportamento.
  *   - Rev 12 (2026-11-21): Passa la Tabella 02 (regole) alla riga: il ruolo mostrato nel suggerimento segue le regole.
  *   - Rev 13 (2026-11-22): Passa alla riga motivoInAttesa: casella grigia per le attrezzature di chi non ha completato la formazione Lavoratore.
+ *   - Rev 14 (2026-11-28 10:30): Carica il catalogo delle classi di concorso (dicitura codice — denominazione).
  */
+import { useCatalogoClassi } from "@/features/insegnamento/classi-concorso";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { assegnaGruppoArgomento } from "@/features/tipi-corso/tipi-raggruppamento";
@@ -50,6 +52,8 @@ export function MatriceAbilitazioniRuoli({ open, onClose }: Props) {
 
   // Riferimento al contenitore per lo scorrimento
   const contenitoreTabellaRef = useRef<HTMLDivElement>(null);
+
+  useCatalogoClassi();
 
   const {
     dipendenti,

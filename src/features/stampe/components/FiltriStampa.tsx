@@ -12,7 +12,9 @@
  *   rev 6 — 07/11/2026 — Suggerimenti (tooltip) su pulsanti, filtri e opzioni; sottotitoli «per attestato» / «per incarico»;
  *                        spunta «Solo incarichi attualmente assegnati» per ogni gruppo con ruolo collegato; filtro «Classe di concorso» al posto di «Materia».
  *   rev 7 — 11/11/2026 17:30 — La casella «Includi lavoratori cessati» diventa il selettore «Stato lavoratore» (In forza / Solo cessati / Tutti).
+ *   rev 8 — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -215,7 +217,7 @@ export function FiltriStampa({ filtri, onChange, reparti, ruoli, categorie, clas
           <Suggerimento testo={SUGGERIMENTI.classe}><span className="font-medium">Classe di concorso</span></Suggerimento>
           <select className={sel} value={filtri.classe} onChange={(e) => set("classe", e.target.value)}>
             <option value={TUTTI}>Tutte le classi di concorso</option>
-            {classi.map((c) => <option key={c} value={c}>{c}</option>)}
+            {classi.map((c) => <option key={c} value={c}>{etichettaClasse(c)}</option>)}
           </select>
         </label>
       )}

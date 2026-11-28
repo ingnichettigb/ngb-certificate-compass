@@ -7,7 +7,9 @@
  *   rev 2 — 10/11/2026 — Casella «E» (esente) per l'aggiornamento Preposto di chi ha un RSPP valido.
  *   rev 3 — 21/11/2026 — Il ruolo indicato nel suggerimento della casella segue la Tabella 02 (prop «regole»).
  *   rev 4 — 22/11/2026 — Casella grigia «…» per un corso dovuto ma «in attesa» della formazione Lavoratore (prop «motivoInAttesa»).
+ *   rev 5 — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { Check } from "lucide-react";
 import type { Dipendente, TipoCorso } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
@@ -49,7 +51,7 @@ export function RigaLavoratoreMatrice({
 }: Props) {
   const isAttiva = attiva;
   const funzione =
-    [dip.reparto, dip.sottoreparto, dip.classe_concorso, dip.materia].filter(Boolean).join(" - ") ||
+    [dip.reparto, dip.sottoreparto, etichettaClasse(dip.classe_concorso), dip.materia].filter(Boolean).join(" - ") ||
     "—";
   const ruoliDelDip = ruoliSicurezzaAssegnati(dip.id, ruoli, mappaAssegnazioni);
   const ruoliSpecifici = ruoliDelDip.filter(
@@ -99,8 +101,8 @@ export function RigaLavoratoreMatrice({
             ))}
           </div>
         ) : (
-          <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full text-muted-foreground">
-            {dip.classe_concorso || "Lavoratore"}
+          <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-medium truncate max-w-full text-muted-foreground" title={etichettaClasse(dip.classe_concorso) || "Lavoratore"}>
+            {etichettaClasse(dip.classe_concorso) || "Lavoratore"}
           </span>
         )}
       </td>

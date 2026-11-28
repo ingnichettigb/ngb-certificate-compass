@@ -30,7 +30,9 @@
  *                         il totale «N addetti» conta i lavoratori distinti; pannello «Controllo addetti» (righe e motivo per ogni addetto).
  *   rev 16 — 22/11/2026 — Se il caricamento degli attestati o dei lavoratori fallisce compare un avviso rosso con il motivo, invece di numeri e righe «Manca» falsi.
  *   rev 17 — 23/11/2026 14:55 — Corretta la chiamata a scaricaPdf: opzioni prima, nome file dopo (come da firma della funzione).
+ *   rev N — 28/11/2026 10:30 — Classe di concorso con denominazione nei filtri, nell'intestazione e nella colonna Mansione.
  */
+import { etichettaClasse, useCatalogoClassi } from "@/features/insegnamento/classi-concorso";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -95,6 +97,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
       return n;
     });
 
+  const catalogoClassi = useCatalogoClassi();
   const tutti = dip.data ?? [];
   const assegnazioni = assQ.data ?? [];
   const dipendenti = useMemo(
@@ -135,7 +138,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
       : filtri.modello === "lavoratori"
         ? calcolaRigheLavoratori(tutti, filtri, assegnazioni, ruoliQ.data ?? [], att.data ?? [], soloIds)
         : calcolaRighe(att.data ?? [], filtriMotore, new Date(), assegnazioni, soloIds, ruoliQ.data ?? [], tutti),
-    [organigramma, att.data, tutti, filtri, filtriMotore, assegnazioni, ruoliQ.data, soloIds],
+    [organigramma, att.data, tutti, filtri, filtriMotore, assegnazioni, ruoliQ.data, soloIds, catalogoClassi],
   );
   const conteggiAddetti = useMemo(() => contaVistaAddetti(righeMotore), [righeMotore]);
   const righeGrezze = useMemo(
@@ -212,7 +215,7 @@ export function StampePage({ predefinita }: { predefinita?: StampaPredefinita } 
     filtri.reparto !== TUTTI && `Reparto ${filtri.reparto}`,
     nomeRuolo && `Per incarico: ${nomeRuolo}`,
     filtri.categoria !== TUTTI && `Categoria: ${filtri.categoria}`,
-    filtri.classe !== TUTTI && `Classe di concorso: ${filtri.classe}`,
+    filtri.classe !== TUTTI && `Classe di concorso: ${etichettaClasse(filtri.classe)}`,
     filtri.modello !== "lavoratori" && filtri.finestra === "scaduti" && "Solo scaduti",
     filtri.modello !== "lavoratori" && filtri.finestra === "270" && "Scadenza entro 9 mesi",
     filtri.modello !== "lavoratori" && ["90", "180", "365"].includes(filtri.finestra) && `Scadenza entro ${filtri.finestra} giorni`,

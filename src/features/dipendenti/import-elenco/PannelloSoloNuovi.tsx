@@ -14,6 +14,7 @@
  *   rev 5 — 12/11/2026 — Scelta guidata: per i nuovi senza classe/profilo (o con classe non in archivio) una tendina propone le classi simili,
  *            «Lascia vuoto» o «Crea nuova classe»; la registrazione resta ferma finché non si è deciso. Come materia si usa il nome in archivio.
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -296,7 +297,7 @@ export function PannelloSoloNuovi({
                         <TendinaDecisione riga={analisiBase[n]!} valore={valoreDaScelta(scelte[r.cf])} classi={classi} onScegli={(v) => scegli(r.cf, v)} />
                       ) : (
                         <>
-                          {r.classe ?? r.sottorepartoAta ?? "—"}
+                          {(r.classe ? etichettaClasse(r.classe) : null) ?? r.sottorepartoAta ?? "—"}
                           {r.classe && r.materia && <div className="text-[11px] text-muted-foreground">{r.materia}</div>}
                         </>
                       )}

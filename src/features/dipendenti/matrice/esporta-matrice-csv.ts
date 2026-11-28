@@ -5,7 +5,9 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: esportazione CSV del piano fabbisogno formativo.
  *            Nessun cambio di comportamento.
+ *   rev N — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { toast } from "sonner";
 import type { Dipendente, TipoCorso } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
@@ -36,12 +38,12 @@ export function esportaMatriceCsv(p: ParametriCsv) {
 
   const righe = lavoratori.map((d) => {
     const fn =
-      [d.reparto, d.sottoreparto, d.classe_concorso, d.materia].filter(Boolean).join(" - ") || "";
+      [d.reparto, d.sottoreparto, etichettaClasse(d.classe_concorso), d.materia].filter(Boolean).join(" - ") || "";
     const ruoliTxt =
       ruoliSicurezzaAssegnati(d.id, ruoli, mappaAssegnazioni)
         .map((r) => r.nome)
         .join("; ") ||
-      d.classe_concorso ||
+      etichettaClasse(d.classe_concorso) ||
       "Lavoratore";
     const corsiVal = corsiVisibili.map((c) => {
       const ob = haObbligoCorso(d.id, c);

@@ -5,7 +5,9 @@
  * Revisioni:
  *   - Rev 2 (2026-10-30 20:25): Box anteprima dicitura completa (Docente - [Classe] - [Materia]) e callback onCambiaClasseConcorso.
  * Sezione «1. I tuoi dati»: anagrafica, reparto, profilo, classe di concorso e materia.
+ *   - Rev 3 (2026-11-28 10:30): Dicitura con codice e denominazione della classe di concorso.
  */
+import { etichettaClasse, useCatalogoClassi } from "@/features/insegnamento/classi-concorso";
 import { CampoSuggerito, type Suggerimento } from "@/components/CampoSuggerito";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,6 +42,7 @@ export function SezioneDati({
   suggerimentiClassi: Suggerimento[];
   suggerimentiMaterie: Suggerimento[];
 }) {
+  useCatalogoClassi();
   return (
     <section className="space-y-4">
       <h2 className="font-display text-lg font-semibold">1. I tuoi dati</h2>
@@ -142,7 +145,7 @@ export function SezioneDati({
             <div className="rounded-lg border border-primary/20 bg-primary/10 p-3 text-xs">
               <span className="font-semibold text-primary">Dicitura completa nel piano formativo:</span>
               <p className="mt-0.5 font-mono text-sm font-bold text-foreground">
-                {[anagrafica.reparto || "Docente", anagrafica.classe_concorso, anagrafica.materia].filter(Boolean).join(" - ")}
+                {[anagrafica.reparto || "Docente", etichettaClasse(anagrafica.classe_concorso), anagrafica.materia].filter(Boolean).join(" - ")}
               </p>
             </div>
           )}

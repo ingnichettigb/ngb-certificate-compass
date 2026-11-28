@@ -5,6 +5,24 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
   [
     "sb",
     "from",
+    "classi_concorso",
+    "["classi_concorso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "classi_concorso",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "classi_concorso",
+    "["codice"]",
+  ],
+  [
+    "sb",
+    "from",
     "tipi_corso",
     "["tipi_corso"]",
   ],
@@ -73,24 +91,6 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
     "from.select.order.order",
     "sottoreparti",
     "["nome"]",
-  ],
-  [
-    "sb",
-    "from",
-    "classi_concorso",
-    "["classi_concorso"]",
-  ],
-  [
-    "sb",
-    "from.select",
-    "classi_concorso",
-    "["*"]",
-  ],
-  [
-    "sb",
-    "from.select.order",
-    "classi_concorso",
-    "["codice"]",
   ],
   [
     "sb",
@@ -348,6 +348,24 @@ exports[`Carica attestato (lavoratore): percorso d'uso completo > registra tutto
     "pagina",
     "dopo invio",
     "Attestato inviatoIl tuo attestato è in attesa di validazione da parte dell'ufficio personale. Riceverai l'esito via email.Carica un altro attestato",
+  ],
+  [
+    "sb",
+    "from",
+    "classi_concorso",
+    "["classi_concorso"]",
+  ],
+  [
+    "sb",
+    "from.select",
+    "classi_concorso",
+    "["*"]",
+  ],
+  [
+    "sb",
+    "from.select.order",
+    "classi_concorso",
+    "["codice"]",
   ],
   [
     "pagina",

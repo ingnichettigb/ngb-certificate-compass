@@ -4,7 +4,9 @@
  * Data creaz: 07/11/2026
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da DialogImportaElenco.tsx: tabella di anteprima dei nominativi con spunte, tipo e mansione/classe proposta. Nessun cambio di comportamento.
+ *   rev 2 — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PROFILI_ATA, type Proposta, type ProfiloAta } from "./analisi-elenco";
 import type { Dispatch, SetStateAction } from "react";
@@ -122,7 +124,7 @@ export function TabellaProposte({
                       <option value="">— scegli classe —</option>
                       {codiciClasse.map((c) => (
                         <option key={c} value={c}>
-                          {c}
+                          {etichettaClasse(c)}
                         </option>
                       ))}
                     </select>

@@ -5,7 +5,9 @@
  * Revisioni:
  *   rev 1 — 07/11/2026 — Estratto da MatriceAbilitazioniRuoli.tsx: filtro per gruppo e per ricerca, ordinamento delle righe.
  *            Funzione pura, senza cambi di comportamento.
+ *   rev N — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import type { Dipendente, TipoCorso } from "@/lib/api";
 import type { RuoloSicurezza } from "@/lib/api/ruoli";
 import type { FiltroStatoLavoratori } from "./BarraFiltriGruppo";
@@ -59,7 +61,7 @@ export function elaboraListaMatrice(p: ParametriLista): Dipendente[] {
         d.codice_fiscale.toLowerCase().includes(q) ||
         (d.reparto && d.reparto.toLowerCase().includes(q)) ||
         (d.materia && d.materia.toLowerCase().includes(q)) ||
-        (d.classe_concorso && d.classe_concorso.toLowerCase().includes(q)),
+        etichettaClasse(d.classe_concorso).toLowerCase().includes(q),
     );
   }
 

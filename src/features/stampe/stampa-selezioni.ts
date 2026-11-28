@@ -7,7 +7,9 @@
  *   rev 2 — 21/11/2026 — voceDelRuolo riconosce il ruolo prima per CODICE (ADD-DAE, PREPOSTO, …); per nome solo se il codice manca.
  *   rev 3 — 22/11/2026 — statoValidita: «In scadenza» da 9 mesi (270 giorni) prima della scadenza, non più da 90; «Scaduto» solo a data passata.
  *   rev 4 — 23/11/2026 14:15 — ordina: raggruppa per lavoratore (cognome/nome); prima il corso base (priorità 0), poi aggiornamenti per data crescente.
+ *   rev 5 — 28/11/2026 10:30 — Classe di concorso mostrata come «codice — denominazione».
  */
+import { etichettaClasse } from "@/features/insegnamento/classi-concorso";
 import { statoRegistrato } from "@/lib/api/attestati";
 import type { Attestato, Dipendente } from "@/lib/api";
 import type { AssegnazioneRuolo, RuoloSicurezza } from "@/lib/api/ruoli";
@@ -147,7 +149,7 @@ type DipMinimo = Pick<Dipendente, "reparto" | "sottoreparto" | "classe_concorso"
 
 /** Mansione leggibile: classe di concorso per i Docenti (il loro «profilo» SEC1/SEC2 non conta), profilo per gli ATA e gli altri. */
 export function mansioneDi(d: DipMinimo): string {
-  const classe = (d.classe_concorso ?? "").trim();
+  const classe = etichettaClasse(d.classe_concorso);
   if ((d.reparto ?? "").trim().toLowerCase() === "docente") return classe;
   return (d.sottoreparto ?? "").trim() || classe;
 }

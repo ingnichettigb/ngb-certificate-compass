@@ -13,7 +13,9 @@
  *   rev 3 — 23/11/2026 17:45 — Selezione per argomenti ancorata alla matrice ruoli di sicurezza (dipendenti_ruoli / ruoli_sicurezza):
  *            seleziona solo gli addetti formalmente incaricati (es. 12 DAE) filtrati per stato; fallback su attestati per argomenti
  *            senza ruolo. Risolto errore di compilazione TS2345 su tipo corso opzionale.
+ *   rev N — 28/11/2026 10:30 — Carica il catalogo classi: nelle schede PDF la classe compare con la denominazione.
  */
+import { useCatalogoClassi } from "@/features/insegnamento/classi-concorso";
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -111,6 +113,7 @@ function ruoloAppartieneAGruppo(r: RuoloSicurezza, ordine: number | null): boole
 }
 
 export function StampaSelezionePage() {
+  useCatalogoClassi();
   const att = useQuery({
     queryKey: ["stampe-attestati"],
     queryFn: () => getAttestati("Approvato"),
