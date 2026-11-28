@@ -1,6 +1,7 @@
 /*
  * File:      types.ts
  * Percorso:  src/features/scadenze/types.ts
+ * Revisione: 6 — 28/11/2026 09:11
  * Data creazione: 2026-10-15
  * Revisioni:
  * - Rev 1 (2026-10-15 10:00): Struttura base tipi per la pagina Scadenze.
@@ -9,6 +10,8 @@
  * - Rev 4 (2026-11-06 18:00): Regime transitorio Preposti: dataTaglio, scadenzaPortataAlTaglio, regolaPreposti,
  *   motivoScadenza; CicloVisuale.troncato.
  * - Rev 5 (2026-11-10): PosizioneCiclo.esenteRspp (aggiornamento Preposto non dovuto per RSPP valido).
+ * - Rev 6 (28/11/2026 09:11): Viste «Scaduti o in scadenza» (90 gg, 6 mesi, 1 anno); colonna di ordinamento «ruolo»
+ *   (ordine predefinito quando è scelto un ruolo: per persona, prima il corso base, poi gli altri in ordine di data).
  */
 import type { Attestato } from "@/lib/api";
 
@@ -18,6 +21,9 @@ export type Vista =
   | "In scadenza (90 gg)"
   | "In scadenza (6 mesi)"
   | "In scadenza (1 anno)"
+  | "Scaduti o in scadenza (90 gg)"
+  | "Scaduti o in scadenza (6 mesi)"
+  | "Scaduti o in scadenza (1 anno)"
   | "Ore parziali"
   | "Tutti con scadenza";
 
@@ -118,7 +124,7 @@ export interface RigaScadenzaDati {
 }
 
 export type ColonnaSort =
-  "dipendente" | "codice_fiscale" | "reparto" | "corso" | "data_corso" | "scadenza" | "stato";
+  "dipendente" | "codice_fiscale" | "reparto" | "corso" | "data_corso" | "scadenza" | "stato" | "ruolo";
 
 export type { DirezioneSort } from "@/components/IntestazioneOrdinabile";
 

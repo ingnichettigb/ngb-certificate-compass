@@ -1,10 +1,13 @@
 /*
  * File:      TabellaScadenze.tsx
  * Percorso:  src/features/scadenze/components/TabellaScadenze.tsx
+ * Revisione: 3 — 28/11/2026 09:11
  * Tabella delle scadenze con intestazioni ordinabili.
+ * Revisioni:
  * - Rev (2026-11-04 08:40): Colonna N° progressiva, intestazione fissa e scorrimento orizzontale.
  * - Rev (2026-11-06 16:00): Righe raggruppate (riga={r}, key=r.chiave), colonna ordinabile «Stato», colSpan 8.
  *   Corregge il crash «Cannot destructure property 'attestato' of 'riga' as it is undefined».
+ * - Rev 3 (28/11/2026 09:11): Stampa: tabella a tutta altezza e senza scorrimento (classi print:).
  */
 import { type ColonnaSort, type DirezioneSort, type RigaScadenzaDati } from "../types";
 import { RigaScadenza } from "./RigaScadenza";
@@ -22,8 +25,8 @@ export function TabellaScadenze({
   onOrdina: (colonna: ColonnaSort) => void;
 }) {
   return (
-    <div className="mt-4 max-h-[calc(100vh-220px)] min-h-[320px] overflow-auto rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]">
-      <table className="w-full min-w-[980px] text-sm">
+    <div className="mt-4 max-h-[calc(100vh-220px)] min-h-[320px] overflow-auto rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] print:mt-2 print:max-h-none print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none">
+      <table className="w-full min-w-[980px] text-sm print:min-w-0 print:text-xs">
         <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur text-left text-xs text-muted-foreground shadow-xs">
           <tr>
             <th className="w-12 px-3 py-2 text-center">N°</th>

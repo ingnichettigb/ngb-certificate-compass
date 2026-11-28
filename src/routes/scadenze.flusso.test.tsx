@@ -1,10 +1,15 @@
 /*
+ * File:      scadenze.flusso.test.tsx
+ * Percorso:  src/routes/scadenze.flusso.test.tsx
+ * Revisione: 3 — 28/11/2026 09:11
  * Test di flusso della pagina Scadenze attestati.
  * Registra, per ogni scelta dell'utente (periodo, corso, reparto, ricerca, ordinamento),
  * l'elenco di righe mostrato e lo confronta con lo snapshot.
  * La data «di oggi» è bloccata al 20/10/2026 per avere risultati stabili.
  * - Rev (2026-11-06 16:00): Dati adeguati al motore dei cicli (durata e ore nel tipo di corso: la scadenza è calcolata,
  *   non più letta da data_scadenza_calcolata); aggiunto l'ordinamento per «Stato». Snapshot rigenerato.
+ * - Rev 3 (28/11/2026 09:11): Nuovo ordine dei menù (periodo, reparto, ruolo, corso) e nuove opzioni «Scaduti o in scadenza».
+ *   Snapshot rigenerato; tempo massimo del test portato a 30 s. Il filtro Ruolo ha un test suo: scadenze.ruolo.flusso.test.tsx.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -104,22 +109,23 @@ describe("Scadenze: percorso d'uso completo", () => {
     foto("vista iniziale (Scaduti, per scadenza crescente)");
 
     registro.push(["opzioni periodo", await opzioni(0)]);
-    registro.push(["opzioni corso", await opzioni(1)]);
-    registro.push(["opzioni reparto", await opzioni(2)]);
+    registro.push(["opzioni reparto", await opzioni(1)]);
+    registro.push(["opzioni ruolo", await opzioni(2)]);
+    registro.push(["opzioni corso", await opzioni(3)]);
 
-    for (const v of ["In scadenza (90 gg)", "In scadenza (6 mesi)", "In scadenza (1 anno)", "Tutti con scadenza", "Scaduti"]) {
+    for (const v of ["In scadenza (90 gg)", "In scadenza (6 mesi)", "In scadenza (1 anno)", "Scaduti o in scadenza (90 gg)", "Scaduti o in scadenza (6 mesi)", "Scaduti o in scadenza (1 anno)", "Tutti con scadenza", "Scaduti"]) {
       await scegli(0, v);
       foto("periodo " + v);
     }
 
     await scegli(0, "Tutti con scadenza");
-    await scegli(1, "Primo soccorso");
+    await scegli(3, "Primo soccorso");
     foto("corso Primo soccorso (indipendente da maiuscole)");
-    await scegli(2, "Docente");
+    await scegli(1, "Docente");
     foto("corso Primo soccorso + reparto Docente");
-    await scegli(1, "Tutti i corsi");
+    await scegli(3, "Tutti i corsi");
     foto("solo reparto Docente (indipendente da maiuscole)");
-    await scegli(2, "Tutti i reparti");
+    await scegli(1, "Tutti i reparti");
 
     const cerca = screen.getByPlaceholderText("Cerca dipendente, CF o corso");
     for (const t of ["ross", "  VRDLNE ", "antincendio", "preposto", "zzz", "mario rossi", ""]) {
@@ -134,11 +140,11 @@ describe("Scadenze: percorso d'uso completo", () => {
     }
 
     await scegli(0, "In scadenza (1 anno)");
-    await scegli(1, "Preposto");
+    await scegli(3, "Preposto");
     foto("combinazione 1 anno + Preposto");
-    await scegli(2, "ATA");
+    await scegli(1, "ATA");
     foto("combinazione 1 anno + Preposto + ATA");
 
     expect(registro).toMatchSnapshot();
-  });
+  }, 30000); // percorso lungo: più passi di prima, quindi più tempo del limite predefinito di 5 secondi
 });
